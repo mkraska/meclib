@@ -6,12 +6,14 @@ Meclib is a special JSXGraph block to be copied into the STACK question. It cont
 
 The set of objects is created with sketches of mechanical systems in mind (support and load symbols, bars, ropes, disks, annotations).
 
+![Demo](demo2.png?raw=true "Screenshot from the demo question")
+
 ## Implemented Objects
 
-<ul><li><code>[ "angle", "&lt;name&gt;", [xc, yc], [xs,ys], radius, angle ]</code> Angle with one arrow, centerpoint, point on start line, radius of arc, angle</li>
+<ul><li><code>[ "angle", "&lt;name&gt;", [xc, yc], [xs,ys], radius, angle ]</code> Angle with one arrow, centerpoint, endpoint of start line, radius of arc, angle</li>
 <li><code>[ "angle", ".", [xc, yc], [xs,ys], radius, +-90 ]</code> Right angle without arrows and label but with a dot inside.</li>
-<li><code>[ "angle2", "&lt;name&gt;", [xc, yc], [xs,ys], radius, angle ]</code> Angle with two  arrows, centerpoint, point on start line, radius of arc, angle</li>
-<li><code>[ "bar", "&lt;name&gt;", [x1, y1], [x2, y2] ]</code>  Stab, dicker schwarzer Strich mit Gelenk-Endpunkten</li>
+<li><code>[ "angle2", "&lt;name&gt;", [xc, yc], [xs,ys], radius, angle ]</code> Angle with two  arrows, centerpoint, endpoint of start line, radius of arc, angle</li>
+<li><code>[ "bar", "&lt;name&gt;", [x1, y1], [x2, y2] ]</code>  bar, thick black line with hinge points (nodes) at the ends. The label is placed next to the center of the line </li>
 <li><code>[ "beam", "", [x1, y1], [x2,y2], r ]</code> Rectangle with black border and light gray filling. The rectangle essentially is a thick line connecting two points. r is the radius (half width). More than two points (must be an even number of points) can be handled, in this case multiple rectangles are generated and merged into a single contour if they overlap. For non-merged overlapping beams use multiple beam objects.</li>
 <li><code>[ "beam", "&lt;color1&gt;","&lt;color2&gt;", [x1, y1], [x2,y2], r ]</code> Rectangle with black border and gradient filling using two colors. The rectangle essentially is a thick line connecting two points. r is the radius (half width).  More than two points (must be an even number of points) can be handled, in this case multiple rectangles are generated and merged into a single contour if they overlap.  For non-merged overlapping beams use multiple beam objects.</li>
 <li><code>[ "circle", "&lt;name&gt;", [xc, yc], [xp,yp] , angle]</code> Circle with centerpoint, point on perimeter, angle for dimension.  The annotation for the radius is only drawn if name is not empty If the angle is negative, the dimension is inside the circle, otherwise it is outside.</li>
@@ -45,3 +47,48 @@ The set of objects is created with sketches of mechanical systems in mind (suppo
 <li><code>[ "spline", "&lt;label&gt;", [x1, y1], dx, f1, f2, [xt1, yt1], [xt2, yt2], style]</code> cubic spline for interactive function graphing, [x1,y1] is the start point of the x axis interval, dx is the length of the interval, f1 and f2 are the function values at the borders of the interval, [xt1, yt1], [xt2, yt2] are points to define the respective tangent directions. If they coincide with the boundary points, no tangent condition is assumed and a quadratic or linear spline is drawn.</li>
 <li><code>[ "waste", "&lt;label&gt;", [x,y ]</code> waste bucket, drag objects there to delete them</li>
 </ul>
+
+## Code for Question Text
+
+The following code is a complete [[jsxgraph]] block, which just is copied to the question text and displays the widget. It can be surrounded by whatever other question text.
+Usually, there is no need to edit the block.
+
+[meclib.txt](meclib.txt)
+
+## Template for Question Variables
+
+You have to define a Maxima list of lists and apply `stackjson_stringify()` to it. The name must be `init` unless you change that in the JSXGraph block.
+Changing the name is required if you want to use more than one JSXGraph widget in a STACK question.
+
+```
+th: 0.13;
+initdata: [ 
+  [ "grid", "xlabel","ylabel", xmin, xmax, ymin, ymax, pix ],
+  [ "angle", ".", [xc, yc], [xs,ys], radius, +/-90 ],
+  [ "angle", "", [xc, yc], [xs,ys], radius, angle ],
+  [ "angle2", "", [xc, yc], [xs,ys], radius, angle ],
+  [ "bar", "", [x1, y1], [x2, y2] ],
+  [ "beam", "", [x1, y1], [x2,y2], r ], /* even number of points for multiple segments */
+  [ "beam", "","", [x1, y1], [x2,y2], r ],
+  [ "circle", "", [xc, yc], [xp,yp] , angle],
+  [ "circle", "", [xc, yc], radius , angle],
+  [ "dim", "", [x1, y1], [x2,y2], d ],
+  [ "dir", "", [x1, y1], angle, offset, length ],
+  [ "fix1", "", [x, y], angle ],
+  [ "fix12", "", [x, y], angle ],
+  [ "fix123", "", [x, y], angle ],
+  [ "fix13", "", [x, y], angle ],
+  [ "force", "", [x1, y1], [x2,y2], 10 ],
+  [ "label", "", [x, y] ],
+  [ "line", "", [x1, x2, x3], [y1, y2, y3] ,(dash), (thickness)],
+  [ "moment", "", [x1, y1], [x2,y2], [x3,y3] ],
+  [ "node", "", [x,y],d ],
+  [ "point", "", [x,y],d ],
+  [ "polygon", "", [x1, y1], [x2,y2], , [x3,y3]],
+  [ "q", "q1","q2", [x1, y1], [x2,y2], q1, q2, phi ],
+  [ "rope", "", [x1, y1], r1, [x2,y2], r2 ],
+  [ "springc", "k", [x1, y1], [x2, y2], r, n, off]
+  [ "wall", "", [x1, y1], [x2,y2] , angle ]
+];
+init: stackjson_stringify(float(initdata));
+```
