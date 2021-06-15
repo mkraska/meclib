@@ -6,7 +6,7 @@ Meclib is a special JSXGraph block to be copied into the STACK question. It cont
 
 The set of objects is created with sketches of mechanical systems in mind (support and load symbols, bars, ropes, disks, annotations).
 
-##Implemented Objects
+## Implemented Objects
 
 <ul><li><code>[ "angle", "&lt;name&gt;", [xc, yc], [xs,ys], radius, angle ]</code> Angle with one arrow, centerpoint, point on start line, radius of arc, angle</li>
 <li><code>[ "angle", ".", [xc, yc], [xs,ys], radius, +-90 ]</code> Right angle without arrows and label but with a dot inside.</li>
@@ -35,7 +35,7 @@ The set of objects is created with sketches of mechanical systems in mind (suppo
 <li><code>[ "springc", "", [x1, y1], [x2,y2], r, n, off ]</code>  compression spring, normal line with n turns of radius r and label offset off (in user units)</li><li><code>[ "wall", "&lt;name&gt;", [x1, y1], [x2,y2] , angle ]</code> Normal line with thin hatching at left side, specified by start and end point. Angle controls the direction of the hatch lines (usually +45/-45).</li>
 </ul>
 
-##Objects Specified for Implementation
+## Objects Specified for Implementation
 
 <ul><li><code>[ "tspring", "", [x1, y1], [x2,y2], r, n ] tension spring, normal line with n turns of radius r</code></li>
 <li><code>[ "mass", "&lt;name&gt;", [x1, y1] ]</code> black filled circle with name</li>
