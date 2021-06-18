@@ -632,6 +632,52 @@ class springc {
     return this.d;
   } 
 }
+//Zugfeder
+class springt {
+  constructor(data){
+    this.d = data.slice(0); //make a copy
+    var r = this.d[4];
+    var x = this.d[2][0];
+    var y =  this.d[2][1];
+    var dx = (this.d[3][0]-x);
+    var dy = (this.d[3][1]-y);
+    var l = Math.sqrt(dx**2+dy**2);
+    var c = r/l;
+    var pr= this.d[5]; //Prozent Länge für Enden
+
+    
+    if (data.length >5 ) {this.n = data[6]*2+1} else {this.n = 5}
+    if (data.length >6 ) {this.off = data[7]} else {this.off = 10}
+    // start point
+    var xf=x+pr/100*dx;
+    var yf=y+pr/100*dy;
+    var dxf= dx - 2*pr/100*dx;
+    var dyf= dy - 2*pr/100*dy;
+    var cf=c;
+    
+    var px = [x, xf];
+    var py = [y, yf];
+    // intermediate points
+    var j;
+    for (j = 1; j < this.n+1; j++) {
+      px.push(xf+dxf*(j-0.5)/this.n+dyf*cf*(-1)**j);
+      py.push(yf+dyf*(j-0.5)/this.n-dxf*cf*(-1)**j);
+    }
+    // last point
+    px.push(xf+dxf, x+dx);
+    py.push(yf+dyf, y+dy);
+    console.log(px,py);
+    console.log(dx,dy);
+    board.create('curve',[ px, py ], normalStyle );
+    // label
+    board.create('point',[x+dx/2-dy/l*this.off, y+dy/2+dx/l*this.off], {    
+      name: "\\("+data[1]+"\\)" ,size:0, label:{offset:[0,0]}});
+  }
+  data(){
+    return this.d;
+  } 
+}
+
 
 //  Wand
 class wall {
@@ -716,6 +762,9 @@ function init() {
        break;      
      case "springc":
         objects.push(new springc(m));
+        break;
+     case "springt":
+        objects.push(new springt(m));
         break;
      case "rope":
        objects.push(new rope(m));
