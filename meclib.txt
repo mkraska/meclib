@@ -248,6 +248,32 @@ class dir {
 }
  data() { return this.data } 
 }
+//co-ordinate arrow with red arrow with label ["disp", "name", [x1,y1], angle, offset]
+class disp {
+   constructor(data) {
+    this.name = data[1];
+    // Arrow
+    const a0 = data[3]*Math.PI/180;
+    const off = data[4];
+    const le = 1.5*a;
+    const nx = Math.cos(a0);
+    const ny = Math.sin(a0);
+    const x2 = data[2][0]+le*nx;
+    const y2 = data[2][1]+le*ny;
+    this.p1 = board.create('point', data[2], { size: 0, name:''});
+    this.p2 = board.create('point', [x2, y2], { size: 0, name:''});
+    this.vec = board.create('arrow', [this.p1, this.p2], { lastArrow: { type: 1, size: 6 } });
+    this.vec.setAttribute(thinStyle);
+    this.vec.setAttribute({strokeColor:"red"});
+    // label
+    var lx = x2+0.2*ny*off;
+    var ly = y2-0.2*nx*off;
+    this.p3 = board.create('point', [lx,ly], {    
+      name:"\\("+this.name+"\\)" ,size:0, label:{offset:[-6,0], color:'red'}
+      } );
+ }
+  data() { return ["disp", this.name, [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()] ] } 
+}
 //  Loslager
 class fix1 {
  constructor(data) {
@@ -720,6 +746,9 @@ function init() {
        break;
      case "dir":
        objects.push(new dir(m));
+       break;
+     case "disp":
+       objects.push(new disp(m));
        break;
      case "fix1":
        objects.push(new fix1(m));
