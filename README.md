@@ -22,6 +22,7 @@ The set of objects is created with sketches of mechanical systems in mind (suppo
 <li><code>[ "circle", "&lt;name&gt;", [xc, yc], radius , angle]</code> Circle with centerpoint and radius, angle for dimension (options same as above)</li>
 <li><code>[ "dim", "&lt;name&gt;", [x1, y1], [x2,y2], d ]</code> linear dimension with name used as label, d is distance from line between points. If zero, short end lines are drawn. Setting d negative, changes the side of the label.</li>
 <li><code>[ "dir", "&lt;name&gt;", [x,y], angle, offset, length]</code> axis arrow with label (indication of coordinate axes). Offset (defaults to 10 pix) and length are optional. If offset is negative, the label is placed at the tail instead of the head.</li>
+<li><code>[ "disp", "&lt;name&gt;", [x,y], angle, offset, length]</code> red axis arrow with label (indication of displacement). Offset (defaults to 10 pix) and length are optional. If offset is negative, the label is placed at the tail instead of the head.</li>
 <li><code>[ "fix1", "&lt;name&gt;", [x, y], angle ]</code> floating bearing, support in vertical direction for angle = 0</li>
 <li><code>[ "fix12", "&lt;name&gt;", [x, y], angle ]</code> fixed bearing, support in x and y direction, angular position is irrelevant for function</li>
 <li><code>[ "fix123", "&lt;name&gt;", [x, y], angle ]</code> built-in support, prevents translation and rotation.</li>
@@ -79,6 +80,7 @@ initdata: [
   [ "circle", "", [xc, yc], radius , angle],
   [ "dim", "", [x1, y1], [x2,y2], d ],
   [ "dir", "", [x1, y1], angle, offset, length ],
+  [ "disp", "", [x1, y1], angle, offset, length ],
   [ "fix1", "", [x, y], angle ],
   [ "fix12", "", [x, y], angle ],
   [ "fix123", "", [x, y], angle ],
@@ -93,7 +95,7 @@ initdata: [
   [ "q", "q1","q2", [x1, y1], [x2,y2], q1, q2, phi ],
   [ "rope", "", [x1, y1], r1, [x2,y2], r2 ],
   [ "springc", "k", [x1, y1], [x2, y2], r, n, off],
-  [ "springt", "c", [x1,y1],[4,1], 0.3, 20, 10, 0.5],
+  [ "springt", "c", [x1,y1],[x2, y2], r, lf, n, off],
   [ "wall", "", [x1, y1], [x2,y2] , angle ]
 ];
 init: stackjson_stringify(float(initdata));
