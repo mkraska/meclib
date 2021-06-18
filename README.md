@@ -36,12 +36,15 @@ The set of objects is created with sketches of mechanical systems in mind (suppo
 <li><code>[ "polygon", "&lt;name&gt;", [x1, y1], [x2,y2],... ]</code> polygon with gray fill</li>
 <li><code>[ "q", "&lt;q1&gt;","&lt;q2&gt;", [x1, y1], [x2,y2], q1, q2, phi ]</code> Line load inclined by phi degrees from perpendicular to line between point 1 and point 2. Names are displayed as labels, q1 and q2 give the height in user units.</li>
 <li><code>[ "rope", "&lt;name&gt;", [x1, y1], r1, [x2,y2], r2 ]</code>  tangent line to two circles with center and radius given. Negative r values select the tangent point on the left side from the line C1-C2.</li>
-<li><code>[ "springc", "", [x1, y1], [x2,y2], r, n, off ]</code>  compression spring, normal line with n turns of radius r and label offset off (in user units)</li><li><code>[ "wall", "&lt;name&gt;", [x1, y1], [x2,y2] , angle ]</code> Normal line with thin hatching at left side, specified by start and end point. Angle controls the direction of the hatch lines (usually +45/-45).</li>
+<li><code>[ "springt", "", [x1, y1], [x2,y2], r, lf, (n (, off)) ] </code>  compression spring, normal line with n turns of radius r and label offset off, n anzahl von Windungen, lf Länge der Endstücke in Prozent (in user units)</li>
+<li><code>[ "springc", "", [x1, y1], [x2,y2], r, n, off ]</code>  compression spring, normal line with n turns of radius r and label offset off (in user units)</li>
+<li><code>[ "wall", "&lt;name&gt;", [x1, y1], [x2,y2] , angle ]</code> Normal line with thin hatching at left side, specified by start and end point. Angle controls the direction of the hatch lines (usually +45/-45).</li>
+ 
 </ul>
 
 ## Objects Specified for Implementation
 
-<ul><li><code>[ "tspring", "", [x1, y1], [x2,y2], r, n ] tension spring, normal line with n turns of radius r</code></li>
+<ul>
 <li><code>[ "mass", "&lt;name&gt;", [x1, y1] ]</code> black filled circle with name</li>
 <li><code>[ "dashpot", "&lt;name&gt;", [x1, y1], [x2,y2], r ]</code> dashpot (for oscillators)</li>
 <li><code>[ "forceGen", "&lt;label&gt;", [x,y] ]</code> Interactive force generator</li>
@@ -89,7 +92,8 @@ initdata: [
   [ "polygon", "", [x1, y1], [x2,y2], , [x3,y3]],
   [ "q", "q1","q2", [x1, y1], [x2,y2], q1, q2, phi ],
   [ "rope", "", [x1, y1], r1, [x2,y2], r2 ],
-  [ "springc", "k", [x1, y1], [x2, y2], r, n, off]
+  [ "springc", "k", [x1, y1], [x2, y2], r, n, off],
+  [ "springt", "c", [x1,y1],[4,1], 0.3, 20, 10, 0.5],
   [ "wall", "", [x1, y1], [x2,y2] , angle ]
 ];
 init: stackjson_stringify(float(initdata));
