@@ -22,6 +22,7 @@ The set of objects is created with sketches of mechanical systems in mind (suppo
 <li><code>[ "circle", "&lt;name&gt;", [xc, yc], radius , angle]</code> Circle with centerpoint and radius, angle for dimension (options same as above)</li>
 <li><code>[ "dim", "&lt;name&gt;", [x1, y1], [x2,y2], d ]</code> linear dimension with name used as label, d is distance from line between points. If zero, short end lines are drawn. Setting d negative, changes the side of the label.</li>
 <li><code>[ "dir", "&lt;name&gt;", [x,y], angle, offset, length]</code> axis arrow with label (indication of coordinate axes). Offset (defaults to 10 pix) and length are optional. If offset is negative, the label is placed at the tail instead of the head.</li>
+<li><code>[ "disp", "&lt;name&gt;", [x,y], angle, offset, length]</code> red axis arrow with label (indication of coordinate axes). Offset (defaults to 10 pix) and length are optional. If offset is negative, the label is placed at the tail instead of the head.</li>
 <li><code>[ "fix1", "&lt;name&gt;", [x, y], angle ]</code> floating bearing, support in vertical direction for angle = 0</li>
 <li><code>[ "fix12", "&lt;name&gt;", [x, y], angle ]</code> fixed bearing, support in x and y direction, angular position is irrelevant for function</li>
 <li><code>[ "fix123", "&lt;name&gt;", [x, y], angle ]</code> built-in support, prevents translation and rotation.</li>
@@ -36,8 +37,8 @@ The set of objects is created with sketches of mechanical systems in mind (suppo
 <li><code>[ "polygon", "&lt;name&gt;", [x1, y1], [x2,y2],... ]</code> polygon with gray fill</li>
 <li><code>[ "q", "&lt;q1&gt;","&lt;q2&gt;", [x1, y1], [x2,y2], q1, q2, phi ]</code> Line load inclined by phi degrees from perpendicular to line between point 1 and point 2. Names are displayed as labels, q1 and q2 give the height in user units.</li>
 <li><code>[ "rope", "&lt;name&gt;", [x1, y1], r1, [x2,y2], r2 ]</code>  tangent line to two circles with center and radius given. Negative r values select the tangent point on the left side from the line C1-C2.</li>
-<li><code>[ "springt", "", [x1, y1], [x2,y2], r, lf, (n (, off)) ] </code>  compression spring, normal line with n turns of radius r and label offset off, n anzahl von Windungen, lf Länge der Endstücke in Prozent (in user units)</li>
 <li><code>[ "springc", "", [x1, y1], [x2,y2], r, n, off ]</code>  compression spring, normal line with n turns of radius r and label offset off (in user units)</li>
+<li><code>[ "springt", "", [x1, y1], [x2,y2], r, lf, (n (, off)) ] </code>  compression spring, normal line with n turns of radius r and label offset off, n number of turns, lf length of end pieces in percent (in user units)</li>
 <li><code>[ "wall", "&lt;name&gt;", [x1, y1], [x2,y2] , angle ]</code> Normal line with thin hatching at left side, specified by start and end point. Angle controls the direction of the hatch lines (usually +45/-45).</li>
  
 </ul>
