@@ -214,7 +214,7 @@ class dim {
    this.hl2.setAttribute(thinStyle);
    // label
    this.p = board.create('point',
-     [x1+0.5*dx+nx*a*0.4, y1+0.5*dy+ny*a*0.4],
+     [x1+0.5*dx+nx*a*0.5, y1+0.5*dy+ny*a*0.5],
      {name:"\\("+this.name+"\\)" ,size:0, label:{offset:[-6,0]}});   
  }
  data() { return this.d }
