@@ -104,7 +104,7 @@ class beam {
  constructor(data){
    this.d = data.slice(0); //make a copy
    data.shift(); // drop the type string
-   if (data[2] instanceof String) {
+   if (typeof data[1] === 'string') {
      this.col = [data.shift(),data.shift()]; //droping the attributes for fillcolor and gradientcolor into an array
    } else {
      this.col = [ 'lightgrey', 'lightgrey']; data.shift(); // drop the name and use default uniform color
