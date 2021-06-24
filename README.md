@@ -53,6 +53,8 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 <li><code>[ "momentGen", "&lt;label&gt;", [x,y] ]</code> Interactive moment generator</li>
 <li><code>[ "spline", "&lt;label&gt;", [x1, y1], dx, f1, f2, [xt1, yt1], [xt2, yt2], style]</code> cubic spline for interactive function graphing, [x1,y1] is the start point of the x axis interval, dx is the length of the interval, f1 and f2 are the function values at the borders of the interval, [xt1, yt1], [xt2, yt2] are points to define the respective tangent directions. If they coincide with the boundary points, no tangent condition is assumed and a quadratic or linear spline is drawn.</li>
 <li><code>[ "waste", "&lt;label&gt;", [x,y ]</code> waste bucket, drag objects there to delete them</li>
+<li><code>[ "circle2P", "&lt;label1&gt;","&lt;label2&gt;", [x1,y1],[x2,y2], style ]</code> circle with two draggable perimeter points, meant for Mohr's circle construction</li>
+<li><code>[ "line2P", "&lt;label&gt;", [x1,y1],[x2,y2], style ]</code> line with two draggable perimeter points, meant for Mohr's circle construction</li>
 </ul>
 
 ## Code for Question Text
