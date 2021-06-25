@@ -142,6 +142,7 @@ class beam {
      this.p.shift(); // remove 2 points
      this.p.shift();
    } 
+ this.b.rendNode.setAttributeNS(null, 'fill-rule', 'evenodd');  //Workaround for correct fill, see https://github.com/jsxgraph/jsxgraph/issues/362
  }
  data(){
    return this.d;
