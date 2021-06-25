@@ -1,5 +1,5 @@
 [[jsxgraph width='250px' height='250px' ]] 
-// Version 2021 06 15
+// Version 2021 06 26
 //## start of chunk 1
 var state = JSON.parse({#init#});
 //JXG.Options.point.snapToGrid = true; // grid snap spoils rotated static objects
