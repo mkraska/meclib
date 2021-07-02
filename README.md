@@ -6,9 +6,15 @@ Meclib is a special JSXGraph block to be copied into the STACK question. It cont
 
 The set of objects is created with sketches of mechanical systems in mind (support and load symbols, bars, ropes, disks, annotations).
 
+
+
 [Demo question](quiz-MMM-MecLib%20Demo%20Github-20210615-1446.xml)
 
 ![Demo](demo2.png?raw=true "Screenshot from the demo question")
+
+## Reference
+
+Kraska, Martin, & Schulz, Dennis. (2021). Automatic assessment of free body diagrams using STACK. Presented at the International Meeting of the STACK Community 2021, Zenodo. http://doi.org/10.5281/zenodo.4916138
 
 ## Implemented Objects
 
