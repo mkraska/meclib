@@ -73,13 +73,13 @@ Usually, there is no need to edit the block.
 ## Template for Question Variables
 
 You have to define a Maxima list of lists and apply `stackjson_stringify()` to it. The name must be `init` unless you change that in the JSXGraph block.
-Changing the name is required if you want to use more than one JSXGraph widget in a STACK question.
+Changing the name is required if you want to use more than one JSXGraph widget in a STACK question. Values in round brackets () are optional. Vertical lines delimit alternatives.
 
 ```
 th: 0.13;
 initdata: [ 
   [ "grid", "xlabel","ylabel", xmin, xmax, ymin, ymax, pix ],
-  [ "angle", ".", [xc, yc], [xs,ys], radius, +/-90 ],
+  [ "angle", ".", [xc, yc], [xs,ys], radius, (-)90 ],
   [ "angle", "", [xc, yc], [xs,ys], radius, angle ],
   [ "angle2", "", [xc, yc], [xs,ys], radius, angle ],
   [ "bar", "", [x1, y1], [x2, y2] ],
@@ -88,8 +88,8 @@ initdata: [
   [ "circle", "", [xc, yc], [xp,yp] , angle],
   [ "circle", "", [xc, yc], radius , angle],
   [ "dim", "", [x1, y1], [x2,y2], d ],
-  [ "dir", "", [x1, y1], angle, offset, length ],
-  [ "disp", "", [x1, y1], angle, offset, length ],
+  [ "dir", "", [x1, y1], angle(, offset(, length)) ],
+  [ "disp", "", [x1, y1], angle(, offset(, length)) ],
   [ "fix1", "", [x, y], angle ],
   [ "fix12", "", [x, y], angle ],
   [ "fix123", "", [x, y], angle ],
