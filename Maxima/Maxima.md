@@ -1,5 +1,9 @@
 # Feedback 
 
+### Feedbacl for numeric input
+
+- Is the value less or greater than expected? 
+
 ### Feedback for numeric input with units
 
 - Correct base units? (is done with UnitRelative and Co)
@@ -65,4 +69,22 @@ any branch of the tree where you want to place the feedback (use the first test 
 {@stest[1]@}{@stest[2]@}
 {@mtest[1]@}{@mtest[2]@}
 ```
+## Test for less or greater than expected
 
+```
+ltgt(%_sans, %_tans, %_tol) := block(
+  if %_tans - %_sans > %_tol*%_tans then  return("Der Wert ist zu klein. "),
+  if %_tans - %_sans < -%_tol*%_tans then  return("Der Wert ist zu gro&szlig;. "),
+  "" );
+```
+Feedback variables: 
+
+```
+ttest: ltgt(sans, tans, tol);
+```
+
+any branch of the tree where you want to place the feedback (use the first test by default):
+
+```
+{@ttest@}
+```
