@@ -45,6 +45,7 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 <li><code>[ "polygon", "&lt;name&gt;", [x1, y1], [x2,y2],... ]</code> polygon with gray fill</li>
 <li><code>[ "q", "&lt;q1&gt;","&lt;q2&gt;", [x1, y1], [x2,y2], q1, q2, phi ]</code> Line load inclined by phi degrees from perpendicular to line between point 1 and point 2. Names are displayed as labels, q1 and q2 give the height.</li>
 <li><code>[ "rope", "&lt;name&gt;", [x1, y1], r1, [x2,y2], r2 ]</code> tangent line to two circles with center and radius given. Negative r values select the tangent point on the left side from the line C1-C2.</li>
+<li><code>[ "moment", "&lt;name&gt;", [x1, y1], [x2,y2], [x3,y3] ]</code> Red moment arrow specified by center point, tail point (defines start angle and radius) and label point (defines end angle and radial label position. Orientation is such that the angle is less then 180° (shortest arc from start angle to end angle).</li>
 <li><code>[ "springc", "", [x1, y1], [x2,y2], r, n, off ]</code>  compression spring, normal line with n turns of radius r and label offset off</li>
 <li><code>[ "springt", "", [x1, y1], [x2,y2], r, lf, (n (, off)) ] </code>  tensile spring, normal line with n turns of radius r and label offset off, lf length of terminal lines in percent of total length.</li>
 <li><code>[ "wall", "&lt;name&gt;", [x1, y1], [x2,y2] , angle ]</code> Normal line with thin hatching at left side, specified by start and end point. Angle controls the direction of the hatch lines (usually +45/-45).</li>
@@ -103,6 +104,7 @@ initdata: [
   [ "polygon", "", [x1, y1], [x2,y2], , [x3,y3]],
   [ "q", "q1","q2", [x1, y1], [x2,y2], q1, q2, phi ],
   [ "rope", "", [x1, y1], r1, [x2,y2], r2 ],
+  [ "rot", "", [x1, y1], [x2,y2], [x3,y3] ],
   [ "springc", "k", [x1, y1], [x2, y2], r, n, off],
   [ "springt", "c", [x1,y1],[x2, y2], r, lf, n, off],
   [ "wall", "", [x1, y1], [x2,y2] , angle ]
