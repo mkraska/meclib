@@ -1,5 +1,5 @@
 [[jsxgraph width='250px' height='250px' ]] 
-// Version 2021 07 17 https://jsfiddle.net/gxek1w3j/2/
+// Version 2021 07 18 https://jsfiddle.net/a5stuxLh/
 var state = JSON.parse({#init#});
 //## start of chunk 1
 JXG.Options.point.fixed = true; // this is for static objects
