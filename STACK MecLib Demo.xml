@@ -7,7 +7,7 @@
     </name>
     <questiontext format="html">
       <text><![CDATA[[[jsxgraph width='250px' height='250px' ]] 
-// Version 2021 07 17 https://jsfiddle.net/gxek1w3j/2/
+// Version 2021 07 18 https://jsfiddle.net/a5stuxLh/
 var state = JSON.parse({#init#});
 //## start of chunk 1
 JXG.Options.point.fixed = true; // this is for static objects
@@ -257,27 +257,27 @@ class dir {
 class disp {
    constructor(data) {
     this.name = data[1];
+    var le = 1.5*a;
+    if (data.length >=5 ) {this.dist = data[4] } else {this.dist = 10};
+    if (data.length >=6 ) { le = data[5] }
+    if (this.dist >= 0) {this.name1 = ""; this.name2 = "\\("+this.name+"\\)" } else
+      {this.name2 = ""; this.name1 = "\\("+this.name+"\\)" }
     // Arrow
     const a0 = data[3]*Math.PI/180;
     const off = data[4];
-    const le = 1.5*a;
     const nx = Math.cos(a0);
     const ny = Math.sin(a0);
     const x2 = data[2][0]+le*nx;
     const y2 = data[2][1]+le*ny;
-    this.p1 = board.create('point', data[2], { size: 0, name:''});
-    this.p2 = board.create('point', [x2, y2], { size: 0, name:''});
+    this.p1 = board.create('point', data[2], { size: 0, name: this.name1, 
+      label:{offset:[-6,this.dist], autoPosition:true, color:"red"} });
+    this.p2 = board.create('point', [x2, y2], { size: 0, name: this.name2,
+      label:{offset:[-6,this.dist], autoPosition:true, color:"red" }});
     this.vec = board.create('arrow', [this.p1, this.p2], { lastArrow: { type: 1, size: 6 } });
     this.vec.setAttribute(thinStyle);
-    this.vec.setAttribute({strokeColor:"red"});
-    // label
-    var lx = x2+0.2*ny*off;
-    var ly = y2-0.2*nx*off;
-    this.p3 = board.create('point', [lx,ly], {    
-      name:"\\("+this.name+"\\)" ,size:0, label:{offset:[-6,0], color:'red'}
-      } );
- }
-  data() { return ["disp", this.name, [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()] ] } 
+    this.vec.setAttribute({color:"red"});
+  }
+  data() { return this.data } 
 }
 //  Loslager
 class fix1 {
@@ -883,7 +883,7 @@ initdata: [
    ["dir", "-x", [4,3],180],
    ["dir", "z", [4,3],270],
    ["dir", "z", [2.5,2.5],270,-1, 0.4],
-   ["disp", "z", [4,1],90,1],
+   ["disp", "z", [4,1],90,1,0.5],
    ["node", "H", [-1,-1],15],
    ["point", "S", [-2.33,-1.33]],
    ["line", "", [-4,-4],[3,4],"-",3],
@@ -950,7 +950,7 @@ initdata: [
    ["dir", "-x", [4,3],180],
    ["dir", "z", [4,3],270],
    ["dir", "z", [2.5,2.5],270,-1, 0.4],
-   ["disp", "z", [4,1],90,1],
+   ["disp", "z", [4,1],90,1,0.5],
    ["node", "H", [-1,-1],15],
    ["point", "S", [-2.33,-1.33]],
    ["line", "", [-4,-4],[3,4],"-",3],

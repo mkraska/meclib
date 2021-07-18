@@ -9,7 +9,7 @@ The set of objects is created with sketches of mechanical systems in mind (suppo
 
 [Demo question](STACK%20MecLib%20Demo.xml)
 
-[jsfiddle tryout](https://jsfiddle.net/gxek1w3j/2/)
+[jsfiddle tryout](https://jsfiddle.net/a5stuxLh/)
 
 ![Demo](demo2.png?raw=true "Screenshot from the demo question")
 
@@ -86,6 +86,7 @@ initdata: [
   [ "bar", "", [x1, y1], [x2, y2] ],
   [ "beam", "", [x1, y1], [x2,y2], r ], /* even number of points for multiple segments */
   [ "beam", "","", [x1, y1], [x2,y2], r ],
+
   [ "circle", "", [xc, yc], [xp,yp] , angle],
   [ "circle", "", [xc, yc], radius , angle],
   [ "dim", "", [x1, y1], [x2,y2], d ],
