@@ -45,6 +45,7 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 <li><code>[ "polygon", "&lt;name&gt;", [x1, y1], [x2,y2],... ]</code> polygon with gray fill</li>
 <li><code>[ "q", "&lt;q1&gt;","&lt;q2&gt;", [x1, y1], [x2,y2], q1, q2, phi ]</code> Line load inclined by phi degrees from perpendicular to line between point 1 and point 2. Names are displayed as labels, q1 and q2 give the height.</li>
 <li><code>[ "rope", "&lt;name&gt;", [x1, y1], r1, [x2,y2], r2 ]</code> tangent line to two circles with center and radius given. Negative r values select the tangent point on the left side from the line C1-C2.</li>
+<li><code>[ "rot", "&lt;name&gt;", [x1, y1], [x2,y2], [x3,y3] ]</code> Red thin arrow (to indicate rotational kinematic quantities) specified by center point, tail point (defines start angle and radius) and label point (defines end angle and radial label position. Orientation is such that the angle is less then 180° (shortest arc from start angle to end angle).</li>
 <li><code>[ "springc", "", [x1, y1], [x2,y2], r, n, off ]</code>  compression spring, normal line with n turns of radius r and label offset off</li>
 <li><code>[ "springt", "", [x1, y1], [x2,y2], r, lf, (n (, off)) ] </code>  tensile spring, normal line with n turns of radius r and label offset off, lf length of terminal lines in percent of total length.</li>
 <li><code>[ "wall", "&lt;name&gt;", [x1, y1], [x2,y2] , angle ]</code> Normal line with thin hatching at left side, specified by start and end point. Angle controls the direction of the hatch lines (usually +45/-45).</li>
@@ -73,13 +74,13 @@ Usually, there is no need to edit the block.
 ## Template for Question Variables
 
 You have to define a Maxima list of lists and apply `stackjson_stringify()` to it. The name must be `init` unless you change that in the JSXGraph block.
-Changing the name is required if you want to use more than one JSXGraph widget in a STACK question.
+Changing the name is required if you want to use more than one JSXGraph widget in a STACK question. Values in round brackets () are optional. Vertical lines delimit alternatives.
 
 ```
 th: 0.13;
 initdata: [ 
   [ "grid", "xlabel","ylabel", xmin, xmax, ymin, ymax, pix ],
-  [ "angle", ".", [xc, yc], [xs,ys], radius, +/-90 ],
+  [ "angle", ".", [xc, yc], [xs,ys], radius, (-)90 ],
   [ "angle", "", [xc, yc], [xs,ys], radius, angle ],
   [ "angle2", "", [xc, yc], [xs,ys], radius, angle ],
   [ "bar", "", [x1, y1], [x2, y2] ],
@@ -88,8 +89,8 @@ initdata: [
   [ "circle", "", [xc, yc], [xp,yp] , angle],
   [ "circle", "", [xc, yc], radius , angle],
   [ "dim", "", [x1, y1], [x2,y2], d ],
-  [ "dir", "", [x1, y1], angle, offset, length ],
-  [ "disp", "", [x1, y1], angle, offset, length ],
+  [ "dir", "", [x1, y1], angle(, offset(, length)) ],
+  [ "disp", "", [x1, y1], angle(, offset(, length)) ],
   [ "fix1", "", [x, y], angle ],
   [ "fix12", "", [x, y], angle ],
   [ "fix123", "", [x, y], angle ],
@@ -103,6 +104,7 @@ initdata: [
   [ "polygon", "", [x1, y1], [x2,y2], , [x3,y3]],
   [ "q", "q1","q2", [x1, y1], [x2,y2], q1, q2, phi ],
   [ "rope", "", [x1, y1], r1, [x2,y2], r2 ],
+  [ "rot", "", [x1, y1], [x2,y2], [x3,y3] ],
   [ "springc", "k", [x1, y1], [x2, y2], r, n, off],
   [ "springt", "c", [x1,y1],[x2, y2], r, lf, n, off],
   [ "wall", "", [x1, y1], [x2,y2] , angle ]

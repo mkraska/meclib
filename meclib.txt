@@ -1,5 +1,5 @@
 [[jsxgraph width='250px' height='250px' ]] 
-// Version 2021 06 26
+// Version 2021 07 11
 //## start of chunk 1
 var state = JSON.parse({#init#});
 //JXG.Options.point.snapToGrid = true; // grid snap spoils rotated static objects
@@ -622,7 +622,20 @@ class rope {
  }
  data() { return this.d }
 }
-
+//rot
+class rot {
+  constructor(data) {
+  this.name = data[1];
+    this.p1 = board.create('point', data[2], { fixed:true, size:0 , name: '' });
+    this.p2 = board.create('point', data[3], { fixed:true, size:0 , name: '' });
+    this.p3 = board.create('point', data[4], {    
+      name:"\\("+this.name+"\\)" ,size:0, label:{offset:[-6,0],color:'red'}});
+    this.arc = board.create('minorArc', [this.p1, this.p2, this.p3], {
+      fixed: true, strokeWidth: 1.75, lastArrow: { type: 1, size: 6 }, strokeColor:"red" });
+    //this.arc.setAttribute({strokeColor:"red"});
+  }
+  data() { return ["rot", this.p3.name, [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()], [this.p3.X(), this.p3.Y()] ] }
+}
 // Druckfeder, ["springc", "k", [x1,y1], [x2,y2], r, n, off]
 class springc {
   constructor(data){
@@ -798,6 +811,9 @@ function init() {
         break;
      case "rope":
        objects.push(new rope(m));
+       break;
+     case "rot":
+       objects.push(new rot(m));
        break;
      case "wall":
        objects.push(new wall(m));
