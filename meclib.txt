@@ -1,14 +1,10 @@
 [[jsxgraph width='250px' height='250px' ]] 
-// Version 2021 07 11
-//## start of chunk 1
+// Version 2021 07 17 https://jsfiddle.net/gxek1w3j/2/
 var state = JSON.parse({#init#});
-//JXG.Options.point.snapToGrid = true; // grid snap spoils rotated static objects
-//JXG.Options.point.snapSizeX = 0.1; 
-//JXG.Options.point.snapSizeY = 0.1; 
+//## start of chunk 1
 JXG.Options.point.fixed = true; // this is for static objects
 JXG.Options.text.useMathJax = true;
 JXG.Options.label.useMathJax = true;
-JXG.Options.text.useMathJax = true;
 JXG.Options.label.offset = [0,0];
 JXG.Options.label.anchorY = 'middle';
 JXG.Options.line.fixed = true;
@@ -20,7 +16,7 @@ const barStyle = {strokewidth:4,strokecolor:"black"};
 // Set some linestyles
 const normalStyle = {strokeWidth:2,strokeColor:'black', lineCap:'round'};
 const thinStyle = {strokeWidth:1,strokeColor:'black', lineCap:'round'};
-const defaultMecLayer = 6;
+const defaultMecLayer = 6;//## End of chunk 1
 //## End of chunk 1
 const board = JXG.JSXGraph.initBoard(divid, {
  boundingbox: [-5, 5, 5, -5], //default values, use "grid" to customize
@@ -29,9 +25,9 @@ const board = JXG.JSXGraph.initBoard(divid, {
 var a = 16/40; // default value, use "grid" to customize
 var labelshift = 0.2*a;
 //##start of chunk 2
-var state;
+var a = 16/40; // default value, use "grid" to customize
+var labelshift = 0.2*a;
 var stateInput;
-// angular dimension with a single or double arrow (handles arrow and arrow2)
 // angular dimension with a single or double arrow (handles arrow and arrow2)
 class angle {
  constructor(data) {
@@ -458,7 +454,19 @@ class grid {
    board.resizeContainer(pix*(xmax-xmin), pix*(ymax-ymin)); 
    a = 16/pix; 
    labelshift = 0.2*a;
- }
+   
+  
+   if (data[1]) {  
+   		var xaxis = board.create('axis', [[0, 0], [1,0]], 
+		  	{name:'\\('+data[1]+'\\)', withLabel: true,
+				label: {position: 'rt', offset: [-25, 20]} });
+      }
+   if (data[2]) {  
+   		var yaxis = board.create('axis', [[0, 0], [0,1]], 
+		  	{name:'\\('+data[2]+'\\)', withLabel: true,
+				label: {position: 'rt', offset: [-20, 0]} });
+      }
+   }
  data(){
    return this.d;
  } 
@@ -628,14 +636,19 @@ class rot {
   this.name = data[1];
     this.p1 = board.create('point', data[2], { fixed:true, size:0 , name: '' });
     this.p2 = board.create('point', data[3], { fixed:true, size:0 , name: '' });
-    this.p3 = board.create('point', data[4], {    
+    
+      // label
+    var x = data[4][0]-0.3;
+    var y = data[4][1]-0.3;
+    this.p3 = board.create('point', [x, y], {    
       name:"\\("+this.name+"\\)" ,size:0, label:{offset:[-6,0],color:'red'}});
     this.arc = board.create('minorArc', [this.p1, this.p2, this.p3], {
-      fixed: true, strokeWidth: 1.75, lastArrow: { type: 1, size: 6 }, strokeColor:"red" });
+      fixed: true, strokeWidth: 1, lastArrow: { type: 1, size: 6 }, strokeColor:"red" });
     //this.arc.setAttribute({strokeColor:"red"});
   }
   data() { return ["rot", this.p3.name, [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()], [this.p3.X(), this.p3.Y()] ] }
 }
+
 // Druckfeder, ["springc", "k", [x1,y1], [x2,y2], r, n, off]
 class springc {
   constructor(data){
@@ -730,7 +743,6 @@ class wall {
  }
  data() { return this.d }
 }
-//## end of chunk 2
 // initialization
 var objects = [];
 init();
@@ -739,7 +751,6 @@ function init() {
  for (m of state) {
    console.log(m);
    switch (m[0]) {
- //## start of chunk 3
      case "angle":
        objects.push(new angle(m));
        break;
@@ -821,5 +832,5 @@ function init() {
    }
  }
 }
-//## end of chunk 3
+//## end of chunk 2
 [[/jsxgraph]]

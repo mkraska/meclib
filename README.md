@@ -7,8 +7,9 @@ Meclib is a special JSXGraph block to be copied into the STACK question. It cont
 The set of objects is created with sketches of mechanical systems in mind (support and load symbols, bars, ropes, disks, annotations).
 
 
+[Demo question](STACK%20MecLib%20Demo.xml)
 
-[Demo question](quiz-MMM-MecLib%20Demo%20Github-20210615-1446.xml)
+[jsfiddle tryout](https://jsfiddle.net/gxek1w3j/2/)
 
 ![Demo](demo2.png?raw=true "Screenshot from the demo question")
 
@@ -36,7 +37,7 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 <li><code>[ "fix123", "&lt;name&gt;", [x, y], angle ]</code> built-in support, prevents translation and rotation.</li>
 <li><code>[ "fix13", "&lt;name&gt;", [x, y], angle ]</code> axial and angular support, floats in vertical direction for angle = 0</li>
 <li><code>[ "force", "&lt;name&gt;", [x1, y1], [x2,y2], d ]</code> force vector. d (in pix) controls the distance of the label. If d is negative, the label is drawn at the tail, if positiv or d is not given the label is at the head of the arrow.</li>
-<li><code>[ "grid", "xlabel","ylabel", xmin, xmax, ymin, ymax, pix ]</code> Grid specification (range of user co-ordinates and user unit in pixels). Must be the first object in the list, otherwise scaling of the other objects might be wrong. xlabel and ylabel are axis labels. Currently no axes are drawn and the labels are ignored.</li>
+<li><code>[ "grid", "xlabel","ylabel", xmin, xmax, ymin, ymax, pix ]</code> Grid specification (range of user co-ordinates and user unit in pixels). Must be the first object in the list, otherwise scaling of the other objects might be wrong. xlabel and ylabel are axis labels. Axes are only drawn if labels aren't empty.</li>
 <li><code>[ "label", "&lt;name&gt;", [x, y] ]</code> label, text anchor is center left, default: no Latex, use <code>\<span class="nolink">\(   \\)</span></code> to enforce Latex mode for text.</li>
 <li><code>[ "line", "&lt;name&gt;", [x1, x2,...], [y1, y2,...] ,dash, th ]</code>  polyline with optional dash style ( "--", ".", "-."..defaults to solid line) and thickness (defaults to 0.8)</li>
 <li><code>[ "moment", "&lt;name&gt;", [x1, y1], [x2,y2], [x3,y3] ]</code>Moment arrow specified by center point, tail point (defines start angle and radius) and label point (defines end angle and radial label position. Orientation is such that the angle is less then 180° (shortest arc from start angle to end angle).</li>
@@ -45,7 +46,6 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 <li><code>[ "polygon", "&lt;name&gt;", [x1, y1], [x2,y2],... ]</code> polygon with gray fill</li>
 <li><code>[ "q", "&lt;q1&gt;","&lt;q2&gt;", [x1, y1], [x2,y2], q1, q2, phi ]</code> Line load inclined by phi degrees from perpendicular to line between point 1 and point 2. Names are displayed as labels, q1 and q2 give the height.</li>
 <li><code>[ "rope", "&lt;name&gt;", [x1, y1], r1, [x2,y2], r2 ]</code> tangent line to two circles with center and radius given. Negative r values select the tangent point on the left side from the line C1-C2.</li>
-<li><code>[ "rot", "&lt;name&gt;", [x1, y1], [x2,y2], [x3,y3] ]</code> Red thin arrow (to indicate rotational kinematic quantities) specified by center point, tail point (defines start angle and radius) and label point (defines end angle and radial label position. Orientation is such that the angle is less then 180° (shortest arc from start angle to end angle).</li>
 <li><code>[ "springc", "", [x1, y1], [x2,y2], r, n, off ]</code>  compression spring, normal line with n turns of radius r and label offset off</li>
 <li><code>[ "springt", "", [x1, y1], [x2,y2], r, lf, (n (, off)) ] </code>  tensile spring, normal line with n turns of radius r and label offset off, lf length of terminal lines in percent of total length.</li>
 <li><code>[ "wall", "&lt;name&gt;", [x1, y1], [x2,y2] , angle ]</code> Normal line with thin hatching at left side, specified by start and end point. Angle controls the direction of the hatch lines (usually +45/-45).</li>
@@ -74,13 +74,13 @@ Usually, there is no need to edit the block.
 ## Template for Question Variables
 
 You have to define a Maxima list of lists and apply `stackjson_stringify()` to it. The name must be `init` unless you change that in the JSXGraph block.
-Changing the name is required if you want to use more than one JSXGraph widget in a STACK question. Values in round brackets () are optional. Vertical lines delimit alternatives.
+Changing the name is required if you want to use more than one JSXGraph widget in a STACK question.
 
 ```
 th: 0.13;
 initdata: [ 
   [ "grid", "xlabel","ylabel", xmin, xmax, ymin, ymax, pix ],
-  [ "angle", ".", [xc, yc], [xs,ys], radius, (-)90 ],
+  [ "angle", ".", [xc, yc], [xs,ys], radius, +/-90 ],
   [ "angle", "", [xc, yc], [xs,ys], radius, angle ],
   [ "angle2", "", [xc, yc], [xs,ys], radius, angle ],
   [ "bar", "", [x1, y1], [x2, y2] ],
@@ -89,8 +89,8 @@ initdata: [
   [ "circle", "", [xc, yc], [xp,yp] , angle],
   [ "circle", "", [xc, yc], radius , angle],
   [ "dim", "", [x1, y1], [x2,y2], d ],
-  [ "dir", "", [x1, y1], angle(, offset(, length)) ],
-  [ "disp", "", [x1, y1], angle(, offset(, length)) ],
+  [ "dir", "", [x1, y1], angle, offset, length ],
+  [ "disp", "", [x1, y1], angle, offset, length ],
   [ "fix1", "", [x, y], angle ],
   [ "fix12", "", [x, y], angle ],
   [ "fix123", "", [x, y], angle ],
