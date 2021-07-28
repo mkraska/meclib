@@ -9,7 +9,7 @@ The set of objects is created with sketches of mechanical systems in mind (suppo
 
 [Demo question](STACK%20MecLib%20Demo.xml)
 
-[jsfiddle tryout](https://jsfiddle.net/a5stuxLh/)
+[jsfiddle tryout](https://jsfiddle.net/a5stuxLh/7/)
 
 ![Demo](demo2.png?raw=true "Screenshot from the demo question")
 
