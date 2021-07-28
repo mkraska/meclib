@@ -51,13 +51,13 @@ class angle {
    this.p4 = board.create('point',
      [this.p1.X()+data[4]*Math.cos(a0), this.p1.Y()+data[4]*Math.sin(a0)],
      {withlabel:false,visible:false});
-   var arrows;
-   if (data[0] == "angle") {arrows = { lastArow: { type: 1, size: 6 }} }
-   if (data[0] == "angle2") {arrows = {
-     firstArrow: { type: 1, size: 6 }, lastArrow: { type: 1, size: 6 } } }
-   if (this.name == ".") {arrows = { } } 
-   this.arc = board.create('minorArc', [this.p1, this.p4, this.p3], arrows);
+   this.arc = board.create('minorArc', [this.p1, this.p4, this.p3] );
    this.arc.setAttribute(thinStyle);
+   if (data[0] == "angle" && this.name != "." )
+     {  this.arc.setAttribute({lastArrow: true} ) } 
+   if (data[0] == "angle2" && this.name != "."  )
+     {  this.arc.setAttribute({firstArrow: true} );
+        this.arc.setAttribute({lastArrow: true} ) } 
    // label
    const al = (a0+a1)/2;
    if (this.name == ".") {
@@ -75,6 +75,7 @@ class angle {
  }
  data() { return this.d }
 }
+
 // Fachwerkstab
 class bar {
  constructor(data) {
