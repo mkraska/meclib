@@ -1,0 +1,340 @@
+<p hidden>[[input:objects]] [[validation:objects]]</p>
+<p hidden>[[input:names]] [[validation:names]]</p>
+<p>
+[[jsxgraph width='500px' height='400px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
+// Version 2021 07 29
+// defaults
+JXG.Options.point.fixed = true; // this is for static objects
+JXG.Options.text.useMathJax = true;
+JXG.Options.label.useMathJax = true;
+JXG.Options.label.offset = [0,0];
+JXG.Options.label.anchorY = 'middle';
+JXG.Options.line.fixed = true;
+// Style for nodes (supports, bars)
+const nodeStyle = {fillcolor:'white',strokeColor:'black',size:2, strokeWidth:1.5};
+const pointStyle = {fillcolor:'black',strokeColor:'black',size:1, strokeWidth:1};
+// Style for bars
+const barStyle = {strokewidth:4,strokecolor:"black"};
+// Set some linestyles
+const normalStyle = {strokeWidth:2,strokeColor:'black', lineCap:'round'};
+const thinStyle = {strokeWidth:1,strokeColor:'black', lineCap:'round'};
+const defaultMecLayer = 6;
+
+JXG.Options.point.snapToGrid = true;
+JXG.Options.point.snapSizeX = 0.1;
+JXG.Options.point.snapSizeY = 0.1;
+
+const board = JXG.JSXGraph.initBoard(divid, {
+  boundingbox: [-5, 5, 5, -5], //default values, use "grid" to customize
+  axis: false, grid:true, showNavigation:false, showCopyright:true
+});
+var a = 16/40; // default value, use "grid" to customize
+var labelshift = 0.2*a;
+
+// get state string either from input field or from initial value defined in question variables
+var state;
+var stateInput; 
+
+class force {
+  constructor(data) {
+    this.p1 = board.create('point', data[2], {
+      name: '', fixed:false
+    });
+    this.p2 = board.create('point', data[3], {
+      name: data[1], fixed:false, label:{offset:[10,10]}
+    });
+    this.vec = board.create('arrow', [this.p1, this.p2], {
+      touchLastPoint: true, fixed:false
+    });
+  }
+  data() {
+    return ["force",
+      this.p2.name,
+      [this.p1.X(), this.p1.Y()],
+      [this.p2.X(), this.p2.Y()]
+    ]
+  }
+}
+// grid control object: [ "grid", "xlabel", "ylabel",  xmin, xmax, ymin, ymax, pix ]
+class grid {
+ constructor(data) {
+   this.d = data;
+   const xmin = data[3];
+   const xmax = data[4];
+   const ymin = data [5];
+   const ymax = data [6];
+   const pix = data [7];
+   board.setBoundingBox([xmin, ymax, xmax, ymin ]);
+   board.resizeContainer(pix*(xmax-xmin), pix*(ymax-ymin)); 
+   a = 16/pix; 
+   labelshift = 0.2*a;
+   if (data[1]) {  
+   		var xaxis = board.create('axis', [[0, 0], [1,0]], 
+		  	{name:'\\('+data[1]+'\\)', withLabel: true,
+				label: {position: 'rt', offset: [-25, 20]} });
+      }
+   if (data[2]) {  
+   		var yaxis = board.create('axis', [[0, 0], [0,1]], 
+		  	{name:'\\('+data[2]+'\\)', withLabel: true,
+				label: {position: 'rt', offset: [-20, 0]} });
+      }
+   }
+ data(){
+   return this.d;
+ } 
+}
+
+class moment {
+  constructor(data) {
+    this.p1 = board.create('point', data[2], {
+      name: '', fixed:false
+    });
+    this.p2 = board.create('point', data[3], {
+      name: '', fixed:false
+    });
+    this.p3 = board.create('point', data[4], {
+      name: data[1], fixed:false, label:{offset:[10,10]}
+    });
+    this.arc = board.create('minorArc', [this.p1, this.p2, this.p3], {
+      fixed: false,
+      strokeWidth: 2,
+      lastArrow: {
+        type: 1,
+        size: 5
+      },
+    });
+    var g = board.create('group', [this.p1, this.p2, this.p3, this.arc]);
+    g.removeTranslationPoint(this.p2);
+    g.removeTranslationPoint(this.p3);
+  }
+  data() {
+    return ["moment",
+      this.p3.name,
+      [this.p1.X(), this.p1.Y()],
+      [this.p2.X(), this.p2.Y()],
+      [this.p3.X(), this.p3.Y()]
+    ]
+  }
+}
+// helper function
+JXG.Math.Numerics.hermitePolynomial = function(p1, p2, t1, t2, l1, l2) {
+  var fct = function(x) {
+    var m = [];
+    if (l1.L() <= 0.15 && l2.L() <= 0.15) {
+      m = [
+      (p2.Y() - p1.Y()) / (p2.X() -  p1.X()),
+      (p2.Y() - p1.Y()) / (p2.X() -  p1.X()),
+      ];
+    } else if (l1.L() <= 0.15 && l2.L() > 0.15) {
+    	var d = (p2.Y() - t2.Y()) / (p2.X() - t2.X());
+    	m = [
+      	(p1.X()*(2*(p1.Y()-p2.Y())-d*p1.X())-p2.X()*(2*(p1.Y()-p2.Y())-d*(2*p1.X()-p2.X())))/(p2.X()*(p2.X()-2*p1.X())+p1.X()**2),
+      	d
+      ];
+    } else if (l2.L() <= 0.15 && l1.L() > 0.15) {
+    	var d = (t1.Y() - p1.Y()) / (t1.X() - p1.X());
+    	m = [
+				d,
+        (p2.X()*(2*(p2.Y()-p1.Y())-d*p2.X())-p1.X()*(2*(p2.Y()-p1.Y())-d*(2*p2.X()-p1.X())))/(p1.X()*(p1.X()-2*p2.X())+p2.X()**2)
+      ];
+    } else {
+      m = [
+      (t1.Y() - p1.Y()) / (t1.X() -  p1.X()),
+      (p2.Y() - t2.Y()) / (p2.X() -  t2.X())
+    ];
+    }
+
+    var w = [
+      (x - p2.X()) / (p2.X() - p1.X()),
+      (x - p1.X()) / (p1.X() - p2.X())
+    ];
+    var Lii = [
+      (x - p1.X()) / (p1.X() - p2.X()),
+      (x - p2.X()) / (p2.X() - p1.X())
+    ];
+
+    var s = 0.0;
+    for (let ii = 0, maxii = 2; ii < maxii; ++ii) {
+      var Hi = (1.0 - 2 * Lii[ii]) * w[ii] ** 2;
+      var Hi_hat = (x - [p1.X(), p2.X()][ii]) * w[ii] ** 2;
+      s += [p1.Y(), p2.Y()][ii] * Hi + m[ii] * Hi_hat;
+    }
+    return s;
+  };
+  return fct;
+};
+
+class spline {
+  constructor(data) {
+    this.c = data.slice(0);
+    data.shift()
+    var pts = [
+      data[1], // left basepoint
+      [data[1][0] + data[2], data[1][1]],  // right basepoint
+      [data[1][0], data[1][1] + data[3]],  // startpoint
+      [data[1][0] + data[2], data[1][1] + data[4]], // endpoint
+      data[5], // left tangent point 
+      data[6]  // right tangent point
+    ];
+    this.line = board.create('line', [ pts[0], pts[1] ], {
+      fixed: true,
+      visible: false
+    });
+
+    var p = [];
+    this.circle = [];
+    this.tgpt = [];
+    this.tg = [];
+    this.hp = [];
+    this.hl = [];
+    var gr = [];
+    for (let ii = 2, maxii = 4; ii < maxii; ++ii) {
+      p.push(board.create('point', pts[ii], { visible: false, name: '', fixed:false })); // y-points
+      this.hp.push(board.create('point',pts[ii-2], nodeStyle)); // basepoints
+      this.hp[ii-2].setAttribute({fixed:true, withLabel:false});  
+      this.hl.push(board.create('segment',[this.hp[ii-2], p[ii -2]], {fixed:true, strokecolor:'black', strokewidth: 1})); // vertical lines
+      this.tgpt.push(board.create('point', pts[ii + 2], { size: 3, color: ['blue', 'green'][ii - 2], name: '', visible: data[8], fixed: ! data[8] })); // tangent points
+      this.circle.push(board.create('circle', [p[ii - 2], 0.15], { strokecolor: ['blue', 'green'][ii - 2], visible: data[8],fixed: ! data[8]       })); // circles for y-points (could be replaced by unfilled points?)
+      this.tg.push(board.create('segment', [p[ii - 2], this.tgpt[ii - 2]], { strokewidth: 1, strokecolor: ['blue', 'green'][ii - 2],
+        visible: data[8], fixed: ! data[8]  })); // tangent lines
+      gr.push(board.create('group', [this.circle[ii - 2], p[ii - 2], this.tgpt[ii - 2]]).removeTranslationPoint(this.tgpt[ii - 2]));
+    } // translation group
+    this.hl.push(board.create('segment',[this.hp[0], this.hp[1]], {fixed:true, strokecolor:'black', strokewidth: 1}));  // baseline
+    this.graph = board.create('functiongraph', [JXG.Math.Numerics.hermitePolynomial(p[0], p[1], this.tgpt[0], this.tgpt[1], this.tg[0], this.tg[1]), p[0].X(), p[1].X()], {  strokecolor: data[0],  strokewidth: 2  }); // graph
+
+// constrain y-points to fixed x value (could be done with sliders?)
+    for (let jj = 0, maxjj = 2; jj < maxjj; ++jj) {
+      this.circle[jj].on('drag', function() {
+        return p[jj].moveTo([pts[jj + 2][0], p[jj].Y()])
+      });
+      this.tg[jj].on('drag', function() {
+        return p[jj].moveTo([pts[jj + 2][0], p[jj].Y()])
+      });
+    }
+
+  var obj = [
+    this.tgpt[0], this.tgpt[1],
+    this.circle[0], this.circle[1],
+    this.tg[0], this.tg[1]
+    ];
+    
+    var click = 0;
+    var turn = data[8];
+    this.graph.on('dblclick', function(){
+    		++click;
+        
+        if ( click == 2)
+        {
+        click = 0;		
+            if (turn == false)
+            {
+            		turn = true;
+            }
+            else
+            {
+            		turn = false;
+            }
+            for (var part of obj)
+         {
+        		part.setAttribute({visible:turn});
+         }
+        }
+    })
+
+    this.color = data[0];
+    this.p0 = data[1];
+    this.distance = data[2];
+    this.YY = data[1][1];
+    this.type = data[7]
+  }
+  data() {
+    return [
+      "spline",
+      this.color,
+      this.p0, this.distance,
+      this.circle[0].center.Y() - this.YY,
+      this.circle[1].center.Y() - this.YY,
+      [this.tgpt[0].X(), this.tgpt[0].Y()],
+      [this.tgpt[1].X(), this.tgpt[1].Y()],
+      this.type,
+      true
+    ];
+  }
+
+
+
+}
+
+// initialization
+
+
+var objects = [];
+
+init();
+
+// object generation
+var fName = board.create('input', [-4.5, 4.5, "F_" + (objects.length + 1).toString(), ''], {
+  cssStyle: 'width: 40px'
+});
+var mName = board.create('input', [-4.5, 4, "M_" + (objects.length + 1).toString(), ''], {
+  cssStyle: 'width: 40px'
+});
+
+var fButton = board.create('button', [-3.5, 4.5, 'Kraft', function() {
+  objects.push(new force(["force", fName.Value(), [3, 4],
+    [4, 4]
+  ]));
+  fName = board.create('input',
+    [-4.5, 4.5, "F_" + (objects.length + 1).toString(), ''], {
+      cssStyle: 'width: 40px'
+    });
+}], {});
+
+var mButton = board.create('button', [-3.5, 4, 'Moment', function() {
+  objects.push(new moment(["moment", mName.Value(), [3.5, 4],
+    [4, 3.5],
+    [4, 4.5]
+  ]));
+  mName = board.create('input',
+    [-4.5, 4, "M_" + (objects.length + 1).toString(), ''], {
+      cssStyle: 'width: 40px'
+    });
+}], {});
+
+update();
+
+board.on('update', function() {
+  update()
+});
+
+function init() {
+  stateInput = document.getElementById(stateRef);
+  if (stateInput.value && stateInput.value != '') {
+    state = JSON.parse(stateInput.value); } else { state = JSON.parse({#init#});
+ }
+  var m;
+  for (m of state) {
+    switch (m[0]) {
+      case "force": objects.push(new force(m)); break;
+      case "grid":  objects.push(new grid(m)); break;
+      case "moment":  objects.push(new moment(m)); break;
+      case "spline":  objects.push(new spline(m)); break;
+    }
+  }
+}
+
+function update() {
+  var m;
+  var dfield = [];
+ var names ="[";
+  for (m of objects) {
+    dfield.push(m.data());
+    if (names!="[") { names=names.concat(",");}
+    names = names.concat((m.data()[1]).replace(/\s+/,"*")); 
+  }
+  stateInput.value = JSON.stringify(dfield);
+  names=names.concat("]");
+  document.getElementById(fbd_names).value=names;
+
+}
+[[/jsxgraph]]</p>
