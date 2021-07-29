@@ -88,3 +88,40 @@ any branch of the tree where you want to place the feedback (use the first test 
 ```
 {@ttest@}
 ```
+## Extraction of Sums of Forces and Moments from iMecLib images
+
+Unit vector from a `force` object
+
+```
+unitvec(l):=block( [v] , v:round((l[4]-l[3])*10),v/sqrt(v[1]^2+v[2]^2));
+```
+
+Sign of a `moment` object
+
+```
+msign(l):=block( [v1,v2] , v1:l[4]-l[3],v2:l[5]-l[3],round(signum(v1[1]*v2[2]-v1[2]*v2[1])));
+```
+
+Moment of a force object about a reference point
+
+```
+moment(l,p):=block( [f,r] , f:unitvec(l),r:l[3]-p, r[1]*f[2]-r[2]*f[1]);
+```
+
+### Feedback Variables
+
+- `rp` reference point
+- `lu` symbolic length unit
+- `objects` Input field with object list
+- `names` Input field with object names
+
+```
+rp:[0,0];
+lu:a;
+data: stackjson_parse(objects);
+f:[0,0];
+for i:1 thru length(data)  do ( if (data[i][1]="force") then f: f+names[i]*unitvec(data[i])); 
+m:0;
+for i:1 thru length(data)  do ( if (data[i][1]="force") then m: m+names[i]*lu*moment(data[i],rp)); 
+for i:1 thru length(data)  do ( if (data[i][1]="moment") then m: m+names[i]*msign(data[i])); 
+```
