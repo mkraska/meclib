@@ -3,11 +3,11 @@
 <!-- question: 102245  -->
   <question type="stack">
     <name>
-      <text>MecLib Demo Github 2021 07 28</text>
+      <text>MecLib Demo Github 2021 07 29</text>
     </name>
     <questiontext format="html">
       <text><![CDATA[[[jsxgraph width='250px' height='250px' ]] 
-// Version 2021 07 28 https://jsfiddle.net/a5stuxLh/7/
+// Version 2021 07 29 https://jsfiddle.net/s9px8obq/
 var state = JSON.parse({#init#});
 //## start of chunk 1
 JXG.Options.point.fixed = true; // this is for static objects
@@ -30,12 +30,9 @@ const board = JXG.JSXGraph.initBoard(divid, {
  boundingbox: [-5, 5, 5, -5], //default values, use "grid" to customize
  axis: false, grid:true, showNavigation:false, showCopyright:true
 });
-var a = 16/40; // default value, use "grid" to customize
-var labelshift = 0.2*a;
 //##start of chunk 2
 var a = 16/40; // default value, use "grid" to customize
 var labelshift = 0.2*a;
-var stateInput;
 // angular dimension with a single or double arrow (handles arrow and arrow2)
 class angle {
  constructor(data) {

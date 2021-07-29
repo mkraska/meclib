@@ -1,5 +1,5 @@
 [[jsxgraph width='250px' height='250px' ]] 
-// Version 2021 07 18 https://jsfiddle.net/a5stuxLh/
+// Version 2021 07 29 https://jsfiddle.net/s9px8obq/
 var state = JSON.parse({#init#});
 //## start of chunk 1
 JXG.Options.point.fixed = true; // this is for static objects
@@ -25,9 +25,6 @@ const board = JXG.JSXGraph.initBoard(divid, {
 var a = 16/40; // default value, use "grid" to customize
 var labelshift = 0.2*a;
 //##start of chunk 2
-var a = 16/40; // default value, use "grid" to customize
-var labelshift = 0.2*a;
-var stateInput;
 // angular dimension with a single or double arrow (handles arrow and arrow2)
 class angle {
  constructor(data) {
