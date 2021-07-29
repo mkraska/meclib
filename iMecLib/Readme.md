@@ -7,7 +7,7 @@ It allows for graphical input in JSXGraph widgets.
 
 [Demo question](STACK%20iMecLib%20Demo.xml)
 
-[jsfiddle tryout](https://jsfiddle.net/s9px8obq/)
+[jsfiddle tryout](https://jsfiddle.net/7w6hecap/2/)
 
 ![Demo](demo.png?raw=true "Screenshot from the demo question")
 

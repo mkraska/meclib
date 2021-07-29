@@ -6,6 +6,8 @@ Meclib is a special JSXGraph block to be copied into the STACK question. It cont
 
 The set of objects is created with sketches of mechanical systems in mind (support and load symbols, bars, ropes, disks, annotations).
 
+There are two versions: `MecLib` (non-interactive) and `iMecLib` (interactive input). The remainder of this page documents the non-interactive version. The interactive version is documented [here](imeclib/Readme.md)
+
 
 [Demo question](STACK%20MecLib%20Demo.xml)
 
@@ -57,13 +59,8 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 <ul>
 <li><code>[ "mass", "&lt;name&gt;", [x1, y1] ]</code> black filled circle with name</li>
 <li><code>[ "dashpot", "&lt;name&gt;", [x1, y1], [x2,y2], r ]</code> dashpot (for oscillators)</li>
-<li><code>[ "forceGen", "&lt;label&gt;", [x,y] ]</code> Interactive force generator</li>
-<li><code>[ "momentGen", "&lt;label&gt;", [x,y] ]</code> Interactive moment generator</li>
 <li><code>[ "spline", "&lt;label&gt;", [x1, y1], dx, f1, f2, [xt1, yt1], [xt2, yt2], style]</code> cubic spline for interactive function graphing, [x1,y1] is the start point of the x axis interval, dx is the length of the interval, f1 and f2 are the function values at the borders of the interval, [xt1, yt1], [xt2, yt2] are points to define the respective tangent directions. If they coincide with the boundary points, no tangent condition is assumed and a quadratic or linear spline is drawn.</li>
-<li><code>[ "waste", "&lt;label&gt;", [x,y ]</code> waste bucket, drag objects there to delete them</li>
-<li><code>[ "circle2P", "&lt;label1&gt;","&lt;label2&gt;", [x1,y1],[x2,y2], style ]</code> circle with two draggable perimeter points, meant for Mohr's circle construction</li>
-<li><code>[ "line2P", "&lt;label&gt;", [x1,y1],[x2,y2], style ]</code> line with two draggable perimeter points, meant for Mohr's circle construction</li>
-</ul>
+
 
 ## Code for Question Text
 
