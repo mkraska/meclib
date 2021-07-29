@@ -125,3 +125,13 @@ m:0;
 for i:1 thru length(data)  do ( if (data[i][1]="force") then m: m+names[i]*lu*moment(data[i],rp)); 
 for i:1 thru length(data)  do ( if (data[i][1]="moment") then m: m+names[i]*msign(data[i])); 
 ```
+
+### PRT Node
+
+Display of the sum of forces and moments (use standard feedback format).
+
+```
+<p>\( \displaystyle \Sigma F_x={@f[1]@}\) </p>
+<p>\( \displaystyle \Sigma F_y={@f[2]@}\) </p>
+<p>\( \displaystyle \Sigma M_0={@m@}\) </p>
+```
