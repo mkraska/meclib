@@ -9,7 +9,7 @@ It allows for graphical input in JSXGraph widgets.
 
 [jsfiddle tryout](https://jsfiddle.net/gvwoucr1/13/)
 
-![Spline Demo](spline demo.png?raw=true "Screenshot from the spline demo question")
+![Spline Demo](spline-demo.png?raw=true "Screenshot from the spline demo question")
 
 ## Reference
 
