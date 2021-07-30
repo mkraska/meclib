@@ -1,3 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+<!-- question: 102250  -->
+  <question type="stack">
+    <name>
+      <text>TM3 01 07 v(t) gegeben, a(t), s(t) gesucht.</text>
+    </name>
+    <questiontext format="markdown">
+      <text><![CDATA[**TM3 01 07** 
+
+<p>Ein Fahrzeug fährt über eine Gesamtzeit von \( t={@t@}\,\mathrm{s}\) gemäß dem dargestellten Geschwindigkeitsverlauf \(v(t)\). </p>
+
+Erstellen Sie im folgenden Bild die korrekten Verläufe für die Beschleunigung und den Weg.
+
+<p>Gegeben: \(v_\max={@vmax@}\, \mathrm{m/s}\), \(t_1={@t1@}\, \mathrm{s}\), \(t_2={@t2@}\, \mathrm{s}\), \(s(t=0)=0\).</p>
+
+<p>\(a_\max=\) [[input:S_amax]] [[validation:S_amax]] [[feedback:amax]]</p>
+<p>\(s_\max=\) [[input:S_smax]] [[validation:S_smax]] [[feedback:smax]]</p>
+
 <p hidden>[[input:objects]] [[validation:objects]]</p>
 <p hidden>[[input:names]] [[validation:names]] </p>
 <p>
@@ -322,3 +341,275 @@ function deactivate(obj) {console.log("deactivate");
         } update()}
 
 [[/jsxgraph]]</p>
+<p>[[feedback:iMecLib]]</p>]]></text>
+    </questiontext>
+    <generalfeedback format="markdown">
+      <text></text>
+    </generalfeedback>
+    <defaultgrade>1</defaultgrade>
+    <penalty>0.1</penalty>
+    <hidden>0</hidden>
+    <idnumber></idnumber>
+    <stackversion>
+      <text>2020120600</text>
+    </stackversion>
+    <questionvariables>
+      <text><![CDATA[vmax: 10;
+t1: 2; t2:4;
+amax: vmax/t1;
+smax: vmax*t2/2;
+
+/* Generatoren entfernt, "dir", "label" ergänzt, Musterlösung eingebaut */
+
+/* iMecLib objects */
+pv0: [0,0]; pa0: [0,3]; ps0: [0, -3];
+
+initdata: [ 
+  [ "grid", "", "", -1.5,6, -4.5, 5.5, 50],
+  [ "spline", "", pv0, [0,0], [2,1], [0,0], [2,1], "b-", "inactive"],
+  [ "spline", "", pv0, [2,1], [4,0], [2,1], [4,0] , "b-", "inactive"],
+  [ "spline", "", pa0, [0,0], [2,0], [0.5,0], [1.5,0], "b-", "active"],
+  [ "spline", "", pa0, [2,0], [4,0], [2.5,0], [3.5,0], "b-", "active"],
+  [ "spline", "", ps0, [0,0], [2,0], [0.5,0], [1.5,0], "b-", "active"],
+  [ "spline", "", ps0, [2,0], [4,0], [2.5,0], [3.5,0], "b-", "active"],
+  [ "dir", "t/\\mathrm{s}", [4,0], 0, 10, 0.6] ,
+  [ "dir", "v/v_\\max", [0,-1], 90, 10, 2.5] ,
+  [ "dir", "a/a_\\max", [0,2], 90, 10, 2.5] ,
+  [ "dir", "s/s_\\max",  [0,-4], 90, 10, 2.5],
+  [ "label", string(t1),  [t1,-0.3 ] ] ,
+  [ "label", string(t2),  [t2,-0.3] ] ,
+  [ "label", "-1",  [-0.3,-1 ] ] ,
+  [ "label", "  1",  [-0.2,1 ] ] ,
+  [ "label", "-1",  [-0.3,-4 ] ] ,
+  [ "label", "  1",  [-0.2,-2 ] ] ,
+  [ "label", "-1",  [-0.3,2 ] ] ,
+  [ "label", "  1",  [-0.2,4 ] ] 
+];
+init: stackjson_stringify(float(initdata));
+
+tansdata: [ 
+  [ "grid", "", "", -1.5,6, -4.5, 5.5, 50],
+  [ "spline", "", pv0, [0,0], [2,1], [0,0], [2,1], "b-", "inactive"],
+  [ "spline", "", pv0, [2,1], [4,0], [2,1], [4,0] , "b-", "inactive"],
+  [ "spline", "", pa0, [0,1], [2,1], [0,1], [2,1], "b-", "active"],
+  [ "spline", "", pa0, [2,-1], [4,-1], [2,-1], [4,-1], "b-", "active"],
+  [ "spline", "", ps0, [0,0], [2,0.5], [0.5,0], [1,0], "b-", "active"],
+  [ "spline", "", ps0, [2,0.5], [4,1], [3,1], [3.5,1], "b-", "active"],
+  [ "dir", "t/\\mathrm{s}", [4,0], 0, 10, 0.6] ,
+  [ "dir", "v/v_\\max", [0,-1], 90, 10, 2.5] ,
+  [ "dir", "a/a_\\max", [0,2], 90, 10, 2.5] ,
+  [ "dir", "s/s_\\max",  [0,-4], 90, 10, 2.5],
+  [ "label", string(t1),  [t1,-0.3 ] ] ,
+  [ "label", string(t2),  [t2,-0.3] ] ,
+  [ "label", "-1",  [-0.3,-1 ] ] ,
+  [ "label", "  1",  [-0.2,1 ] ] ,
+  [ "label", "-1",  [-0.3,-4 ] ] ,
+  [ "label", "  1",  [-0.2,-2 ] ] ,
+  [ "label", "-1",  [-0.3,2 ] ] ,
+  [ "label", "  1",  [-0.2,4 ] ] 
+];
+tans: stackjson_stringify(float(tansdata));
+]]></text>
+    </questionvariables>
+    <specificfeedback format="markdown">
+      <text></text>
+    </specificfeedback>
+    <questionnote>
+      <text></text>
+    </questionnote>
+    <questionsimplify>1</questionsimplify>
+    <assumepositive>0</assumepositive>
+    <assumereal>0</assumereal>
+    <prtcorrect format="markdown">
+      <text></text>
+    </prtcorrect>
+    <prtpartiallycorrect format="markdown">
+      <text></text>
+    </prtpartiallycorrect>
+    <prtincorrect format="markdown">
+      <text></text>
+    </prtincorrect>
+    <multiplicationsign>none</multiplicationsign>
+    <sqrtsign>1</sqrtsign>
+    <complexno>i</complexno>
+    <inversetrig>cos-1</inversetrig>
+    <logicsymbol>lang</logicsymbol>
+    <matrixparens>[</matrixparens>
+    <variantsselectionseed></variantsselectionseed>
+    <input>
+      <name>names</name>
+      <type>algebraic</type>
+      <tans>[]</tans>
+      <boxsize>40</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint></syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>0</mustverify>
+      <showvalidation>0</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>objects</name>
+      <type>string</type>
+      <tans>tans</tans>
+      <boxsize>40</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint></syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>0</mustverify>
+      <showvalidation>0</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>S_amax</name>
+      <type>units</type>
+      <tans>amax*m/s^2</tans>
+      <boxsize>8</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>Zahl mit Einheit</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>S_smax</name>
+      <type>units</type>
+      <tans>smax*m</tans>
+      <boxsize>8</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>Zahl mit Einheit</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <prt>
+      <name>amax</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>UnitsRelative</answertest>
+        <sans>S_amax</sans>
+        <tans>amax*m/s^2</tans>
+        <testoptions>0.005</testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1.0000000</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>amax-1-T</trueanswernote>
+        <truefeedback format="markdown">
+          <text></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0.0000000</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>amax-1-F</falseanswernote>
+        <falsefeedback format="markdown">
+          <text></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>iMecLib</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>1</feedbackstyle>
+      <feedbackvariables>
+        <text></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>1</sans>
+        <tans>1</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1.0000000</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>fbd-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[{@names[4]@}<br>
+{@names[5]@}<br>
+{@names[6]@}<br>
+{@names[7]@}]]></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0.0000000</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>fbd-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>smax</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>UnitsRelative</answertest>
+        <sans>S_smax</sans>
+        <tans>smax*m</tans>
+        <testoptions>0.005</testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1.0000000</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>smax-1-T</trueanswernote>
+        <truefeedback format="markdown">
+          <text></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0.0000000</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>smax-1-F</falseanswernote>
+        <falsefeedback format="markdown">
+          <text></text>
+        </falsefeedback>
+      </node>
+    </prt>
+  </question>
+
+</quiz>

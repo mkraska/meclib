@@ -5,11 +5,11 @@ iMeclib is the interactive version of MecLib.
 It allows for graphical input in JSXGraph widgets.
 
 
-[Demo question](STACK%20iMecLib%20Demo.xml)
+[Demo question](spline-demo.xml)
 
-[jsfiddle tryout](https://jsfiddle.net/7w6hecap/2/)
+[jsfiddle tryout](https://jsfiddle.net/gvwoucr1/13/)
 
-![Demo](demo.png?raw=true "Screenshot from the demo question")
+![Spline Demo](spline demo.png?raw=true "Screenshot from the spline demo question")
 
 ## Reference
 
@@ -20,10 +20,12 @@ Kraska, Martin, & Schulz, Dennis. (2021). Automatic assessment of free body diag
 All co-ordinates and lengths are in user units as specified with `"grid"`, angles are in °, if not specified otherwise.
 
 <ul>
+<li><code>[ "dir", "&lt;name&gt;", [x,y], angle, offset, length]</code> small arrow with label (indication of coordinate axes). Offset (defaults to 10 pix) and length (defaults to grid-independent smart value) are optional. If offset is negative, the label is placed at the tail instead of the head.</li>
 <li><code>[ "force", "&lt;name&gt;", [x1, y1], [x2,y2], d ]</code> force vector. d (in pix) controls the distance of the label. If d is negative, the label is drawn at the tail, if positiv or d is not given the label is at the head of the arrow.</li>
 <li><code>[ "grid", "xlabel","ylabel", xmin, xmax, ymin, ymax, pix ]</code> Grid specification (range of user co-ordinates and user unit in pixels). Must be the first object in the list, otherwise scaling of the other objects might be wrong. xlabel and ylabel are axis labels. Axes are only drawn if labels aren't empty.</li>
+<li><code>[ "label", "&lt;name&gt;", [x, y] ]</code> label, text anchor is center left, default: no Latex, use <code>\<span class="nolink">\(   \\)</span></code> to enforce Latex mode for text.</li>
 <li><code>[ "moment", "&lt;name&gt;", [x1, y1], [x2,y2], [x3,y3] ]</code>Moment arrow specified by center point, tail point (defines start angle and radius) and label point (defines end angle and radial label position. Orientation is such that the angle is less then 180° (shortest arc from start angle to end angle).</li>
-<li><code>[ "spline", "&lt;label&gt;", [x1, y1], dx, f1, f2, [xt1, yt1], [xt2, yt2], style]</code> cubic spline for interactive function graphing, [x1,y1] is the start point of the x axis interval, dx is the length of the interval, f1 and f2 are the function values at the borders of the interval, [xt1, yt1], [xt2, yt2] are points to define the respective tangent directions. If they coincide with the boundary points, no tangent condition is assumed and a quadratic or linear spline is drawn. Style is `true` or `false` and indicates if interactive modification is allowed.</li>
+<li><code>[ "spline", "eqn", [X0, Y0], [x1, y1], [x2,y2], [xt1, yt1], [xt2,yt2], style, status ]</code> cubic spline for interactive function graphing. `[X01,Y01]` is the origin of the local system. The other points are given in this local system: `[x1, y1], [x2,y2]` are start and end points. `[xt1, yt1], [xt2, yt2]` are points to define the respective tangent directions. If they coincide with the boundary points, no tangent condition is assumed and a quadratic or linear spline is drawn. `style` is currently ignored. `status` is `"active"` (for interactive input) or `"inactive"` (for display).</li>
 </ul>
 
 ## Objects Specified for Implementation
@@ -45,13 +47,11 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 <li><code>[ "circle", "&lt;name&gt;", [xc, yc], [xp,yp] , angle]</code> Circle with centerpoint, point on perimeter, angle for dimension.  The annotation for the radius is only drawn if name is not empty. If the angle is negative, the dimension is inside the circle, otherwise it is outside.</li>
 <li><code>[ "circle", "&lt;name&gt;", [xc, yc], radius , angle]</code> Circle with centerpoint and radius, angle for dimension (options same as above)</li>
 <li><code>[ "dim", "&lt;name&gt;", [x1, y1], [x2,y2], d ]</code> linear dimension with name used as label, d is distance from line between points, counts positive to the left side seen from point 1 to point 2. If zero, short end lines are drawn.</li>
-<li><code>[ "dir", "&lt;name&gt;", [x,y], angle, offset, length]</code> small arrow with label (indication of coordinate axes). Offset (defaults to 10 pix) and length (defaults to grid-independent smart value) are optional. If offset is negative, the label is placed at the tail instead of the head.</li>
 <li><code>[ "disp", "&lt;name&gt;", [x,y], angle, offset, length]</code> small red arrow with label (indication of displacement). Offset (defaults to 10 pix) and length (1) are optional. If offset is negative, the label is placed at the tail instead of the head.</li>
 <li><code>[ "fix1", "&lt;name&gt;", [x, y], angle ]</code> floating bearing with label, support in vertical direction for angle = 0</li>
 <li><code>[ "fix12", "&lt;name&gt;", [x, y], angle ]</code> fixed bearing, support in x and y direction, angular position is irrelevant for function</li>
 <li><code>[ "fix123", "&lt;name&gt;", [x, y], angle ]</code> built-in support, prevents translation and rotation.</li>
 <li><code>[ "fix13", "&lt;name&gt;", [x, y], angle ]</code> axial and angular support, floats in vertical direction for angle = 0</li>
-<li><code>[ "label", "&lt;name&gt;", [x, y] ]</code> label, text anchor is center left, default: no Latex, use <code>\<span class="nolink">\(   \\)</span></code> to enforce Latex mode for text.</li>
 <li><code>[ "line", "&lt;name&gt;", [x1, x2,...], [y1, y2,...] ,dash, th ]</code>  polyline with optional dash style ( "--", ".", "-."..defaults to solid line) and thickness (defaults to 0.8)</li>
 <li><code>[ "node", "&lt;name&gt;", [x,y],d ]</code> Node (small white circle, typically indicates hinge point) with label. d (in pix) is an optional distance of the label</li>
 <li><code>[ "point", "&lt;name&gt;", [x,y],d ]</code> Small black point with label. d (in pix) is an optional distance of the label</li>
@@ -79,8 +79,10 @@ Changing the name is required if you want to use more than one JSXGraph widget i
 ```
 /* iMecLib objects */
 initdata: [ 
+  [ "dir", "x",  [x,y], angle, labeloffset, length],
+  [ "label", "A",  [x,y] ] ,
   [ "grid", "x", "y", -5,5, -2, 5, 50 ],
-  [ "spline", "red", [-4, 1], 3, 2, 3, [-2, 3], [-4, 3], "b-", true],
+  [ "spline", "eqn", [X0, Y0], [x1, y1], [x2,y2], [xt1, yt1], [xt2,yt2], "", "active"],
   [ "moment", "M_0", [0,0], [1,-1], [1,1] ], 
   [ "force", "F", [2,0], [2,1] ] 
 ];
