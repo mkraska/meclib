@@ -16,6 +16,11 @@
 - correct dimension (simplifies to the same base unit)? This requires specification of units for each variable. ([forum discussion](https://moodle.org/mod/forum/discuss.php?d=406908#p1673135), [Github issue](https://github.com/maths/moodle-qtype_stack/issues/665))
 - off by a numeric factor? (note, expressions aren't necessarily products)
 
+### Feedback for interactive graphical input
+
+- extraction of sums of forces and moment, see below
+- values and slope of splines, see below.
+
 ### Input and validation issues
 
 - ambiguous validation: `x0` and `x_0` ([forum discussion](https://moodle.org/mod/forum/discuss.php?d=412362))
@@ -90,6 +95,8 @@ any branch of the tree where you want to place the feedback (use the first test 
 ```
 ## Extraction of Sums of Forces and Moments from iMecLib images
 
+### Question Variables
+
 Unit vector from a `force` object
 
 ```
@@ -134,4 +141,51 @@ Display of the sum of forces and moments (use standard feedback format).
 <p>\( \displaystyle \Sigma F_x={@f[1]@}\) </p>
 <p>\( \displaystyle \Sigma F_y={@f[2]@}\) </p>
 <p>\( \displaystyle \Sigma M_0={@m@}\) </p>
+```
+
+
+## Feedback on Value and Slope of Splines
+
+
+### Question Variables
+
+
+Generic function for feedback on splines. The comparison is made usng 3 decimal places.
+
+
+```
+splinefeedback(%_sans,%_tans,%_x1,%_x2):=block( [simp,%_s1,%_s2], 
+  simp:true, 
+  %_s1: string(%_x1),
+  %_s2: string(%_x2),
+  sconcat( "\\( \\in",  %_s1, "\\ldots ",  %_s2, "\\)",
+     if round(1000*(at(%_sans,x=%_x1) - at(%_tans,x=%_x1))) # 0 then sconcat("<br>Der Wert bei \\(", %_s1, "\\) stimmt nicht.") else "", 
+     if round(1000*(at(%_sans,x=%_x2) - at(%_tans,x=%_x2))) # 0 then sconcat("<br>Der Wert bei \\(", %_s2, "\\) stimmt nicht.") else "", 
+     if round(1000*(at(diff(%_sans,x),x=%_x1) - at(diff(%_tans,x),x=%_x1))) # 0 then sconcat("<br>Der Anstieg bei \\(", %_s1, "\\) stimmt nicht.") else "", 
+     if round(1000*(at(diff(%_sans,x),x=%_x2) - at(diff(%_tans,x),x=%_x2))) # 0 then sconcat("<br>Der Anstieg bei \\(", %_s2, "\\) stimmt nicht.") else "" ) );
+```
+
+
+### Feedback Variables
+
+- `S_a1` function for the interactively modified spline (taken from the names input field, referenced by object index in the list)
+- `a1` teachers solution
+- `x1` x value for left bound
+- `x2` x value for the right bound
+
+```
+S_a1: names[4];
+stext: splinefeedback(S_a1,a1,0,t1);
+```
+
+### PRT Node
+
+Test for identity of the curves:
+
+AlgebraicEquivalence(S_a1, a1). The coefficients of the reference solution must be rounded to 3 decimal places. 
+
+Display the interval and eventual hints on wrong values or wrong slope on either side of the interval. Use this in both branches of the node. The Te
+
+```
+\(a \) für  \(t / \mathrm{s} \) {@stext@}
 ```

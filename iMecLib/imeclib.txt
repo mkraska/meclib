@@ -2,38 +2,36 @@
 <p hidden>[[input:names]] [[validation:names]] </p>
 <p>
 [[jsxgraph width='500px' height='400px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
-// Version 2021 07 30
+// Version 2021 07 31
 // defaults
+JXG.Options.point.snapToGrid = true; // grid snap spoils rotated static objects
+JXG.Options.point.snapSizeX = 0.1;
+JXG.Options.point.snapSizeY = 0.1;
 JXG.Options.point.fixed = true; // this is for static objects
 JXG.Options.text.useMathJax = true;
 JXG.Options.label.useMathJax = true;
-JXG.Options.label.offset = [0,0];
+JXG.Options.text.useMathJax = true;
+JXG.Options.label.offset = [0, 0];
 JXG.Options.label.anchorY = 'middle';
-JXG.Options.line.fixed = true;
+var a = 0.4; //compute this to match font size (grid-independent)
+var labelshift = 0.2 * a;
 // Style for nodes (supports, bars)
-const nodeStyle = {fillcolor:'white',strokeColor:'black',size:2, strokeWidth:1.5};
-const pointStyle = {fillcolor:'black',strokeColor:'black',size:1, strokeWidth:1};
+const nodeStyle = { fillcolor: 'white', strokeColor: 'black', size: 2, strokeWidth: 1.5 }; 
+const pointStyle = { fillcolor: 'black', strokeColor: 'black', size: 1, strokeWidth: 1 };
 // Style for bars
-const barStyle = {strokewidth:4,strokecolor:"black"};
+const barStyle = { strokewidth: 4, strokecolor: "black" };
 // Set some linestyles
-const normalStyle = {strokeWidth:2,strokeColor:'black', lineCap:'round'};
-const thinStyle = {strokeWidth:1,strokeColor:'black', lineCap:'round'};
-const defaultMecLayer = 6;
-
-JXG.Options.point.snapToGrid = true;
-JXG.Options.point.snapSizeX = 0.1;
-JXG.Options.point.snapSizeY = 0.1;
+const normalStyle = { strokeWidth: 2, strokeColor: 'black', lineCap: 'round' };
+const thinStyle = { strokeWidth: 1, strokeColor: 'black', lineCap: 'round' };
+const inactiveColor = "gray";
 
 const board = JXG.JSXGraph.initBoard(divid, {
   boundingbox: [-5, 5, 5, -5], //default values, use "grid" to customize
   axis: false, grid:true, showNavigation:false, showCopyright:true
 });
-var a = 16/40; // default value, use "grid" to customize
-var labelshift = 0.2*a;
-
-// get state string either from input field or from initial value defined in question variables
 var state;
-var stateInput; 
+var stateInput;
+
 // co-ordinate arrow with arrow with label 
 // ["dir", "name", [x1,y1], angle]
 // ["dir", "name", [x1,y1], angle, offset]
@@ -168,35 +166,40 @@ class spline {
     this.pt2 = board.create('point',PT2, { name: '', fixed: false });
     this.t1 = board.create('segment',[this.p1, this.pt1], {fixed:false, strokecolor:'black', strokewidth: 1});
     this.t2 = board.create('segment',[this.p2, this.pt2], {fixed:false, strokecolor:'black', strokewidth: 1});
-    this.b1 = board.create('segment',[this.p1, [P1[0],this.P[1]]], {fixed:false, strokecolor:'black', strokewidth: 1});
-    this.b1 = board.create('segment',[this.p2, [P2[0],this.P[1]]], {fixed:false, strokecolor:'black', strokewidth: 1});
-    this.b1 = board.create('segment',[[P1[0],this.P[1]], [P2[0],this.P[1]]], {fixed:false, strokecolor:'black', strokewidth: 1});
+    board.create('segment',[this.p1, [P1[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
+    board.create('segment',[this.p2, [P2[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
+    board.create('segment',[[P1[0],this.P[1]], [P2[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
     //this.g1 = board.create('group', [this.p1, this.pt1] ).removeTranslationPoint(this.pt1);
     //this.g2 = board.create('group', [this.p2, this.pt2] ).removeTranslationPoint(this.pt2);
-
-    //this.graph = board.create('functiongraph', [hermite(this.p1, this.p2, this.pt1, this.pt2, this.t1, this.t2), this.p1.X(), this.p2.X()], {   strokecolor: 'red',  strokewidth: 3    });
     this.graph = board.create('functiongraph', [hermiteplot(this.P,this.p1, this.p2, this.pt1, this.pt2), this.p1.X(), this.p2.X()], { strokecolor: 'red', strokewidth: 3  });
-    // set activate/deactivate, this works
-		this.obj = [ this.p1, this.p2, this.pt1, this.pt2, this.t1, this.t2 ];
-    if (this.state == "active") { activate(this.obj) }
-    else { deactivate(this.obj) }
+    // set activate/deactivate
+		this.obj = [ this.p1, this.p2, this.pt1, this.pt2 ];
+    if (this.state == "active") { this.activate(this) }
+    if (this.state == "inactive") { this.deactivate(this) }
+    if (this.state == "locked") { 
+      this.deactivate(this); this.state = "locked" ; this.graph.setAttribute({color:'black'} ) }
     
-    //switch by mouseclick, this doesn't work
-    this.graph.on('down', function() {
-      if (this.state == "active") { this.state = "inactive"; }
-      else { this.state = "active"; }
-      } )
+    //switch by doubleclick
+    this.graph.parent = this;
+    this.graph.lastclick = Date.now();    
+    this.graph.on('up', function() {
+      if (Date.now()-this.lastclick < 500) {console.log(this.parent.state); this.parent.switch()}
+      else {this.lastclick = Date.now() }})
   }
-  activate() {console.log("activate"); this.state = "active";
-        for (var part of this.obj) {
+  switch() {if (this.state == "active") { this.deactivate(this)}
+      else if (this.state == "inactive") { this.activate(this);}
+      console.log(this.state)}
+  activate(ref) {console.log("this.activate()"); ref.state = "active";
+        for (var part of ref.obj) {
           part.setAttribute({visible:true});
           part.setAttribute({fixed:false});
         } update()}
-  deactivate() {console.log("deactivate"); this.state = "inactive";
-        for (var part of this.obj) {
+  deactivate(ref) {console.log("this.deactivate()"); ref.state = "inactive";
+        for (var part of ref.obj) {
           part.setAttribute({visible:false});
           part.setAttribute({fixed:true});
         } update()}
+
   data() {  return [
       "spline",
       this.d[1],
@@ -246,7 +249,7 @@ function update() {
  var names ="[";
   for (m of objects) {
     dfield.push(m.data());
-    if (names!="[") { names=names.concat(",");}
+    if (names != "[") { names = names.concat(",")  }
     names = names.concat(m.name()); 
   }
   stateInput.value = JSON.stringify(dfield);
@@ -310,15 +313,4 @@ function hermitename(Ref,p1, p2, t1, t2) {
     return n.replace(/\+\-/g,"-")  }
   else {return "NaN"}
 };
-function activate(obj) { console.log("activate");
-        for (var part of obj) {
-          part.setAttribute({visible:true});
-          part.setAttribute({fixed:false});
-        } update()}
-function deactivate(obj) {console.log("deactivate");
-        for (var part of obj) {
-          part.setAttribute({visible:false});
-          part.setAttribute({fixed:true});
-        } update()}
-
 [[/jsxgraph]]</p>

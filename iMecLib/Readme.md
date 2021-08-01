@@ -25,7 +25,12 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 <li><code>[ "grid", "xlabel","ylabel", xmin, xmax, ymin, ymax, pix ]</code> Grid specification (range of user co-ordinates and user unit in pixels). Must be the first object in the list, otherwise scaling of the other objects might be wrong. xlabel and ylabel are axis labels. Axes are only drawn if labels aren't empty.</li>
 <li><code>[ "label", "&lt;name&gt;", [x, y] ]</code> label, text anchor is center left, default: no Latex, use <code>\<span class="nolink">\(   \\)</span></code> to enforce Latex mode for text.</li>
 <li><code>[ "moment", "&lt;name&gt;", [x1, y1], [x2,y2], [x3,y3] ]</code>Moment arrow specified by center point, tail point (defines start angle and radius) and label point (defines end angle and radial label position. Orientation is such that the angle is less then 180° (shortest arc from start angle to end angle).</li>
-<li><code>[ "spline", "eqn", [X0, Y0], [x1, y1], [x2,y2], [xt1, yt1], [xt2,yt2], style, status ]</code> cubic spline for interactive function graphing. `[X01,Y01]` is the origin of the local system. The other points are given in this local system: `[x1, y1], [x2,y2]` are start and end points. `[xt1, yt1], [xt2, yt2]` are points to define the respective tangent directions. If they coincide with the boundary points, no tangent condition is assumed and a quadratic or linear spline is drawn. `style` is currently ignored. `status` is `"active"` (for interactive input) or `"inactive"` (for display).</li>
+<li><code>[ "spline", "eqn", [X0, Y0], [x1, y1], [x2,y2], [xt1, yt1], [xt2,yt2], style, status ]</code> cubic spline for interactive function graphing. 
+<ul><li><code>[X01,Y01]</code> origin of the local system. The other points are given in this local system. Note that the dynamic display of co-ordinates uses the global system.</li> 
+<li><code>[x1, y1], [x2,y2]</code> start and end points.</li> <li><code>[xt1, yt1], [xt2, yt2]</code> points to define the respective tangent directions. Points only visible in active state. If they coincide with the boundary points, no tangent condition is assumed and a quadratic or linear spline is drawn. </li>
+<li><code>style</code> currently ignored.</li>
+<li> <code>status</code> is <code>"active"</code>, <code>"inactive"</code> or <code>"locked"</code>. The spline can be switched between active and inactive state except if it is locked, then it is black. Otherwise the curve is plotted in red.</li>
+</ul></li>
 </ul>
 
 ## Objects Specified for Implementation
