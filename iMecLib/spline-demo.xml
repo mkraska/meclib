@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <quiz>
-<!-- question: 102250  -->
+<!-- question: 102253  -->
   <question type="stack">
     <name>
-      <text>TM3 01 07 v(t) gegeben, a(t), s(t) gesucht.</text>
+      <text>TM3 01 07 v(t) gegeben, a(t), s(t) gesucht. 21-07-31</text>
     </name>
     <questiontext format="markdown">
       <text><![CDATA[**TM3 01 07** 
@@ -23,36 +23,34 @@ Erstellen Sie im folgenden Bild die korrekten Verläufe für die Beschleunigung 
 [[jsxgraph width='500px' height='400px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
 // Version 2021 07 30
 // defaults
+JXG.Options.point.snapToGrid = true; // grid snap spoils rotated static objects
+JXG.Options.point.snapSizeX = 0.1;
+JXG.Options.point.snapSizeY = 0.1;
 JXG.Options.point.fixed = true; // this is for static objects
 JXG.Options.text.useMathJax = true;
 JXG.Options.label.useMathJax = true;
-JXG.Options.label.offset = [0,0];
+JXG.Options.text.useMathJax = true;
+JXG.Options.label.offset = [0, 0];
 JXG.Options.label.anchorY = 'middle';
-JXG.Options.line.fixed = true;
+var a = 0.4; //compute this to match font size (grid-independent)
+var labelshift = 0.2 * a;
 // Style for nodes (supports, bars)
-const nodeStyle = {fillcolor:'white',strokeColor:'black',size:2, strokeWidth:1.5};
-const pointStyle = {fillcolor:'black',strokeColor:'black',size:1, strokeWidth:1};
+const nodeStyle = { fillcolor: 'white', strokeColor: 'black', size: 2, strokeWidth: 1.5 }; 
+const pointStyle = { fillcolor: 'black', strokeColor: 'black', size: 1, strokeWidth: 1 };
 // Style for bars
-const barStyle = {strokewidth:4,strokecolor:"black"};
+const barStyle = { strokewidth: 4, strokecolor: "black" };
 // Set some linestyles
-const normalStyle = {strokeWidth:2,strokeColor:'black', lineCap:'round'};
-const thinStyle = {strokeWidth:1,strokeColor:'black', lineCap:'round'};
-const defaultMecLayer = 6;
-
-JXG.Options.point.snapToGrid = true;
-JXG.Options.point.snapSizeX = 0.1;
-JXG.Options.point.snapSizeY = 0.1;
+const normalStyle = { strokeWidth: 2, strokeColor: 'black', lineCap: 'round' };
+const thinStyle = { strokeWidth: 1, strokeColor: 'black', lineCap: 'round' };
+const inactiveColor = "gray";
 
 const board = JXG.JSXGraph.initBoard(divid, {
   boundingbox: [-5, 5, 5, -5], //default values, use "grid" to customize
   axis: false, grid:true, showNavigation:false, showCopyright:true
 });
-var a = 16/40; // default value, use "grid" to customize
-var labelshift = 0.2*a;
-
-// get state string either from input field or from initial value defined in question variables
 var state;
-var stateInput; 
+var stateInput;
+
 // co-ordinate arrow with arrow with label 
 // ["dir", "name", [x1,y1], angle]
 // ["dir", "name", [x1,y1], angle, offset]
@@ -187,35 +185,40 @@ class spline {
     this.pt2 = board.create('point',PT2, { name: '', fixed: false });
     this.t1 = board.create('segment',[this.p1, this.pt1], {fixed:false, strokecolor:'black', strokewidth: 1});
     this.t2 = board.create('segment',[this.p2, this.pt2], {fixed:false, strokecolor:'black', strokewidth: 1});
-    this.b1 = board.create('segment',[this.p1, [P1[0],this.P[1]]], {fixed:false, strokecolor:'black', strokewidth: 1});
-    this.b1 = board.create('segment',[this.p2, [P2[0],this.P[1]]], {fixed:false, strokecolor:'black', strokewidth: 1});
-    this.b1 = board.create('segment',[[P1[0],this.P[1]], [P2[0],this.P[1]]], {fixed:false, strokecolor:'black', strokewidth: 1});
+    board.create('segment',[this.p1, [P1[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
+    board.create('segment',[this.p2, [P2[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
+    board.create('segment',[[P1[0],this.P[1]], [P2[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
     //this.g1 = board.create('group', [this.p1, this.pt1] ).removeTranslationPoint(this.pt1);
     //this.g2 = board.create('group', [this.p2, this.pt2] ).removeTranslationPoint(this.pt2);
-
-    //this.graph = board.create('functiongraph', [hermite(this.p1, this.p2, this.pt1, this.pt2, this.t1, this.t2), this.p1.X(), this.p2.X()], {   strokecolor: 'red',  strokewidth: 3    });
     this.graph = board.create('functiongraph', [hermiteplot(this.P,this.p1, this.p2, this.pt1, this.pt2), this.p1.X(), this.p2.X()], { strokecolor: 'red', strokewidth: 3  });
-    // set activate/deactivate, this works
-		this.obj = [ this.p1, this.p2, this.pt1, this.pt2, this.t1, this.t2 ];
-    if (this.state == "active") { activate(this.obj) }
-    else { deactivate(this.obj) }
+    // set activate/deactivate
+		this.obj = [ this.p1, this.p2, this.pt1, this.pt2 ];
+    if (this.state == "active") { this.activate(this) }
+    if (this.state == "inactive") { this.deactivate(this) }
+    if (this.state == "locked") { 
+      this.deactivate(this); this.state = "locked" ; this.graph.setAttribute({color:'black'} ) }
     
-    //switch by mouseclick, this doesn't work
-    this.graph.on('down', function() {
-      if (this.state == "active") { this.state = "inactive"; }
-      else { this.state = "active"; }
-      } )
+    //switch by doubleclick
+    this.graph.parent = this;
+    this.graph.lastclick = Date.now();    
+    this.graph.on('up', function() {
+      if (Date.now()-this.lastclick < 500) {console.log(this.parent.state); this.parent.switch()}
+      else {this.lastclick = Date.now() }})
   }
-  activate() {console.log("activate"); this.state = "active";
-        for (var part of this.obj) {
+  switch() {if (this.state == "active") { this.deactivate(this)}
+      else if (this.state == "inactive") { this.activate(this);}
+      console.log(this.state)}
+  activate(ref) {console.log("this.activate()"); ref.state = "active";
+        for (var part of ref.obj) {
           part.setAttribute({visible:true});
           part.setAttribute({fixed:false});
         } update()}
-  deactivate() {console.log("deactivate"); this.state = "inactive";
-        for (var part of this.obj) {
+  deactivate(ref) {console.log("this.deactivate()"); ref.state = "inactive";
+        for (var part of ref.obj) {
           part.setAttribute({visible:false});
           part.setAttribute({fixed:true});
         } update()}
+
   data() {  return [
       "spline",
       this.d[1],
@@ -265,7 +268,7 @@ function update() {
  var names ="[";
   for (m of objects) {
     dfield.push(m.data());
-    if (names!="[") { names=names.concat(",");}
+    if (names != "[") { names = names.concat(",")  }
     names = names.concat(m.name()); 
   }
   stateInput.value = JSON.stringify(dfield);
@@ -329,22 +332,18 @@ function hermitename(Ref,p1, p2, t1, t2) {
     return n.replace(/\+\-/g,"-")  }
   else {return "NaN"}
 };
-function activate(obj) { console.log("activate");
-        for (var part of obj) {
-          part.setAttribute({visible:true});
-          part.setAttribute({fixed:false});
-        } update()}
-function deactivate(obj) {console.log("deactivate");
-        for (var part of obj) {
-          part.setAttribute({visible:false});
-          part.setAttribute({fixed:true});
-        } update()}
-
 [[/jsxgraph]]</p>
-<p>[[feedback:iMecLib]]</p>]]></text>
+<p>[[feedback:a1]]</p>
+<p>[[feedback:a2]]</p>
+<p>[[feedback:s1]]</p>
+<p>[[feedback:s2]]</p>]]></text>
     </questiontext>
     <generalfeedback format="markdown">
-      <text></text>
+      <text>Die Beschleunigung ist die Zeitableitung der Geschwindigkeit.  Da die Geschwindigkeit linear verläuft, ist die Beschleunigung konstant (Anstieg überall  gleich Null) und ihr Wert kann abschnittsweise als \\(\\Delta v/ \\Delta t\\) berechnet werden. Der Maximalwert tritt im ersten Abschnitt auf (Fahrzeug beschleunigt).
+
+Der Weg ist das Zeitintegral der Geschwindigkeit, Ihr Wertzuwachs in einem Bereich entspricht der Fläche unter der Geschwindigkeitskurve. Der Anstieg der Wegkurve entspricht der Geschwindigkeit. Damit ist der Anstieg von \\(s\\) am Anfang und am Ende gleich Null.
+
+Mit der Anfangsbedingung  \\(s(t=0)=0\\) ergibt sich der Maximalwert des Wegs als Fläche unter der gesamten Geschwindigkeitskurve.</text>
     </generalfeedback>
     <defaultgrade>1</defaultgrade>
     <penalty>0.1</penalty>
@@ -359,15 +358,18 @@ t1: 2; t2:4;
 amax: vmax/t1;
 smax: vmax*t2/2;
 
-/* Generatoren entfernt, "dir", "label" ergänzt, Musterlösung eingebaut */
+a1: 1.0;
+a2: -1.0;
+s1: 0.125*x^2 ;
+s2: -0.125*x^2+1.0*x-1.0;
 
 /* iMecLib objects */
 pv0: [0,0]; pa0: [0,3]; ps0: [0, -3];
 
 initdata: [ 
   [ "grid", "", "", -1.5,6, -4.5, 5.5, 50],
-  [ "spline", "", pv0, [0,0], [2,1], [0,0], [2,1], "b-", "inactive"],
-  [ "spline", "", pv0, [2,1], [4,0], [2,1], [4,0] , "b-", "inactive"],
+  [ "spline", "", pv0, [0,0], [2,1], [0,0], [2,1], "b-", "locked"],
+  [ "spline", "", pv0, [2,1], [4,0], [2,1], [4,0] , "b-", "locked"],
   [ "spline", "", pa0, [0,0], [2,0], [0.5,0], [1.5,0], "b-", "active"],
   [ "spline", "", pa0, [2,0], [4,0], [2.5,0], [3.5,0], "b-", "active"],
   [ "spline", "", ps0, [0,0], [2,0], [0.5,0], [1.5,0], "b-", "active"],
@@ -389,12 +391,12 @@ init: stackjson_stringify(float(initdata));
 
 tansdata: [ 
   [ "grid", "", "", -1.5,6, -4.5, 5.5, 50],
-  [ "spline", "", pv0, [0,0], [2,1], [0,0], [2,1], "b-", "inactive"],
-  [ "spline", "", pv0, [2,1], [4,0], [2,1], [4,0] , "b-", "inactive"],
-  [ "spline", "", pa0, [0,1], [2,1], [0,1], [2,1], "b-", "active"],
-  [ "spline", "", pa0, [2,-1], [4,-1], [2,-1], [4,-1], "b-", "active"],
-  [ "spline", "", ps0, [0,0], [2,0.5], [0.5,0], [1,0], "b-", "active"],
-  [ "spline", "", ps0, [2,0.5], [4,1], [3,1], [3.5,1], "b-", "active"],
+  [ "spline", "", pv0, [0,0], [2,1], [0,0], [2,1], "b-", "locked"],
+  [ "spline", "", pv0, [2,1], [4,0], [2,1], [4,0] , "b-", "locked"],
+  [ "spline", "", pa0, [0,1], [2,1], [0,1], [2,1], "b-", "inactive"],
+  [ "spline", "", pa0, [2,-1], [4,-1], [2,-1], [4,-1], "b-", "inactive"],
+  [ "spline", "", ps0, [0,0], [2,0.5], [0.5,0], [1,0], "b-", "inactive"],
+  [ "spline", "", ps0, [2,0.5], [4,1], [3,1], [3.5,1], "b-", "inactive"],
   [ "dir", "t/\\mathrm{s}", [4,0], 0, 10, 0.6] ,
   [ "dir", "v/v_\\max", [0,-1], 90, 10, 2.5] ,
   [ "dir", "a/a_\\max", [0,2], 90, 10, 2.5] ,
@@ -409,7 +411,16 @@ tansdata: [
   [ "label", "  1",  [-0.2,4 ] ] 
 ];
 tans: stackjson_stringify(float(tansdata));
-]]></text>
+
+splinefeedback(%_sans,%_tans,%_x1,%_x2):=block( [simp,%_s1,%_s2], 
+  simp:true, 
+  %_s1: string(%_x1),
+  %_s2: string(%_x2),
+  sconcat( "\\( \\in",  %_s1, "\\ldots ",  %_s2, "\\)",
+     if round(1000*(at(%_sans,x=%_x1) - at(%_tans,x=%_x1))) # 0 then sconcat("<br>Der Wert bei \\(", %_s1, "\\) stimmt nicht.") else "", 
+     if round(1000*(at(%_sans,x=%_x2) - at(%_tans,x=%_x2))) # 0 then sconcat("<br>Der Wert bei \\(", %_s2, "\\) stimmt nicht.") else "", 
+     if round(1000*(at(diff(%_sans,x),x=%_x1) - at(diff(%_tans,x),x=%_x1))) # 0 then sconcat("<br>Der Anstieg bei \\(", %_s1, "\\) stimmt nicht.") else "", 
+     if round(1000*(at(diff(%_sans,x),x=%_x2) - at(diff(%_tans,x),x=%_x2))) # 0 then sconcat("<br>Der Anstieg bei \\(", %_s2, "\\) stimmt nicht.") else "" ) );]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
       <text></text>
@@ -509,6 +520,74 @@ tans: stackjson_stringify(float(tansdata));
       <options></options>
     </input>
     <prt>
+      <name>a1</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text>S_a1: names[4];
+stext: splinefeedback(S_a1,a1,0,t1);</text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>S_a1</sans>
+        <tans>a1</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1.0000000</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>a1-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>\(a \) für  \(t / \mathrm{s} \) {@stext@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0.0000000</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>a1-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text>\(a \) für  \(t / \mathrm{s} \) {@stext@}</text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>a2</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text>S_a2: names[5];
+stext: splinefeedback(S_a2,a2,t1,t2);</text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>S_a2</sans>
+        <tans>a2</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1.0000000</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>a2-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>\(a \) für  \(t / \mathrm{s} \) {@stext@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0.0000000</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>a2-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text>\(a \) für  \(t / \mathrm{s} \) {@stext@}</text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
       <name>amax</name>
       <value>1.0000000</value>
       <autosimplify>1</autosimplify>
@@ -542,38 +621,70 @@ tans: stackjson_stringify(float(tansdata));
       </node>
     </prt>
     <prt>
-      <name>iMecLib</name>
+      <name>s1</name>
       <value>1.0000000</value>
       <autosimplify>1</autosimplify>
-      <feedbackstyle>1</feedbackstyle>
+      <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text></text>
+        <text>S_s1: names[6];
+stext: splinefeedback(S_s1,s1,0,t1);</text>
       </feedbackvariables>
       <node>
         <name>0</name>
         <answertest>AlgEquiv</answertest>
-        <sans>1</sans>
-        <tans>1</tans>
+        <sans>S_s1</sans>
+        <tans>s1</tans>
         <testoptions></testoptions>
         <quiet>0</quiet>
         <truescoremode>=</truescoremode>
         <truescore>1.0000000</truescore>
         <truepenalty></truepenalty>
         <truenextnode>-1</truenextnode>
-        <trueanswernote>fbd-1-T</trueanswernote>
+        <trueanswernote>s1-1-T</trueanswernote>
         <truefeedback format="html">
-          <text><![CDATA[{@names[4]@}<br>
-{@names[5]@}<br>
-{@names[6]@}<br>
-{@names[7]@}]]></text>
+          <text>\(s \) für  \(t / \mathrm{s} \) {@stext@}</text>
         </truefeedback>
         <falsescoremode>=</falsescoremode>
         <falsescore>0.0000000</falsescore>
         <falsepenalty></falsepenalty>
         <falsenextnode>-1</falsenextnode>
-        <falseanswernote>fbd-1-F</falseanswernote>
+        <falseanswernote>s1-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text></text>
+          <text>\(s \) für  \(t / \mathrm{s} \) {@stext@}</text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>s2</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text>S_s2: names[7];
+stext: splinefeedback(S_s2,s2,t1,t2);</text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>S_s2</sans>
+        <tans>s2</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1.0000000</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>s2-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>\(s \) für  \(t / \mathrm{s} \) {@stext@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0.0000000</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>s2-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text>\(s \) für  \(t / \mathrm{s} \) {@stext@}</text>
         </falsefeedback>
       </node>
     </prt>
