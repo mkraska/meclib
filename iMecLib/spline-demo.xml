@@ -21,7 +21,7 @@ Erstellen Sie im folgenden Bild die korrekten Verläufe für die Beschleunigung 
 <p hidden>[[input:names]] [[validation:names]] </p>
 <p>
 [[jsxgraph width='500px' height='400px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
-// Version 2021 07 30
+// Version 2021 07 31
 // defaults
 JXG.Options.point.snapToGrid = true; // grid snap spoils rotated static objects
 JXG.Options.point.snapSizeX = 0.1;
@@ -50,7 +50,12 @@ const board = JXG.JSXGraph.initBoard(divid, {
 });
 var state;
 var stateInput;
-
+// make infobox optionally relative to a given point (define p.ref to [xref, yref])
+board.highlightInfobox = function(x, y , el) {
+    if (typeof (el.ref) != 'undefined') { this.infobox.setText( 
+        '('+(parseFloat(x)-el.ref[0]).toFixed(1) + ', ' + (parseFloat(y)-el.ref[1]).toFixed(1)+ ')')}
+    else {this.infobox.setText( '('+ x + ', ' + y + ')' )};
+};
 // co-ordinate arrow with arrow with label 
 // ["dir", "name", [x1,y1], angle]
 // ["dir", "name", [x1,y1], angle, offset]
@@ -191,8 +196,9 @@ class spline {
     //this.g1 = board.create('group', [this.p1, this.pt1] ).removeTranslationPoint(this.pt1);
     //this.g2 = board.create('group', [this.p2, this.pt2] ).removeTranslationPoint(this.pt2);
     this.graph = board.create('functiongraph', [hermiteplot(this.P,this.p1, this.p2, this.pt1, this.pt2), this.p1.X(), this.p2.X()], { strokecolor: 'red', strokewidth: 3  });
-    // set activate/deactivate
-		this.obj = [ this.p1, this.p2, this.pt1, this.pt2 ];
+    // set of control points
+    this.obj = [ this.p1, this.p2, this.pt1, this.pt2 ];
+    for (var part of this.obj) { part.ref = this.P} // ref point for local system
     if (this.state == "active") { this.activate(this) }
     if (this.state == "inactive") { this.deactivate(this) }
     if (this.state == "locked") { 
