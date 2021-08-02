@@ -11,7 +11,7 @@ There are two versions: `MecLib` (non-interactive) and `iMecLib` (interactive in
 
 [Demo question](STACK%20MecLib%20Demo.xml)
 
-[jsfiddle tryout](https://jsfiddle.net/s9px8obq/)
+[jsfiddle tryout](https://jsfiddle.net/17r9kfmg/5/)
 
 ![Demo](demo2.png?raw=true "Screenshot from the demo question")
 
