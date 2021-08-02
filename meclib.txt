@@ -1,5 +1,5 @@
 [[jsxgraph width='250px' height='250px' ]] 
-// Version 2021 07 29 https://jsfiddle.net/s9px8obq/
+// Version 2021 08 02 https://jsfiddle.net/17r9kfmg/4/
 var state = JSON.parse({#init#});
 //## start of chunk 1
 JXG.Options.point.fixed = true; // this is for static objects
@@ -22,9 +22,10 @@ const board = JXG.JSXGraph.initBoard(divid, {
  boundingbox: [-5, 5, 5, -5], //default values, use "grid" to customize
  axis: false, grid:true, showNavigation:false, showCopyright:true
 });
-var a = 16/40; // default value, use "grid" to customize
-var labelshift = 0.2*a;
 //##start of chunk 2
+var a = 16/40; // default value, use "grid" to customize
+var pxunit = 1/40;
+var labelshift = 0.2*a;
 // angular dimension with a single or double arrow (handles arrow and arrow2)
 class angle {
  constructor(data) {
@@ -72,7 +73,6 @@ class angle {
  }
  data() { return this.d }
 }
-
 // Fachwerkstab
 class bar {
  constructor(data) {
@@ -176,6 +176,45 @@ class circle {
    return this.d;
  } 
 }
+
+// damper 
+// [ "dashpot", "name", [x1,y1], [x2,y2], r, offset ]
+class dashpot {
+  constructor(data){
+    // Parameter handling
+    this.d = data.slice(0); //make a copy
+    var x = this.d[2][0];
+    var y =  this.d[2][1];
+    var dx = (this.d[3][0]-x);
+    var dy = (this.d[3][1]-y);
+    var l = Math.sqrt(dx**2+dy**2);
+    var r;
+    if (data.length >4 ) {r = data[4] } else {r = 6*pxunit}
+    if (data.length >5 ) {this.off = data[7]} else {this.off = r+8*pxunit}
+    console.log(r);
+    var c = r/l;
+    // start point
+    var xc = x+0.5*dx, yc = y+0.5*dy;
+    var dlx = c*dx, dly = c*dy, dqx = -c*dy, dqy = c*dx;    
+    var px = [x, xc, NaN, xc+dqx, xc-dqx, NaN,
+      xc+dqx-dlx, xc+dqx+dlx, xc-dqx+dlx, xc-dqx-dlx, NaN,
+      xc+dlx, x+dx];
+    var py = [y, yc, NaN, yc+dqy, yc-dqy, NaN,
+      yc+dqy-dly, yc+dqy+dly, yc-dqy+dly, yc-dqy-dly, NaN,
+      yc+dly, y+dy];
+    px.push(x+dx);
+    py.push(y+dy);
+     board.create('curve',[ px, py ], normalStyle );
+    // label
+    board.create('point',[xc-dy/l*this.off, yc+dx/l*this.off], {    
+      name: "\\("+data[1]+"\\)" ,size:0, label:{offset:[0,0]}});
+  }
+  data(){
+    return this.d;
+  } 
+}
+
+
 // linear dimension ["dim", "name", [x1,y1], [x2,y2], d]
 class dim {
  constructor(data) {
@@ -451,6 +490,7 @@ class grid {
    board.setBoundingBox([xmin, ymax, xmax, ymin ]);
    board.resizeContainer(pix*(xmax-xmin), pix*(ymax-ymin)); 
    a = 16/pix; 
+   pxunit = 1/pix;
    labelshift = 0.2*a;
    
   
@@ -500,6 +540,21 @@ class line {
    return this.d;
  } 
 }
+//  point mass [ "mass", [x,y],r, off]
+class mass {
+ constructor(data) {
+   this.d = data;
+   var r, off;
+   if (data.length > 3) {r = data[3]} else {r = 4}
+   if (data.length > 4) {off = data[4 ]} else {off = 11}
+   // node
+   this.p1 = board.create('point', data[2],  { 
+     name: "\\("+data[1]+"\\)", 
+     label:{autoPosition:true, offset:[off,0]}, 
+     color:'black', size: r } );
+ }
+ data() { return this.d }
+}
 
 // Momentenpfeil
 class moment {
@@ -510,7 +565,7 @@ class moment {
    this.p3 = board.create('point', data[4], {    
      name:"\\("+this.name+"\\)" ,size:0, label:{offset:[-6,0],color:'blue'}});
    this.arc = board.create('minorArc', [this.p1, this.p2, this.p3], {
-     fixed: true, strokeWidth: 2, lastArrow: { type: 1, size: 5 }, });
+     fixed: true, strokeWidth: 2, lastArrow: { type: 1, size: 5 } });
  }
  data() { return ["moment", this.p3.name, [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()], [this.p3.X(), this.p3.Y()] ] }
 }
@@ -683,29 +738,30 @@ class springc {
     return this.d;
   } 
 }
-//Zugfeder
+//tensile spring
+// [ "springt", "name", [x1,y1], [x2,y2], r, proz, n, offset ]
 class springt {
   constructor(data){
+    // Parameter handling
     this.d = data.slice(0); //make a copy
-    var r = this.d[4];
     var x = this.d[2][0];
     var y =  this.d[2][1];
     var dx = (this.d[3][0]-x);
     var dy = (this.d[3][1]-y);
     var l = Math.sqrt(dx**2+dy**2);
+    var r,pr;
+    if (data.length >4 ) {r = data[4] } else {r = 10*pxunit}
+    if (data.length >5 ) {pr = data[5] } else {pr = 20}
+    if (data.length >6 ) {this.n = data[6]*2+1} else {this.n = Math.ceil(l*(1-pr/50)/(5*pxunit))}
+    if (data.length >7 ) {this.off = data[7]} else {this.off = 14*pxunit}
+    console.log(r,pr,pxunit);
     var c = r/l;
-    var pr= this.d[5]; //Prozent Länge für Enden
-
-    
-    if (data.length >5 ) {this.n = data[6]*2+1} else {this.n = 5}
-    if (data.length >6 ) {this.off = data[7]} else {this.off = 10}
     // start point
     var xf=x+pr/100*dx;
     var yf=y+pr/100*dy;
     var dxf= dx - 2*pr/100*dx;
     var dyf= dy - 2*pr/100*dy;
-    var cf=c;
-    
+    var cf=c; 
     var px = [x, xf];
     var py = [y, yf];
     // intermediate points
@@ -717,9 +773,7 @@ class springt {
     // last point
     px.push(xf+dxf, x+dx);
     py.push(yf+dyf, y+dy);
-    console.log(px,py);
-    console.log(dx,dy);
-    board.create('curve',[ px, py ], normalStyle );
+     board.create('curve',[ px, py ], normalStyle );
     // label
     board.create('point',[x+dx/2-dy/l*this.off, y+dy/2+dx/l*this.off], {    
       name: "\\("+data[1]+"\\)" ,size:0, label:{offset:[0,0]}});
@@ -749,84 +803,34 @@ function init() {
  for (m of state) {
    console.log(m);
    switch (m[0]) {
-     case "angle":
-       objects.push(new angle(m));
-       break;
-     case "angle2":
-       objects.push(new angle(m));
-       break;
-     case "bar":
-       objects.push(new bar(m));
-       break;
-     case "beam":
-       objects.push(new beam(m));
-       break;
-     case "circle":
-       objects.push(new circle(m));
-       break;
-     case "dim":
-       objects.push(new dim(m));
-       break;
-     case "dir":
-       objects.push(new dir(m));
-       break;
-     case "disp":
-       objects.push(new disp(m));
-       break;
-     case "fix1":
-       objects.push(new fix1(m));
-       break;
-     case "fix12":
-       objects.push(new fix12(m));
-       break;
-     case "fix123":
-       objects.push(new fix123(m));
-       break;
-     case "fix13":
-       objects.push(new fix13(m));
-       break;
-     case "force":
-       objects.push(new force(m));
-       break
-     case "grid":
-       objects.push(new grid(m));
-       break
-     case "label":
-       objects.push(new label(m));
-       break
-     case "line":
-       objects.push(new line(m));
-       break
-     case "moment":
-       objects.push(new moment(m));
-       break;
-     case "node":
-       objects.push(new node(m));
-       break;
-     case "point":
-       objects.push(new point(m));
-       break;
-     case "polygon":
-       objects.push(new polygon(m));
-       break;
-     case "q":
-       objects.push(new q(m));
-       break;      
-     case "springc":
-        objects.push(new springc(m));
-        break;
-     case "springt":
-        objects.push(new springt(m));
-        break;
-     case "rope":
-       objects.push(new rope(m));
-       break;
-     case "rot":
-       objects.push(new rot(m));
-       break;
-     case "wall":
-       objects.push(new wall(m));
-       break;
+     case "angle": objects.push(new angle(m)); break;
+     case "angle2": objects.push(new angle(m)); break;
+     case "bar": objects.push(new bar(m)); break;
+     case "beam": objects.push(new beam(m)); break;
+     case "circle": objects.push(new circle(m)); break;
+     case "dashpot": objects.push(new dashpot(m)); break;
+     case "dim": objects.push(new dim(m)); break;
+     case "dir": objects.push(new dir(m)); break;
+     case "disp": objects.push(new disp(m)); break;
+     case "fix1": objects.push(new fix1(m)); break;
+     case "fix12": objects.push(new fix12(m)); break;
+     case "fix123": objects.push(new fix123(m)); break;
+     case "fix13": objects.push(new fix13(m)); break;
+     case "force": objects.push(new force(m)); break
+     case "grid": objects.push(new grid(m)); break
+     case "label": objects.push(new label(m)); break
+     case "line": objects.push(new line(m)); break
+     case "mass": objects.push(new mass(m)); break;
+     case "moment": objects.push(new moment(m)); break;
+     case "node": objects.push(new node(m)); break;
+     case "point": objects.push(new point(m)); break;
+     case "polygon": objects.push(new polygon(m)); break;
+     case "q": objects.push(new q(m)); break;      
+     case "rope": objects.push(new rope(m)); break;
+     case "rot": objects.push(new rot(m)); break;
+     case "springc": objects.push(new springc(m)); break;
+     case "springt": objects.push(new springt(m)); break;
+     case "wall": objects.push(new wall(m)); break;
    }
  }
 }
