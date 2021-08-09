@@ -184,7 +184,7 @@ Test for identity of the curves:
 
 AlgebraicEquivalence(S_a1, a1). The coefficients of the reference solution must be rounded to 3 decimal places. 
 
-Display the interval and eventual hints on wrong values or wrong slope on either side of the interval. Use this in both branches of the node. The Te
+Display the interval and eventual hints on wrong values or wrong slope on either side of the interval. Use this in both branches of the node.
 
 ```
 \(a \) für  \(t / \mathrm{s} \) {@stext@}
