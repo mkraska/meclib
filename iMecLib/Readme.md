@@ -96,4 +96,4 @@ init: stackjson_stringify(float(initdata));
 
 ## Functions for Feedback Generation
 
-Functions to evaluate the state of the interactive graphics are discussed in the [Maxima Readme](Maxima/Readme.md).
+Functions to evaluate the state of the interactive graphics are discussed in the [Maxima Readme](../Maxima/Readme.md).
