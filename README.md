@@ -57,6 +57,7 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 - <code>[ "rot", "&lt;name&gt;", [x1, y1], [x2,y2], [x3,y3] ]</code> Red thin arrow (to indicate rotational kinematic quantities) specified by center point, tail point (defines start angle and radius) and label point (defines end angle and radial label position. Orientation is such that the angle is less then 180° (shortest arc from start angle to end angle).
 
   If the label placement is not good, suppress it using `""` as name and use a `"label"` object with `"red"` color.
+
 - <code>[ "springc", "", [x1, y1], [x2,y2], r, n, off ]</code>  compression spring, normal line with n turns of radius r and label offset off
 - <code>[ "springt", "", [x1, y1], [x2,y2], d, lf, (n (, off)) ] </code>  tensile spring
  - `d` diameter of the turns in grid units (default: equivalent to 10px)
@@ -68,8 +69,7 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 
 ## Objects Specified for Implementation
 
-<ul>
-<li><code>[ "spline", "&lt;label&gt;", [x1, y1], dx, f1, f2, [xt1, yt1], [xt2, yt2], style]</code> implemented in iMecLib</li>
+- <code>[ "spline", "&lt;label&gt;", [x1, y1], dx, f1, f2, [xt1, yt1], [xt2, yt2], style]</code> implemented in iMecLib
 
 
 ## Code for Question Text
