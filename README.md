@@ -11,7 +11,7 @@ There are two versions: `MecLib` (non-interactive) and `iMecLib` (interactive in
 
 [Demo question](STACK%20MecLib%20Demo.xml)
 
-[jsfiddle tryout](https://jsfiddle.net/17r9kfmg/5/)
+[jsfiddle tryout](https://jsfiddle.net/248wo69c/4/)
 
 ![Demo](demo2.png?raw=true "Screenshot from the demo question")
 
@@ -43,7 +43,7 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 - <code>[ "fix13", "&lt;name&gt;", [x, y], angle ]</code> axial and angular support, floats in vertical direction for angle = 0
 - <code>[ "force", "&lt;name&gt;", [x1, y1], [x2,y2], d ]</code> force vector. d (in pix) controls the distance of the label. If d is negative, the label is drawn at the tail, if positiv or d is not given the label is at the head of the arrow.
 - <code>[ "grid", "xlabel","ylabel", xmin, xmax, ymin, ymax, pix ]</code> Grid specification (range of user co-ordinates and user unit in pixels). Must be the first object in the list, otherwise scaling of the other objects might be wrong. xlabel and ylabel are axis labels. Axes are only drawn if labels aren't empty.
-- <code>[ "label", "&lt;name&gt;", [x, y] ]</code> label, text anchor is center left, default: no Latex, use <code>\<span class="nolink">\(   \\)</span></code> to enforce Latex mode for text.
+- <code>[ "label", "&lt;name&gt;", [x, y], color ]</code> label, text anchor is center left, default: no Latex, use <code>\<span class="nolink">\(   \\)</span></code> to enforce Latex mode for text. `color` is optional and defaults to `"black"`.
 - <code>[ "line", "&lt;name&gt;", [x1, x2,...], [y1, y2,...] ,dash, th ]</code>  polyline with optional dash style ( "--", ".", "-."..defaults to solid line) and thickness (defaults to 0.8)
 - <code>[ "mass", "&lt;name&gt;", [x1, y1], r, off ]</code> point mass
 	+ `r` radius in px (default 4)
@@ -55,6 +55,8 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 - <code>[ "q", "&lt;q1&gt;","&lt;q2&gt;", [x1, y1], [x2,y2], q1, q2, phi ]</code> Line load inclined by phi degrees from perpendicular to line between point 1 and point 2. Names are displayed as labels, q1 and q2 give the height.
 - <code>[ "rope", "&lt;name&gt;", [x1, y1], r1, [x2,y2], r2 ]</code> tangent line to two circles with center and radius given. Negative r values select the tangent point on the left side from the line C1-C2.
 - <code>[ "rot", "&lt;name&gt;", [x1, y1], [x2,y2], [x3,y3] ]</code> Red thin arrow (to indicate rotational kinematic quantities) specified by center point, tail point (defines start angle and radius) and label point (defines end angle and radial label position. Orientation is such that the angle is less then 180° (shortest arc from start angle to end angle).
+
+  If the label placement is not good, suppress it using `""` as name and use a `"label"` object with `"red"` color.
 - <code>[ "springc", "", [x1, y1], [x2,y2], r, n, off ]</code>  compression spring, normal line with n turns of radius r and label offset off
 - <code>[ "springt", "", [x1, y1], [x2,y2], d, lf, (n (, off)) ] </code>  tensile spring
  - `d` diameter of the turns in grid units (default: equivalent to 10px)
