@@ -27,6 +27,7 @@ var a = 16/40; // default value, use "grid" to customize
 var pxunit = 1/40;
 var labelshift = 0.2*a;
 // angular dimension with a single or double arrow (handles arrow and arrow2)
+// angular dimension with a single or double arrow (handles arrow and arrow2)
 class angle {
  constructor(data) {
    this.d = data.slice(0); //copy
@@ -65,7 +66,7 @@ class angle {
        {name:"" ,fillcolor:'black',strokeColor:'black',size:0.5, strokeWidth:0}); 
    }
    else {
-     const rl = data[4]+0.5*a;
+     const rl = data[4]+10*pxunit;
      this.p5 = board.create('point',
        [this.p1.X()+rl*Math.cos(al), this.p1.Y()+rl*Math.sin(al)],
        {name:"\\("+this.name+"\\)" ,size:0, label:{offset:[-6,0]}}); 
