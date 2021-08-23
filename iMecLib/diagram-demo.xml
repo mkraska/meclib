@@ -1,0 +1,738 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+<!-- question: 1035974  -->
+  <question type="stack">
+    <name>
+      <text>TM2 04 04 Zugversuch plastisch, Meclib</text>
+    </name>
+    <questiontext format="markdown">
+      <text><![CDATA[**TM2 04 04**
+
+<p hidden>[[input:objects]] [[validation:objects]]</p>
+<p hidden>[[input:names]] [[validation:names]]</p>
+<p>
+[[jsxgraph width='500px' height='400px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
+// Version 2021 08 23
+// set Input "objects" to type string and no validation
+// set Input "names" to algebraic, no validation, allow floats
+// defaults
+JXG.Options.point.snapToGrid = true; // grid snap spoils rotated static objects
+JXG.Options.point.snapSizeX = 0.1;
+JXG.Options.point.snapSizeY = 0.1;
+JXG.Options.point.fixed = true; // this is for static objects
+JXG.Options.text.useMathJax = true;
+JXG.Options.label.useMathJax = true;
+JXG.Options.text.useMathJax = true;
+JXG.Options.label.offset = [0, 0];
+JXG.Options.label.anchorY = 'middle';
+var a = 0.4; //compute this to match font size (grid-independent)
+var pxunit = 1/40;
+var labelshift = 0.2 * a;
+// Style for nodes (supports, bars)
+const nodeStyle = { fillcolor: 'white', strokeColor: 'black', size: 2, strokeWidth: 1.5 }; 
+const pointStyle = { fillcolor: 'black', strokeColor: 'black', size: 1, strokeWidth: 1 };
+// Style for bars
+const barStyle = { strokewidth: 4, strokecolor: "black" };
+// Set some linestyles
+const normalStyle = { strokeWidth: 2, strokeColor: 'black', lineCap: 'round' };
+const thinStyle = { strokeWidth: 1, strokeColor: 'black', lineCap: 'round' };
+const inactiveColor = "gray";
+
+const board = JXG.JSXGraph.initBoard(divid, {
+  boundingbox: [-5, 5, 5, -5], //default values, use "grid" to customize
+  axis: false, grid:true, showNavigation:false, showCopyright:true
+});
+var state;
+var stateInput;
+// make infobox optionally relative to a given point (define p.ref to [xref, yref])
+board.highlightInfobox = function(x, y , el) {
+    var ref = [0,0];
+    var scale = [1,1];
+    var dp = [1,1];
+    if (typeof (el.ref) != 'undefined') {ref = el.ref}
+    if (typeof (el.scale) != 'undefined') {scale = el.scale}
+    if (typeof (el.dp) != 'undefined') {dp = el.dp}
+    this.infobox.setText( 
+        '('+((parseFloat(x)-ref[0])*scale[0]).toFixed(dp[0]) + ', ' + ((parseFloat(y)-ref[1])*scale[1]).toFixed(dp[1])+ ')')
+};
+// crosshair for reading off co-ordinates from graphs
+// [ "crosshair", "", [x0, y0], [xref, yref], [xscale, yscale], [dpx, dpy] ]
+class crosshair {
+  constructor(data) {
+    this.d = data;
+    const f = 2, r = 7;
+    const pp =  {size:0, name:'', fixed:false, snapToGrid:false, showInfobox:false};
+    this.p = board.create('point', data[2], {
+      name: '', fixed:false, size:r, fillOpacity:0, highlightFillOpacity:0, strokeWidth:1, color:"blue", snapToGrid:false
+    });
+    // set properties of infobox
+    if (data[3]) { this.p.ref = data[3] }
+    if (data[4]) { this.p.scale = data[4] }
+    if (data[5]) { this.p.dp = data[5] }
+    console.log(this.p.dp);
+    
+    this.p1 = board.create('point', plus(data[2],[-f*r*pxunit,0]),pp);
+    this.p2 = board.create('point', plus(data[2],[+f*r*pxunit,0]), pp);   
+    this.h = board.create('segment',  [this.p1, this.p2], {strokeWidth:1});
+    this.p3 = board.create('point', plus(data[2],[0,-f*r*pxunit]), pp);
+    this.p4 = board.create('point', plus(data[2],[0,+f*r*pxunit]), pp);   
+    this.v = board.create('segment',  [this.p3, this.p4], {strokeWidth:1});
+    board.create('group', [this.p, this.p1, this.p2, this.h, this.p3, this.p4, this.v] );
+  }
+  data() { var d = this.d; d[2] = [this.p.X(), this.p.Y()]; return d } 
+  name() { return "0" }
+}
+
+// co-ordinate arrow with arrow with label 
+// ["dir", "name", [x1,y1], angle]
+// ["dir", "name", [x1,y1], angle, offset]
+// ["dir", "name", [x1,y1], angle, offset, length]
+class dir {
+ constructor(data) {
+   this.label = data[1];
+   this.d =data;
+   var le = 1.5*a;
+   if (data.length >=5 ) {this.dist = data[4] } else {this.dist = 10}
+   if (data.length >=6 ) { le = data[5] }
+   if (this.dist >= 0) {this.name1 = ""; this.name2 = "\\("+this.label+"\\)" } else
+     {this.name2 = ""; this.name1 = "\\("+this.label+"\\)" }
+   // Arrow
+   const a0 = data[3]*Math.PI/180;
+   const off = data[4];
+   const nx = Math.cos(a0);
+   const ny = Math.sin(a0);
+   const x2 = data[2][0]+le*nx;
+   const y2 = data[2][1]+le*ny;
+   this.p1 = board.create('point', data[2], { size: 0, name: this.name1, 
+     label:{offset:[-6,this.dist], autoPosition:true}});
+   this.p2 = board.create('point', [x2, y2], { size: 0, name: this.name2,
+     label:{offset:[-6,this.dist], autoPosition:true}});
+   this.vec = board.create('arrow', [this.p1, this.p2], { lastArrow: { type: 1, size: 6 } });
+   this.vec.setAttribute(thinStyle);
+ };
+ data() { return this.d }; 
+ name() { return "0" };
+}
+
+class force {
+  constructor(data) {
+    this.p1 = board.create('point', data[2], {
+      name: '', fixed:false
+    });
+    this.p2 = board.create('point', data[3], {
+      name: data[1], fixed:false, label:{offset:[10,10]}
+    });
+    this.vec = board.create('arrow', [this.p1, this.p2], {
+      touchLastPoint: true, fixed:false
+    });
+  }
+  data() {  return ["force", this.p2.name, [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()]  ] }
+  name() { return this.p2.name.replace(/\s+/,"*") }
+}
+// grid control object: [ "grid", "xlabel", "ylabel",  xmin, xmax, ymin, ymax, pix ]
+// grid control object: [ "grid", "xlabel", "ylabel",  xmin, xmax, ymin, ymax, pix, [fx, fy] ]
+class grid {
+ constructor(data) {
+   this.d = data;
+   const xmin = data[3];
+   const xmax = data[4];
+   const ymin = data [5];
+   const ymax = data [6];
+   const pix = data [7];
+   var fx = 1, fy = 1;
+   if (data[8]) {fx = data[8][0]; fy = data[8][1]};
+   board.setBoundingBox([xmin, ymax, xmax, ymin ]);
+   board.resizeContainer(pix*(xmax-xmin), pix*(ymax-ymin)); 
+   a = 16/pix; 
+   pxunit = 1/pix;
+   labelshift = 0.2*a;
+   //if (data[1] || data[2]) {board.removeGrids()};
+   if (data[1]) { 
+   		var xaxis = board.create('axis', [[0, 0], [1,0]], 
+		  	{name:'\\('+data[1]+'\\)', withLabel: true,
+				label: {position: 'rt', offset: [-25, 20]},
+        ticks: {generateLabelValue:function(p1,p2) {return (p1.usrCoords[1]-p2.usrCoords[1])*fx}} });
+      }
+   if (data[2]) {  
+   		var yaxis = board.create('axis', [[0, 0], [0,1]], 
+		  	{name:'\\('+data[2]+'\\)', withLabel: true,
+				label: {position: 'rt', offset: [-20, 0]},
+        ticks: {generateLabelValue:function(p1,p2) {return (p1.usrCoords[2]-p2.usrCoords[2])*fy}} });    
+      }   
+   }
+  
+ data(){  return this.d }
+ name(){  return "0" }
+}
+// Text label
+class label {
+ constructor(data){
+   this.p = board.create('point', data[2], {    
+     name:data[1] ,size:0, label:{offset:[0,0]}} );
+   this.d=data;
+ }
+ data(){ return this.d }
+ name(){  return "0" }
+}
+
+
+class moment {
+  constructor(data) {
+    this.p1 = board.create('point', data[2], {
+      name: '', fixed:false
+    });
+    this.p2 = board.create('point', data[3], {
+      name: '', fixed:false
+    });
+    this.p3 = board.create('point', data[4], {
+      name: data[1], fixed:false, label:{offset:[10,10]}
+    });
+    this.arc = board.create('minorArc', [this.p1, this.p2, this.p3], {
+      fixed: false,
+      strokeWidth: 2,
+      lastArrow: {
+        type: 1,
+        size: 5
+      },
+    });
+    var g = board.create('group', [this.p1, this.p2, this.p3, this.arc]);
+    g.removeTranslationPoint(this.p2);
+    g.removeTranslationPoint(this.p3);
+  }
+  data() { return ["moment", this.p3.name,  [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()], [this.p3.X(), this.p3.Y()]  ]  }
+  name() {return this.p3.name.replace(/\s+/,"*") }
+}
+
+// [ "spline", "eqn", [X0, Y0], [x1, y1], [x2,y2], [xt1, yt1], [xt2,yt2], style, status ]
+class spline {
+  constructor(data) {
+    this.d = data;
+    this.state = data[8];
+    this.style = data[7];
+    // global coordinates
+    this.P = data[2]; // ref point
+    var P1 = plus(this.P, data[3]);
+    var P2 = plus(this.P, data[4]);
+    var PT1 = plus(this.P, data[5]);
+    var PT2 = plus(this.P, data[6]);
+    var B1 = [P1[0], this.P[1]];
+    var B2 = [P2[0], this.P[1]];  
+    // points
+    this.v1 = board.create('line',[P1,plus(P1,[0,1])], {visible:false, fixed:true});
+    this.v2 = board.create('line',[P2,plus(P2,[0,1])], {visible:false, fixed:true});
+    this.p1 = board.create('glider',[P1[0], P1[1],this.v1], { name: '', fixed: false ,size:6, color:'red',fillOpacity:0});
+    this.p2 = board.create('glider',[P2[0], P2[1],this.v2], { name: '', fixed: false ,size:6, color:'red',fillOpacity:0});
+    this.pt1 = board.create('point',PT1, { name: '', fixed: false, snapToGrid:false });
+    this.pt2 = board.create('point',PT2, { name: '', fixed: false, snapToGrid:false });
+    this.t1 = board.create('segment',[this.p1, this.pt1], {fixed:false, strokecolor:'black', strokewidth: 1});
+    this.t2 = board.create('segment',[this.p2, this.pt2], {fixed:false, strokecolor:'black', strokewidth: 1});
+    this.v1 = board.create('segment',[this.p1, [P1[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
+    this.v2 = board.create('segment',[this.p2, [P2[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
+    this.v3= board.create('segment',[[P1[0],this.P[1]], [P2[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
+    //this.g1 = board.create('group', [this.p1, this.pt1] ).removeTranslationPoint(this.pt1);
+    //this.g2 = board.create('group', [this.p2, this.pt2] ).removeTranslationPoint(this.pt2);
+    this.graph = board.create('functiongraph', [hermiteplot(this.P,this.p1, this.p2, this.pt1, this.pt2), this.p1.X(), this.p2.X()], { strokecolor: 'red', strokewidth: 3  });
+    // set of control points
+    this.obj = [ this.p1, this.p2, this.pt1, this.pt2 ];
+    for (var part of this.obj) { part.ref = this.P} // ref point for local system
+    if (this.state == "active") { this.activate(this) }
+    if (this.state == "inactive") { this.deactivate(this) }
+    if (this.state == "locked") { 
+      this.deactivate(this); this.state = "locked" ;  this.graph.setAttribute({strokeColor:'black'} ); }
+    if (this.state == "pure") { 
+      this.deactivate(this); this.state = "pure" ;  
+      this.graph.setAttribute({strokeColor:'black'} );  this.graph.setAttribute({strokewidth: 2});  this.graph.setAttribute({highlight: false} ); 
+      this.v1.setAttribute({visible: false}); this.v2.setAttribute({visible: false}); this.v3.setAttribute({visible: false}); 
+      this.t1.setAttribute({visible: false}); this.t2.setAttribute({visible: false});
+      }
+   
+    //switch by doubleclick
+    this.graph.parent = this;
+    this.graph.lastclick = Date.now();    
+    this.graph.on('up', function() {
+      if (Date.now()-this.lastclick < 500) {console.log(this.parent.state); this.parent.switch()}
+      else {this.lastclick = Date.now() }})
+  }
+  switch() {if (this.state == "active") { this.deactivate(this)}
+      else if (this.state == "inactive") { this.activate(this);}
+      console.log(this.state)}
+  activate(ref) {console.log("this.activate()"); ref.state = "active";
+        for (var part of ref.obj) {
+          part.setAttribute({visible:true});
+          part.setAttribute({fixed:false});
+          part.setAttribute({snapToGrid:true});
+        } update()}
+  deactivate(ref) {console.log("this.deactivate()"); ref.state = "inactive";
+        for (var part of ref.obj) {
+          part.setAttribute({visible:false});
+          part.setAttribute({fixed:true});
+        } update()}
+
+  data() {  return [
+      "spline",
+      this.d[1],
+      this.d[2],
+      minus([this.p1.X(),this.p1.Y()], this.d[2]),
+      minus([this.p2.X(),this.p2.Y()], this.d[2]),
+      minus([this.pt1.X(),this.pt1.Y()], this.d[2]),
+      minus([this.pt2.X(),this.pt2.Y()], this.d[2]),
+      this.style,
+      this.state
+    ];  }
+  name() { return hermitename(this.P,this.p1, this.p2, this.pt1, this.pt2) }
+}
+
+// initialization
+var objects = [];
+init();
+
+update();
+
+board.on('update', function() {
+  update()
+});
+
+function init() {
+  stateInput = document.getElementById(stateRef);
+  if (stateInput.value && stateInput.value != '') {
+    console.log(stateInput.value); state = JSON.parse(stateInput.value); } else { state = JSON.parse({#init#});
+ }
+  var m;
+  for (m of state) {
+    console.log(m);
+    switch (m[0]) {
+      case "crosshair": objects.push(new crosshair(m)); break;
+      case "dir": objects.push(new dir(m)); break;
+      case "force": objects.push(new force(m)); break;
+      case "grid":  objects.push(new grid(m)); break;
+      case "label":  objects.push(new label(m)); break;
+      case "moment":  objects.push(new moment(m)); break;
+      case "spline":  objects.push(new spline(m)); break;
+    }
+  }
+}
+
+function update() {
+  var m;
+  var dfield = [];
+ var names ="[";
+  for (m of objects) {
+    dfield.push(m.data());
+    if (names != "[") { names = names.concat(",")  }
+    names = names.concat(m.name()); 
+  }
+  stateInput.value = JSON.stringify(dfield);
+  names=names.concat("]");
+  document.getElementById(fbd_names).value=names;
+
+}
+function plus(a,b) { return [ a[0]+b[0], a[1]+b[1] ] }
+function minus(a,b) { return [ a[0]-b[0], a[1]-b[1] ] }
+function hermite(x1,dx,y1,dy,d1,d2) {
+  if (!isNaN(d1) && !isNaN(d2)) {
+    // cubic spline
+    var c0 = (dx**3*y1+(2*dy+(-d2-d1)*dx)*x1**3+(3*dx*dy+(-d2-2*d1)*dx**2)*x1**2-d1*dx**3*x1)/(dx**3);
+    var c1 = -((6*dy+(-3*d2-3*d1)*dx)*x1**2+(6*dx*dy+(-2*d2-4*d1)*dx**2)*x1-d1*dx**3)/(dx**3);
+    var c2 = ((6*dy+(-3*d2-3*d1)*dx)*x1+3*dx*dy+(-d2-2*d1)*dx**2)/(dx**3);
+    var c3 = -(2*dy+(-d2-d1)*dx)/(dx**3); }
+  if (isNaN(d1) && !isNaN(d2)) {
+    // parabola with 2 points and slope at right point
+    var c0 = (dx**2*y1+(d2*dx-dy)*x1**2+(d2*dx**2-2*dx*dy)*x1)/(dx**2);
+    var c1 = ((2*dy-2*d2*dx)*x1+2*dx*dy-d2*dx**2)/(dx**2);
+    var c2 = -(dy-d2*dx)/(dx**2);
+    var c3 = 0;}
+  if (!isNaN(d1) && isNaN(d2)) {
+    // parabola with 2 points and slope at left point
+    var c0 = (dx**2*y1+(dy-d1*dx)*x1**2-d1*dx**2*x1)/(dx**2);
+    var c1 = -((2*dy-2*d1*dx)*x1-d1*dx**2)/(dx**2);
+    var c2 = (dy-d1*dx)/(dx**2);
+    var c3 = 0;}
+  if (isNaN(d1) && isNaN(d2)) {
+    // straight segment thru 2 points
+    var c0 = (dx*y1-dy*x1)/dx;
+    var c1 = dy/dx;
+    var c2 = 0;
+    var c3 = 0;}
+  return [c0, c1, c2, c3];
+}
+function hermiteplot(Ref,p1, p2, t1, t2) {
+  var fct = function(x) {
+    const tol = 0.09; // min x-range for tangent lines
+    var c0 = 0, c1 = 0, c2 = 0, c3 = 0;
+    var x1 = p1.X()-Ref[0], dx = p2.X()-p1.X();
+    var y1 = p1.Y()-Ref[1], dy = p2.Y()-p1.Y();
+    var d1 = (p1.Y()-t1.Y())/(p1.X()-t1.X());
+    if (Math.abs(p1.X()-t1.X())<tol) {d1 = NaN};
+    var d2 = (p2.Y()-t2.Y())/(p2.X()-t2.X());
+    if (Math.abs(p2.X()-t2.X())<tol) {d2 = NaN};
+    var c = hermite(x1,dx,y1,dy,d1,d2);
+    var s = Ref[1]+c[3]*(x-Ref[0])**3+c[2]*(x-Ref[0])**2+c[1]*(x-Ref[0])+c[0];
+    return  s
+  }
+  return fct; 
+};
+function hermitename(Ref,p1, p2, t1, t2) {
+  const tol = 0.09; // min x-range for tangent lines
+  var c0 = 0, c1 = 0, c2 = 0, c3 = 0;
+  var x1 = p1.X()-Ref[0], dx = p2.X()-p1.X();
+  var y1 = p1.Y()-Ref[1], dy = p2.Y()-p1.Y();
+  var d1 = (p1.Y()-t1.Y())/(p1.X()-t1.X());
+  var d2 = (p2.Y()-t2.Y())/(p2.X()-t2.X());
+  var c = hermite(x1,dx,y1,dy,d1,d2);
+  if (!isNaN(c[0]+c[1]+c[2]+c[3])) {
+    var n = c[3].toFixed(3) + "*x^3+" + c[2].toFixed(3) + "*x^2+" + c[1].toFixed(3) + "*x+" + c[0].toFixed(3);
+    return n.replace(/\+\-/g,"-")  }
+  else {return "NaN"}
+};
+[[/jsxgraph]]</p>
+
+<p>In einem Zugversuch wurde das dargestellte Spannungs-Dehnungs-Diagramm für ein Kunststoffmaterial ermittelt.</p>
+<p>Zu bestimmen ist die bleibende Länge \(\ell_p\) einer Probe mit der Anfangslänge \(\ell_0={@l0@}\,\mathrm{cm}\), die bis zu einer Dehnung von \(\varepsilon_\max={@eps@}\%\) belastet und dann entlastet wurde. Dabei wird angenommen, dass das Material sich elastisch-plastisch verhält und im elastischen Bereich linear ist.</p>
+<p>Bestimmen Sie den E-Modul und die Spannung bei maximaler Dehnung aus dem Diagramm. Benutzen Sie das blaue Fadenkreuz zum Ablesen der Koordinaten.</p>
+<p>\(E=\) [[input:S_Emodul]] [[validation:S_Emodul]] [[feedback:Emodul]] </p>
+<p>\( \sigma(\varepsilon_\max)=\) [[input:S_sig]] [[validation:S_sig]] [[feedback:sig]] </p>
+<p>Berechnen Sie nun die bleibende Dehnung und die bleibende Länge des Stabes nach der Entlastung:</p>
+<p>\(\varepsilon_p=\) [[input:S_ep]]% [[validation:S_ep]] [[feedback:ep]] </p>
+<p>\(l_p=\) [[input:S_lp]] [[validation:S_lp]] [[feedback:lp]] </p>]]></text>
+<file name="Hib-2-3-12.png" path="/" encoding="base64">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</file>
+    </questiontext>
+    <generalfeedback format="html">
+      <text>Der E-Modul ergibt sich aus dem Quotient von Spannung und Dehnung eines Punkts auf der elastischen Geraden. Beim Ablesen ist zu beachten:
+- Ist der Punkt zu weit unten, wird der Wert ungenau, weil die Zahlen klein sind.
+- Ist der Punkt zu weit oben, wird der Wert ungenau, weil man die elastische Gerade verlässt und in den plastischen Bereich reinkommt. Den Übergang kann man bei diesem Material nur sehr schlecht erkennen.
+
+Die Spannung bei maximaler Dehnung wird einfach für den gegebenen Dehnungswert abgelesen.
+
+Daraus kann man mit dem E-Modul die elastische Dehnung berechnen. Diese muss man von der gegebenen Gesamtdehnung abziehen, um die plastische (bleibende) Dehnung zu erhalten.
+
+Plastische Dehnung mal Anfangslänge liefert dann die bleibende Längenänderung. Damit ergibt sich dann auch die bleibende Länge als Anfangslänge plus Längenänderung.</text>
+    </generalfeedback>
+    <defaultgrade>1</defaultgrade>
+    <penalty>0.1</penalty>
+    <hidden>0</hidden>
+    <idnumber></idnumber>
+    <stackversion>
+      <text>2020120600</text>
+    </stackversion>
+    <questionvariables>
+      <text><![CDATA[
+de0: 0.4;
+ds0: rand_with_step(15,20,1);
+de1:0.4;
+ds1: ds0/(3*de0)*de1;
+de2: rand_with_step(3.5,4.5,0.1);
+ds2: rand_with_step(4,6,1);
+T: ds0/de0*rand_with_step(0.1,0.15, 0.01)
+l0: rand_with_step(5,8,1);
+eps: rand_with_step(de0+de1,de0+de1+de2,0.1);
+
+Emodul: ds0/de0*100;
+
+
+/* iMecLib objects */
+fx: 0.5; fy: 5
+p0:[0,0];
+p1:[de0/fx,ds0/fy];
+p2: p1+[de1/fx, ds1/fy];
+p3: p2+[de2/fx, ds2/fy];
+p4: p3+[1/fx, T/fy];
+y(x):=a*x^3+b*x^2+c*x+d;
+maxy: p3[2]+1;
+maxx: p3[1]+1;
+initdata: [ 
+  [ "grid", " ", " ", -0.5,maxx, -1, maxy, 40, [fx, fy] ],
+  [ "label", "\\(\\sigma \\) in MPa", [0.6,maxy-0.5] ],
+  [ "label", "\\(\\varepsilon \\) in %", [maxx-0.9,0] ],  
+  [ "spline", "eqn", p0, p0, p1, p0, p1, "", "pure"],
+  [ "spline", "eqn", p0, p1, p2, p0, p2+[1,0], "", "pure"],
+  [ "spline", "eqn", p0, p2, p3, p2+[1,0], p4, "", "pure"],
+  [ "crosshair", "", [2,2], [0,0], [fx,fy], [2,1] ]
+];
+init: stackjson_stringify(float(initdata));
+
+[a,b,c,d]: ev([a,b,c,d], solve([ y(p2[1])=p2[2], y(p3[1])=p3[2], at(diff(y(x),x),x=p2[1])=0, at(diff(y(x),x),x=p3[1])=T*fx/fy], [a,b,c,d]));
+sig: fy*y(eps/fx);
+ep: eps-sig/Emodul*100;
+lp: l0*(1+ep/100);
+]]></text>
+    </questionvariables>
+    <specificfeedback format="html">
+      <text></text>
+    </specificfeedback>
+    <questionnote>
+      <text> \(l_0={@l0@}\,\mathrm{cm}\),  \(\varepsilon={@eps@}\%\) {@[ds0, ds2,de2,T]@} E-Modul    {@Emodul@} Sig {@sig@}</text>
+    </questionnote>
+    <questionsimplify>1</questionsimplify>
+    <assumepositive>0</assumepositive>
+    <assumereal>0</assumereal>
+    <prtcorrect format="html">
+      <text><![CDATA[<p>Richtig.</p>]]></text>
+    </prtcorrect>
+    <prtpartiallycorrect format="html">
+      <text><![CDATA[<p>Ihre Antwort ist teilweise korrekt.</p>]]></text>
+    </prtpartiallycorrect>
+    <prtincorrect format="html">
+      <text><![CDATA[<p>Falsch.</p>]]></text>
+    </prtincorrect>
+    <multiplicationsign>dot</multiplicationsign>
+    <sqrtsign>1</sqrtsign>
+    <complexno>i</complexno>
+    <inversetrig>cos-1</inversetrig>
+    <logicsymbol>lang</logicsymbol>
+    <matrixparens>[</matrixparens>
+    <variantsselectionseed></variantsselectionseed>
+    <input>
+      <name>names</name>
+      <type>algebraic</type>
+      <tans>[]</tans>
+      <boxsize>15</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint></syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>0</mustverify>
+      <showvalidation>0</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>objects</name>
+      <type>string</type>
+      <tans>init</tans>
+      <boxsize>15</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint></syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>1</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>0</mustverify>
+      <showvalidation>0</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>S_Emodul</name>
+      <type>units</type>
+      <tans>Emodul*MPa</tans>
+      <boxsize>8</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>Zahl mit Einheit</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>1</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>S_ep</name>
+      <type>numerical</type>
+      <tans>ep</tans>
+      <boxsize>6</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint>Zahl</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>S_lp</name>
+      <type>units</type>
+      <tans>lp*cm</tans>
+      <boxsize>8</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>Zahl mit Einheit</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>S_sig</name>
+      <type>units</type>
+      <tans>sig*MPa</tans>
+      <boxsize>8</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>Zahl mit Einheit</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <prt>
+      <name>Emodul</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>UnitsRelative</answertest>
+        <sans>S_Emodul</sans>
+        <tans>Emodul*MPa</tans>
+        <testoptions>0.05</testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1.0000000</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>Emodul-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0.0000000</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>Emodul-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[&nbsp;Abweichung > 5% .]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>ep</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>NumRelative</answertest>
+        <sans>S_ep</sans>
+        <tans>ep</tans>
+        <testoptions>0.05</testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1.0000000</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>ep-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0.0000000</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>ep-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[&nbsp;Abweichung > 5% .]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>lp</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>UnitsRelative</answertest>
+        <sans>S_lp</sans>
+        <tans>lp*cm</tans>
+        <testoptions>0.005</testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1.0000000</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>lp-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0.0000000</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>lp-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[&nbsp;Abweichung > 0.5% .]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>sig</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>UnitsRelative</answertest>
+        <sans>S_sig</sans>
+        <tans>sig*MPa</tans>
+        <testoptions>0.01</testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1.0000000</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>sig-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0.0000000</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>sig-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[&nbsp;Abweichung > 1%.]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <qtest>
+      <testcase>1</testcase>
+    </qtest>
+    <qtest>
+      <testcase>2</testcase>
+    </qtest>
+    <tags>
+      <tag><text>numerisch</text>
+</tag>
+      <tag><text>Fragetest</text>
+</tag>
+    </tags>
+  </question>
+
+</quiz>

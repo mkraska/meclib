@@ -1,15 +1,18 @@
-# iMmecLib
+# iMecLib
 
 iMeclib is the interactive version of MecLib.
 
 It allows for graphical input in JSXGraph widgets.
 
 
-[Demo question](spline-demo.xml)
 
-[jsfiddle tryout](https://jsfiddle.net/gvwoucr1/20/)
+[jsfiddle tryout](https://jsfiddle.net/vtmeq12x/2/)
+
+[Spline demo question](spline-demo.xml)
 
 ![Spline Demo](spline-demo.png?raw=true "Screenshot from the spline demo question")
+
+[Diagram demo question with scaled axes and crosshair](diagram-demo.xml)
 
 ## Reference
 
@@ -20,16 +23,23 @@ Kraska, Martin, & Schulz, Dennis. (2021). Automatic assessment of free body diag
 All co-ordinates and lengths are in user units as specified with `"grid"`, angles are in °, if not specified otherwise.
 
 <ul>
+<li><code>[ "crosshair","", [x0, y0], [xref, yref], [fx, fy], [dpx, dpy] ]</code> Interactive crosshair for reading off co-ordinate values.</li>
+<ul>
+<li><code>[x0,y0]</code> initial location</li> 
+<li><code>[xref, yref]</code> origin (default: <code>[0, 0]</code>)</li> 
+<li><code>[fx, fy]</code> x and y values of a single grid unit (default: <code>[1, 1]</code>).  </li>
+<li><code>[dpx, dpy]</code> decimal precision of the co-ordinate display (default: <code>[1, 1]</code>)</li>
+</ul></li>
 <li><code>[ "dir", "&lt;name&gt;", [x,y], angle, offset, length]</code> small arrow with label (indication of coordinate axes). Offset (defaults to 10 pix) and length (defaults to grid-independent smart value) are optional. If offset is negative, the label is placed at the tail instead of the head.</li>
 <li><code>[ "force", "&lt;name&gt;", [x1, y1], [x2,y2], d ]</code> force vector. d (in pix) controls the distance of the label. If d is negative, the label is drawn at the tail, if positiv or d is not given the label is at the head of the arrow.</li>
-<li><code>[ "grid", "xlabel","ylabel", xmin, xmax, ymin, ymax, pix ]</code> Grid specification (range of user co-ordinates and user unit in pixels). Must be the first object in the list, otherwise scaling of the other objects might be wrong. xlabel and ylabel are axis labels. Axes are only drawn if labels aren't empty.</li>
+<li><code>[ "grid", "xlabel","ylabel", xmin, xmax, ymin, ymax, pix, [fx, fy] ]</code> Grid specification (range of user co-ordinates and user unit in pixels). Must be the first object in the list, otherwise scaling of the other objects might be wrong. xlabel and ylabel are axis labels. Axes are only drawn if labels aren't empty. fx and fy can be used to scale the tick values of the axes.</li>
 <li><code>[ "label", "&lt;name&gt;", [x, y] ]</code> label, text anchor is center left, default: no Latex, use <code>\<span class="nolink">\(   \\)</span></code> to enforce Latex mode for text.</li>
 <li><code>[ "moment", "&lt;name&gt;", [x1, y1], [x2,y2], [x3,y3] ]</code>Moment arrow specified by center point, tail point (defines start angle and radius) and label point (defines end angle and radial label position. Orientation is such that the angle is less then 180° (shortest arc from start angle to end angle).</li>
 <li><code>[ "spline", "eqn", [X0, Y0], [x1, y1], [x2,y2], [xt1, yt1], [xt2,yt2], style, status ]</code> cubic spline for interactive function graphing. 
 <ul><li><code>[X01,Y01]</code> origin of the local system. The other points are given in this local system. Note that the dynamic display of co-ordinates uses the local system.</li> 
 <li><code>[x1, y1], [x2,y2]</code> start and end points.</li> <li><code>[xt1, yt1], [xt2, yt2]</code> points to define the respective tangent directions. Points only visible in active state. If they coincide with the boundary points, no tangent condition is assumed and a quadratic or linear spline is drawn. </li>
 <li><code>style</code> currently ignored.</li>
-<li> <code>status</code> is <code>"active"</code>, <code>"inactive"</code> or <code>"locked"</code>. The spline can be switched between active and inactive state by doubleclick except if it is locked, then it is black. Otherwise the curve is plotted in red.</li>
+<li> <code>status</code> is <code>"active"</code>, <code>"inactive"</code>, <code>"locked"</code>  or <code>"pure"</code>. The spline can be switched between active and inactive state by doubleclick except if it is locked or pure, then it is black. Otherwise the curve is plotted in red. "pure" plots only the curve and switches off highlighting.</li>
 </ul></li>
 </ul>
 
@@ -72,9 +82,9 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 ## Code for Question Text
 
 The following code is a complete [[jsxgraph]] block plus the required hidden input fields `objects` and `names`. This is just copied to the question text and displays the widget. It can be surrounded by whatever other question text.
-Usually, there is no need to edit the block.
+Usually, there is no need to edit the block. It is not an executable script, the extension js is used to trigger proper syntax highlighting in editors.
 
-[imeclib.txt](imeclib.txt)
+[imeclib.js](imeclib.js)
 
 ## Template for Question Variables
 
@@ -84,9 +94,10 @@ Changing the name is required if you want to use more than one JSXGraph widget i
 ```
 /* iMecLib objects */
 initdata: [ 
+  [ "grid", "x", "y", -5,5, -2, 5, 50 [fx, fy]],
   [ "dir", "x",  [x,y], angle, labeloffset, length],
-  [ "label", "A",  [x,y] ] ,
-  [ "grid", "x", "y", -5,5, -2, 5, 50 ],
+  [ "crosshair","", [x0, y0], [xref, yref], [fx, fy], [dpx, dpy] ],
+  [ "label", "A",  [x,y] ],
   [ "spline", "eqn", [X0, Y0], [x1, y1], [x2,y2], [xt1, yt1], [xt2,yt2], "", "active"],
   [ "moment", "M_0", [0,0], [1,-1], [1,1] ], 
   [ "force", "F", [2,0], [2,1] ] 

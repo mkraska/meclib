@@ -1,5 +1,5 @@
 [[jsxgraph width='250px' height='250px' ]] 
-// Version 2021 08 09 https://jsfiddle.net/248wo69c/1/
+// Version 2021 08 09 https://jsfiddle.net/248wo69c/4/
 var state = JSON.parse({#init#});
 //## start of chunk 1
 JXG.Options.point.fixed = true; // this is for static objects
@@ -515,8 +515,9 @@ class grid {
 class label {
  constructor(data){
    this.name = data[1];
+   if (data.length>3) {this.c = data[3]} else {this.c = "black"}
    this.p = board.create('point', data[2], {    
-     name:this.name ,size:0, label:{offset:[0,0]}} );
+     name:this.name ,size:0, label:{offset:[0,0], color:this.c}} );
    this.d=data;
  }
  data(){ return this.d}
