@@ -6,7 +6,7 @@ It allows for graphical input in JSXGraph widgets.
 
 
 
-[jsfiddle tryout](https://jsfiddle.net/vtmeq12x/2/)
+[jsfiddle tryout](https://jsfiddle.net/vtmeq12x/3/)
 
 [Spline demo question](spline-demo.xml)
 
