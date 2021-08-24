@@ -2,7 +2,7 @@
 <p hidden>[[input:names]] [[validation:names]] </p>
 <p>
 [[jsxgraph width='500px' height='400px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
-// Version 2021 07 31
+// Version 2021 07 31 https://jsfiddle.net/vtmeq12x/4/
 // defaults
 JXG.Options.point.snapToGrid = true; // grid snap spoils rotated static objects
 JXG.Options.point.snapSizeX = 0.1;
@@ -14,6 +14,7 @@ JXG.Options.text.useMathJax = true;
 JXG.Options.label.offset = [0, 0];
 JXG.Options.label.anchorY = 'middle';
 var a = 0.4; //compute this to match font size (grid-independent)
+var pxunit = 1/40;
 var labelshift = 0.2 * a;
 // Style for nodes (supports, bars)
 const nodeStyle = { fillcolor: 'white', strokeColor: 'black', size: 2, strokeWidth: 1.5 }; 
@@ -33,10 +34,81 @@ var state;
 var stateInput;
 // make infobox optionally relative to a given point (define p.ref to [xref, yref])
 board.highlightInfobox = function(x, y , el) {
-    if (typeof (el.ref) != 'undefined') { this.infobox.setText( 
-        '('+(parseFloat(x)-el.ref[0]).toFixed(1) + ', ' + (parseFloat(y)-el.ref[1]).toFixed(1)+ ')')}
-    else {this.infobox.setText( '('+ x + ', ' + y + ')' )};
+    var ref = [0,0];
+    var scale = [1,1];
+    var dp = [1,1];
+    if (typeof (el.ref) != 'undefined') {ref = el.ref}
+    if (typeof (el.scale) != 'undefined') {scale = el.scale}
+    if (typeof (el.dp) != 'undefined') {dp = el.dp}
+    this.infobox.setText( 
+        '('+((parseFloat(x)-ref[0])*scale[0]).toFixed(dp[0]) + ', ' + ((parseFloat(y)-ref[1])*scale[1]).toFixed(dp[1])+ ')')
 };
+// crosshair for reading off co-ordinates from graphs
+// [ "crosshair", "", [x0, y0], [xref, yref], [xscale, yscale], [dpx, dpy] ]
+class crosshair {
+  constructor(data) {
+    this.d = data;
+    const f = 2, r = 7;
+    const pp =  {size:0, name:'', fixed:false, snapToGrid:false, showInfobox:false};
+    this.p = board.create('point', data[2], {
+      name: '', fixed:false, size:r, fillOpacity:0, highlightFillOpacity:0, strokeWidth:1, color:"blue", snapToGrid:false
+    });
+    // set properties of infobox
+    if (data[3]) { this.p.ref = data[3] }
+    if (data[4]) { this.p.scale = data[4] }
+    if (data[5]) { this.p.dp = data[5] }
+    console.log(this.p.dp);
+    
+    this.p1 = board.create('point', plus(data[2],[-f*r*pxunit,0]),pp);
+    this.p2 = board.create('point', plus(data[2],[+f*r*pxunit,0]), pp);   
+    this.h = board.create('segment',  [this.p1, this.p2], {strokeWidth:1});
+    this.p3 = board.create('point', plus(data[2],[0,-f*r*pxunit]), pp);
+    this.p4 = board.create('point', plus(data[2],[0,+f*r*pxunit]), pp);   
+    this.v = board.create('segment',  [this.p3, this.p4], {strokeWidth:1});
+    board.create('group', [this.p, this.p1, this.p2, this.h, this.p3, this.p4, this.v] );
+  }
+  data() { var d = this.d; d[2] = [this.p.X(), this.p.Y()]; return d } 
+  name() { return "0" }
+}
+// damper 
+// [ "dashpot", "name", [x1,y1], [x2,y2], r, offset ]
+class dashpot {
+  constructor(data){
+    // Parameter handling
+    this.d = data.slice(0); //make a copy
+    var x = this.d[2][0];
+    var y =  this.d[2][1];
+    var dx = (this.d[3][0]-x);
+    var dy = (this.d[3][1]-y);
+    var l = Math.sqrt(dx**2+dy**2);
+    var r;
+    if (data.length >4 ) {r = data[4] } else {r = 6*pxunit}
+    if (data.length >5 ) {this.off = data[7]} else {this.off = r+8*pxunit}
+    var c = r/l;
+    // start point
+    var xc = x+0.5*dx, yc = y+0.5*dy;
+    var dlx = c*dx, dly = c*dy, dqx = -c*dy, dqy = c*dx;    
+    var px = [x, xc, NaN, xc+dqx, xc-dqx, NaN,
+      xc+dqx-dlx, xc+dqx+dlx, xc-dqx+dlx, xc-dqx-dlx, NaN,
+      xc+dlx, x+dx];
+    var py = [y, yc, NaN, yc+dqy, yc-dqy, NaN,
+      yc+dqy-dly, yc+dqy+dly, yc-dqy+dly, yc-dqy-dly, NaN,
+      yc+dly, y+dy];
+    px.push(x+dx);
+    py.push(y+dy);
+     board.create('curve',[ px, py ], normalStyle );
+    // label
+    board.create('point',[xc-dy/l*this.off, yc+dx/l*this.off], {    
+      name: "\\("+data[1]+"\\)" ,size:0, label:{offset:[0,0]}});
+    // logging
+    console.log("dasphot", data[1], data[2], data[3], r, this.off);   
+  }
+  name() { return "0" }
+  data(){
+    return this.d;
+  } 
+}
+
 // co-ordinate arrow with arrow with label 
 // ["dir", "name", [x1,y1], angle]
 // ["dir", "name", [x1,y1], angle, offset]
@@ -67,6 +139,33 @@ class dir {
  data() { return this.d }; 
  name() { return "0" };
 }
+//co-ordinate arrow with red arrow with label ["disp", "name", [x1,y1], angle, offset]
+class disp {
+   constructor(data) {
+    this.name = data[1];
+    var le = 1.5*a;
+    if (data.length >=5 ) {this.dist = data[4] } else {this.dist = 10};
+    if (data.length >=6 ) { le = data[5] }
+    if (this.dist >= 0) {this.name1 = ""; this.name2 = "\\("+this.name+"\\)" } else
+      {this.name2 = ""; this.name1 = "\\("+this.name+"\\)" }
+    // Arrow
+    const a0 = data[3]*Math.PI/180;
+    const off = data[4];
+    const nx = Math.cos(a0);
+    const ny = Math.sin(a0);
+    const x2 = data[2][0]+le*nx;
+    const y2 = data[2][1]+le*ny;
+    this.p1 = board.create('point', data[2], { size: 0, name: this.name1, 
+      label:{offset:[-6,this.dist], autoPosition:true, color:"red"} });
+    this.p2 = board.create('point', [x2, y2], { size: 0, name: this.name2,
+      label:{offset:[-6,this.dist], autoPosition:true, color:"red" }});
+    this.vec = board.create('arrow', [this.p1, this.p2], { lastArrow: { type: 1, size: 6 } });
+    this.vec.setAttribute(thinStyle);
+    this.vec.setAttribute({color:"red"});
+  }
+  data() { return this.data } 
+  name() { return "0" }
+}
 
 class force {
   constructor(data) {
@@ -84,6 +183,7 @@ class force {
   name() { return this.p2.name.replace(/\s+/,"*") }
 }
 // grid control object: [ "grid", "xlabel", "ylabel",  xmin, xmax, ymin, ymax, pix ]
+// grid control object: [ "grid", "xlabel", "ylabel",  xmin, xmax, ymin, ymax, pix, [fx, fy] ]
 class grid {
  constructor(data) {
    this.d = data;
@@ -92,21 +192,28 @@ class grid {
    const ymin = data [5];
    const ymax = data [6];
    const pix = data [7];
+   var fx = 1, fy = 1;
+   if (data[8]) {fx = data[8][0]; fy = data[8][1]};
    board.setBoundingBox([xmin, ymax, xmax, ymin ]);
    board.resizeContainer(pix*(xmax-xmin), pix*(ymax-ymin)); 
    a = 16/pix; 
+   pxunit = 1/pix;
    labelshift = 0.2*a;
-   if (data[1]) {  
+   //if (data[1] || data[2]) {board.removeGrids()};
+   if (data[1]) { 
    		var xaxis = board.create('axis', [[0, 0], [1,0]], 
 		  	{name:'\\('+data[1]+'\\)', withLabel: true,
-				label: {position: 'rt', offset: [-25, 20]} });
+				label: {position: 'rt', offset: [-25, 20]},
+        ticks: {generateLabelValue:function(p1,p2) {return (p1.usrCoords[1]-p2.usrCoords[1])*fx}} });
       }
    if (data[2]) {  
    		var yaxis = board.create('axis', [[0, 0], [0,1]], 
 		  	{name:'\\('+data[2]+'\\)', withLabel: true,
-				label: {position: 'rt', offset: [-20, 0]} });
-      }
+				label: {position: 'rt', offset: [-20, 0]},
+        ticks: {generateLabelValue:function(p1,p2) {return (p1.usrCoords[2]-p2.usrCoords[2])*fy}} });    
+      }   
    }
+  
  data(){  return this.d }
  name(){  return "0" }
 }
@@ -120,7 +227,41 @@ class label {
  data(){ return this.d }
  name(){  return "0" }
 }
-
+// line between along x and y data vectors with optional dash style and thickness
+class line {
+ constructor(data) {
+   this.d = data;
+   if (data.length<5) {this.dash = "-"} else {this.dash = data[4]}
+   if (data.length<6) {this.th = 0.8 } else {this.th = data[5]}
+   var d;
+   switch (this.dash) {
+     case "-": d = 0; break;
+     case ".": d = 1; break;
+     case "--": d = 2; break;
+     case "-.": d = 6; break;
+   }
+   this.p = board.create('curve',[this.d[2],this.d[3]],
+     { dash:d, strokeColor:'black', strokeWidth:this.th, layer:8}); 
+ }
+ data(){ return this.d }
+ name(){  return "0" }
+}
+//  point mass [ "mass", [x,y],r, off]
+class mass {
+  constructor(data) {
+    this.d = data;
+    var r, off;
+    if (data.length > 3) {r = data[3]} else {r = 4}
+    if (data.length > 4) {off = data[4 ]} else {off = 11}
+    // node
+    this.p1 = board.create('point', data[2],  { 
+      name: "\\("+data[1]+"\\)", 
+      label:{autoPosition:true, offset:[off,0]}, 
+      color:'black', size: r } );
+  }
+  data() { return this.d }
+  name(){  return "0" }
+}
 class moment {
   constructor(data) {
     this.p1 = board.create('point', data[2], {
@@ -167,45 +308,42 @@ class spline {
     this.v2 = board.create('line',[P2,plus(P2,[0,1])], {visible:false, fixed:true});
     this.p1 = board.create('glider',[P1[0], P1[1],this.v1], { name: '', fixed: false ,size:6, color:'red',fillOpacity:0});
     this.p2 = board.create('glider',[P2[0], P2[1],this.v2], { name: '', fixed: false ,size:6, color:'red',fillOpacity:0});
-    this.pt1 = board.create('point',PT1, { name: '', fixed: false });
-    this.pt2 = board.create('point',PT2, { name: '', fixed: false });
+    this.pt1 = board.create('point',PT1, { name: '', fixed: false, snapToGrid:false });
+    this.pt2 = board.create('point',PT2, { name: '', fixed: false, snapToGrid:false });
     this.t1 = board.create('segment',[this.p1, this.pt1], {fixed:false, strokecolor:'black', strokewidth: 1});
     this.t2 = board.create('segment',[this.p2, this.pt2], {fixed:false, strokecolor:'black', strokewidth: 1});
-    board.create('segment',[this.p1, [P1[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
-    board.create('segment',[this.p2, [P2[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
-    board.create('segment',[[P1[0],this.P[1]], [P2[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
+    this.v1 = board.create('segment',[this.p1, [P1[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
+    this.v2 = board.create('segment',[this.p2, [P2[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
+    this.v3= board.create('segment',[[P1[0],this.P[1]], [P2[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
     //this.g1 = board.create('group', [this.p1, this.pt1] ).removeTranslationPoint(this.pt1);
     //this.g2 = board.create('group', [this.p2, this.pt2] ).removeTranslationPoint(this.pt2);
     this.graph = board.create('functiongraph', [hermiteplot(this.P,this.p1, this.p2, this.pt1, this.pt2), this.p1.X(), this.p2.X()], { strokecolor: 'red', strokewidth: 3  });
     // set of control points
     this.obj = [ this.p1, this.p2, this.pt1, this.pt2 ];
     for (var part of this.obj) { part.ref = this.P} // ref point for local system
-    if (this.state == "active") { this.activate(this) }
-    if (this.state == "inactive") { this.deactivate(this) }
+    // state init
+    if (this.state == "active") { activate(this) }
+    if (this.state == "inactive") {deactivate(this) }
     if (this.state == "locked") { 
-      this.deactivate(this); this.state = "locked" ; this.graph.setAttribute({color:'black'} ) }
-    
+      deactivate(this); this.state = "locked" ;  this.graph.setAttribute({strokeColor:'black'} ); }
+    if (this.state == "pure") { 
+      deactivate(this); this.state = "pure" ;  
+      this.graph.setAttribute({strokeColor:'black'} );  
+      this.graph.setAttribute({strokewidth: 2});  
+      this.graph.setAttribute({highlight: false} ); 
+      this.v1.setAttribute({visible: false}); 
+      this.v2.setAttribute({visible: false}); 
+      this.v3.setAttribute({visible: false}); 
+      this.t1.setAttribute({visible: false}); 
+      this.t2.setAttribute({visible: false});
+    }
     //switch by doubleclick
     this.graph.parent = this;
     this.graph.lastclick = Date.now();    
     this.graph.on('up', function() {
-      if (Date.now()-this.lastclick < 500) {console.log(this.parent.state); this.parent.switch()}
+      if (Date.now()-this.lastclick < 500) { console.log(this.parent.state); Switch(this.parent) }
       else {this.lastclick = Date.now() }})
   }
-  switch() {if (this.state == "active") { this.deactivate(this)}
-      else if (this.state == "inactive") { this.activate(this);}
-      console.log(this.state)}
-  activate(ref) {console.log("this.activate()"); ref.state = "active";
-        for (var part of ref.obj) {
-          part.setAttribute({visible:true});
-          part.setAttribute({fixed:false});
-        } update()}
-  deactivate(ref) {console.log("this.deactivate()"); ref.state = "inactive";
-        for (var part of ref.obj) {
-          part.setAttribute({visible:false});
-          part.setAttribute({fixed:true});
-        } update()}
-
   data() {  return [
       "spline",
       this.d[1],
@@ -218,6 +356,62 @@ class spline {
       this.state
     ];  }
   name() { return hermitename(this.P,this.p1, this.p2, this.pt1, this.pt2) }
+}
+//tensile spring
+// [ "springt", "name", [x1,y1], [x2,y2], r, proz, n, offset ]
+class springt {
+  constructor(data){
+    // Parameter handling
+    this.d = data.slice(0); //make a copy
+    var x = this.d[2][0];
+    var y =  this.d[2][1];
+    var dx = (this.d[3][0]-x);
+    var dy = (this.d[3][1]-y);
+    var l = Math.sqrt(dx**2+dy**2);
+    var r,pr;
+    if (data.length >4 ) {r = data[4] } else {r = 6*pxunit}
+    if (data.length >5 ) {pr = data[5] } else {pr = 20}
+    if (data.length >6 ) {this.n = data[6]*2+1} else {this.n = Math.ceil(l*(1-pr/50)/(5*pxunit))}
+    if (data.length >7 ) {this.off = data[7]} else {this.off = 14*pxunit}
+    var c = r/l;
+    // start point
+    var xf=x+pr/100*dx;
+    var yf=y+pr/100*dy;
+    var dxf= dx - 2*pr/100*dx;
+    var dyf= dy - 2*pr/100*dy;
+    var cf=r/(l*(1-pr/50));
+    var px = [x, xf];
+    var py = [y, yf];
+    // intermediate points
+    var j;
+    for (j = 1; j < this.n+1; j++) {
+      px.push(xf+dxf*(j-0.5)/this.n+dyf*cf*(-1)**j);
+      py.push(yf+dyf*(j-0.5)/this.n-dxf*cf*(-1)**j);
+    }
+    // last point
+    px.push(xf+dxf, x+dx);
+    py.push(yf+dyf, y+dy);
+    board.create('curve',[ px, py ], normalStyle );
+    // label
+    board.create('point',[x+dx/2-dy/l*this.off, y+dy/2+dx/l*this.off], {    
+      name: "\\("+data[1]+"\\)" ,size:0, label:{offset:[0,0]}});
+	// logging
+    console.log("springt", data[1], data[2], data[3], r, pr,  Math.floor(this.n/2), this.off);
+  }
+  name(){ return "0" }
+  data(){ return this.d } 
+}
+//  Wand
+class wall {
+ constructor(data) {
+   this.d = data;
+   // dependent objects
+   this.bl = board.create('segment', [data[2],data[3]], {name: ''});
+   this.bl.setAttribute(normalStyle);
+   this.c = board.create("comb", [data[2],data[3]], { width: 0.25*a, frequency: 0.25*a, angle: data[4]* Math.PI / 180 })
+  }
+  data() { return this.d }
+  name(){ return "0" }
 }
 
 // initialization
@@ -239,12 +433,19 @@ function init() {
   for (m of state) {
     console.log(m);
     switch (m[0]) {
-      case "dir": objects.push(new dir(m)); break;
-      case "force": objects.push(new force(m)); break;
-      case "grid":  objects.push(new grid(m)); break;
-      case "label":  objects.push(new label(m)); break;
-      case "moment":  objects.push(new moment(m)); break;
-      case "spline":  objects.push(new spline(m)); break;
+      case "dashpot":		objects.push(new dashpot(m)); break;
+      case "crosshair":		objects.push(new crosshair(m)); break;
+      case "dir": 			objects.push(new dir(m)); break;
+      case "disp": 			objects.push(new disp(m)); break;
+      case "force": 		objects.push(new force(m)); break;
+      case "grid":  		objects.push(new grid(m)); break;
+      case "label":   		objects.push(new label(m)); break;
+      case "line": 			objects.push(new line(m)); break
+      case "mass": 			objects.push(new mass(m)); break;     
+      case "moment":  		objects.push(new moment(m)); break;
+      case "spline":  		objects.push(new spline(m)); break;
+      case "springt":  		objects.push(new springt(m)); break;
+      case "wall": 			objects.push(new wall(m)); break;
     }
   }
 }
@@ -252,7 +453,7 @@ function init() {
 function update() {
   var m;
   var dfield = [];
- var names ="[";
+  var names ="[";
   for (m of objects) {
     dfield.push(m.data());
     if (names != "[") { names = names.concat(",")  }
@@ -319,4 +520,19 @@ function hermitename(Ref,p1, p2, t1, t2) {
     return n.replace(/\+\-/g,"-")  }
   else {return "NaN"}
 };
+function activate(ref) {console.log("activate()"); ref.state = "active";
+        for (var part of ref.obj) {
+          part.setAttribute({visible:true});
+          part.setAttribute({fixed:false});
+          part.setAttribute({snapToGrid:true});
+        } update()}
+function deactivate(ref) {console.log("deactivate()"); ref.state = "inactive";
+        for (var part of ref.obj) {
+          part.setAttribute({visible:false});
+          part.setAttribute({fixed:true});
+        } update()}
+function Switch(ref) {if (ref.state == "active") { deactivate(ref)}
+      else if (ref.state == "inactive") { activate(ref)}
+      console.log(ref.state)}
+
 [[/jsxgraph]]</p>
