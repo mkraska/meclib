@@ -5,8 +5,7 @@ iMeclib is the interactive version of MecLib.
 It allows for graphical input in JSXGraph widgets.
 
 
-
-[jsfiddle tryout](https://jsfiddle.net/vtmeq12x/3/)
+[jsfiddle tryout](https://jsfiddle.net/vtmeq12x/5/)
 
 [Spline demo question](spline-demo.xml)
 
