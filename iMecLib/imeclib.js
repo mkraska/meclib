@@ -2,7 +2,7 @@
 <p hidden>[[input:names]] [[validation:names]] </p>
 <p>
 [[jsxgraph width='500px' height='400px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
-// Version 2021 07 31 https://jsfiddle.net/vtmeq12x/4/
+// Version 2021 08 26 https://jsfiddle.net/vtmeq12x/9/
 // defaults
 JXG.Options.point.snapToGrid = true; // grid snap spoils rotated static objects
 JXG.Options.point.snapSizeX = 0.1;
@@ -43,6 +43,27 @@ board.highlightInfobox = function(x, y , el) {
     this.infobox.setText( 
         '('+((parseFloat(x)-ref[0])*scale[0]).toFixed(dp[0]) + ', ' + ((parseFloat(y)-ref[1])*scale[1]).toFixed(dp[1])+ ')')
 };
+//[ "circle2P", "<label1>","<label2>", [x1,y1],[x2,y2], f ]//
+class circle2p {
+  constructor(data){
+    this.d = data.slice(0); //make a copy
+    this.f = data[5];
+    console.log([data[3][0]/this.f,data[3][1]/this.f]);
+    // x-axis for intersection points
+    this.xaxis = board.create('line', [ [0, 0], [1, 0] ], { visible: false }); 
+    // circle
+    this.A = board.create('point', [data[3][0]/this.f,data[3][1]/this.f], { name: data[1], fixed:false, label:{offset:[5,5]}}); 
+	  this.AS = board.create('point', [data[4][0]/this.f,data[4][1]/this.f], { name: data[2], fixed:false, label:{offset:[5,5]} }); 
+    this.MSK1 = board.create('semicircle', [this.A, this.AS]); 
+    this.MSK2 = board.create('semicircle', [this.AS, this.A]); 
+    this.int1 = board.create('intersection', [this.MSK1, this.xaxis], { visible: true, size: 0 , label:{visible:false} });
+	  this.int2 = board.create('intersection', [this.MSK2, this.xaxis], { visible: true, size: 0 , label:{visible:false} }); 
+    for (var pt of [this.A, this.AS, this.int1, this.int2]) {
+    	pt.scale = [this.f,this.f] }
+  }
+  data(){ return [this.d[0], this.d[1], this.d[2], [this.A.X()*this.f,this.A.Y()*this.f],[this.AS.X()*this.f,this.AS.Y()*this.f], this.f] } 
+  name(){ return "[["+this.data()[3].toString() + "],[" + this.data()[4].toString() + "]]" } 
+}
 // crosshair for reading off co-ordinates from graphs
 // [ "crosshair", "", [x0, y0], [xref, yref], [xscale, yscale], [dpx, dpy] ]
 class crosshair {
@@ -139,7 +160,8 @@ class dir {
  data() { return this.d }; 
  name() { return "0" };
 }
-//co-ordinate arrow with red arrow with label ["disp", "name", [x1,y1], angle, offset]
+//co-ordinate arrow with red arrow with label 
+// [ "disp", "name", [x,y], angle, offset, length]
 class disp {
    constructor(data) {
     this.name = data[1];
@@ -166,7 +188,7 @@ class disp {
   data() { return this.data } 
   name() { return "0" }
 }
-
+// [ "force", "name", [x1, y1], [x2,y2], d ]
 class force {
   constructor(data) {
     this.p1 = board.create('point', data[2], {
@@ -203,7 +225,7 @@ class grid {
    if (data[1]) { 
    		var xaxis = board.create('axis', [[0, 0], [1,0]], 
 		  	{name:'\\('+data[1]+'\\)', withLabel: true,
-				label: {position: 'rt', offset: [-25, 20]},
+				label: {position: 'rt', offset: [-5, 12], anchorX:'right'},
         ticks: {generateLabelValue:function(p1,p2) {return (p1.usrCoords[1]-p2.usrCoords[1])*fx}} });
       }
    if (data[2]) {  
@@ -213,7 +235,6 @@ class grid {
         ticks: {generateLabelValue:function(p1,p2) {return (p1.usrCoords[2]-p2.usrCoords[2])*fy}} });    
       }   
    }
-  
  data(){  return this.d }
  name(){  return "0" }
 }
@@ -228,6 +249,7 @@ class label {
  name(){  return "0" }
 }
 // line between along x and y data vectors with optional dash style and thickness
+// [ "line", "name", [x1, x2,...], [y1, y2,...] ,dash, th ]
 class line {
  constructor(data) {
    this.d = data;
@@ -245,6 +267,22 @@ class line {
  }
  data(){ return this.d }
  name(){  return "0" }
+}
+//[ "line2P", "label", [x1,y1],[x2,y2], f ]//
+class line2p {
+  constructor(data){
+    this.d = data.slice(0); //make a copy
+    this.f = data[4];
+    this.p1 = board.create('point', [data[2][0]/this.f,data[2][1]/this.f], { 
+    	label:{visible:false}, snaptopoints: true, attractorDistance: 0.2, fixed:false }); 
+    this.p2 = board.create('point', [data[3][0]/this.f,data[3][1]/this.f], { 
+    	label:{visible:false}, snaptopoints: true, attractorDistance: 0.2, fixed:false }); 
+    this.g = board.create('line', [this.p1, this.p2], { 
+    strokecolor: 'green', name:data[1],withLabel:true,label:{offset:[10,0]}});
+       for (var pt of [this.p1, this.p2]) {	pt.scale = [this.f,this.f] }
+  }
+  data(){ return [this.d[0], this.d[1], [this.p1.X()*this.f,this.p1.Y()*this.f],[this.p2.X()*this.f,this.p2.Y()*this.f], this.f] } 
+  name(){ return "[["+this.data()[2].toString() + "],[" + this.data()[3].toString() + "]]" } 
 }
 //  point mass [ "mass", [x,y],r, off]
 class mass {
@@ -401,7 +439,7 @@ class springt {
   name(){ return "0" }
   data(){ return this.d } 
 }
-//  Wand
+// [ "wall", "name", [x1, y1], [x2,y2] , angle ]
 class wall {
  constructor(data) {
    this.d = data;
@@ -433,19 +471,21 @@ function init() {
   for (m of state) {
     console.log(m);
     switch (m[0]) {
+      case "circle2p":	        objects.push(new circle2p(m)); break;
+      case "crosshair":	objects.push(new crosshair(m)); break;
       case "dashpot":		objects.push(new dashpot(m)); break;
-      case "crosshair":		objects.push(new crosshair(m)); break;
       case "dir": 			objects.push(new dir(m)); break;
-      case "disp": 			objects.push(new disp(m)); break;
+      case "disp": 		objects.push(new disp(m)); break;
       case "force": 		objects.push(new force(m)); break;
       case "grid":  		objects.push(new grid(m)); break;
-      case "label":   		objects.push(new label(m)); break;
-      case "line": 			objects.push(new line(m)); break
-      case "mass": 			objects.push(new mass(m)); break;     
-      case "moment":  		objects.push(new moment(m)); break;
-      case "spline":  		objects.push(new spline(m)); break;
-      case "springt":  		objects.push(new springt(m)); break;
-      case "wall": 			objects.push(new wall(m)); break;
+      case "label":   	        objects.push(new label(m)); break;
+      case "line": 		objects.push(new line(m)); break
+      case "line2p": 		objects.push(new line2p(m)); break
+      case "mass": 		objects.push(new mass(m)); break;     
+      case "moment":  	objects.push(new moment(m)); break;
+      case "spline":  	        objects.push(new spline(m)); break;
+      case "springt":  	        objects.push(new springt(m)); break;
+      case "wall": 		objects.push(new wall(m)); break;
     }
   }
 }

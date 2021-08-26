@@ -5,7 +5,7 @@ iMeclib is the interactive version of MecLib.
 It allows for graphical input in JSXGraph widgets.
 
 
-[jsfiddle tryout](https://jsfiddle.net/vtmeq12x/5/)
+[jsfiddle tryout](https://jsfiddle.net/vtmeq12x/9/)
 
 [Spline demo question](spline-demo.xml)
 
@@ -22,6 +22,7 @@ Kraska, Martin, & Schulz, Dennis. (2021). Automatic assessment of free body diag
 All co-ordinates and lengths are in user units as specified with `"grid"`, angles are in °, if not specified otherwise.
 
 <ul>
+<li><code>[ "circle2p", "label1","label2", [x1,y1],[x2,y2], f ]</code> circle with two draggable perimeter points, meant for Mohr's circle construction. `f` is a scaling factor for co-ordinate display. <a href="https://github.com/mkraska/meclib/wiki/Mohr's-Circle">Wiki</a></li></li>
 <li><code>[ "crosshair","", [x0, y0], [xref, yref], [fx, fy], [dpx, dpy] ]</code> Interactive crosshair for reading off co-ordinate values.</li>
 <ul>
 <li><code>[x0,y0]</code> initial location</li> 
@@ -29,13 +30,14 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 <li><code>[fx, fy]</code> x and y values of a single grid unit (default: <code>[1, 1]</code>).  </li>
 <li><code>[dpx, dpy]</code> decimal precision of the co-ordinate display (default: <code>[1, 1]</code>)</li>
 </ul></li>
-<li><code>[ "dashpot", "&lt;name&gt;", [x1, y1], [x2,y2], r ]</code> dashpot (for oscillators)</li>
+<li><code>[ "dashpot", "name", [x1,y1], [x2,y2], r, offset ]</code> dashpot (for oscillators)</li>
 <li><code>[ "dir", "&lt;name&gt;", [x,y], angle, offset, length]</code> small arrow with label (indication of coordinate axes). Offset (defaults to 10 pix) and length (defaults to grid-independent smart value) are optional. If offset is negative, the label is placed at the tail instead of the head.</li>
-<li><code>[ "disp", "&lt;name&gt;", [x,y], angle, offset, length]</code> small red arrow with label (indication of displacement). Offset (defaults to 10 pix) and length (1) are optional. If offset is negative, the label is placed at the tail instead of the head.</li>
+<li><code>[ "disp", "name", [x,y], angle, offset, length]</code> small red arrow with label (indication of displacement). Offset (defaults to 10 pix) and length (1) are optional. If offset is negative, the label is placed at the tail instead of the head.</li>
 <li><code>[ "force", "&lt;name&gt;", [x1, y1], [x2,y2], d ]</code> force vector. d (in pix) controls the distance of the label. If d is negative, the label is drawn at the tail, if positiv or d is not given the label is at the head of the arrow.</li>
 <li><code>[ "grid", "xlabel","ylabel", xmin, xmax, ymin, ymax, pix, [fx, fy] ]</code> Grid specification (range of user co-ordinates and user unit in pixels). Must be the first object in the list, otherwise scaling of the other objects might be wrong. xlabel and ylabel are axis labels. Axes are only drawn if labels aren't empty. fx and fy can be used to scale the tick values of the axes.</li>
 <li><code>[ "label", "&lt;name&gt;", [x, y] ]</code> label, text anchor is center left, default: no Latex, use <code>\<span class="nolink">\(   \\)</span></code> to enforce Latex mode for text.</li>
-<li><code>[ "line", "&lt;name&gt;", [x1, x2,...], [y1, y2,...] ,dash, th ]</code>  polyline with optional dash style ( "--", ".", "-."..defaults to solid line) and thickness (defaults to 0.8)</li>
+<li><code>[ "line", "name", [x1, x2,...], [y1, y2,...] ,dash, th ]</code>  polyline with optional dash style ( "--", ".", "-."..defaults to solid line) and thickness (defaults to 0.8)</li>
+<li><code>[ "line2P", "label", [x1,y1],[x2,y2], f ]</code> line with two draggable perimeter points, meant for Mohr's circle construction. `f` is a scaling factor for co-ordinate display. <a href="https://github.com/mkraska/meclib/wiki/Mohr's-Circle">Wiki</a></li>
 <li><code>[ "mass", "&lt;name&gt;", [x1, y1] ]</code> black filled circle with name</li>
 <li><code>[ "moment", "&lt;name&gt;", [x1, y1], [x2,y2], [x3,y3] ]</code>Moment arrow specified by center point, tail point (defines start angle and radius) and label point (defines end angle and radial label position. Orientation is such that the angle is less then 180° (shortest arc from start angle to end angle).</li>
 <li><code>[ "spline", "eqn", [X0, Y0], [x1, y1], [x2,y2], [xt1, yt1], [xt2,yt2], style, status ]</code> cubic spline for interactive function graphing. 
@@ -45,7 +47,7 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 <li> <code>status</code> is <code>"active"</code>, <code>"inactive"</code>, <code>"locked"</code>  or <code>"pure"</code>. The spline can be switched between active and inactive state by doubleclick except if it is locked or pure, then it is black. Otherwise the curve is plotted in red. "pure" plots only the curve and switches off highlighting.</li>
 </ul></li>
 <li><code>[ "springt", "", [x1, y1], [x2,y2], r, lf, (n (, off)) ] </code>  tensile spring, normal line with n turns of radius r and label offset off, lf length of terminal lines in percent of total length.</li>
-<li><code>[ "wall", "&lt;name&gt;", [x1, y1], [x2,y2] , angle ]</code> Normal line with thin hatching at left side, specified by start and end point. Angle controls the direction of the hatch lines (usually +45/-45).</li>
+<li><code>[ "wall", "name", [x1, y1], [x2,y2] , angle ]</code> Normal line with thin hatching at left side, specified by start and end point. Angle controls the direction of the hatch lines (usually +45/-45).</li>
 </ul>
 
 </ul>
@@ -56,8 +58,6 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 <li><code>[ "forceGen", "&lt;label&gt;", [x,y] ]</code> Interactive force generator</li>
 <li><code>[ "momentGen", "&lt;label&gt;", [x,y] ]</code> Interactive moment generator</li>
 <li><code>[ "waste", "&lt;label&gt;", [x,y ]</code> waste bucket, drag objects there to delete them</li>
-<li><code>[ "circle2P", "&lt;label1&gt;","&lt;label2&gt;", [x1,y1],[x2,y2], style ]</code> circle with two draggable perimeter points, meant for Mohr's circle construction</li>
-<li><code>[ "line2P", "&lt;label&gt;", [x1,y1],[x2,y2], style ]</code> line with two draggable perimeter points, meant for Mohr's circle construction</li>
 <li><code>[ "angle", "&lt;name&gt;", [xc, yc], [xs,ys], radius, angle ]</code> Angle with one arrow, centerpoint, endpoint of start line, radius of arc, angle.</li>
 <li><code>[ "angle", ".", [xc, yc], [xs,ys], radius, (-)90 ]</code> Right angle without arrows and label but with a dot inside.</li>
 <li><code>[ "angle2", "&lt;name&gt;", [xc, yc], [xs,ys], radius, angle ]</code> Angle with two arrows, centerpoint, endpoint of start line, radius of arc, angle.</li>
@@ -83,6 +83,7 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 
 The following code is a complete [[jsxgraph]] block plus the required hidden input fields `objects` and `names`. This is just copied to the question text and displays the widget. It can be surrounded by whatever other question text.
 
+
 Usually, there is no need to edit the block. It is not an executable script, the extension js is used to trigger proper syntax highlighting in editors.
 
 [imeclib.js](imeclib.js)
@@ -96,10 +97,18 @@ Changing the name is required if you want to use more than one JSXGraph widget i
 /* iMecLib objects */
 initdata: [ 
   [ "grid", "x", "y", -5,5, -2, 5, 50 [fx, fy]],
-  [ "dir", "x",  [x,y], angle, labeloffset, length],
+  [ "circle2p", "label1","label2", [x1,y1],[x2,y2], f ],
   [ "crosshair","", [x0, y0], [xref, yref], [fx, fy], [dpx, dpy] ],
+  [ "dashpot", "name", [x1,y1], [x2,y2], r, offset ],
+  [ "dir", "x",  [x,y], angle, labeloffset, length],
+  [ "disp", "name", [x,y], angle, offset, length],
   [ "label", "A",  [x,y] ],
+  [ "line", "name", [x1, x2,...], [y1, y2,...] ,dash, th ],
+  [ "line2P", "label", [x1,y1],[x2,y2], f ],
+  [ "mass", [x,y],r, off],
   [ "spline", "eqn", [X0, Y0], [x1, y1], [x2,y2], [xt1, yt1], [xt2,yt2], "", "active"],
+  [ "springt", "name", [x1,y1], [x2,y2], r, proz, n, offset ],
+  [ "wall", "name", [x1, y1], [x2,y2] , angle ],
   [ "moment", "M_0", [0,0], [1,-1], [1,1] ], 
   [ "force", "F", [2,0], [2,1] ] 
 ];
