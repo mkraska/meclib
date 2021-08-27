@@ -5,7 +5,7 @@ iMeclib is the interactive version of MecLib.
 It allows for graphical input in JSXGraph widgets.
 
 
-[jsfiddle tryout](https://jsfiddle.net/vtmeq12x/9/)
+[jsfiddle tryout](https://jsfiddle.net/vtmeq12x/20/)
 
 [Spline demo question](spline-demo.xml)
 
@@ -23,7 +23,7 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 
 <ul>
 <li><code>[ "circle2p", "label1","label2", [x1,y1],[x2,y2], f ]</code> circle with two draggable perimeter points, meant for Mohr's circle construction. `f` is a scaling factor for co-ordinate display. <a href="https://github.com/mkraska/meclib/wiki/Mohr's-Circle">Wiki</a></li></li>
-<li><code>[ "crosshair","", [x0, y0], [xref, yref], [fx, fy], [dpx, dpy] ]</code> Interactive crosshair for reading off co-ordinate values.</li>
+<li><code>[ "crosshair","", [x0, y0], [xref, yref], [fx, fy], [dpx, dpy] ]</code> Interactive crosshair for reading off co-ordinate values. <a href="https://github.com/mkraska/meclib/wiki/Diagrams-with-scaling-and-crosshair">Wiki</a></li>
 <ul>
 <li><code>[x0,y0]</code> initial location</li> 
 <li><code>[xref, yref]</code> origin (default: <code>[0, 0]</code>)</li> 
@@ -33,13 +33,15 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 <li><code>[ "dashpot", "name", [x1,y1], [x2,y2], r, offset ]</code> dashpot (for oscillators)</li>
 <li><code>[ "dir", "&lt;name&gt;", [x,y], angle, offset, length]</code> small arrow with label (indication of coordinate axes). Offset (defaults to 10 pix) and length (defaults to grid-independent smart value) are optional. If offset is negative, the label is placed at the tail instead of the head.</li>
 <li><code>[ "disp", "name", [x,y], angle, offset, length]</code> small red arrow with label (indication of displacement). Offset (defaults to 10 pix) and length (1) are optional. If offset is negative, the label is placed at the tail instead of the head.</li>
-<li><code>[ "force", "&lt;name&gt;", [x1, y1], [x2,y2], d ]</code> force vector. d (in pix) controls the distance of the label. If d is negative, the label is drawn at the tail, if positiv or d is not given the label is at the head of the arrow.</li>
+<li><code>[ "force", "&lt;name&gt;", [x1, y1], [x2,y2], d , state]</code> force vector. d (in pix) controls the distance of the label. If d is negative, the label is drawn at the tail, if positiv or d is not given the label is at the head of the arrow. If `state` is `"active"`, then the force can be moved around interactively.</li>
+<li><code>[ "forceGen", "name", [x,y] ]</code> Interactive force generator. It consists of an input field for the label and a force prototype, which can be dragged to produce new forces. Forces can be deleted by dragging them outside of the canvas.   <a href="https://github.com/mkraska/meclib/wiki/Interactive-Free-Body-Diagrams">Wiki</a></li>
 <li><code>[ "grid", "xlabel","ylabel", xmin, xmax, ymin, ymax, pix, [fx, fy] ]</code> Grid specification (range of user co-ordinates and user unit in pixels). Must be the first object in the list, otherwise scaling of the other objects might be wrong. xlabel and ylabel are axis labels. Axes are only drawn if labels aren't empty. fx and fy can be used to scale the tick values of the axes.</li>
 <li><code>[ "label", "&lt;name&gt;", [x, y] ]</code> label, text anchor is center left, default: no Latex, use <code>\<span class="nolink">\(   \\)</span></code> to enforce Latex mode for text.</li>
 <li><code>[ "line", "name", [x1, x2,...], [y1, y2,...] ,dash, th ]</code>  polyline with optional dash style ( "--", ".", "-."..defaults to solid line) and thickness (defaults to 0.8)</li>
 <li><code>[ "line2P", "label", [x1,y1],[x2,y2], f ]</code> line with two draggable perimeter points, meant for Mohr's circle construction. `f` is a scaling factor for co-ordinate display. <a href="https://github.com/mkraska/meclib/wiki/Mohr's-Circle">Wiki</a></li>
 <li><code>[ "mass", "&lt;name&gt;", [x1, y1] ]</code> black filled circle with name</li>
-<li><code>[ "moment", "&lt;name&gt;", [x1, y1], [x2,y2], [x3,y3] ]</code>Moment arrow specified by center point, tail point (defines start angle and radius) and label point (defines end angle and radial label position. Orientation is such that the angle is less then 180° (shortest arc from start angle to end angle).</li>
+<li><code>[ "moment", "&lt;name&gt;", [x1, y1], [x2,y2], [x3,y3], state ]</code>Moment arrow specified by center point, tail point (defines start angle and radius) and label point (defines end angle and radial label position. Orientation is such that the angle is less then 180° (shortest arc from start angle to end angle). If `state` is set to `"active"`, the object can be moved around interactively.</li>
+<li><code>[ "momentGen", "name", [x,y] ]</code> Interactive force generator. It consists of an input field for the label and a force prototype, which can be dragged to produce new moments. Moments can be deleted by dragging them outside of the canvas. <a href="https://github.com/mkraska/meclib/wiki/Interactive-Free-Body-Diagrams">Wiki</a></li>
 <li><code>[ "spline", "eqn", [X0, Y0], [x1, y1], [x2,y2], [xt1, yt1], [xt2,yt2], style, status ]</code> cubic spline for interactive function graphing. 
 <ul><li><code>[X01,Y01]</code> origin of the local system. The other points are given in this local system. Note that the dynamic display of co-ordinates uses the local system.</li> 
 <li><code>[x1, y1], [x2,y2]</code> start and end points.</li> <li><code>[xt1, yt1], [xt2, yt2]</code> points to define the respective tangent directions. Points only visible in active state. If they coincide with the boundary points, no tangent condition is assumed and a quadratic or linear spline is drawn. </li>
@@ -55,9 +57,6 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
 ## Objects Specified for Implementation
 
 <ul>
-<li><code>[ "forceGen", "&lt;label&gt;", [x,y] ]</code> Interactive force generator</li>
-<li><code>[ "momentGen", "&lt;label&gt;", [x,y] ]</code> Interactive moment generator</li>
-<li><code>[ "waste", "&lt;label&gt;", [x,y ]</code> waste bucket, drag objects there to delete them</li>
 <li><code>[ "angle", "&lt;name&gt;", [xc, yc], [xs,ys], radius, angle ]</code> Angle with one arrow, centerpoint, endpoint of start line, radius of arc, angle.</li>
 <li><code>[ "angle", ".", [xc, yc], [xs,ys], radius, (-)90 ]</code> Right angle without arrows and label but with a dot inside.</li>
 <li><code>[ "angle2", "&lt;name&gt;", [xc, yc], [xs,ys], radius, angle ]</code> Angle with two arrows, centerpoint, endpoint of start line, radius of arc, angle.</li>
@@ -102,15 +101,17 @@ initdata: [
   [ "dashpot", "name", [x1,y1], [x2,y2], r, offset ],
   [ "dir", "x",  [x,y], angle, labeloffset, length],
   [ "disp", "name", [x,y], angle, offset, length],
+  [ "force", "F", [2,0], [2,1] ], 
+  [ "forceGen", "name", [x,y] ], 
   [ "label", "A",  [x,y] ],
   [ "line", "name", [x1, x2,...], [y1, y2,...] ,dash, th ],
   [ "line2P", "label", [x1,y1],[x2,y2], f ],
   [ "mass", [x,y],r, off],
+  [ "moment", "M_0", [0,0], [1,-1], [1,1] ], 
+  [ "momentGen", "name", [x,y] ], 
   [ "spline", "eqn", [X0, Y0], [x1, y1], [x2,y2], [xt1, yt1], [xt2,yt2], "", "active"],
   [ "springt", "name", [x1,y1], [x2,y2], r, proz, n, offset ],
-  [ "wall", "name", [x1, y1], [x2,y2] , angle ],
-  [ "moment", "M_0", [0,0], [1,-1], [1,1] ], 
-  [ "force", "F", [2,0], [2,1] ] 
+  [ "wall", "name", [x1, y1], [x2,y2] , angle ]
 ];
 init: stackjson_stringify(float(initdata));
 ```

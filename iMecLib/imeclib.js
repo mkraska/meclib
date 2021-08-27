@@ -2,7 +2,7 @@
 <p hidden>[[input:names]] [[validation:names]] </p>
 <p>
 [[jsxgraph width='500px' height='400px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
-// Version 2021 08 26 https://jsfiddle.net/vtmeq12x/9/
+// Version 2021 08 27 https://jsfiddle.net/vtmeq12x/20/
 // defaults
 JXG.Options.point.snapToGrid = true; // grid snap spoils rotated static objects
 JXG.Options.point.snapSizeX = 0.1;
@@ -188,22 +188,81 @@ class disp {
   data() { return this.data } 
   name() { return "0" }
 }
-// [ "force", "name", [x1, y1], [x2,y2], d ]
+// [ "force", "name", [x1, y1], [x2,y2], d , state ]
 class force {
   constructor(data) {
-    this.p1 = board.create('point', data[2], {
-      name: '', fixed:false
-    });
+    this.d = data;
+    this.fname = data[1];
+    var fix = true, size = 0; 
+    if (data[4]) { this.off = data[4] } else { this.off = 10 }
+    const labelopts = {offset:[this.off,0], autoPosition:true, color:'blue'};
+    if (this.off >= 0) {this.name1 = ""; this.name2 = "\\("+this.fname+"\\)" } else
+      {this.name2 = ""; this.name1 = "\\("+this.fname+"\\)" }
+    if (data[5]) { this.state = data[5] } else { this.state = "locked" }
+    if (this.state == "active") {fix = false; size = 2} 
+    this.p1 = board.create('point', data[2], { 
+      name: this.name1, fixed:fix, size: size, label:labelopts  }); 
     this.p2 = board.create('point', data[3], {
-      name: data[1], fixed:false, label:{offset:[10,10]}
-    });
+      name: this.name2, fixed:fix, size: size, label:labelopts });
     this.vec = board.create('arrow', [this.p1, this.p2], {
-      touchLastPoint: true, fixed:false
-    });
+      touchLastPoint: true, fixed:false, lastArrow:{size:5, type:2} });
+    this.vec.obj = [this.vec, this.p1, this.p2];
+    this.vec.num = objects.length;   
+    this.vec.on("up", function(e) { 
+      if (isOutside(this.point1) || isOutside(this.point2) ) {
+        objects[this.num].d[0] = "deleted";
+        board.removeObject(this.obj, true) 
+      } })
   }
-  data() {  return ["force", this.p2.name, [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()]  ] }
-  name() { return this.p2.name.replace(/\s+/,"*") }
+  data() {  return [this.d[0], this.fname, 
+    [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()], this.off, this.state ] }
+  name() { return this.fname.replace(/\s+/,"*") }
 }
+// [ "forceGen", "name", [x,y]]
+class forceGen {
+  constructor(data) {
+    // input field
+    this.d = data;
+    const dy = -20*pxunit, dx = 40*pxunit;
+    // HTML trick because input.set() doesn't work in the callback
+    var t = board.create('text', [ data[2][0], data[2][1], 
+      '<input type="text" id="fname" value="'+data[1]+'" size="1">'], {fixed: true});
+    // ref point for checking drag distance
+    const ref1 = board.create('point', plus(data[2], [0,dy]), {visible:false});
+    const ref2 = board.create('point', plus(data[2], [dx,dy]), {visible:false});
+    // arrow
+    const p1 = board.create('point', plus(data[2], [0,dy]), { 
+      name: '', fixed:false, visible: false });
+    const p2 = board.create('point', plus(data[2], [dx,dy]), {
+      name: '\\('+document.getElementById("fname").value+'\\)', fixed:false, visible:false, label:{offset:[5,0], visible:true, color:'gray'} });
+    p2.addParents(t);
+    var vec = board.create('arrow', [p1, p2], 
+      { fixed:false, color:'gray',lastArrow:{size:5, type:2} } );
+    // callback creates new force object and new name
+    t.on('out', function(e) {
+      p2.setAttribute({name:'\\('+document.getElementById("fname").value+'\\)'})});
+    vec.on('up', function(e) {
+      //only generate force if distance is sufficient to not create overlapping objects
+      if (ref1.Dist(this.point1)+ref2.Dist(this.point2) >dx) {
+      	objects.push(new force(["force", 
+          document.getElementById("fname").value, 
+          [p1.X(), p1.Y()], [p2.X(), p2.Y()], 10, "active"] ));
+        // generate new unique force name
+        var f = [];
+        for (var m of objects) {
+          if (m.data()[0] == 'force') { f = f.concat(m.data()[1]) } }
+        var i = 1, n = '', found = true;
+        while (found ) { n = 'F_'+i.toString();  found = f.includes(n);i ++;} 
+        document.getElementById("fname").value = n;
+      }
+      // whatever happened, move the arrow back
+      p1.setPositionDirectly(JXG.COORDS_BY_USER, [ref1.X(), ref1.Y()],[p1.X(), p1.Y()] );       p2.setPositionDirectly(JXG.COORDS_BY_USER, [ref2.X(), ref2.Y()],[p2.X(), p2.Y()] );
+      p2.setAttribute({name:'\\('+document.getElementById("fname").value+'\\)'}) });
+    }
+  data(){  return this.d }
+  name(){  return "0" }
+}
+
 // grid control object: [ "grid", "xlabel", "ylabel",  xmin, xmax, ymin, ymax, pix ]
 // grid control object: [ "grid", "xlabel", "ylabel",  xmin, xmax, ymin, ymax, pix, [fx, fy] ]
 class grid {
@@ -302,29 +361,83 @@ class mass {
 }
 class moment {
   constructor(data) {
+    this.d = data;
+    this.mname = data[1];
+    var fix = true, size = 0; 
+    if (data[5]) { this.state = data[5] } else { this.state = "locked" }
+    if (this.state == "active") {fix = false; size = 2} 
     this.p1 = board.create('point', data[2], {
-      name: '', fixed:false
-    });
+      name: '', fixed:fix, size:size });
     this.p2 = board.create('point', data[3], {
-      name: '', fixed:false
-    });
+      name: '', fixed:fix, size:size });
     this.p3 = board.create('point', data[4], {
-      name: data[1], fixed:false, label:{offset:[10,10]}
-    });
+      name: "\\("+this.mname+"\\)", fixed:fix, size:size, 
+      label:{offset:[10,0], autoPosition:true, color:'blue'} });
     this.arc = board.create('minorArc', [this.p1, this.p2, this.p3], {
-      fixed: false,
-      strokeWidth: 2,
-      lastArrow: {
-        type: 1,
-        size: 5
-      },
-    });
+      fixed: fix, strokeWidth: 2, lastArrow: {type: 2, size: 5
+      } });
     var g = board.create('group', [this.p1, this.p2, this.p3, this.arc]);
     g.removeTranslationPoint(this.p2);
     g.removeTranslationPoint(this.p3);
+    this.arc.obj = [this.arc, this.p1, this.p2, this.p3 ];
+    this.arc.num = objects.length;
+    this.arc.on("up", function(e) { 
+      if (isOutside(this.obj[1]) || isOutside(this.obj[2]) || isOutside(this.obj[3]) ) {
+        objects[this.num].d[0] = "deleted";
+        board.removeObject(this.obj, true) 
+      } })
   }
-  data() { return ["moment", this.p3.name,  [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()], [this.p3.X(), this.p3.Y()]  ]  }
-  name() {return this.p3.name.replace(/\s+/,"*") }
+  data() { return [this.d[0], this.mname,  [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()], [this.p3.X(), this.p3.Y()]  ]  }
+  name() {return this.mname.replace(/\s+/,"*") }
+}
+// [ "momentGen", "name", [x,y]]
+class momentGen {
+  constructor(data) {
+    // input field
+    this.d = data;
+    const dy = -5*pxunit, dx = 15*pxunit, dy1 = -20*pxunit;
+    // HTML trick because input.set() doesn't work in the callback
+    var t = board.create('text', [ data[2][0], data[2][1], 
+      '<input type="text" id="mname" value="'+data[1]+'" size="1">'], {fixed: true});
+    // ref point for checking drag distance and for position reset
+    const ref1 = board.create('point', plus(data[2], [dx,dy]), {visible:false});
+    const ref2 = board.create('point', plus(data[2], [0,dy1]), {visible:false});
+    const ref3 = board.create('point', plus(data[2], [2*dx,dy1]), {visible:false});
+    // arrow
+    const p1 = board.create('point', plus(data[2], [dx,dy]), { 
+      name: '', fixed:false, visible: false });
+    const p2 = board.create('point', plus(data[2], [0,dy1]), { 
+      name: '', fixed:false, visible: false });
+    const p3 = board.create('point', plus(data[2], [2*dx,dy1]), {
+      name: '\\('+document.getElementById("mname").value+'\\)', fixed:false, visible:false, label:{offset:[5,0], visible:true, color:'gray'} });
+    p2.addParents(t);
+    var arc = board.create('minorArc', [p1, p2, p3], { fixed:false, strokeColor:'gray',
+      strokeWidth: 2, lastArrow: { type: 2, size: 5}});
+    // callback creates new moment object and new name
+    t.on('out', function(e) {
+      p3.setAttribute({name:'\\('+document.getElementById("mname").value+'\\)'})});
+    arc.on('up', function(e) {
+      //only generate force if distance is sufficient to not create overlapping objects
+      if (ref2.Dist(p2) >dx) {
+        objects.push(new moment(["moment", 
+          document.getElementById("mname").value, 
+          [p1.X(), p1.Y()], [p2.X(), p2.Y()], [p3.X(), p3.Y()], "active"] ));
+        // generate new unique moment name
+        var f = [];
+        for (var m of objects) {
+          if (m.data()[0] == 'moment') { f = f.concat(m.data()[1]) } }
+        console.log(f);
+        var i = 1, n = '', found = true;
+        while (found ) { n = 'M_'+i.toString();  found = f.includes(n);i ++;} 
+        document.getElementById("mname").value = n;
+      }
+      // whatever happened, move the arc back
+      p1.setPositionDirectly(JXG.COORDS_BY_USER, [ref1.X(), ref1.Y()],[p1.X(), p1.Y()] );       p2.setPositionDirectly(JXG.COORDS_BY_USER, [ref2.X(), ref2.Y()],[p2.X(), p2.Y()] );
+      p3.setPositionDirectly(JXG.COORDS_BY_USER, [ref3.X(), ref3.Y()],[p3.X(), p3.Y()] );
+      p3.setAttribute({name:'\\('+document.getElementById("mname").value+'\\)'}) });
+    }
+  data(){  return this.d }
+  name(){  return "0" }
 }
 
 // [ "spline", "eqn", [X0, Y0], [x1, y1], [x2,y2], [xt1, yt1], [xt2,yt2], style, status ]
@@ -471,21 +584,23 @@ function init() {
   for (m of state) {
     console.log(m);
     switch (m[0]) {
-      case "circle2p":	        objects.push(new circle2p(m)); break;
+      case "circle2p":	objects.push(new circle2p(m)); break;
       case "crosshair":	objects.push(new crosshair(m)); break;
       case "dashpot":		objects.push(new dashpot(m)); break;
       case "dir": 			objects.push(new dir(m)); break;
-      case "disp": 		objects.push(new disp(m)); break;
+      case "disp": 			objects.push(new disp(m)); break;
       case "force": 		objects.push(new force(m)); break;
+      case "forceGen":  objects.push(new forceGen(m)); break;
       case "grid":  		objects.push(new grid(m)); break;
-      case "label":   	        objects.push(new label(m)); break;
-      case "line": 		objects.push(new line(m)); break
+      case "label":   	objects.push(new label(m)); break;
+      case "line": 			objects.push(new line(m)); break
       case "line2p": 		objects.push(new line2p(m)); break
-      case "mass": 		objects.push(new mass(m)); break;     
+      case "mass": 			objects.push(new mass(m)); break;     
       case "moment":  	objects.push(new moment(m)); break;
-      case "spline":  	        objects.push(new spline(m)); break;
-      case "springt":  	        objects.push(new springt(m)); break;
-      case "wall": 		objects.push(new wall(m)); break;
+      case "momentGen":	objects.push(new momentGen(m)); break;
+      case "spline":  	objects.push(new spline(m)); break;
+      case "springt":  	objects.push(new springt(m)); break;
+      case "wall": 			objects.push(new wall(m)); break;
     }
   }
 }
@@ -495,17 +610,18 @@ function update() {
   var dfield = [];
   var names ="[";
   for (m of objects) {
-    dfield.push(m.data());
-    if (names != "[") { names = names.concat(",")  }
-    names = names.concat(m.name()); 
+  	// object key is "deleted" if it has been deleted
+    if (m.data()[0] != 'deleted' ) {dfield.push(m.data());
+    if (names != "[") { names = names.concat(",") }
+    names = names.concat(m.name()); }
   }
   stateInput.value = JSON.stringify(dfield);
   names=names.concat("]");
   document.getElementById(fbd_names).value=names;
-
 }
 function plus(a,b) { return [ a[0]+b[0], a[1]+b[1] ] }
 function minus(a,b) { return [ a[0]-b[0], a[1]-b[1] ] }
+function dist(a,b) { return Math.sqrt( (a[0]-b[0])**2 + (a[1]-b[1])**2 ) }
 function hermite(x1,dx,y1,dy,d1,d2) {
   if (!isNaN(d1) && !isNaN(d2)) {
     // cubic spline
@@ -574,5 +690,8 @@ function deactivate(ref) {console.log("deactivate()"); ref.state = "inactive";
 function Switch(ref) {if (ref.state == "active") { deactivate(ref)}
       else if (ref.state == "inactive") { activate(ref)}
       console.log(ref.state)}
-
+function isOutside(ref) {
+  var [xmin, ymax, xmax, ymin] = board.getBoundingBox();
+  var x = ref.X(), y = ref.Y();
+  return (x<xmin || x>xmax || y<ymin || y>ymax) }
 [[/jsxgraph]]</p>
