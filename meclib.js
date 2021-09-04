@@ -1,5 +1,5 @@
 [[jsxgraph width='250px' height='250px' ]] 
-// Version 2021 08 09 https://jsfiddle.net/248wo69c/4/
+// Version 2021 09 05 https://jsfiddle.net/gs6omdp0/
 var state = JSON.parse({#init#});
 //## start of chunk 1
 JXG.Options.point.fixed = true; // this is for static objects
@@ -52,9 +52,9 @@ class angle {
      {withlabel:false,visible:false});
    this.arc = board.create('minorArc', [this.p1, this.p4, this.p3] );
    this.arc.setAttribute(thinStyle);
-   if (data[0] == "angle" && this.name != "." )
+   if (data[0] == "angle1" )
      {  this.arc.setAttribute({lastArrow: true} ) } 
-   if (data[0] == "angle2" && this.name != "."  )
+   if (data[0] == "angle2" )
      {  this.arc.setAttribute({firstArrow: true} );
         this.arc.setAttribute({lastArrow: true} ) } 
    // label
@@ -803,6 +803,7 @@ function init() {
    console.log(m);
    switch (m[0]) {
      case "angle": objects.push(new angle(m)); break;
+     case "angle1": objects.push(new angle(m)); break;
      case "angle2": objects.push(new angle(m)); break;
      case "bar": objects.push(new bar(m)); break;
      case "beam": objects.push(new beam(m)); break;

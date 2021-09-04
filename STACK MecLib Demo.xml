@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <quiz>
-<!-- question: 102268  -->
+<!-- question: 102313  -->
   <question type="stack">
     <name>
-      <text>MecLib Demo Github 2021 08 09</text>
+      <text>MecLib Demo Github 2021 09 05</text>
     </name>
     <questiontext format="html">
       <text><![CDATA[[[jsxgraph width='250px' height='250px' ]] 
-// Version 2021 08 09 https://jsfiddle.net/248wo69c/4/
+// Version 2021 09 05 https://jsfiddle.net/gs6omdp0/
 var state = JSON.parse({#init#});
 //## start of chunk 1
 JXG.Options.point.fixed = true; // this is for static objects
@@ -35,6 +35,7 @@ var a = 16/40; // default value, use "grid" to customize
 var pxunit = 1/40;
 var labelshift = 0.2*a;
 // angular dimension with a single or double arrow (handles arrow and arrow2)
+// angular dimension with a single or double arrow (handles arrow and arrow2)
 class angle {
  constructor(data) {
    this.d = data.slice(0); //copy
@@ -59,9 +60,9 @@ class angle {
      {withlabel:false,visible:false});
    this.arc = board.create('minorArc', [this.p1, this.p4, this.p3] );
    this.arc.setAttribute(thinStyle);
-   if (data[0] == "angle" && this.name != "." )
+   if (data[0] == "angle1" )
      {  this.arc.setAttribute({lastArrow: true} ) } 
-   if (data[0] == "angle2" && this.name != "."  )
+   if (data[0] == "angle2" )
      {  this.arc.setAttribute({firstArrow: true} );
         this.arc.setAttribute({lastArrow: true} ) } 
    // label
@@ -73,7 +74,7 @@ class angle {
        {name:"" ,fillcolor:'black',strokeColor:'black',size:0.5, strokeWidth:0}); 
    }
    else {
-     const rl = data[4]+0.5*a;
+     const rl = data[4]+10*pxunit;
      this.p5 = board.create('point',
        [this.p1.X()+rl*Math.cos(al), this.p1.Y()+rl*Math.sin(al)],
        {name:"\\("+this.name+"\\)" ,size:0, label:{offset:[-6,0]}}); 
@@ -523,7 +524,7 @@ class grid {
 class label {
  constructor(data){
    this.name = data[1];
-   if (data.length>3) {this.c = data[3]} else {tis.c = "black"}
+   if (data.length>3) {this.c = data[3]} else {this.c = "black"}
    this.p = board.create('point', data[2], {    
      name:this.name ,size:0, label:{offset:[0,0], color:this.c}} );
    this.d=data;
@@ -810,6 +811,7 @@ function init() {
    console.log(m);
    switch (m[0]) {
      case "angle": objects.push(new angle(m)); break;
+     case "angle1": objects.push(new angle(m)); break;
      case "angle2": objects.push(new angle(m)); break;
      case "bar": objects.push(new bar(m)); break;
      case "beam": objects.push(new beam(m)); break;
@@ -874,9 +876,9 @@ initdata: [
    ["fix12","E",[-3,-2], 0],
    ["fix1","G",[-3,-1], 270],
    ["force","F_2", [-1,-1],[-1,-2],5],
-   ["angle", "\\ddot \\varphi", [-2,1],[-1,1],0.9,30],
+   ["angle1", "\\ddot \\varphi", [-2,1],[-1,1],0.9,30],
    ["angle2", "\\beta_1", [3,4.5],[3,3.8],0.5,-63.4],
-   ["angle2", ".", [4,-2],[3.2,-1.2],0.4,90],
+   ["angle", ".", [4,-2],[3.2,-1.2],0.4,90],
    ["label", "ABC", [3.2,4.5], "red"],
    ["dir", "x", [4,3],0],
    ["dir", "y", [4,3],90,0,1],
@@ -948,9 +950,9 @@ initdata: [
    ["fix12","E",[-3,-2], 0],
    ["fix1","G",[-3,-1], 270],
    ["force","F_2", [-1,-1],[-1,-2],5],
-   ["angle", "\\ddot \\varphi", [-2,1],[-1,1],0.9,30],
+   ["angle1", "\\ddot \\varphi", [-2,1],[-1,1],0.9,30],
    ["angle2", "\\beta_1", [3,4.5],[3,3.8],0.5,-63.4],
-   ["angle2", ".", [4,-2],[3.2,-1.2],0.4,90],
+   ["angle", ".", [4,-2],[3.2,-1.2],0.4,90],
    ["label", "ABC", [3.2,4.5], "red"],
    ["dir", "x", [4,3],0],
    ["dir", "y", [4,3],90,0,1],

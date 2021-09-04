@@ -11,7 +11,7 @@ There are two versions: `MecLib` (non-interactive) and `iMecLib` (interactive in
 
 [Demo question](STACK%20MecLib%20Demo.xml)
 
-[jsfiddle tryout](https://jsfiddle.net/k4Ljm9wb/)
+[jsfiddle tryout](https://jsfiddle.net/gs6omdp0/)
 
 ![Demo](demo2.png?raw=true "Screenshot from the demo question")
 
@@ -23,8 +23,9 @@ Kraska, Martin, & Schulz, Dennis. (2021). Automatic assessment of free body diag
 
 All co-ordinates and lengths are in user units as specified with `"grid"`, angles are in °, if not specified otherwise.
 
-- <code>[ "angle", "&lt;name&gt;", [xc, yc], [xs,ys], radius, angle ]</code> Angle with one arrow, centerpoint, endpoint of start line, radius of arc, angle.
+- <code>[ "angle", "&lt;name&gt;", [xc, yc], [xs,ys], radius, angle ]</code> Angle without arrows, centerpoint, endpoint of start line, radius of arc, angle.
 - <code>[ "angle", ".", [xc, yc], [xs,ys], radius, (-)90 ]</code> Right angle without arrows and label but with a dot inside.
+- <code>[ "angle1", "&lt;name&gt;", [xc, yc], [xs,ys], radius, angle ]</code> Angle with one arrow, centerpoint, endpoint of start line, radius of arc, angle.
 - <code>[ "angle2", "&lt;name&gt;", [xc, yc], [xs,ys], radius, angle ]</code> Angle with two arrows, centerpoint, endpoint of start line, radius of arc, angle.
 - <code>[ "bar", "&lt;name&gt;", [x1, y1], [x2, y2] ]</code>  bar, thick black line with hinge points (nodes) at the ends. The label is placed next to the center of the line on the left side if seen from point 1 to point 2. 
 - <code>[ "beam", "", [x1, y1], [x2,y2], r ]</code> Rectangle with black border and light gray filling. The rectangle essentially is a thick line connecting two points. r is the radius (half width). More than two points (must be an even number of points) can be handled, in this case multiple rectangles are generated and merged into a single contour if they overlap. For non-merged overlapping beams use multiple beam objects.
@@ -59,6 +60,7 @@ All co-ordinates and lengths are in user units as specified with `"grid"`, angle
   If the label placement is not good, suppress it using `""` as name and use a `"label"` object with `"red"` color.
 
 
+
 - <code>[ "springc", "", [x1, y1], [x2,y2], r, n, off ]</code>  compression spring, normal line with n turns of radius r and label offset off
 - <code>[ "springt", "", [x1, y1], [x2,y2], d, lf, (n (, off)) ] </code>  tensile spring
  - `d` diameter of the turns in grid units (default: equivalent to 10px)
@@ -91,6 +93,7 @@ initdata: [
   [ "grid", "xlabel","ylabel", xmin, xmax, ymin, ymax, pix ],
   [ "angle", ".", [xc, yc], [xs,ys], radius, +/-90 ],
   [ "angle", "", [xc, yc], [xs,ys], radius, angle ],
+  [ "angle1", "", [xc, yc], [xs,ys], radius, angle ],
   [ "angle2", "", [xc, yc], [xs,ys], radius, angle ],
   [ "bar", "", [x1, y1], [x2, y2] ],
   [ "beam", "", [x1, y1], [x2,y2], r ], /* even number of points for multiple segments */
