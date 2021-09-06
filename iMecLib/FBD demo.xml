@@ -1,4 +1,12 @@
-<p hidden>[[input:objects]] [[validation:objects]]</p>
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+<!-- question: 102319  -->
+  <question type="stack">
+    <name>
+      <text>FBD demo</text>
+    </name>
+    <questiontext format="markdown">
+      <text><![CDATA[<p hidden>[[input:objects]] [[validation:objects]]</p>
 <p hidden>[[input:names]] [[validation:names]] </p>
 <p>
 [[jsxgraph width='500px' height='400px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
@@ -1101,3 +1109,149 @@ function isOutside(ref) {
   var x = ref.X(), y = ref.Y();
   return (x<xmin || x>xmax || y<ymin || y>ymax) }
 [[/jsxgraph]]</p>
+
+[[feedback:fbd]]]]></text>
+    </questiontext>
+    <generalfeedback format="markdown">
+      <text></text>
+    </generalfeedback>
+    <defaultgrade>1</defaultgrade>
+    <penalty>0.1</penalty>
+    <hidden>0</hidden>
+    <idnumber></idnumber>
+    <stackversion>
+      <text>2020120600</text>
+    </stackversion>
+    <questionvariables>
+      <text><![CDATA[/* iMecLib objects */
+pA: [0,0]; pB: [3,0]; pC: [5, -1]; 
+
+initdata: [ 
+  [ "grid", "", "", -1, 6, -2, 4, 40],
+  [ "forceGen", "F_1", [-0.5,3.5]],
+  [ "momentGen", "M_1", [1.5,3.5]],  
+  [ "beam", "", pA, pB, 0.15],
+  [ "bar", "", pB, pC, "show" ],
+  [ "fix12", "A", pA, 0, "show" ],
+  [ "fix12", "C", pC, 0, "show" ],
+  [ "label", "\\(B\\)", pB+[-0.2,-0.5] ],
+  [ "q", "", "q_0", pA+[0,0.3], pB+[0,0.3], 0.7,0.7,0, "show"]
+];
+init: stackjson_stringify(float(initdata));
+
+tansdata: [ 
+  [ "grid", "", "", -1.5, 6, -2, 4, 40],
+  [ "forceGen", "F_1", [-0.5,3.5]],
+  [ "momentGen", "M_1", [1.5,3.5]],  
+  [ "beam", "", pA, pB, 0.15],
+  [ "bar", "", pB, pC, "hide" ],
+  [ "fix12", "A", pA, 0, "hide" ],
+  [ "fix12", "C", pC, 0, "show" ],
+  [ "label", "\\(B\\)", pB+[-0.2,-0.5] ],
+  [ "q", "", "q_0", pA+[0,0.3], pB+[0,0.3], 0.7,0.7,0, "hide"],
+  [ "force", "3 q_0 a", [1.5, 1.6], [1.5, 0.6], 10, "active"],
+  [ "force", "A_v", pA, pA+[0,1], 10, "active"],
+  [ "force", "A_h", pA, pA+[1,0], 10, "active"],
+  [ "force", "B", pB, pB+[1,-0.5], 10, "active"]
+];
+tans: stackjson_stringify(float(tansdata));
+
+]]></text>
+    </questionvariables>
+    <specificfeedback format="markdown">
+      <text></text>
+    </specificfeedback>
+    <questionnote>
+      <text></text>
+    </questionnote>
+    <questionsimplify>1</questionsimplify>
+    <assumepositive>0</assumepositive>
+    <assumereal>0</assumereal>
+    <prtcorrect format="markdown">
+      <text></text>
+    </prtcorrect>
+    <prtpartiallycorrect format="markdown">
+      <text></text>
+    </prtpartiallycorrect>
+    <prtincorrect format="markdown">
+      <text></text>
+    </prtincorrect>
+    <multiplicationsign>none</multiplicationsign>
+    <sqrtsign>1</sqrtsign>
+    <complexno>i</complexno>
+    <inversetrig>cos-1</inversetrig>
+    <logicsymbol>lang</logicsymbol>
+    <matrixparens>[</matrixparens>
+    <variantsselectionseed></variantsselectionseed>
+    <input>
+      <name>names</name>
+      <type>algebraic</type>
+      <tans>[]</tans>
+      <boxsize>40</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint></syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>0</mustverify>
+      <showvalidation>0</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>objects</name>
+      <type>string</type>
+      <tans>tans</tans>
+      <boxsize>40</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint></syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>0</mustverify>
+      <showvalidation>0</showvalidation>
+      <options></options>
+    </input>
+    <prt>
+      <name>fbd</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>1</sans>
+        <tans>1</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1.0000000</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>fbd-1-T</trueanswernote>
+        <truefeedback format="markdown">
+          <text></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0.0000000</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>fbd-1-F</falseanswernote>
+        <falsefeedback format="markdown">
+          <text></text>
+        </falsefeedback>
+      </node>
+    </prt>
+  </question>
+
+</quiz>
