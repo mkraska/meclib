@@ -2,8 +2,7 @@
 <p hidden>[[input:names]] [[validation:names]] </p>
 <p>
 [[jsxgraph width='500px' height='400px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
-// Version 2021 08 27 https://jsfiddle.net/vtmeq12x/20/
-// defaults
+// Version 2021 09 08 https://jsfiddle.net/vtmeq12x/33/
 JXG.Options.point.snapToGrid = true; // grid snap spoils rotated static objects
 JXG.Options.point.snapSizeX = 0.1;
 JXG.Options.point.snapSizeY = 0.1;
@@ -24,6 +23,7 @@ const barStyle = { strokewidth: 4, strokecolor: "black" };
 // Set some linestyles
 const normalStyle = { strokeWidth: 2, strokeColor: 'black', lineCap: 'round' };
 const thinStyle = { strokeWidth: 1, strokeColor: 'black', lineCap: 'round' };
+const defaultMecLayer = 6;
 const inactiveColor = "gray";
 
 const board = JXG.JSXGraph.initBoard(divid, {
@@ -37,12 +37,116 @@ board.highlightInfobox = function(x, y , el) {
     var ref = [0,0];
     var scale = [1,1];
     var dp = [1,1];
-    if (typeof (el.ref) != 'undefined') {ref = el.ref}
+    var lbl = '';
+    if (typeof (el.ref) == 'function') {ref = el.ref()} 
+    else if (typeof(el.ref) != 'undefined') {ref = el.ref()}
     if (typeof (el.scale) != 'undefined') {scale = el.scale}
     if (typeof (el.dp) != 'undefined') {dp = el.dp}
+    if (typeof (el.infoboxlabel) == 'string') {lbl = el.infoboxlabel}
     this.infobox.setText( 
-        '('+((parseFloat(x)-ref[0])*scale[0]).toFixed(dp[0]) + ', ' + ((parseFloat(y)-ref[1])*scale[1]).toFixed(dp[1])+ ')')
+        lbl+'('+((parseFloat(x)-ref[0])*scale[0]).toFixed(dp[0]) + ', ' + ((parseFloat(y)-ref[1])*scale[1]).toFixed(dp[1])+ ')')
 };
+// Fachwerkstab
+class bar {
+ constructor(data) {
+   if (typeof(data[data.length-1]) == 'string') {this.state = data.pop()}
+     else {this.state = "locked"}
+   this.d = data.slice(0);
+   // line
+   this.p1 = board.create('point',data[2],{withlabel:false});
+   this.p1.setAttribute(nodeStyle);
+   this.p2 = board.create('point',data[3],{withlabel:false});
+   this.p2.setAttribute(nodeStyle);
+   this.line = board.create('segment', [this.p1, this.p2], {withlabel:false});     this.line.setAttribute(barStyle);
+   // label
+   const alpha = this.line.getAngle()+Math.PI/2;
+   this.label = board.create('text', [
+     0.5*(this.p1.X()+this.p2.X())+Math.cos(alpha)*0.5*a, 
+     0.5*(this.p1.Y()+this.p2.Y())+Math.sin(alpha)*0.5*a, data[1] ], {
+     anchorX:'middle', anchorY:'middle', highlight:false
+   });
+    // implement state switching
+    this.obj = [ this.p1, this.p2, this.line, this.label ];
+    // state init
+    if (this.state == "show") { show(this) }
+    if (this.state == "hide") { hide(this) }
+    if (this.state == "locked") { lock(this) }
+    //switch by doubleclick
+    this.line.parent = this;
+    this.line.lastclick = Date.now();    
+    this.line.on('up', function() {
+      if (Date.now()-this.lastclick < 500) { Switch(this.parent) }
+      else {this.lastclick = Date.now() }})
+  }
+  data(){ var a = this.d.slice(0); a.push(this.state); return a}
+  name(){ return '"'+this.state+'"' } 
+}
+
+// Rectangle with centerline given by pair of points. Even number of points generates multiple rectangles which are merged if they overlap.
+// [ "beam", "color", [x1,y1], [x2,y2] ..., radius, state ]
+class beam {
+ constructor(data){
+   if (typeof(data[data.length-1]) == 'string') {this.state = data.pop()}
+     else {this.state = "locked"}
+   this.d = data.slice(0); //make a copy
+   this.r = data.pop(); // radius
+   data.shift(); // drop the type string
+   if (typeof data[1] === 'string') {
+     this.col = [data.shift(),data.shift()]; //droping the attributes for fillcolor and gradientcolor into an array
+   } else {
+     this.col = [ 'lightgrey', 'lightgrey']; data.shift(); // drop the name and use default uniform color
+   }
+   this.b = board.create('curve', [[],[]], normalStyle); // init the result
+   this.p = data; // end points of center line
+   // loop over pairs of points
+   this.angle = -Math.atan2(this.p[1][1]-this.p[0][1],this.p[1][0]-this.p[0][0])+Math.PI/2;
+   this.attr = {
+       opacity: true, layer: defaultMecLayer, fillcolor:this.col[0],
+               gradient: 'linear', gradientSecondColor: this.col[1], gradientAngle: this.angle, 
+               strokeWidth: normalStyle.strokeWidth, strokeColor: normalStyle.strokeColor
+               };
+   while (this.p.length > 0) {
+     var x = this.p[0][0];
+     var y =  this.p[0][1];
+     var dx = (this.p[1][0]-x);
+     var dy = (this.p[1][1]-y);
+     var l = Math.sqrt(dx**2+dy**2);
+     var c = this.r/l;
+     var bneu = board.create('curve',[
+       [x+dy*c,x+dx+dy*c,x+dx-dy*c,x-dy*c,x+dy*c], 
+       [y-dx*c,y+dy-dx*c,y+dy+dx*c,y+dx*c,y-dx*c] ], 
+       { strokeWidth:0 }
+     );
+     if ((typeof JXG.Math.Clip === 'undefined') || (this.b.dataX.length == 0)) {
+        this.b = bneu;
+        this.b.setAttribute(this.attr);
+     }
+     else {
+       this.b = board.create('curve', JXG.Math.Clip.union( bneu, this.b, board), 
+         this.attr);
+     }
+     this.p.shift(); // remove 2 points
+     this.p.shift();
+   } 
+ this.b.rendNode.setAttributeNS(null, 'fill-rule', 'evenodd');  //Workaround for correct fill, see https://github.com/jsxgraph/jsxgraph/issues/362
+    // implement state switching
+    this.obj = [ this.b ];
+    // state init
+    if (this.state == "show") { show(this) }
+    if (this.state == "hide") { hide(this) }
+    if (this.state == "locked") { lock(this) }
+        //switch by doubleclick
+    this.b.parent = this;
+    this.b.lastclick = Date.now();    
+    this.b.on('up', function() {
+      if (Date.now()-this.lastclick < 500) { Switch(this.parent) }
+      else {this.lastclick = Date.now() }})
+
+  }
+  data(){ var a = this.d.slice(0); a.push(this.state); return a}
+  name(){ return '"'+this.state+'"' } 
+}
+
 //[ "circle2P", "<label1>","<label2>", [x1,y1],[x2,y2], f ]//
 class circle2p {
   constructor(data){
@@ -188,6 +292,213 @@ class disp {
   data() { return this.data } 
   name() { return "0" }
 }
+//  Loslager
+class fix1 {
+  constructor(data) {
+    if (typeof(data[data.length-1]) == 'string') {this.state = data.pop()}
+      else {this.state = "locked"}
+    this.d = data.slice(0);
+    // base points
+    const coords = [
+     [0, 0],
+     [-a / 2, -0.8*a],
+     [+a / 2, -0.8*a],
+     [ - 0.8 * a, -0.8*a],
+     [ + 0.8 * a, -0.8*a],
+     [ - 0.8 * a, - 1*a],
+     [ + 0.8 * a, - 1*a],
+     [ 0, - 1.7*a]
+    ];
+    var p = [];
+    var c;
+    for (c of coords) {
+      p.push(board.create('point', c, {visible: false, snapToGrid:false}));
+    };
+    const t1 = board.create('transform', [data[3] * Math.PI / 180], { type: 'rotate' });
+    t1.applyOnce(p);
+    const t2 = board.create('transform', data[2], { type: 'translate' });
+    t2.applyOnce(p);
+    // dependent objects
+    // pivot 
+    this.p1 = board.create('point', [p[0].X(), p[0].Y()],{ name: '', highlight:false });
+    this.p1.setAttribute(nodeStyle);
+    // label
+    this.label=board.create('point', [p[7].X(), p[7].Y()], {name:"\\("+data[1]+"\\)" ,size:0, label:{offset:[-6,-2], highlight:false}});
+    // body
+    this.t = board.create('polygon', [p[0], p[1], p[2]], {name: '',fillColor: "white", Opacity: true, layer: 7,
+      borders: {visible: false}, vertices: { fixed: true, size: 0 } });
+    this.tb = board.create('curve', [[p[0].X(), p[1].X(), p[2].X(), p[0].X()], 
+      [p[0].Y(), p[1].Y(), p[2].Y(), p[0].Y()]],{layer:8,strokeColor:normalStyle.strokeColor, strokeWidth:normalStyle.strokeWidth, lineCap:normalStyle.lineCap} )
+    // baseline with hatch
+    this.bl = board.create('segment', [p[5],p[6]], {name: '', highlight:false});
+    this.bl.setAttribute(normalStyle);
+    this.c = board.create("comb", [p[6],p[5]], { width: 0.25*a, frequency: 0.25*a, angle: 1 * Math.PI / 4, layer:8, highlight:false})
+    // implement state switching
+    this.obj = [ this.p1, this.t, this.bl, this.c, this.label, this.label.label, this.tb ];
+    // state init
+    if (this.state == "show") { show(this) }
+    if (this.state == "hide") { hide(this) }
+    //switch by doubleclick
+    this.t.parent = this;
+    this.t.lastclick = Date.now();    
+    this.t.on('up', function() {
+      if (Date.now()-this.lastclick < 500) { Switch(this.parent) }
+      else {this.lastclick = Date.now() }})
+  }
+  data(){ var a = this.d.slice(0); a.push(this.state); return a}
+  name(){ return '"'+this.state+'"' } 
+}
+//  Festlager
+class fix12 {
+  constructor(data) {    
+    if (typeof(data[data.length-1]) == 'string') {this.state = data.pop()}
+      else {this.state = "locked"}
+    this.d = data.slice(0);
+    // base points
+    const coords = [
+     [0, 0],
+     [-a / 2, -a],
+     [+a / 2, -a],
+     [ - 0.8 * a, - a],
+     [ + 0.8 * a, - a],
+     [ 0, - 1.7*a] // label
+    ];
+    var p = [];
+    var c;
+    for (c of coords) { p.push(board.create('point', c, {visible: false, snapToGrid:false})) }
+    const t1 = board.create('transform', [data[3] * Math.PI / 180], { type: 'rotate' });
+    t1.applyOnce(p);
+    const t2 = board.create('transform', data[2], { type: 'translate' });
+    t2.applyOnce(p);
+    // dependent objects
+    // pivot 
+    this.p1 = board.create('point', [p[0].X(), p[0].Y()],{ name: "", highlight:false });
+    this.p1.setAttribute(nodeStyle);
+    // label
+    this.label=board.create('point', [p[5].X(), p[5].Y()], 
+      {name:"\\("+data[1]+"\\)", highlight:false ,size:0, 
+      label:{offset:[-6,-2], highlight:false}});
+    // body
+    this.t = board.create('polygon', [p[0], p[1], p[2]], {name: '',fillColor: "white", Opacity: true, layer: 7, borders:{visible:false},
+      vertices: { fixed: true, size: 0 } });
+    this.tb = board.create('curve', [[p[0].X(), p[1].X(), p[2].X(), p[0].X()], 
+      [p[0].Y(), p[1].Y(), p[2].Y(), p[0].Y()]],
+      {layer:8,strokeColor:normalStyle.strokeColor, highlight:false, 
+      strokeWidth:normalStyle.strokeWidth, lineCap:normalStyle.lineCap} )
+    // baseline with hatch
+    this.bl = board.create('segment', [p[3],p[4]], {name: '', highlight:false});
+    this.bl.setAttribute(normalStyle);
+    this.c = board.create("comb", [p[4],p[3]], {fixed: true, width: 0.25*a, frequency: 0.25*a, angle: 1 * Math.PI / 4, layer:8, highlight:false })
+    // implement state switching
+    this.obj = [ this.p1, this.t, this.bl, this.c, this.label, this.label.label, this.tb ];
+    // state init
+    if (this.state == "show") { show(this) }
+    if (this.state == "hide") { hide(this) }
+    //switch by doubleclick
+    this.t.parent = this;
+    this.t.lastclick = Date.now();    
+    this.t.on('up', function() {
+      if (Date.now()-this.lastclick < 500) { Switch(this.parent) }
+      else {this.lastclick = Date.now() }})
+  }
+  data(){ var a = this.d.slice(0); a.push(this.state); return a}
+  name(){ return '"'+this.state+'"' } 
+}
+//  Einspannung
+class fix123 {
+  constructor(data) {    
+    if (typeof(data[data.length-1]) == 'string') {this.state = data.pop()}
+      else {this.state = "locked"}
+    this.d = data.slice(0);
+    // base points
+    const coords = [
+     [0,0],       // base point
+     [0, -0.8*a], // p
+     [0, +0.8*a], // p
+     [-0.7*a,0]   // label
+    ];
+    var p = [];
+    var c;
+    for (c of coords) {
+      p.push(board.create('point', c, {visible: false, snapToGrid:false}));
+    }
+    const t1 = board.create('transform', [data[3] * Math.PI / 180], { type: 'rotate' });
+    t1.applyOnce(p);
+    const t2 = board.create('transform', data[2], { type: 'translate' });
+    t2.applyOnce(p);
+    // dependent objects
+    // base point
+    this.p1 = board.create('point', [p[0].X(), p[0].Y()],{size:0, name: '', highlight:false });
+    // label
+    this.label=board.create('point', [p[3].X(), p[3].Y()], {name:"\\("+data[1]+"\\)" ,size:0,highlight:false, label:{offset:[-6,-2], highlight:false}});
+    // baseline with hatch
+    this.bl = board.create('segment', [p[1],p[2]], {name: ''});
+    this.bl.setAttribute(normalStyle);
+    this.c = board.create("comb", [p[2],p[1]], { width: 0.25*a, frequency: 0.25*a, angle: -1 * Math.PI / 4, layer:8, highlight:false })
+    // implement state switching
+    this.obj = [ this.p1, this.bl, this.c, this.label, this.label.label ];
+    // state init
+    if (this.state == "show") { show(this) }
+    if (this.state == "hide") { hide(this) }
+    //switch by doubleclick
+    this.bl.parent = this;
+    this.bl.lastclick = Date.now();    
+    this.bl.on('up', function() {
+      if (Date.now()-this.lastclick < 500) { Switch(this.parent) }
+      else {this.lastclick = Date.now() }})
+  }
+  data(){ var a = this.d.slice(0); a.push(this.state); return a}
+  name(){ return '"'+this.state+'"' } 
+}
+//  Slider 
+class fix13 {
+ constructor(data) {
+    if (typeof(data[data.length-1]) == 'string') {this.state = data.pop()}
+      else {this.state = "locked"}
+    this.d = data.slice(0);
+    // base points
+    const coords = [
+     [0,0],       // base point
+     [0, -0.5*a], // p
+     [0, +0.5*a], // p
+     [-0.2*a, -0.8*a], // p
+     [-0.2*a, +0.8*a], // p
+     [-0.9*a,0]   // label
+    ];
+    var p = [];
+    var c;
+    for (c of coords) {
+      p.push(board.create('point', c, {visible: false, snapToGrid:false}));
+    };
+    const t1 = board.create('transform', [data[3] * Math.PI / 180], { type: 'rotate' });
+    t1.applyOnce(p);
+    const t2 = board.create('transform', data[2], { type: 'translate' });
+    t2.applyOnce(p);
+    // dependent objects
+    // base point
+    this.p1 = board.create('point', [p[0].X(), p[0].Y()],{size:0, name: '' });
+    // label
+    this.label=board.create('point', [p[5].X(), p[5].Y()], {name:"\\("+data[1]+"\\)" ,size:0, label:{offset:[-6,-2], highlight:false}});
+    this.l = board.create('segment', [p[1],p[2]], {name: '',highlight:false});
+    this.l.setAttribute(normalStyle);
+    this.bl = board.create('segment', [p[3],p[4]], {name: ''});
+    this.bl.setAttribute(normalStyle);
+    this.c = board.create("comb", [p[4],p[3]], { width: 0.25*a, frequency: 0.25*a, angle: -1 * Math.PI / 4, layer:8, highlight:false })
+    // implement state switching
+    this.obj = [ this.p1, this.l, this.bl, this.c, this.label, this.label.label ];
+    // state init
+    if (this.state == "show") { show(this) }
+    if (this.state == "hide") { hide(this) }
+    //switch by doubleclick
+    this.bl.parent = this;
+    this.bl.lastclick = Date.now();    
+    this.bl.on('up', function() {
+      if (Date.now()-this.lastclick < 500) { Switch(this.parent) }
+      else {this.lastclick = Date.now() }})
+  }
+  data(){ var a = this.d.slice(0); a.push(this.state); return a}
+  name(){ return '"'+this.state+'"' } 
+}
 // [ "force", "name", [x1, y1], [x2,y2], d , state ]
 class force {
   constructor(data) {
@@ -204,6 +515,9 @@ class force {
       name: this.name1, fixed:fix, size: size, label:labelopts  }); 
     this.p2 = board.create('point', data[3], {
       name: this.name2, fixed:fix, size: size, label:labelopts });
+    this.p2.start = this.p1;
+    this.p2.ref = function() { return [this.start.X(), this.start.Y()] };
+    this.p2.infoboxlabel = "Vektor ";
     this.vec = board.create('arrow', [this.p1, this.p2], {
       touchLastPoint: true, fixed:false, lastArrow:{size:5, type:2} });
     this.vec.obj = [this.vec, this.p1, this.p2];
@@ -213,7 +527,10 @@ class force {
         objects[this.num].d[0] = "deleted";
         board.removeObject(this.obj, true) 
       } })
-  }
+    // switch off highlighting if locked
+    this.obj = [this.vec, this.p1, this.p2, this.p2.label];
+    if (this.state == "locked") { lock(this) } 
+      }
   data() {  return [this.d[0], this.fname, 
     [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()], this.off, this.state ] }
   name() { return this.fname.replace(/\s+/,"*") }
@@ -386,6 +703,10 @@ class moment {
         objects[this.num].d[0] = "deleted";
         board.removeObject(this.obj, true) 
       } })
+        // switch off highlighting if locked
+    this.obj = [this.p1, this.p2, this.p3, this.arc,this.p3.label];
+    if (this.state == "locked") { lock(this) } 
+
   }
   data() { return [this.d[0], this.mname,  [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()], [this.p3.X(), this.p3.Y()]  ]  }
   name() {return this.mname.replace(/\s+/,"*") }
@@ -438,6 +759,62 @@ class momentGen {
     }
   data(){  return this.d }
   name(){  return "0" }
+}
+// line load 
+// line load perpendicular to the line
+class q {
+  constructor(data){
+    if (typeof(data[data.length-1]) == 'string') {this.state = data.pop()}
+      else {this.state = "locked"}
+    this.d = data.slice(0);
+    data.shift(); //"q" wird ausgeblendet
+    this.name1 = data.shift();  this.name2 = data.shift(); 
+    this.alpha = Math.atan2(data[1][1]-data[0][1],data[1][0]-data[0][0]); //Balkenneigung
+    this.phi = data.pop()*Math.PI/180 //Abweichung zur Normalen
+    this.width = Math.sqrt(Math.pow(data[0][1]-data[1][1],2)+Math.pow(data[0][0]-data[1][0],2)); //Länge der unteren Kante
+    this.n = data[2];
+    this.m = (data[3]-data[2])/this.width;
+    this.sin = [Math.sin(this.alpha+this.phi), Math.sin(this.alpha)]; 
+    this.cos = [Math.cos(this.alpha+this.phi), Math.cos(this.alpha)];
+    this.arrow = []; this.p = []; this.label = [];
+    for (this.i=0;this.i<=(this.width/a);this.i++) {
+      this.p.push(
+        [ 0, this.m*((this.i)*this.width/Math.floor(this.width/a))+this.n ]);
+      this.p.push([0, 0]);
+      for (this.j=0;this.j<=1;this.j++) {
+        this.p[2*this.i+this.j] = [
+          this.p[2*this.i+this.j][0]*this.cos[this.j]-this.p[2*this.i+this.j][1]*this.sin[this.j]+data[0][0]+this.cos[1]*(this.i*this.width/Math.floor(this.width/a)),
+          this.p[2*this.i+this.j][0]*this.sin[this.j]+this.p[2*this.i+this.j][1]*this.cos[this.j]+data[0][1]+this.sin[1]*(this.i*this.width/Math.floor(this.width/a)) ] }
+      this.arrow.push(board.create('arrow', [ this.p[2*this.i], this.p[2*this.i+1] ],
+        {lastarrow:{size:5}, fixed:true, snapToGrid:false, strokewidth:1, highlight:false})) }
+    this.polygon = board.create('polygon', 
+      [ this.p[0],this.p[1],this.p[this.p.length-1],this.p[this.p.length-2] ],
+      { fillcolor:'#0000ff44', strokecolor:'blue', fixed:true, highlight:false,
+        borders:{visible:false},
+        vertices:{visible:false} });
+    this.border = board.create('curve', [
+      [this.p[0][0], this.p[1][0], this.p[this.p.length-1][0],this.p[this.p.length-2][0], this.p[0][0] ],
+      [this.p[0][1], this.p[1][1], this.p[this.p.length-1][1],this.p[this.p.length-2][1], this.p[0][1] ]], {strokeColor:'blue'});
+    this.label.push(board.create('point',this.p[0],
+      { name:'\\('+this.name1+'\\)', size:0, fixed:true,
+        label:{autoPosition:true,offset:[-10,10],color:'blue', highlight:false} }));
+    this.label.push(board.create('point',this.p[this.p.length-2], 
+      { name:'\\('+this.name2+'\\)', size:0, fixed:true,
+        label:{autoPosition:true, offset:[5,10], color:'blue', highlight:false} }));
+    // implement state switching
+    this.obj = this.arrow.concat([this.polygon, this.border, this.label[0].label, this.label[1].label]); 
+    // state init
+    if (this.state == "show") { show(this) }
+    if (this.state == "hide") { hide(this) }
+    //switch by doubleclick
+    this.border.parent = this;
+    this.border.lastclick = Date.now();    
+    this.border.on('up', function() {
+      if (Date.now()-this.lastclick < 500) { Switch(this.parent) }
+      else {this.lastclick = Date.now() }})
+  } 
+  data(){ var a = this.d.slice(0); a.push(this.state); return a}
+  name(){ return '"'+this.state+'"' } 
 }
 
 // [ "spline", "eqn", [X0, Y0], [x1, y1], [x2,y2], [xt1, yt1], [xt2,yt2], style, status ]
@@ -565,6 +942,8 @@ class wall {
   name(){ return "0" }
 }
 
+
+
 // initialization
 var objects = [];
 init();
@@ -584,11 +963,17 @@ function init() {
   for (m of state) {
     console.log(m);
     switch (m[0]) {
+      case "bar":	      objects.push(new bar(m)); break;
+      case "beam":	    objects.push(new beam(m)); break;
       case "circle2p":	objects.push(new circle2p(m)); break;
       case "crosshair":	objects.push(new crosshair(m)); break;
       case "dashpot":		objects.push(new dashpot(m)); break;
       case "dir": 			objects.push(new dir(m)); break;
       case "disp": 			objects.push(new disp(m)); break;
+      case "fix1": 	  	objects.push(new fix1(m)); break;
+      case "fix12": 	  objects.push(new fix12(m)); break;
+      case "fix123": 	  objects.push(new fix123(m)); break;
+      case "fix13": 	  objects.push(new fix13(m)); break;
       case "force": 		objects.push(new force(m)); break;
       case "forceGen":  objects.push(new forceGen(m)); break;
       case "grid":  		objects.push(new grid(m)); break;
@@ -598,6 +983,7 @@ function init() {
       case "mass": 			objects.push(new mass(m)); break;     
       case "moment":  	objects.push(new moment(m)); break;
       case "momentGen":	objects.push(new momentGen(m)); break;
+      case "q":  	      objects.push(new q(m)); break;
       case "spline":  	objects.push(new spline(m)); break;
       case "springt":  	objects.push(new springt(m)); break;
       case "wall": 			objects.push(new wall(m)); break;
@@ -608,16 +994,16 @@ function init() {
 function update() {
   var m;
   var dfield = [];
-  var names ="[";
+  var names = "[";
   for (m of objects) {
   	// object key is "deleted" if it has been deleted
     if (m.data()[0] != 'deleted' ) {dfield.push(m.data());
     if (names != "[") { names = names.concat(",") }
     names = names.concat(m.name()); }
-  }
-  stateInput.value = JSON.stringify(dfield);
+  }  stateInput.value = JSON.stringify(dfield);
   names=names.concat("]");
   document.getElementById(fbd_names).value=names;
+
 }
 function plus(a,b) { return [ a[0]+b[0], a[1]+b[1] ] }
 function minus(a,b) { return [ a[0]-b[0], a[1]-b[1] ] }
@@ -656,7 +1042,9 @@ function hermiteplot(Ref,p1, p2, t1, t2) {
     var x1 = p1.X()-Ref[0], dx = p2.X()-p1.X();
     var y1 = p1.Y()-Ref[1], dy = p2.Y()-p1.Y();
     var d1 = (p1.Y()-t1.Y())/(p1.X()-t1.X());
-  	var d2 = (p2.Y()-t2.Y())/(p2.X()-t2.X());
+    if (Math.abs(p1.X()-t1.X())<tol) {d1 = NaN};
+    var d2 = (p2.Y()-t2.Y())/(p2.X()-t2.X());
+    if (Math.abs(p2.X()-t2.X())<tol) {d2 = NaN};
     var c = hermite(x1,dx,y1,dy,d1,d2);
     var s = Ref[1]+c[3]*(x-Ref[0])**3+c[2]*(x-Ref[0])**2+c[1]*(x-Ref[0])+c[0];
     return  s
@@ -675,21 +1063,39 @@ function hermitename(Ref,p1, p2, t1, t2) {
     var n = c[3].toFixed(3) + "*x^3+" + c[2].toFixed(3) + "*x^2+" + c[1].toFixed(3) + "*x+" + c[0].toFixed(3);
     return n.replace(/\+\-/g,"-")  }
   else {return "NaN"}
-};
-function activate(ref) {console.log("activate()"); ref.state = "active";
+}
+function lock(ref) {
+        for (var part of ref.obj) {
+          part.setAttribute({highlight:false});
+        } update()}
+// applies settings for active state of fixed objects
+function show(ref) { ref.state = "show";
+        for (var part of ref.obj) {
+          part.setAttribute({strokeOpacity:1, fillOpacity:1});
+        } update()}
+// applies settings for inactive state of fixed objects
+function hide(ref) { ref.state = "hide";
+        for (var part of ref.obj) {
+          part.setAttribute({strokeOpacity:0.2, fillOpacity:0.2});
+        } update()}
+function activate(ref) { ref.state = "active";
         for (var part of ref.obj) {
           part.setAttribute({visible:true});
           part.setAttribute({fixed:false});
           part.setAttribute({snapToGrid:true});
         } update()}
-function deactivate(ref) {console.log("deactivate()"); ref.state = "inactive";
+function deactivate(ref) { ref.state = "inactive";
         for (var part of ref.obj) {
           part.setAttribute({visible:false});
           part.setAttribute({fixed:true});
         } update()}
-function Switch(ref) {if (ref.state == "active") { deactivate(ref)}
-      else if (ref.state == "inactive") { activate(ref)}
-      console.log(ref.state)}
+function Switch(ref) { switch (ref.state) {
+    case "active":  deactivate(ref); break
+    case "inactive":  activate(ref); break
+    case "show":  hide(ref); break
+    case "hide":  show(ref); break    
+  } console.log(ref.state)}  
+// checks if if a point is outside the boundingbox
 function isOutside(ref) {
   var [xmin, ymax, xmax, ymin] = board.getBoundingBox();
   var x = ref.X(), y = ref.Y();
