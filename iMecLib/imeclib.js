@@ -1,21 +1,20 @@
-<p hidden>[[input:objects]] [[validation:objects]]</p>
-<p hidden>[[input:names]] [[validation:names]] </p>
-[[jsxgraph width='500px' height='400px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
-var mode  = "STACK";
-const initstring = {#init#};
-// End of STACK header
+// Meclib version 2021 09 10 https://jsfiddle.net/Lotbzdv9/4/
 
-// Meclib version 2021 09 10 https://jsfiddle.net/1q34awrn/4/
-
-JXG.Options.point.snapToGrid = true; // grid snap spoils rotated static objects
+JXG.Options.point.snapToGrid = false; // grid snap spoils rotated static objects
 JXG.Options.point.snapSizeX = 0.1;
 JXG.Options.point.snapSizeY = 0.1;
 JXG.Options.point.fixed = true; // this is for static objects
 JXG.Options.text.useMathJax = true;
 JXG.Options.label.useMathJax = true;
-JXG.Options.text.useMathJax = true;
 JXG.Options.label.offset = [0, 0];
 JXG.Options.label.anchorY = 'middle';
+JXG.Options.curve.highlight = false;
+JXG.Options.label.highlight = false;
+JXG.Options.circle.highlight = false;
+JXG.Options.line.highlight = false;
+JXG.Options.polygon.highlight = false;
+JXG.Options.polygon.borders.highlight = false;
+JXG.Options.point.highlight = false;
 var a = 0.4; //compute this to match font size (grid-independent)
 var pxunit = 1/40;
 var labelshift = 0.2 * a;
@@ -51,6 +50,56 @@ board.highlightInfobox = function(x, y , el) {
     this.infobox.setText( 
         lbl+'('+((parseFloat(x)-ref[0])*scale[0]).toFixed(dp[0]) + ', ' + ((parseFloat(y)-ref[1])*scale[1]).toFixed(dp[1])+ ')')
 };
+// angular dimension with a single or double arrow (handles arrow, arrow1 and arrow2)
+class angle {
+ constructor(data) {
+   this.d = data.slice(0); //copy
+   // base line
+   this.p1 = board.create('point',data[2],{withlabel:false,visible:false});
+   this.p2 = board.create('point',data[3],{withlabel:false,visible:false});
+   this.line = board.create('segment', [this.p1, this.p2], {withlabel:false}); 
+   this.line.setAttribute(thinStyle);
+   // second line
+   const a0 = this.line.getAngle();
+   const le = this.line.L();
+   const a1 = a0+Math.PI/180*data[5];
+   //console.log(a0*180/Math.PI, a1*180/Math.PI);
+   this.p3 = board.create('point',
+     [this.p1.X()+le*Math.cos(a1), this.p1.Y()+le*Math.sin(a1)],
+     {withlabel:false,visible:false});
+   this.l2 = board.create('segment', [this.p1, this.p3], {withlabel:false});
+   this.l2.setAttribute(thinStyle);
+   // arc with arrows
+   this.p4 = board.create('point',
+     [this.p1.X()+data[4]*Math.cos(a0), this.p1.Y()+data[4]*Math.sin(a0)],
+     {withlabel:false,visible:false});
+   this.arc = board.create('minorArc', [this.p1, this.p4, this.p3], 
+     {firstArrow: {type: 7, size: 5}, lastArrow: {type: 7, size: 5} ,firstArrow:false, lastArrow:false} );
+   this.arc.setAttribute(thinStyle);
+   if (data[0] == "angle1" )
+     {  this.arc.setAttribute({lastArrow:true})}
+   if (data[0] == "angle2" )
+     {  this.arc.setAttribute({firstArrow:true} );
+        this.arc.setAttribute({lastArrow:true} )
+ } 
+   // label
+   const al = (a0+a1)/2; // angular position of label
+   if (data[1] == ".") {
+     const rl = data[4]*0.6;
+     this.p5 = board.create('point',
+       [this.p1.X()+rl*Math.cos(al), this.p1.Y()+rl*Math.sin(al)],
+       {name:"" ,fillcolor:'black',strokeColor:'black',size:0.5, strokeWidth:0}); 
+   }
+   else {
+     const rl = data[4]+10*pxunit;
+     this.p5 = board.create('point',
+       [this.p1.X()+rl*Math.cos(al), this.p1.Y()+rl*Math.sin(al)],
+       {name:"\\("+data[1]+"\\)" ,size:0, label:{offset:[-6,0]}}); 
+   }
+ }
+ data() { return this.d }
+ name() { return '"'+this.d[1]+'"' }
+}
 // Fachwerkstab
 class bar {
  constructor(data) {
@@ -151,6 +200,39 @@ class beam {
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return '"'+this.state+'"' } 
 }
+// Circle with centerpoint, point on perimeter, optional: use name as radius indicator
+class circle {
+  constructor(data){
+    this.d = data.slice(0); //make a copy
+    data.shift(); // drop the type string
+    data.shift(); // drop the name string
+    this.angle = data.pop()*Math.PI/180; // pop the angle for the label
+    // circle
+    this.c = board.create('circle', data, {opacity: true, fillcolor:'lightgray', 
+         strokeWidth: normalStyle.strokeWidth, 
+         strokeColor: normalStyle.strokeColor});
+    // arrow and label if name is not empty
+    if (data[1] != '') {
+      const dx = Math.cos(this.angle);
+      const dy = Math.sin(this.angle);
+      var dir = 1;
+      if (this.angle < 0) {dir = -1}
+      const xc = data[0][0];
+      const yc = data[0][1];
+      const r = this.c.Radius();
+      //      console.log(dir);
+      this.a = board.create('arrow',
+        [[xc+dx*(r+dir*a), yc+dy*(r+dir*a)],[xc+dx*(r), yc+dy*(r)]],
+        thinStyle);
+      // label
+      this.p = board.create('point',
+      [xc+dx*(r+dir*1.5*a), yc+dy*(r+dir*1.5*a)],
+      {name:"\\("+data[1]+"\\)" ,size:0, label:{offset:[-6,0]}}); 
+    }
+  }
+  data(){ return this.d } 
+  name(){ return '"'+this.d[1]+'"' } 
+}
 
 //[ "circle2P", "<label1>","<label2>", [x1,y1],[x2,y2], f ]//
 class circle2p {
@@ -233,10 +315,46 @@ class dashpot {
     // logging
     console.log("dasphot", data[1], data[2], data[3], r, this.off);   
   }
-  name() { return "0" }
-  data(){
-    return this.d;
-  } 
+  name() { '"'+this.d[1]+'"' }
+  data() { return this.d } 
+}
+// linear dimension ["dim", "name", [x1,y1], [x2,y2], d]
+class dim {
+ constructor(data) {
+   this.d = data;  
+   const dx = data[3][0]-data[2][0];
+   const dy = data[3][1]-data[2][1];
+   const a0 = Math.atan2(dy,dx);
+   const le = Math.sqrt(dx**2+dy**2);
+   const d = data[4];
+   const x1 = data[2][0]-d*dy/le;
+   const y1 = data[2][1]+d*dx/le;
+   const x2 = x1+dx; 
+   const y2 = y1+dy;
+   const nx = -dy/le;
+   const ny = dx/le;
+   //console.log(nx,ny);
+   // baseline
+   this.bl = board.create('arrow', [ [x1,y1 ], [x2,y2 ]], {name: '', firstArrow: { type: 1, size: 6 }, lastArrow: { type: 1, size: 6 }});
+   this.bl.setAttribute(thinStyle);
+   // perpendicular lines
+   var da = 0.3*a;
+   var di = da;
+   if (d !=0  ) {di=d};
+   if (d<0) {di=d;da=-da};
+   this.hl1 = board.create('segment', 
+     [ [x1-nx*di,y1-ny*di ], [x1+nx*da,y1+ny*da ]], {name: ''});
+   this.hl1.setAttribute(thinStyle);
+   this.hl2 = board.create('segment', 
+     [ [x2-nx*di,y2-ny*di ], [x2+nx*da,y2+ny*da ]], {name: ''});
+   this.hl2.setAttribute(thinStyle);
+   // label
+   this.p = board.create('point',
+     [x1+0.5*dx+nx*a*0.5, y1+0.5*dy+ny*a*0.5],
+     {name:"\\("+data[1]+"\\)" ,size:0, label:{offset:[-6,0]}});   
+ }
+ data() { return this.d }
+ name() { return '"'+this.d[1]+'"' }
 }
 
 // co-ordinate arrow with arrow with label 
@@ -267,18 +385,18 @@ class dir {
    this.vec.setAttribute(thinStyle);
  };
  data() { return this.d }; 
- name() { return "0" };
+ name() { return '"'+this.d[1]+'"' };
 }
 //co-ordinate arrow with red arrow with label 
 // [ "disp", "name", [x,y], angle, offset, length]
 class disp {
-   constructor(data) {
-    this.name = data[1];
+  constructor(data) {
+    this.d = data.slice(9);
     var le = 24*pxunit;
     if (data.length >=5 ) {this.dist = data[4] } else {this.dist = 10};
     if (data.length >=6 ) { le = data[5] }
-    if (this.dist >= 0) {this.name1 = ""; this.name2 = "\\("+this.name+"\\)" } else
-      {this.name2 = ""; this.name1 = "\\("+this.name+"\\)" }
+    if (this.dist >= 0) {this.name1 = ""; this.name2 = "\\("+data[1]+"\\)" } else
+      {this.name2 = ""; this.name1 = "\\("+data[1]+"\\)" }
     // Arrow
     const a0 = data[3]*Math.PI/180;
     const off = data[4];
@@ -294,8 +412,8 @@ class disp {
     this.vec.setAttribute(thinStyle);
     this.vec.setAttribute({color:"red"});
   }
-  data() { return this.data } 
-  name() { return "0" }
+  data() { return this.d } 
+  name() { return '"'+this.d[1]+'"' }
 }
 //  Loslager
 class fix1 {
@@ -621,14 +739,16 @@ class grid {
 }
 // Text label
 class label {
- constructor(data){
-   this.p = board.create('point', data[2], {    
-     name:data[1] ,size:0, label:{offset:[0,0]}} );
-   this.d=data;
- }
- data(){ return this.d }
- name(){  return "0" }
+  constructor(data){
+    if (data[3]) {this.c = data[3]} else {this.c = "black"}
+    this.p = board.create('point', data[2], {    
+      name:data[1] ,size:0, label:{offset:[0,0], color:this.c}} );
+    this.d=data;
+  }
+  data(){ return this.d }
+  name(){  return "0" }
 }
+
 // line between along x and y data vectors with optional dash style and thickness
 // [ "line", "name", [x1, x2,...], [y1, y2,...] ,dash, th ]
 class line {
@@ -765,6 +885,43 @@ class momentGen {
   data(){  return this.d }
   name(){  return "0" }
 }
+//  node with label
+class node {
+  constructor(data) {
+    this.d = data;
+    if (data.length > 3) {this.dist = data[3]} else {this.dist = 10};
+    // node
+    this.p1 = board.create('point', data[2],  {name: "\\("+data[1]+"\\)", label:{autoPosition:true, offset:[0,this.dist]}} );
+    this.p1.setAttribute(nodeStyle);
+    // label
+  }
+  data() { return this.d }
+  name() { return '"'+this.d[1]+'"' }
+}
+//  point with label
+class point {
+  constructor(data) {
+    this.d = data;
+    if (data.length > 3) {this.dist = data[3]} else {this.dist = 10};
+    // node
+    this.p1 = board.create('point', data[2],  {name: "\\("+data[1]+"\\)", label:{autoPosition:true, offset:[0,this.dist]}} );
+    this.p1.setAttribute(pointStyle);
+    // label
+  }
+  data() { return this.d }
+  name() { return '"'+this.d[1]+'"'}
+}
+// grau gefülltes Polygon mit schwarzem Rand. Z.B. für Scheiben oder Balken
+class polygon {
+  constructor(data){
+    this.d = data.slice(0);
+    this.v = data.slice(2);
+    this.p = board.create('polygon',this.v, {opacity: true, fillcolor:'lightgray', vertices:{size:0, fixed: true} ,borders: normalStyle } );
+  }
+  data(){ return this.d }
+  name(){ return "0" } 
+}
+
 // line load 
 // line load perpendicular to the line
 class q {
@@ -820,6 +977,43 @@ class q {
   } 
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return '"'+this.state+'"' } 
+}
+// rope, tangent line to two circles ["rope", "name",[x1,y1], r1, [x2,y2],r2 ]
+// negative r values select the tangent point on the left side from the line p1-p2
+class rope {
+  constructor(data) {
+    this.d = data;
+    const dx = data[4][0]-data[2][0];
+    const dy = data[4][1]-data[2][1];
+    const a0 = Math.atan2(dy,dx);
+    const le = Math.sqrt(dx**2+dy**2);
+    const r1 = data[3];
+    const r2 = data[5];
+    const a1 = Math.acos((r1-r2)/le);
+    this.l = board.create('segment', [
+      [data[2][0]+Math.cos(a0-a1)*r1,data[2][1]+Math.sin(a0-a1)*r1 ],
+      [data[4][0]+Math.cos(a0-a1)*r2,data[4][1]+Math.sin(a0-a1)*r2 ]], {name: data[1],
+       layer: defaultMecLayer, withLabel:true, label:{offset:[0,8],autoPosition:true}});
+    this.l.setAttribute(normalStyle);    
+  }
+  data() { return this.d }
+  name() { return '"'+this.state+'"' }
+}
+//rot
+class rot {
+  constructor(data) {
+  this.d = data;
+    this.p1 = board.create('point', data[2], { fixed:true, size:0 , name: '' });
+    this.p2 = board.create('point', data[3], { fixed:true, size:0 , name: '' }); 
+    // label
+    this.p3 = board.create('point', data[4], {    
+      name:"\\("+data[1]+"\\)" ,size:0, label:{offset:[0,0],color:'red'}});
+    this.arc = board.create('minorArc', [this.p1, this.p2, this.p3], {
+      fixed: true, strokeWidth: 1, lastArrow: { type: 1, size: 6 }, strokeColor:"red" });
+    //this.arc.setAttribute({strokeColor:"red"});
+  }
+  data() { return this.d }
+  name() { return '"'+this.d[1]+'"' }
 }
 
 // [ "spline", "eqn", [X0, Y0], [x1, y1], [x2,y2], [xt1, yt1], [xt2,yt2], style, status ]
@@ -890,6 +1084,43 @@ class spline {
     ];  }
   name() { return hermitename(this.P,this.p1, this.p2, this.pt1, this.pt2) }
 }
+// compressive spring, ["springc", "k", [x1,y1], [x2,y2], r, n, off]
+class springc {
+  constructor(data){
+    this.d = data.slice(0); //make a copy
+    var r;
+    var x = this.d[2][0];
+    var y =  this.d[2][1];
+    var dx = (this.d[3][0]-x);
+    var dy = (this.d[3][1]-y);
+    var l = Math.sqrt(dx**2+dy**2);
+    if (data.length >4 ) {r = data[4]} else {r = 6*pxunit};
+    if (data.length >5 ) {this.n = data[5]*2+1} else {this.n = Math.ceil(l/(5*pxunit))};
+    if (data.length >6 ) {this.off = data[6]} else {this.off = 14*pxunit};
+    var c = r/l;
+    // start point
+    var px = [x-dy*c];
+    var py = [y+dx*c];
+    // intermediate points
+    var j;
+    for (j = 0; j < this.n+1; j++) {
+      px.push(x+dx*j/this.n+dy*c*(-1)**j);
+      py.push(y+dy*j/this.n-dx*c*(-1)**j);
+    }
+    // last point
+    px.push(x+dx+dy*c,x+dx-dy*c);
+    py.push(y+dy-dx*c,y+dy+dx*c);
+    board.create('curve',[ px, py ], normalStyle );
+    // label
+    board.create('point',[x+dx/2-dy/l*this.off, y+dy/2+dx/l*this.off], {    
+      name: "\\("+data[1]+"\\)" ,size:0, label:{offset:[0,0]}});
+	// logging
+    console.log("springc", data[1], data[2], data[3], r,  Math.floor(this.n/2), this.off);
+  }
+  data(){ return this.d } 
+  name(){ return '"'+this.d[1]+'"' } 
+}
+
 //tensile spring
 // [ "springt", "name", [x1,y1], [x2,y2], r, proz, n, offset ]
 class springt {
@@ -931,17 +1162,17 @@ class springt {
 	// logging
     console.log("springt", data[1], data[2], data[3], r, pr,  Math.floor(this.n/2), this.off);
   }
-  name(){ return "0" }
+  name(){ return '"'+this.d[1]+'"' }
   data(){ return this.d } 
 }
 // [ "wall", "name", [x1, y1], [x2,y2] , angle ]
 class wall {
- constructor(data) {
-   this.d = data;
-   // dependent objects
-   this.bl = board.create('segment', [data[2],data[3]], {name: ''});
-   this.bl.setAttribute(normalStyle);
-   this.c = board.create("comb", [data[2],data[3]], { width: 0.25*a, frequency: 0.25*a, angle: data[4]* Math.PI / 180 })
+  constructor(data) {
+    this.d = data;
+    // dependent objects
+    this.bl = board.create('segment', [data[2],data[3]], {name: ''});
+    this.bl.setAttribute(normalStyle);
+    this.c = board.create("comb", [data[2],data[3]], { width: 0.25*a, frequency: 0.25*a, angle: data[4]* Math.PI / 180 })
   }
   data() { return this.d }
   name(){ return "0" }
@@ -949,20 +1180,26 @@ class wall {
 
 function init() {
   let state;
-  stateInput = document.getElementById(stateRef);
-  if (stateInput.value && stateInput.value != '') {
-    state = JSON.parse(stateInput.value); } else { state = JSON.parse(initstring);
- }
+  if (stateRef) {
+    stateInput = document.getElementById(stateRef);
+    if (stateInput.value && stateInput.value != '') {
+      state = JSON.parse(stateInput.value); } else { state = JSON.parse(initstring); }
+   } else { state = JSON.parse(initstring) }
  console.log("OK");
   var m;
   for (m of state) {
     console.log(m);
     switch (m[0]) {
+      case "angle":     objects.push(new angle(m)); break;
+      case "angle1":    objects.push(new angle(m)); break;
+      case "angle2":    objects.push(new angle(m)); break;
       case "bar":	      objects.push(new bar(m)); break;
       case "beam":	    objects.push(new beam(m)); break;
+      case "circle":	  objects.push(new circle(m)); break;
       case "circle2p":	objects.push(new circle2p(m)); break;
       case "crosshair":	objects.push(new crosshair(m)); break;
       case "dashpot":		objects.push(new dashpot(m)); break;
+      case "dim": 			objects.push(new dim(m)); break;
       case "dir": 			objects.push(new dir(m)); break;
       case "disp": 			objects.push(new disp(m)); break;
       case "fix1": 	  	objects.push(new fix1(m)); break;
@@ -978,8 +1215,14 @@ function init() {
       case "mass": 			objects.push(new mass(m)); break;     
       case "moment":  	objects.push(new moment(m)); break;
       case "momentGen":	objects.push(new momentGen(m)); break;
+      case "node":      objects.push(new node(m)); break;
+      case "point":     objects.push(new point(m)); break;
+      case "polygon":   objects.push(new polygon(m)); break;
       case "q":  	      objects.push(new q(m)); break;
+      case "rope":      objects.push(new rope(m)); break;
+      case "rot":       objects.push(new rot(m)); break;
       case "spline":  	objects.push(new spline(m)); break;
+      case "springc":   objects.push(new springc(m)); break;
       case "springt":  	objects.push(new springt(m)); break;
       case "wall": 			objects.push(new wall(m)); break;
     }
@@ -987,16 +1230,18 @@ function init() {
 }
 
 function update() {
+  if (!stateRef) { return }
   var m;
   var dfield = [];
   var names = "[";
   for (m of objects) {
   	// object key is "deleted" if it has been deleted
+    // console.log(m.data()[0], m.name());
     if (m.data()[0] != 'deleted' ) {dfield.push(m.data());
     if (names != "[") { names = names.concat(",") }
     names = names.concat(m.name()); }
   }
-   names = names.concat("]");
+  names = names.concat("]");
   if (mode == "jsfiddle") {
     stateInput.innerHTML = JSON.stringify(dfield);
     document.getElementById(fbd_names).innerHTML = names } else {
@@ -1108,4 +1353,4 @@ board.on('update', function() {
   update()
 });
 
-[[/jsxgraph]]</p>
+[[/jsxgraph]]
