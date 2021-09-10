@@ -1,8 +1,12 @@
 <p hidden>[[input:objects]] [[validation:objects]]</p>
 <p hidden>[[input:names]] [[validation:names]] </p>
-<p>
 [[jsxgraph width='500px' height='400px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
-// Version 2021 09 08 https://jsfiddle.net/vtmeq12x/33/
+var mode  = "STACK";
+const initstring = {#init#};
+// End of STACK header
+
+// Meclib version 2021 09 10 https://jsfiddle.net/1q34awrn/4/
+
 JXG.Options.point.snapToGrid = true; // grid snap spoils rotated static objects
 JXG.Options.point.snapSizeX = 0.1;
 JXG.Options.point.snapSizeY = 0.1;
@@ -30,6 +34,7 @@ const board = JXG.JSXGraph.initBoard(divid, {
   boundingbox: [-5, 5, 5, -5], //default values, use "grid" to customize
   axis: false, grid:true, showNavigation:false, showCopyright:true
 });
+
 var state;
 var stateInput;
 // make infobox optionally relative to a given point (define p.ref to [xref, yref])
@@ -242,7 +247,7 @@ class dir {
  constructor(data) {
    this.label = data[1];
    this.d =data;
-   var le = 1.5*a;
+   var le = 24*pxunit;
    if (data.length >=5 ) {this.dist = data[4] } else {this.dist = 10}
    if (data.length >=6 ) { le = data[5] }
    if (this.dist >= 0) {this.name1 = ""; this.name2 = "\\("+this.label+"\\)" } else
@@ -269,7 +274,7 @@ class dir {
 class disp {
    constructor(data) {
     this.name = data[1];
-    var le = 1.5*a;
+    var le = 24*pxunit;
     if (data.length >=5 ) {this.dist = data[4] } else {this.dist = 10};
     if (data.length >=6 ) { le = data[5] }
     if (this.dist >= 0) {this.name1 = ""; this.name2 = "\\("+this.name+"\\)" } else
@@ -708,7 +713,7 @@ class moment {
     if (this.state == "locked") { lock(this) } 
 
   }
-  data() { return [this.d[0], this.mname,  [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()], [this.p3.X(), this.p3.Y()]  ]  }
+  data() { return [this.d[0], this.mname,  [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()], [this.p3.X(), this.p3.Y()], this.state ]  }
   name() {return this.mname.replace(/\s+/,"*") }
 }
 // [ "momentGen", "name", [x,y]]
@@ -942,23 +947,13 @@ class wall {
   name(){ return "0" }
 }
 
-
-
-// initialization
-var objects = [];
-init();
-
-update();
-
-board.on('update', function() {
-  update()
-});
-
 function init() {
+  let state;
   stateInput = document.getElementById(stateRef);
   if (stateInput.value && stateInput.value != '') {
-    console.log(stateInput.value); state = JSON.parse(stateInput.value); } else { state = JSON.parse({#init#});
+    state = JSON.parse(stateInput.value); } else { state = JSON.parse(initstring);
  }
+ console.log("OK");
   var m;
   for (m of state) {
     console.log(m);
@@ -1000,11 +995,15 @@ function update() {
     if (m.data()[0] != 'deleted' ) {dfield.push(m.data());
     if (names != "[") { names = names.concat(",") }
     names = names.concat(m.name()); }
-  }  stateInput.value = JSON.stringify(dfield);
-  names=names.concat("]");
-  document.getElementById(fbd_names).value=names;
-
+  }
+   names = names.concat("]");
+  if (mode == "jsfiddle") {
+    stateInput.innerHTML = JSON.stringify(dfield);
+    document.getElementById(fbd_names).innerHTML = names } else {
+    stateInput.value = JSON.stringify(dfield);
+    document.getElementById(fbd_names).value = names }
 }
+
 function plus(a,b) { return [ a[0]+b[0], a[1]+b[1] ] }
 function minus(a,b) { return [ a[0]-b[0], a[1]-b[1] ] }
 function dist(a,b) { return Math.sqrt( (a[0]-b[0])**2 + (a[1]-b[1])**2 ) }
@@ -1100,4 +1099,13 @@ function isOutside(ref) {
   var [xmin, ymax, xmax, ymin] = board.getBoundingBox();
   var x = ref.X(), y = ref.Y();
   return (x<xmin || x>xmax || y<ymin || y>ymax) }
+
+// initialization
+var objects = [];
+init();
+update();
+board.on('update', function() {
+  update()
+});
+
 [[/jsxgraph]]</p>
