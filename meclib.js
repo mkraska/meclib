@@ -1,5 +1,7 @@
-// Meclib version 2021 09 10 https://jsfiddle.net/Lotbzdv9/4/
+// Meclib version 2021 09 11 https://jsfiddle.net/swguer4p/13/
 
+const highlightColor = "orange";
+const movableLineColor = "blue";
 JXG.Options.point.snapToGrid = false; // grid snap spoils rotated static objects
 JXG.Options.point.snapSizeX = 0.1;
 JXG.Options.point.snapSizeY = 0.1;
@@ -43,7 +45,7 @@ board.highlightInfobox = function(x, y , el) {
     var dp = [1,1];
     var lbl = '';
     if (typeof (el.ref) == 'function') {ref = el.ref()} 
-    else if (typeof(el.ref) != 'undefined') {ref = el.ref()}
+    else if (typeof(el.ref) != 'undefined') {ref = el.ref}
     if (typeof (el.scale) != 'undefined') {scale = el.scale}
     if (typeof (el.dp) != 'undefined') {dp = el.dp}
     if (typeof (el.infoboxlabel) == 'string') {lbl = el.infoboxlabel}
@@ -111,26 +113,20 @@ class bar {
    this.p1.setAttribute(nodeStyle);
    this.p2 = board.create('point',data[3],{withlabel:false});
    this.p2.setAttribute(nodeStyle);
-   this.line = board.create('segment', [this.p1, this.p2], {withlabel:false});     this.line.setAttribute(barStyle);
+   this.line = board.create('segment', [this.p1, this.p2], {withlabel:false});     
+   this.line.setAttribute(barStyle);
    // label
    const alpha = this.line.getAngle()+Math.PI/2;
    this.label = board.create('text', [
      0.5*(this.p1.X()+this.p2.X())+Math.cos(alpha)*0.5*a, 
      0.5*(this.p1.Y()+this.p2.Y())+Math.sin(alpha)*0.5*a, data[1] ], {
-     anchorX:'middle', anchorY:'middle', highlight:false
-   });
+     anchorX:'middle', anchorY:'middle' });
     // implement state switching
     this.obj = [ this.p1, this.p2, this.line, this.label ];
     // state init
     if (this.state == "show") { show(this) }
     if (this.state == "hide") { hide(this) }
-    if (this.state == "locked") { lock(this) }
-    //switch by doubleclick
-    this.line.parent = this;
-    this.line.lastclick = Date.now();    
-    this.line.on('up', function() {
-      if (Date.now()-this.lastclick < 500) { Switch(this.parent) }
-      else {this.lastclick = Date.now() }})
+    if (this.state != "locked") { makeSwitchable(this.line, this) }
   }
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return '"'+this.state+'"' } 
@@ -182,20 +178,13 @@ class beam {
      this.p.shift(); // remove 2 points
      this.p.shift();
    } 
- this.b.rendNode.setAttributeNS(null, 'fill-rule', 'evenodd');  //Workaround for correct fill, see https://github.com/jsxgraph/jsxgraph/issues/362
+   this.b.rendNode.setAttributeNS(null, 'fill-rule', 'evenodd');  //Workaround for correct fill, see https://github.com/jsxgraph/jsxgraph/issues/362
     // implement state switching
     this.obj = [ this.b ];
     // state init
     if (this.state == "show") { show(this) }
     if (this.state == "hide") { hide(this) }
-    if (this.state == "locked") { lock(this) }
-        //switch by doubleclick
-    this.b.parent = this;
-    this.b.lastclick = Date.now();    
-    this.b.on('up', function() {
-      if (Date.now()-this.lastclick < 500) { Switch(this.parent) }
-      else {this.lastclick = Date.now() }})
-
+    if (this.state != "locked") { makeSwitchable(this.b, this) }
   }
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return '"'+this.state+'"' } 
@@ -245,8 +234,8 @@ class circle2p {
     // circle
     this.A = board.create('point', [data[3][0]/this.f,data[3][1]/this.f], { name: data[1], fixed:false, label:{offset:[5,5]}}); 
 	  this.AS = board.create('point', [data[4][0]/this.f,data[4][1]/this.f], { name: data[2], fixed:false, label:{offset:[5,5]} }); 
-    this.MSK1 = board.create('semicircle', [this.A, this.AS]); 
-    this.MSK2 = board.create('semicircle', [this.AS, this.A]); 
+    this.MSK1 = board.create('semicircle', [this.A, this.AS], {strokeColor:movableLineColor}); 
+    this.MSK2 = board.create('semicircle', [this.AS, this.A], {strokeColor:movableLineColor}); 
     this.int1 = board.create('intersection', [this.MSK1, this.xaxis], { visible: true, size: 0 , label:{visible:false} });
 	  this.int2 = board.create('intersection', [this.MSK2, this.xaxis], { visible: true, size: 0 , label:{visible:false} }); 
     for (var pt of [this.A, this.AS, this.int1, this.int2]) {
@@ -443,10 +432,10 @@ class fix1 {
     t2.applyOnce(p);
     // dependent objects
     // pivot 
-    this.p1 = board.create('point', [p[0].X(), p[0].Y()],{ name: '', highlight:false });
+    this.p1 = board.create('point', [p[0].X(), p[0].Y()],{ name: '' });
     this.p1.setAttribute(nodeStyle);
     // label
-    this.label=board.create('point', [p[7].X(), p[7].Y()], {name:"\\("+data[1]+"\\)" ,size:0, label:{offset:[-6,-2], highlight:false}});
+    this.label=board.create('point', [p[7].X(), p[7].Y()], {name:"\\("+data[1]+"\\)" ,size:0, label:{offset:[-6,-2] }});
     // body
     this.t = board.create('polygon', [p[0], p[1], p[2]], {name: '',fillColor: "white", Opacity: true, layer: 7,
       borders: {visible: false}, vertices: { fixed: true, size: 0 } });
@@ -461,12 +450,7 @@ class fix1 {
     // state init
     if (this.state == "show") { show(this) }
     if (this.state == "hide") { hide(this) }
-    //switch by doubleclick
-    this.t.parent = this;
-    this.t.lastclick = Date.now();    
-    this.t.on('up', function() {
-      if (Date.now()-this.lastclick < 500) { Switch(this.parent) }
-      else {this.lastclick = Date.now() }})
+    if (this.state != "locked") { makeSwitchable(this.tb, this) } 
   }
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return '"'+this.state+'"' } 
@@ -517,12 +501,7 @@ class fix12 {
     // state init
     if (this.state == "show") { show(this) }
     if (this.state == "hide") { hide(this) }
-    //switch by doubleclick
-    this.t.parent = this;
-    this.t.lastclick = Date.now();    
-    this.t.on('up', function() {
-      if (Date.now()-this.lastclick < 500) { Switch(this.parent) }
-      else {this.lastclick = Date.now() }})
+    if (this.state != "locked") { makeSwitchable(this.tb, this) } 
   }
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return '"'+this.state+'"' } 
@@ -563,12 +542,7 @@ class fix123 {
     // state init
     if (this.state == "show") { show(this) }
     if (this.state == "hide") { hide(this) }
-    //switch by doubleclick
-    this.bl.parent = this;
-    this.bl.lastclick = Date.now();    
-    this.bl.on('up', function() {
-      if (Date.now()-this.lastclick < 500) { Switch(this.parent) }
-      else {this.lastclick = Date.now() }})
+    if (this.state != "locked") { makeSwitchable(this.bl, this) } 
   }
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return '"'+this.state+'"' } 
@@ -612,12 +586,7 @@ class fix13 {
     // state init
     if (this.state == "show") { show(this) }
     if (this.state == "hide") { hide(this) }
-    //switch by doubleclick
-    this.bl.parent = this;
-    this.bl.lastclick = Date.now();    
-    this.bl.on('up', function() {
-      if (Date.now()-this.lastclick < 500) { Switch(this.parent) }
-      else {this.lastclick = Date.now() }})
+    if (this.state != "locked") { makeSwitchable(this.bl, this) } 
   }
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return '"'+this.state+'"' } 
@@ -627,22 +596,23 @@ class force {
   constructor(data) {
     this.d = data;
     this.fname = data[1];
-    var fix = true, size = 0; 
     if (data[4]) { this.off = data[4] } else { this.off = 10 }
     const labelopts = {offset:[this.off,0], autoPosition:true, color:'blue'};
     if (this.off >= 0) {this.name1 = ""; this.name2 = "\\("+this.fname+"\\)" } else
       {this.name2 = ""; this.name1 = "\\("+this.fname+"\\)" }
     if (data[5]) { this.state = data[5] } else { this.state = "locked" }
-    if (this.state == "active") {fix = false; size = 2} 
+    var fix = true, size = 0, hl = false; 
+    if (this.state == "active") {fix = false; size = 2; hl = true} 
     this.p1 = board.create('point', data[2], { 
-      name: this.name1, fixed:fix, size: size, label:labelopts  }); 
+      name: this.name1, fixed:fix, size: size, label:labelopts }); 
     this.p2 = board.create('point', data[3], {
       name: this.name2, fixed:fix, size: size, label:labelopts });
     this.p2.start = this.p1;
     this.p2.ref = function() { return [this.start.X(), this.start.Y()] };
     this.p2.infoboxlabel = "Vektor ";
     this.vec = board.create('arrow', [this.p1, this.p2], {
-      touchLastPoint: true, fixed:false, lastArrow:{size:5, type:2} });
+      touchLastPoint: true, fixed:false, lastArrow:{size:5, type:2}, highlight:hl,
+      highlightStrokeColor:highlightColor});
     this.vec.obj = [this.vec, this.p1, this.p2];
     this.vec.num = objects.length;   
     this.vec.on("up", function(e) { 
@@ -677,7 +647,8 @@ class forceGen {
       name: '\\('+document.getElementById("fname").value+'\\)', fixed:false, visible:false, label:{offset:[5,0], visible:true, color:'gray'} });
     p2.addParents(t);
     var vec = board.create('arrow', [p1, p2], 
-      { fixed:false, color:'gray',lastArrow:{size:5, type:2} } );
+      { fixed:false, color:'gray',lastArrow:{size:5, type:2}, highlight:true,
+      highlightStrokeColor:highlightColor} );
     // callback creates new force object and new name
     t.on('out', function(e) {
       p2.setAttribute({name:'\\('+document.getElementById("fname").value+'\\)'})});
@@ -775,12 +746,14 @@ class line2p {
     this.d = data.slice(0); //make a copy
     this.f = data[4];
     this.p1 = board.create('point', [data[2][0]/this.f,data[2][1]/this.f], { 
-    	label:{visible:false}, snaptopoints: true, attractorDistance: 0.2, fixed:false }); 
+    	label:{visible:false}, snapToGrid:true, snaptopoints: true, attractorDistance: 0.2, fixed:false }); 
     this.p2 = board.create('point', [data[3][0]/this.f,data[3][1]/this.f], { 
-    	label:{visible:false}, snaptopoints: true, attractorDistance: 0.2, fixed:false }); 
+    	label:{visible:false}, snapToGrid:true, snaptopoints: true, attractorDistance: 0.2, fixed:false }); 
     this.g = board.create('line', [this.p1, this.p2], { 
-    strokecolor: 'green', name:data[1],withLabel:true,label:{offset:[10,0]}});
-       for (var pt of [this.p1, this.p2]) {	pt.scale = [this.f,this.f] }
+      strokecolor: movableLineColor, strokeWidth:1, 
+      highlight:true, highlightStrokeColor:highlightColor, 
+      name:data[1],withLabel:true,label:{offset:[10,0]}});
+    for (var pt of [this.p1, this.p2]) {	pt.scale = [this.f,this.f] }
   }
   data(){ return [this.d[0], this.d[1], [this.p1.X()*this.f,this.p1.Y()*this.f],[this.p2.X()*this.f,this.p2.Y()*this.f], this.f] } 
   name(){ return "[["+this.data()[2].toString() + "],[" + this.data()[3].toString() + "]]" } 
@@ -805,19 +778,19 @@ class moment {
   constructor(data) {
     this.d = data;
     this.mname = data[1];
-    var fix = true, size = 0; 
     if (data[5]) { this.state = data[5] } else { this.state = "locked" }
-    if (this.state == "active") {fix = false; size = 2} 
+    var fix = true, size = 0, hl = false;
+    if (this.state == "active") {fix = false; size = 2; hl = true} 
     this.p1 = board.create('point', data[2], {
-      name: '', fixed:fix, size:size });
+      name: '', fixed:fix, size:size, snapToGrid:true });
     this.p2 = board.create('point', data[3], {
-      name: '', fixed:fix, size:size });
+      name: '', fixed:fix, size:size, snapToGrid:true});
     this.p3 = board.create('point', data[4], {
-      name: "\\("+this.mname+"\\)", fixed:fix, size:size, 
-      label:{offset:[10,0], autoPosition:true, color:'blue'} });
+      name: "\\("+this.mname+"\\)", fixed:fix, size:size, snapToGrid:true,
+      label:{offset:[0,0], autoPosition:true, color:'blue'} });
     this.arc = board.create('minorArc', [this.p1, this.p2, this.p3], {
-      fixed: fix, strokeWidth: 2, lastArrow: {type: 2, size: 5
-      } });
+      fixed: fix, strokeWidth: 2, highlight:hl, highlightStrokeColor:highlightColor,
+      lastArrow: {type: 2, size: 5 } });
     var g = board.create('group', [this.p1, this.p2, this.p3, this.arc]);
     g.removeTranslationPoint(this.p2);
     g.removeTranslationPoint(this.p3);
@@ -857,8 +830,10 @@ class momentGen {
     const p3 = board.create('point', plus(data[2], [2*dx,dy1]), {
       name: '\\('+document.getElementById("mname").value+'\\)', fixed:false, visible:false, label:{offset:[5,0], visible:true, color:'gray'} });
     p2.addParents(t);
-    var arc = board.create('minorArc', [p1, p2, p3], { fixed:false, strokeColor:'gray',
-      strokeWidth: 2, lastArrow: { type: 2, size: 5}});
+    var arc = board.create('minorArc', [p1, p2, p3], { 
+      fixed:false, strokeColor:'gray', strokeWidth: 2, 
+      highlight:true, highlightStrokeColor:highlightColor,
+      lastArrow: { type: 2, size: 5}});
     // callback creates new moment object and new name
     t.on('out', function(e) {
       p3.setAttribute({name:'\\('+document.getElementById("mname").value+'\\)'})});
@@ -968,12 +943,7 @@ class q {
     // state init
     if (this.state == "show") { show(this) }
     if (this.state == "hide") { hide(this) }
-    //switch by doubleclick
-    this.border.parent = this;
-    this.border.lastclick = Date.now();    
-    this.border.on('up', function() {
-      if (Date.now()-this.lastclick < 500) { Switch(this.parent) }
-      else {this.lastclick = Date.now() }})
+    if (this.state != "locked") { makeSwitchable(this.border, this) }
   } 
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return '"'+this.state+'"' } 
@@ -1030,29 +1000,45 @@ class spline {
     var PT2 = plus(this.P, data[6]);
     var B1 = [P1[0], this.P[1]];
     var B2 = [P2[0], this.P[1]];  
-    // points
+    // vertical slide lines
     this.v1 = board.create('line',[P1,plus(P1,[0,1])], {visible:false, fixed:true});
     this.v2 = board.create('line',[P2,plus(P2,[0,1])], {visible:false, fixed:true});
-    this.p1 = board.create('glider',[P1[0], P1[1],this.v1], { name: '', fixed: false ,size:6, color:'red',fillOpacity:0});
-    this.p2 = board.create('glider',[P2[0], P2[1],this.v2], { name: '', fixed: false ,size:6, color:'red',fillOpacity:0});
-    this.pt1 = board.create('point',PT1, { name: '', fixed: false, snapToGrid:false });
-    this.pt2 = board.create('point',PT2, { name: '', fixed: false, snapToGrid:false });
+    // sliding points
+    this.p1 = board.create('glider',[P1[0], P1[1],this.v1], { 
+      name: '', fixed: false ,size:6, color:'red',fillOpacity:0,
+      snapToGrid:true});
+    this.p2 = board.create('glider',[P2[0], P2[1],this.v2], { 
+      name: '', fixed: false ,size:6, color:'red',fillOpacity:0,
+      snapToGrid:true});
+    // tangent points
+    this.pt1 = board.create('point',PT1, { name: '', fixed: false, snapToGrid:true });
+    this.pt2 = board.create('point',PT2, { name: '', fixed: false, snapToGrid:true });
+    // tangent lines
     this.t1 = board.create('segment',[this.p1, this.pt1], {fixed:false, strokecolor:'black', strokewidth: 1});
     this.t2 = board.create('segment',[this.p2, this.pt2], {fixed:false, strokecolor:'black', strokewidth: 1});
+    // decorations
     this.v1 = board.create('segment',[this.p1, [P1[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
     this.v2 = board.create('segment',[this.p2, [P2[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
     this.v3= board.create('segment',[[P1[0],this.P[1]], [P2[0],this.P[1]]], {fixed:true, strokecolor:'black', strokewidth: 1});
     //this.g1 = board.create('group', [this.p1, this.pt1] ).removeTranslationPoint(this.pt1);
     //this.g2 = board.create('group', [this.p2, this.pt2] ).removeTranslationPoint(this.pt2);
-    this.graph = board.create('functiongraph', [hermiteplot(this.P,this.p1, this.p2, this.pt1, this.pt2), this.p1.X(), this.p2.X()], { strokecolor: 'red', strokewidth: 3  });
-    // set of control points
-    this.obj = [ this.p1, this.p2, this.pt1, this.pt2 ];
-    for (var part of this.obj) { part.ref = this.P} // ref point for local system
+    this.graph = board.create('functiongraph', [hermiteplot(this.P,this.p1, this.p2, this.pt1, this.pt2), this.p1.X(), this.p2.X()], { strokecolor: movableLineColor, strokewidth: 3  });
+    // configure infoboxes
+    this.p1.ref = this.P;
+    this.p2.ref = this.P;
+    this.pt1.start = this.p1;
+    this.pt2.start = this.p2;
+    this.pt1.ref = function() { return [this.start.X(), this.start.Y()] };
+    this.pt2.ref = function() { return [this.start.X(), this.start.Y()] };
+    this.pt1.infoboxlabel = "Delta ";
+    this.pt2.infoboxlabel = "Delta ";
     // state init
+    this.obj = [ this.p1, this.p2, this.pt1, this.pt2 ];
     if (this.state == "active") { activate(this) }
     if (this.state == "inactive") {deactivate(this) }
     if (this.state == "locked") { 
-      deactivate(this); this.state = "locked" ;  this.graph.setAttribute({strokeColor:'black'} ); }
+      deactivate(this); this.state = "locked" ;  
+      this.graph.setAttribute({strokeColor:'black'} ); }
     if (this.state == "pure") { 
       deactivate(this); this.state = "pure" ;  
       this.graph.setAttribute({strokeColor:'black'} );  
@@ -1065,11 +1051,8 @@ class spline {
       this.t2.setAttribute({visible: false});
     }
     //switch by doubleclick
-    this.graph.parent = this;
-    this.graph.lastclick = Date.now();    
-    this.graph.on('up', function() {
-      if (Date.now()-this.lastclick < 500) { console.log(this.parent.state); Switch(this.parent) }
-      else {this.lastclick = Date.now() }})
+    makeSwitchable(this.graph, this);
+    this.graph.setAttribute({highlightFillOpacity:0});
   }
   data() {  return [
       "spline",
@@ -1301,7 +1284,9 @@ function hermitename(Ref,p1, p2, t1, t2) {
   var x1 = p1.X()-Ref[0], dx = p2.X()-p1.X();
   var y1 = p1.Y()-Ref[1], dy = p2.Y()-p1.Y();
   var d1 = (p1.Y()-t1.Y())/(p1.X()-t1.X());
+  if (Math.abs(p1.X()-t1.X())<tol) {d1 = NaN};
   var d2 = (p2.Y()-t2.Y())/(p2.X()-t2.X());
+  if (Math.abs(p2.X()-t2.X())<tol) {d2 = NaN};
   var c = hermite(x1,dx,y1,dy,d1,d2);
   if (!isNaN(c[0]+c[1]+c[2]+c[3])) {
     var n = c[3].toFixed(3) + "*x^3+" + c[2].toFixed(3) + "*x^2+" + c[1].toFixed(3) + "*x+" + c[0].toFixed(3);
@@ -1344,7 +1329,19 @@ function isOutside(ref) {
   var [xmin, ymax, xmax, ymin] = board.getBoundingBox();
   var x = ref.X(), y = ref.Y();
   return (x<xmin || x>xmax || y<ymin || y>ymax) }
-
+// sets a state switch callback to element el in object obj
+function makeSwitchable(el, obj) {
+  //switch by doubleclick
+  el.setAttribute({highlight:true});
+  el.setAttribute({highlightStrokeColor:highlightColor});
+  el.setAttribute({highlightFillColor:highlightColor});
+  el.setAttribute({highlightFillOpacity:0.5});
+  el.parent = obj;
+  el.lastclick = Date.now();    
+  el.on('up', function() {
+    if (Date.now()-el.lastclick < 500) { Switch(obj) }
+      else {el.lastclick = Date.now() }})
+}
 // initialization
 var objects = [];
 init();
@@ -1352,5 +1349,4 @@ update();
 board.on('update', function() {
   update()
 });
-
 [[/jsxgraph]]
