@@ -9,9 +9,9 @@ The set of objects is created with sketches of mechanical systems in mind (suppo
 
 Documentation: see [Wiki](https://github.com/mkraska/meclib/wiki).
 
-[jsfiddle tryout](https://jsfiddle.net/Lotbzdv9/4/)
+[jsfiddle tryout](https://jsfiddle.net/swguer4p/27/)
 
-![Demo](demo2.png?raw=true "Screenshot from the demo question")
+![Demo](images/Meclib demo.png?raw=true "Screenshot from the demo question")
 
 ## Reference
 
