@@ -1,10 +1,11 @@
-// Meclib version 2021 09 12 https://jsfiddle.net/swguer4p/27/
+// Meclib version 2021 09 13 https://jsfiddle.net/yjwa3kzv/7/
 
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const defaultMecLayer = 6;
 var pxunit = 1/40; // is reset by "grid"
 var a = 16*pxunit; // is reset by "grid"
+var deg2rad = Math.PI/180, rad2deg = 180/Math.PI;
 // infobox settings, further settings after board initiation
 JXG.Options.infobox.layer = defaultMecLayer+5;
 JXG.Options.infobox.strokeColor = 'black';
@@ -39,7 +40,7 @@ const pointStyle = { fillcolor: 'black', strokeColor: 'black', size: 1, strokeWi
 // invisible points with infobox
 const silentPStyle = {size:0, withLabel:false};
 // grid snap for control points
-const controlSnapStyle = { snapToGrid:true, snaptopoints: true, attractorDistance: 0.2, fixed:false};
+const controlSnapStyle = { snapToGrid:true, snapToPoints: true, attractorDistance: 0.2, fixed:false};
 // Style for bars
 const barStyle = { strokewidth: 4, strokecolor: "black" };
 // Normal line (body outline)
@@ -47,7 +48,7 @@ const normalStyle = { strokeWidth: 2, strokeColor: 'black', lineCap: 'round' };
 // helper line
 const thinStyle = { strokeWidth: 1, strokeColor: 'black', lineCap: 'round' };
 // hatch style, must be a function because depending on pxunit
-const hatchStyle = function () { return {fixed: true, width:4*pxunit , frequency:4*pxunit, angle: Math.PI/4, layer:8 } };
+const hatchStyle = function () { return {fixed: true, width:4*pxunit , frequency:4*pxunit, angle:45*deg2rad, layer:8 } };
 
 const board = JXG.JSXGraph.initBoard(divid, {
   boundingbox: [-5, 5, 5, -5], //default values, use "grid" to customize
@@ -84,8 +85,8 @@ class angle {
    // second line
    const a0 = this.line.getAngle();
    const le = this.line.L();
-   const a1 = a0+Math.PI/180*data[5];
-   //console.log(a0*180/Math.PI, a1*180/Math.PI);
+   const a1 = a0+data[5]*deg2rad;
+   //console.log(a0*rad2deg, a1*rad2deg);
    this.p3 = board.create('point', plus( XY(this.p1), rect(le,a1) ), silentPStyle );
    this.l2 = board.create('segment', [this.p1, this.p3], {
      withlabel:false, ...thinStyle });
@@ -128,7 +129,7 @@ class bar {
    this.line = board.create('segment', [this.p1, this.p2], {
      withlabel:false, ...barStyle});     
    // label
-   const alpha = this.line.getAngle()+Math.PI/2;
+   const alpha = this.line.getAngle()+90*deg2rad;
    this.label = board.create('text', plus(  mult( 0.5, plus( XY(this.p1), XY(this.p2) ) ), rect(11*pxunit, alpha) ).concat(data[1]), {
      anchorX:'middle', anchorY:'middle' });
     // implement state switching
@@ -159,7 +160,7 @@ class beam {
    this.b = board.create('curve', [[],[]], normalStyle); // init the result
    this.p = data; // end points of center line
    // loop over pairs of points
-   this.angle = -Math.atan2(this.p[1][1]-this.p[0][1],this.p[1][0]-this.p[0][0])+Math.PI/2;
+   this.angle = -Math.atan2(this.p[1][1]-this.p[0][1],this.p[1][0]-this.p[0][0])+90*deg2rad;
    this.attr = { opacity: true, layer: defaultMecLayer, fillcolor:this.col[0],
      gradient: 'linear', gradientSecondColor: this.col[1], gradientAngle: this.angle, 
      ...normalStyle };
@@ -206,7 +207,7 @@ class circle {
     if (typeof(data[data.length-1]) == 'string') {this.state = data.pop()}
       else {this.state = "locked"}
     this.d = data.slice(0); //make a copy
-    this.angle = data.pop()*Math.PI/180; // pop the angle for the label
+    this.angle = data.pop()*deg2rad; // pop the angle for the label
     // circle
     this.c = board.create('circle', [ data[2], data[3] ], {
       opacity: true, fillcolor:'lightgray', 
@@ -342,7 +343,7 @@ class dim {
    const d = data[4];
    const vd = minus( data[3], data[2]);
    const [le, a0] = polar(vd);
-   const vn = rect( 1, a0+Math.PI/2 )
+   const vn = rect( 1, a0+90*deg2rad )
    const v1 = plus( data[2], mult( d, vn ) );
    const v2 = plus( v1, vd );
    const vc = mult( 0.5, plus( v1, v2));
@@ -384,7 +385,7 @@ class dir {
      {this.name2 = ""; this.name1 = "\\("+this.label+"\\)" }
    // Arrow
    const off = data[4];
-   const v = rect( le, data[3]*Math.PI/180 );
+   const v = rect( le, data[3]*deg2rad );
    this.p1 = board.create('point', data[2], { size: 0, name: this.name1, 
      showInfobox:false, label:{offset:[0,this.dist], autoPosition:true}});
    this.p2 = board.create('point', plus(data[2], v), { size: 0, name: this.name2,
@@ -408,7 +409,7 @@ class disp {
      {this.name2 = ""; this.name1 = "\\("+this.label+"\\)" }
    // Arrow
    const off = data[4];
-   const v = rect( le, data[3]*Math.PI/180 );
+   const v = rect( le, data[3]*deg2rad );
    this.p1 = board.create('point', data[2], { size: 0, name: this.name1, 
      showInfobox:false, label:{offset:[0,this.dist], autoPosition:true, color:"red"}});
    this.p2 = board.create('point', plus(data[2], v), { size: 0, name: this.name2,
@@ -439,7 +440,7 @@ class fix1 {
     var p = [];
     var c;
     for (c of coords) { p.push(board.create('point', c, {visible: false})); }
-    const t1 = board.create('transform', [data[3] * Math.PI / 180], { type: 'rotate' });
+    const t1 = board.create('transform', [data[3]*deg2rad], { type: 'rotate' });
     t1.applyOnce(p);
     const t2 = board.create('transform', data[2], { type: 'translate' });
     t2.applyOnce(p);
@@ -463,6 +464,7 @@ class fix1 {
     if (this.state == "show") { show(this) }
     if (this.state == "hide") { hide(this) }
     if (this.state != "locked") { makeSwitchable(this.c, this) } 
+    if (this.state != "locked") { makeSwitchable(this.t, this) } 
   }
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return '"'+this.state+'"' } 
@@ -485,7 +487,7 @@ class fix12 {
     var p = [];
     var c;
     for (c of coords) { p.push(board.create('point', c, {visible: false})); }
-    const t1 = board.create('transform', [data[3] * Math.PI / 180], { type: 'rotate' });
+    const t1 = board.create('transform', [data[3]*deg2rad], { type: 'rotate' });
     t1.applyOnce(p);
     const t2 = board.create('transform', data[2], { type: 'translate' });
     t2.applyOnce(p);
@@ -529,7 +531,7 @@ class fix123 {
     var p = [];
     var c;
     for (c of coords) { p.push(board.create('point', c, {visible: false})); }
-    const t1 = board.create('transform', [data[3] * Math.PI / 180], { type: 'rotate' });
+    const t1 = board.create('transform', [data[3]*deg2rad], { type: 'rotate' });
     t1.applyOnce(p);
     const t2 = board.create('transform', data[2], { type: 'translate' });
     t2.applyOnce(p);
@@ -541,7 +543,7 @@ class fix123 {
       ...centeredLabelStyle });
     // baseline with hatch
     this.bl = board.create('segment', [p[1],p[2]], {name: '',...normalStyle});
-    this.c = board.create("comb", [p[2],p[1]], hatchStyle() )
+    this.c = board.create("comb", [p[2],p[1]], { ...hatchStyle(), angle:-45*deg2rad }) 
     // implement state switching
     this.obj = [ this.p1, this.bl, this.c, this.label, this.label.label ];
     // state init
@@ -570,7 +572,7 @@ class fix13 {
     var p = [];
     var c;
     for (c of coords) { p.push(board.create('point', c, {visible: false})); }
-    const t1 = board.create('transform', [data[3] * Math.PI / 180], { type: 'rotate' });
+    const t1 = board.create('transform', [data[3]*deg2rad], { type: 'rotate' });
     t1.applyOnce(p);
     const t2 = board.create('transform', data[2], { type: 'translate' });
     t2.applyOnce(p);
@@ -613,26 +615,41 @@ class force {
       ...controlSnapStyle, fixed:fix, size: size, label:labelopts });
     // configure infobox
     this.p2.start = this.p1;
-    this.p2.ref = function() { return [this.start.X(), this.start.Y()] };
+    this.p2.ref = function() { return XY(this.start) };
     this.p2.infoboxlabel = "Vektor ";
-    // arrow
+    // arrow version with fixed:false doesn't snap to grid
+    //this.vec = board.create('arrow', [this.p1, this.p2], {
+    //  touchLastPoint: true, fixed:false, snapToGrid:true, lastArrow:{size:5, type:2}, highligh    
     this.vec = board.create('arrow', [this.p1, this.p2], {
-      touchLastPoint: true, fixed:false, lastArrow:{size:5, type:2}, highlight:hl,
+      touchLastPoint: true, lastArrow:{size:5, type:2}, highlight:hl,
       highlightStrokeColor:highlightColor});
     this.vec.obj = [this.vec, this.p1, this.p2];
-    this.vec.num = objects.length;  
+    this.vec.parent = this;  
+    // translation by base point drag
+    const g = board.create('group', [this.p1, this.p2]);
+    g.removeTranslationPoint(this.p2);
     // delete-function
-    this.vec.on("up", function(e) { 
-      if (isOutside(this.point1) || isOutside(this.point2) ) {
-        objects[this.num].d[0] = "deleted";
-        board.removeObject(this.obj, true) 
-      } })
+    this.vec.lastclick = Date.now(); 
+    //this.vec.on('drag',function() {
+    //  vec.point1.snapToGrid(); vec.point2.snapToGrid()})
+    this.vec.on('up', function() {
+      if (Date.now()-this.lastclick < 500) { 
+        this.parent.state = "deleted"; cleanUp();
+        board.removeObject(this.obj, true);
+      }
+    else {this.lastclick = Date.now() } })
     // switch off highlighting if locked
     this.obj = [this.vec, this.p1, this.p2, this.p2.label];
     if (this.state == "locked") { lock(this) } 
-      }
+    // update conditions
+    this.p1.on("up", update )
+    this.p2.on("up", update )
+    // points for position check
+    this.proximityPoints = [this.p1, this.p2];
+  }
   data() {  return [this.d[0], this.fname, 
-    [this.p1.X(), this.p1.Y()], [this.p2.X(), this.p2.Y()], this.off, this.state ] }
+    [this.p1.X(), this.p1.Y()], 
+    [this.p2.X(), this.p2.Y()], this.off, this.state ] }
   name() { return this.fname.replace(/\s+/,"*") }
 }
 // [ "forceGen", "name", [x,y]]
@@ -657,6 +674,7 @@ class forceGen {
       { fixed:false, color:'gray',lastArrow:{size:5, type:2}, highlight:true,
       highlightStrokeColor:highlightColor} );
     // callback creates new force object and new name
+    vec.parent = this;
     t.on('out', function(e) {
       p2.setAttribute({name:'\\('+document.getElementById("fname").value+'\\)'})});
     vec.on('up', function(e) {
@@ -671,6 +689,8 @@ class forceGen {
         var i = 1, n = '', found = true;
         while (found ) { n = 'F_'+i.toString();  found = f.includes(n);i ++;} 
         document.getElementById("fname").value = n;
+        vec.parent.d[1] = n;
+        update();
       }
       // whatever happened, move the arrow back
       p1.setPositionDirectly(JXG.COORDS_BY_USER, [ref1.X(), ref1.Y()],[p1.X(), p1.Y()] );       p2.setPositionDirectly(JXG.COORDS_BY_USER, [ref2.X(), ref2.Y()],[p2.X(), p2.Y()] );
@@ -796,21 +816,30 @@ class moment {
     ...controlSnapStyle, fixed:fix, size:size,
       label:{offset:[0,0], autoPosition:true, color:'blue'} });
     this.arc = board.create('minorArc', [this.p1, this.p2, this.p3], {
-      fixed: fix, strokeWidth: 2, highlight:hl, highlightStrokeColor:highlightColor,
+      fixed: true, strokeWidth: 2, highlight:hl, highlightStrokeColor:highlightColor,
       lastArrow: {type: 2, size: 5 } });
     var g = board.create('group', [this.p1, this.p2, this.p3, this.arc]);
     g.removeTranslationPoint(this.p2);
     g.removeTranslationPoint(this.p3);
+    // delete-function
     this.arc.obj = [this.arc, this.p1, this.p2, this.p3 ];
-    this.arc.num = objects.length;
-    this.arc.on("up", function(e) { 
-      if (isOutside(this.obj[1]) || isOutside(this.obj[2]) || isOutside(this.obj[3]) ) {
-        objects[this.num].d[0] = "deleted";
-        board.removeObject(this.obj, true) 
-      } })
-        // switch off highlighting if locked
+    this.arc.parent = this;
+    this.arc.lastclick = Date.now();    
+    this.arc.on('up', function() {
+    if (Date.now()-this.lastclick < 500) { 
+       this.parent.state = "deleted"; cleanUp();
+       board.removeObject(this.obj, true);
+        }
+    else {this.lastclick = Date.now() }})
+    // switch off highlighting if locked
     this.obj = [this.p1, this.p2, this.p3, this.arc,this.p3.label];
     if (this.state == "locked") { lock(this) } 
+    // update condition
+    this.p1.on("up", update )
+    this.p2.on("up", update )
+    this.p3.on("up", update )
+    // Points for proximity check
+    this.proximityPoints = [this.p1];
 
   }
   data() { return [this.d[0], this.mname, XY(this.p1), XY(this.p2), XY(this.p3), this.state ]  }
@@ -842,6 +871,7 @@ class momentGen {
       highlight:true, highlightStrokeColor:highlightColor,
       lastArrow: { type: 2, size: 5}});
     // callback creates new moment object and new name
+    arc.parent = this;
     t.on('out', function(e) {
       p3.setAttribute({name:'\\('+document.getElementById("mname").value+'\\)'})});
     arc.on('up', function(e) {
@@ -856,6 +886,8 @@ class momentGen {
         var i = 1, n = '', found = true;
         while (found ) { n = 'M_'+i.toString();  found = f.includes(n);i ++;} 
         document.getElementById("mname").value = n;
+        arc.parent.d[1] = n;
+        update();
       }
       // whatever happened, move the arc back
       p1.setPositionDirectly(JXG.COORDS_BY_USER, XY(ref1), XY(p1) );
@@ -919,10 +951,11 @@ class q {
     if (typeof(data[data.length-1]) == 'string') {this.state = data.pop()}
       else {this.state = "locked"}
     this.d = data.slice(0);
+    this.loads = [];
     data.shift(); //"q" wird ausgeblendet
     this.name1 = data.shift();  this.name2 = data.shift();
     [this.width, this.alpha] = polar( minus( data[1], data[0] ));
-    this.phi = data.pop()*Math.PI/180 //Abweichung zur Normalen
+    this.phi = data.pop()*deg2rad //Abweichung zur Normalen
     this.n = data[2];
     this.m = (data[3]-data[2])/this.width;
     this.sin = [Math.sin(this.alpha+this.phi), Math.sin(this.alpha)]; 
@@ -940,7 +973,7 @@ class q {
         {lastarrow:{size:5}, strokewidth:1})) }
     this.polygon = board.create('polygon', 
       [ this.p[0],this.p[1],this.p[this.p.length-1],this.p[this.p.length-2] ],
-      { fillcolor:'#0000ff44', strokecolor:'blue', fixed:true,
+      { fillcolor:'#0000ff44', strokecolor:'blue', fixed:true, hasInnerPoints:true,
         vertices:{visible:false}, borders:{fixed:true} });
     this.label.push(board.create('point',this.p[0],
       { name:'\\('+this.name1+'\\)', size:0, fixed:true,
@@ -957,7 +990,8 @@ class q {
     if (this.state != "locked") { makeSwitchable(this.polygon, this) }
   } 
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
-  name(){ return '"'+this.state+'"' } 
+  name(){ if (this.loads[0]) {return '['+this.loads+']'} else {return '"'+this.state+'"' } } 
+  isOn(pt) {return isPointInPoly(pt,this.polygon)} 
 }
 // rope, tangent line to two circles ["rope", "name",[x1,y1], r1, [x2,y2],r2 ]
 // negative r values select the tangent point on the left side from the line p1-p2
@@ -1209,7 +1243,7 @@ class wall {
     // dependent objects
     this.bl = board.create('segment', [data[2],data[3]], {name: '', ...normalStyle});
     this.c = board.create("comb", [data[2],data[3]], {
-      ...hatchStyle(), angle: data[4]* Math.PI / 180 })
+      ...hatchStyle(), angle: data[4]*deg2rad })
     // state switching
     this.obj = [ this.bl, this.c ]; 
     if (this.state == "show") { show(this) }
@@ -1273,22 +1307,54 @@ function init() {
 
 function update() {
   if (!stateRef) { return }
+  console.log("update")
   var m;
   var dfield = [];
   var names = "[";
+  // get list of loads and targets 
+  const load = [ "force", "moment"];
+  const target = ["bar", "beam", "circle", "fix1", "fix12", "fix123", "fix13", "rope",
+    "dashpot", "springc", "springt", "wall", "polygon", "q" ];
+  let loadlist = [], targetlist = [];
+  for (let i = 0; i < objects.length; i++) {
+    if (load.includes( objects[i].data()[0] )) { loadlist.push(i)}
+    if (target.includes( objects[i].data()[0] ) && objects[i].state == 'hide') { // only hidden targets
+      targetlist.push(i); objects[i].loads = []} // empty load list
+    }
+  // establish relations
+  for (let L of loadlist) {
+    for (let T of targetlist) {
+      try { //expect maximum 2 proximity points in load
+        if (objects[T].isOn(objects[L].proximityPoints[0]) || 
+            objects[T].isOn(objects[L].proximityPoints[1]) ) {
+          console.log( objects[L].name() + " is on "+ T.toString() );
+          objects[T].loads.push(L)} 
+        }
+      catch (err) {}
+  } }
+    
+  
+  // generate output   
   for (m of objects) {
-  	// object key is "deleted" if it has been deleted
-    // console.log(m.data()[0], m.name());
-    if (m.data()[0] != 'deleted' ) {dfield.push(m.data());
+    dfield.push(m.data());
     if (names != "[") { names = names.concat(",") }
     names = names.concat(m.name()); }
-  }
+  // write output
   names = names.concat("]");
   if (mode == "jsfiddle") {
     stateInput.innerHTML = JSON.stringify(dfield);
-    document.getElementById(fbd_names).innerHTML = names } else {
+    document.getElementById(fbd_names).innerHTML = names } 
+  else {
     stateInput.value = JSON.stringify(dfield);
     document.getElementById(fbd_names).value = names }
+}
+
+function cleanUp() {
+  // remove deleted objects from the list
+  for (let i = 0; i < objects.length; i++) {
+    let d = objects[i].data();
+    if (d[d.length-1] == 'deleted') {objects.splice(i,1); i--;}
+  }
 }
 
 function rect(r,alpha) { return [ r*Math.cos(alpha), r*Math.sin(alpha) ] }
@@ -1298,6 +1364,9 @@ function mult(f,a) { return [ a[0]*f, a[1]*f ] }
 function plus(a,b) { return [ a[0]+b[0], a[1]+b[1] ] }
 function minus(a,b) { return [ a[0]-b[0], a[1]-b[1] ] }
 function dist(a,b) { return Math.sqrt( (a[0]-b[0])**2 + (a[1]-b[1])**2 ) }
+function isPointInPoly(pt,po) { 
+  let c = new JXG.Coords(JXG.COORDS_BY_USER, [pt.X(), pt.Y()], board);
+  return po.hasPoint(c.scrCoords[1], c.scrCoords[2])}
 function hermite(x1,dx,y1,dy,d1,d2) {
   if (!isNaN(d1) && !isNaN(d2)) {
     // cubic spline
@@ -1410,6 +1479,7 @@ function makeSwitchable(el, obj) {
 var objects = [];
 init();
 update();
-board.on('update', function() {
-  update()
-});
+//board.on('up', function() {
+//  update()
+//});
+
