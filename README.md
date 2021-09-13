@@ -11,7 +11,7 @@ Documentation: see [Wiki](https://github.com/mkraska/meclib/wiki).
 
 [jsfiddle tryout](https://jsfiddle.net/swguer4p/27/)
 
-![Demo](images/Meclib demo.png?raw=true "Screenshot from the demo question")
+![Demo](images/Meclib%20demo.png?raw=true "Screenshot from the demo question")
 
 ## Reference
 
