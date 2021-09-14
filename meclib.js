@@ -1,4 +1,4 @@
-// Meclib version 2021 09 14 https://jsfiddle.net/yjwa3kzv/13/
+// Meclib version 2021 09 14 https://jsfiddle.net/yjwa3kzv/14/
 
 const highlightColor = "orange";
 const movableLineColor = "blue";
@@ -657,6 +657,7 @@ class force {
       if (Date.now()-this.lastclick < 500) { 
         this.parent.state = "deleted"; cleanUp();
         board.removeObject(this.obj, true);
+        update()
       }
     else {this.lastclick = Date.now() } })
     // switch off highlighting if locked
@@ -849,7 +850,7 @@ class moment {
     this.arc.on('up', function() {
     if (Date.now()-this.lastclick < 500) { 
        this.parent.state = "deleted"; cleanUp();
-       board.removeObject(this.obj, true);
+       board.removeObject(this.obj, true); update()
         }
     else {this.lastclick = Date.now() }})
     // switch off highlighting if locked
