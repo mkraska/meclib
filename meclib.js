@@ -1,4 +1,7 @@
-// Meclib version 2021 09 14 https://jsfiddle.net/yjwa3kzv/14/
+
+// Meclib version 2021 09 16 
+// https://jsfiddle.net/yjwa3kzv/18/
+// https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
 const movableLineColor = "blue";
@@ -681,8 +684,9 @@ class forceGen {
     this.d = data;
     const dy = -20*pxunit, dx = 40*pxunit;
     // HTML trick because input.set() doesn't work in the callback
+    const fid = divid+"_fname"; // unique ID for html object even if multiple widgets on a page
     var t = board.create('text', [ data[2][0], data[2][1], 
-      '<input type="text" id="fname" value="'+data[1]+'" size="1">'], {fixed: true});
+      '<input type="text" id='+fid+' value="'+data[1]+'" size="1">'], {fixed: true});
     // ref point for checking drag distance
     const ref1 = board.create('point', plus(data[2], [0,dy]), {visible:false});
     const ref2 = board.create('point', plus(data[2], [dx,dy]), {visible:false});
@@ -690,7 +694,7 @@ class forceGen {
     const p1 = board.create('point', plus(data[2], [0,dy]), { 
       name: '', fixed:false, visible: false });
     const p2 = board.create('point', plus(data[2], [dx,dy]), {
-      name: toTEX(document.getElementById("fname").value), fixed:false, visible:false, label:{offset:[5,0], visible:true, color:'gray'} });
+      name: toTEX(document.getElementById(fid).value), fixed:false, visible:false, label:{offset:[5,0], visible:true, color:'gray'} });
     p2.addParents(t);
     var vec = board.create('arrow', [p1, p2], 
       { fixed:false, color:'gray',lastArrow:{size:5, type:2}, highlight:true,
@@ -698,11 +702,11 @@ class forceGen {
     // callback creates new force object and new name
     vec.parent = this;
     t.on('out', function(e) {
-      p2.setAttribute({name:toTEX(document.getElementById("fname").value) })});
+      p2.setAttribute({name:toTEX(document.getElementById(fid).value) })});
     vec.on('up', function(e) {
       //only generate force if distance is sufficient to not create overlapping objects
       if (ref1.Dist(this.point1)+ref2.Dist(this.point2) >dx) {
-      	objects.push(new force(["force", document.getElementById("fname").value, 
+      	objects.push(new force(["force", document.getElementById(fid).value, 
           XY(p1), XY(p2), 10, "active"] ));
         // generate new unique force name
         var f = [];
@@ -710,13 +714,13 @@ class forceGen {
           if (m.data()[0] == 'force') { f = f.concat(m.data()[1]) } }
         var i = 1, n = '', found = true;
         while (found ) { n = 'F_'+i.toString();  found = f.includes(n);i ++;} 
-        document.getElementById("fname").value = n;
+        document.getElementById(fid).value = n;
         vec.parent.d[1] = n;
         update();
       }
       // whatever happened, move the arrow back
-      p1.setPositionDirectly(JXG.COORDS_BY_USER, [ref1.X(), ref1.Y()],[p1.X(), p1.Y()] );       p2.setPositionDirectly(JXG.COORDS_BY_USER, [ref2.X(), ref2.Y()],[p2.X(), p2.Y()] );
-      p2.setAttribute({name:toTEX(document.getElementById("fname").value) }) });
+      p1.setPositionDirectly(JXG.COORDS_BY_USER, [ref1.X(), ref1.Y()],[p1.X(), p1.Y()] );         p2.setPositionDirectly(JXG.COORDS_BY_USER, [ref2.X(), ref2.Y()],[p2.X(), p2.Y()] );
+      p2.setAttribute({name:toTEX(document.getElementById(fid).value) }) });
     }
   data(){  return this.d }
   name(){  return "0" }
@@ -874,8 +878,9 @@ class momentGen {
     this.d = data;
     const dy = -5*pxunit, dx = 15*pxunit, dy1 = -20*pxunit;
     // HTML trick because input.set() doesn't work in the callback
+    const mid = divid+'m_name';
     var t = board.create('text', [ data[2][0], data[2][1], 
-      '<input type="text" id="mname" value="'+data[1]+'" size="1">'], {fixed: true});
+      '<input type="text" id='+mid+' value="'+data[1]+'" size="1">'], {fixed: true});
     // ref point for checking drag distance and for position reset
     const ref1 = board.create('point', plus(data[2], [dx,dy]), {visible:false});
     const ref2 = board.create('point', plus(data[2], [0,dy1]), {visible:false});
@@ -886,7 +891,7 @@ class momentGen {
     const p2 = board.create('point', plus(data[2], [0,dy1]), { 
       name: '', fixed:false, visible: false });
     const p3 = board.create('point', plus(data[2], [2*dx,dy1]), {
-      name: toTEX(document.getElementById("mname").value), fixed:false, visible:false, label:{offset:[5,0], visible:true, color:'gray'} });
+      name: toTEX(document.getElementById(mid).value), fixed:false, visible:false, label:{offset:[5,0], visible:true, color:'gray'} });
     p2.addParents(t);
     var arc = board.create('minorArc', [p1, p2, p3], { 
       fixed:false, strokeColor:'gray', strokeWidth: 2, 
@@ -895,11 +900,11 @@ class momentGen {
     // callback creates new moment object and new name
     arc.parent = this;
     t.on('out', function(e) {
-      p3.setAttribute({name:toTEX(document.getElementById("mname").value )})});
+      p3.setAttribute({name:toTEX(document.getElementById(mid).value )})});
     arc.on('up', function(e) {
       //only generate force if distance is sufficient to not create overlapping objects
       if (ref2.Dist(p2) >dx) {
-        objects.push(new moment(["moment", document.getElementById("mname").value, 
+        objects.push(new moment(["moment", document.getElementById(mid).value, 
           XY(p1), XY(p2), XY(p3), "active"] ));
         // generate new unique moment name
         var f = [];
@@ -907,7 +912,7 @@ class momentGen {
           if (m.data()[0] == 'moment') { f = f.concat(m.data()[1]) } }
         var i = 1, n = '', found = true;
         while (found ) { n = 'M_'+i.toString();  found = f.includes(n);i ++;} 
-        document.getElementById("mname").value = n;
+        document.getElementById(mid).value = n;
         arc.parent.d[1] = n;
         update();
       }
@@ -915,7 +920,7 @@ class momentGen {
       p1.setPositionDirectly(JXG.COORDS_BY_USER, XY(ref1), XY(p1) );
       p2.setPositionDirectly(JXG.COORDS_BY_USER, XY(ref2), XY(p2) );
       p3.setPositionDirectly(JXG.COORDS_BY_USER, XY(ref3), XY(p3) );
-      p3.setAttribute({name:toTEX(document.getElementById("mname").value)}) });
+      p3.setAttribute({name:toTEX(document.getElementById(mid).value)}) });
     }
   data(){  return this.d }
   name(){  return "0" }
