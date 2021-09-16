@@ -1,6 +1,5 @@
-
 // Meclib version 2021 09 16 
-// https://jsfiddle.net/yjwa3kzv/18/
+// https://jsfiddle.net/yjwa3kzv/19/
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -1372,7 +1371,7 @@ function update() {
             ( objects[T].hasPoint(objects[L].proximityPoints[0]) || 
             objects[T].hasPoint(objects[L].proximityPoints[1]) ) ) {
           console.log( objects[L].name() + " is on "+ T.toString() );
-          objects[T].loads.push(L)} 
+          objects[T].loads.push(L+1)} // Maxima indices are base 1, therefore increase the index
         }
       catch (err) {console.log(L,T,err.message)}
   } }
