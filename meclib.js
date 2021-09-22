@@ -1,5 +1,5 @@
-// Meclib version 2021 09 16 
-// https://jsfiddle.net/yjwa3kzv/19/
+// Meclib version 2021 09 22
+// https://jsfiddle.net/k9wymjrq/5/
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -8,6 +8,7 @@ const defaultMecLayer = 6;
 var pxunit = 1/40; // is reset by "grid"
 var a = 16*pxunit; // is reset by "grid"
 var deg2rad = Math.PI/180, rad2deg = 180/Math.PI;
+const tolPointLine = 0.001;
 // infobox settings, further settings after board initiation
 JXG.Options.infobox.layer = defaultMecLayer+5;
 JXG.Options.infobox.strokeColor = 'black';
@@ -142,7 +143,8 @@ class bar {
     this.loads = [];
     if (this.state != "locked") { makeSwitchable(this.line, this) }
   }
-  hasPoint(pt) {return isOn(pt,this.line)}
+  hasPoint(pt) { 
+   return isOn(pt,this.line) && JXG.Math.Geometry.distPointLine([1,pt.X(),pt.Y()], this.line.stdform) < tolPointLine}
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return targetName(this) }  
 }
@@ -345,7 +347,9 @@ class dashpot {
   }
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return targetName(this) } 
-  hasPoint(pt) {return isOn(pt,this.s) || isOn(pt,this.p1)} 
+  hasPoint(pt) {return (isOn(pt,this.s) || isOn(pt,this.p1))  && 
+    JXG.Math.Geometry.distPointLine(
+      [1,pt.X(),pt.Y()], this.s.stdform) < tolPointLine} 
 }
 // linear dimension ["dim", "name", [x1,y1], [x2,y2], d]
 class dim {
@@ -637,7 +641,9 @@ class force {
     this.p2 = board.create('point', data[3], { name: this.name2, 
       ...controlSnapStyle, fixed:fix, size: size, label:labelopts });
     // configure infobox
+    this.p1.dp = [2,2];
     this.p2.start = this.p1;
+    this.p2.dp = [2,2];
     this.p2.ref = function() { return XY(this.start) };
     this.p2.infoboxlabel = "Vektor ";
     // arrow version with fixed:false doesn't snap to grid
@@ -1060,7 +1066,9 @@ class rope {
   }
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return targetName(this) } 
-  hasPoint(pt) {return isOn(pt,this.l)} 
+  hasPoint(pt) {return isOn(pt,this.l) && 
+    JXG.Math.Geometry.distPointLine(
+      [1,pt.X(),pt.Y()], this.l.stdform) < tolPointLine} 
 }//rot
 class rot {
   constructor(data) {
@@ -1207,7 +1215,9 @@ class springc {
   }
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return targetName(this) } 
-  hasPoint(pt) {return isOn(pt,this.s) || isOn(pt,this.p1)} 
+  hasPoint(pt) {return (isOn(pt,this.s) || isOn(pt,this.p1)) && 
+    JXG.Math.Geometry.distPointLine(
+      [1,pt.X(),pt.Y()], this.s.stdform) < tolPointLine} 
 }
 
 //tensile spring
@@ -1270,7 +1280,9 @@ class springt {
   }
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return targetName(this) } 
-  hasPoint(pt) {return isOn(pt,this.s) || isOn(pt,this.p1)} 
+  hasPoint(pt) {return (isOn(pt,this.s) || isOn(pt,this.p1)) && 
+    JXG.Math.Geometry.distPointLine(
+      [1,pt.X(),pt.Y()], this.s.stdform) < tolPointLine} 
 }
 // [ "wall", "name", [x1, y1], [x2,y2] , angle ]
 class wall {
@@ -1291,7 +1303,9 @@ class wall {
   }
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return targetName(this) } 
-  hasPoint(pt) {return isOn(pt,this.bl) } 
+  hasPoint(pt) {return isOn(pt,this.bl) && 
+    JXG.Math.Geometry.distPointLine(
+      [1,pt.X(),pt.Y()], this.bl.stdform) < tolPointLine } 
 }
 
 function init() {
