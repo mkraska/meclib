@@ -1,5 +1,5 @@
-// Meclib version 2021 09 23
-// https://jsfiddle.net/k9wymjrq/8/
+// Meclib version 2021 09 25
+// https://jsfiddle.net/k9wymjrq/10/
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -130,7 +130,8 @@ class bar {
    this.p1 = board.create('point',data[2],{withlabel:false, ...nodeStyle});
    this.p2 = board.create('point',data[3],{withlabel:false, ...nodeStyle});
    this.line = board.create('segment', [this.p1, this.p2], {
-     withlabel:false, ...barStyle});     
+     withlabel:false, ...barStyle});  
+   targets.push(this.line);
    // label
    const alpha = this.line.getAngle()+90*deg2rad;
    this.label = board.create('text', plus(  mult( 0.5, plus( XY(this.p1), XY(this.p2) ) ), rect(11*pxunit, alpha) ).concat(data[1]), {
@@ -332,6 +333,7 @@ class dashpot {
     this.p1 = board.create('point',this.d[2], silentPStyle );
     this.p2 = board.create('point',this.d[3], silentPStyle );
     this.s = board.create('segment', [this.p1,this.p2],{strokeWidth:0});
+    targets.push(this.s);
     // label
     this.l = board.create('point',[xc-dy/l*this.off, yc+dx/l*this.off], {    
       name:toTEX(data[1]), ...centeredLabelStyle });
@@ -637,9 +639,11 @@ class force {
     if (this.state == "active") {fix = false; size = 2; hl = true} 
     // start and end point
     this.p1 = board.create('point', data[2], { name: this.name1, 
-      ...controlSnapStyle, fixed:fix, size: size, label:labelopts }); 
+      ...controlSnapStyle, fixed:fix, size: size, label:labelopts, 
+      attractors:targets, attractorDistance: 0.2  }); 
     this.p2 = board.create('point', data[3], { name: this.name2, 
-      ...controlSnapStyle, fixed:fix, size: size, label:labelopts });
+      ...controlSnapStyle, fixed:fix, size: size, label:labelopts, 
+      attractors:targets, attractorDistance: 0.2  });
     // configure infobox
     this.p1.dp = [2,2];
     this.p2.start = this.p1;
@@ -1048,13 +1052,10 @@ class rope {
     this.l = board.create('segment', [ p1,p2 ],
       {name: data[1], layer: defaultMecLayer, withLabel:true,
        ...normalStyle, label:{offset:[0,8],autoPosition:false}});
+    targets.push(this.l);
     // snap targets
     this.p1 = board.create('point', p1, {name: '', ...silentPStyle } );
     this.p2 = board.create('point', p2, {name: '', ...silentPStyle } );
-    board.create('point', plus( mult( 0.7,p1), mult( 0.3, p2)),
-      {name: '', ...silentPStyle } );
-    board.create('point', plus( mult( 0.3,p1), mult( 0.7, p2)), 
-      {name: '', ...silentPStyle } );
     // implement state switching
     this.obj = [ this.l, this.l.label ]; 
     // state init
@@ -1211,6 +1212,7 @@ class springc {
     this.p1 = board.create('point',this.d[2], silentPStyle );
     this.p2 = board.create('point',this.d[3], silentPStyle );
     this.s = board.create('segment', [this.p1,this.p2],{strokeWidth:0});
+    targets.push(this.s);
     this.loads = []
   }
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
@@ -1276,6 +1278,7 @@ class springt {
     this.p1 = board.create('point',this.d[2], silentPStyle );
     this.p2 = board.create('point',this.d[3], silentPStyle );
     this.s = board.create('segment', [this.p1,this.p2],{strokeWidth:0});
+    targets.push(this.s);
     this.loads = []
   }
   data(){ var a = this.d.slice(0); a.push(this.state); return a}
@@ -1541,6 +1544,7 @@ function makeSwitchable(el, obj) {
 
 // initialization
 var objects = [];
+var targets = []; /* for sliding of points */
 init();
 update();
 //board.on('up', function() {
