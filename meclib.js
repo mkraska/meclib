@@ -1,5 +1,5 @@
-// Meclib version 2021 09 22
-// https://jsfiddle.net/k9wymjrq/5/
+// Meclib version 2021 09 23
+// https://jsfiddle.net/k9wymjrq/8/
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -1427,8 +1427,7 @@ function toTEX(str) {return '\\('+str.replace(/[\*\s]/g, "\\;")+'\\)' }// conver
 
 // functions for proximity check
 function isOn(pt,po) { 
-  let c = new JXG.Coords(JXG.COORDS_BY_USER, [pt.X(), pt.Y()], board);
-  return po.hasPoint(c.scrCoords[1], c.scrCoords[2])}
+  return po.hasPoint(pt.coords.scrCoords[1], pt.coords.scrCoords[2]) }
 function targetName(obj) {if (obj.loads[0]) {return '['+obj.loads+']'} else {return '"'+obj.state+'"' } } 
 // functions for splines
 function hermite(x1,dx,y1,dy,d1,d2) {
