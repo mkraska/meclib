@@ -1,5 +1,5 @@
 // Meclib version 2021 10 06
-// https://jsfiddle.net/rt0Lxhey/2/
+// https://jsfiddle.net/rt0Lxhey/3/
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -282,7 +282,7 @@ class crosshair {
     const f = 2, r = 7;
     const pp =  {size:0, name:'', fixed:false, snapToGrid:false, showInfobox:false};
     this.p = board.create('point', data[2], {
-      name: '', fixed:false, size:r, fillOpacity:0, highlightFillOpacity:0, strokeWidth:1, color:"blue", snapToGrid:false
+      name: '', fixed:false, size:r, fillOpacity:0, highlightFillOpacity:0, strokeWidth:1, color:"blue", snapToGrid:false, attractors:targets, attractorDistance: 0.2
     });
     // set properties of infobox
     if (data[3]) { this.p.ref = data[3] }
@@ -1158,6 +1158,8 @@ class spline {
     this.p2.on('up', update() );
     this.pt1.on('up', update() );
     this.pt2.on('up', update() );
+    // add to attractor list, to be used by crosshair
+    targets.push(this.graph);
   }
   data() {  return [
       "spline",
