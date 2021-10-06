@@ -1,5 +1,5 @@
 // Meclib version 2021 10 06
-// https://jsfiddle.net/rt0Lxhey/3/
+// https://jsfiddle.net/rt0Lxhey/4/
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -1151,7 +1151,7 @@ class spline {
       this.t2.setAttribute({visible: false});
     }
     //switch by doubleclick
-    makeSwitchable(this.graph, this);
+    if (this.state == "active" || this.state == "inactive") {makeSwitchable(this.graph, this)};
     this.graph.setAttribute({highlightFillOpacity:0});
     // trigger update on changes
     this.p1.on('up', update() );
