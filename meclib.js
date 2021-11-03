@@ -1,5 +1,5 @@
-// Meclib version 2021 10 06
-// https://jsfiddle.net/rt0Lxhey/4/
+// Meclib version 2021 11 03
+// https://jsfiddle.net/a2g4rjwv/3/
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -259,15 +259,17 @@ class circle2p {
     this.xaxis = board.create('line', [ [0, 0], [1, 0] ], { visible: false }); 
     // circle
     this.A = board.create('point', mult( 1/this.f, data[3] ), { 
-      name: data[1], ...controlSnapStyle, label:{offset:[5,5]}}); 
+      name: data[1], ...controlSnapStyle, snapToPoints:false,label:{offset:[5,5]}}); 
 	  this.AS = board.create('point', mult( 1/this.f, data[4] ), { 
-      name: data[2], ...controlSnapStyle, label:{offset:[5,5]} }); 
+      name: data[2], ...controlSnapStyle, snapToPoints:false,label:{offset:[5,5]} }); 
     this.MSK1 = board.create('semicircle', [this.A, this.AS], lStyle ); 
     this.MSK2 = board.create('semicircle', [this.AS, this.A], lStyle ); 
     this.int1 = board.create('intersection', [this.MSK1, this.xaxis], iStyle );
 	  this.int2 = board.create('intersection', [this.MSK2, this.xaxis], iStyle ); 
     for (var pt of [this.A, this.AS, this.int1, this.int2]) {
     	pt.scale = [this.f,this.f] }
+    this.A.on("up", update );
+    this.AS.on("up", update );   
   }
   data(){ 
     return [this.d[0], this.d[1], this.d[2],
@@ -816,6 +818,8 @@ class line2p {
       highlight:true, highlightStrokeColor:highlightColor, 
       name:data[1],withLabel:true,label:{offset:[10,0]}});
     for (var pt of [this.p1, this.p2]) {	pt.scale = [this.f,this.f] }
+    this.p1.on("up", update );
+    this.p2.on("up", update );
   }
   data(){ return [this.d[0], this.d[1], [this.p1.X()*this.f,this.p1.Y()*this.f],[this.p2.X()*this.f,this.p2.Y()*this.f], this.f] } 
   name(){ return "[["+this.data()[2].toString() + "],[" + this.data()[3].toString() + "]]" } 
@@ -1557,4 +1561,3 @@ update();
 //board.on('up', function() {
 //  update()
 //});
-
