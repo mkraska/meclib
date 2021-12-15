@@ -1,5 +1,5 @@
-// Meclib version 2021 11 03
-// https://jsfiddle.net/a2g4rjwv/3/
+// Meclib version 2021 12 15
+// https://jsfiddle.net/x5zysqer/1/
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -800,6 +800,8 @@ class line {
    }
    this.p = board.create('curve',[this.d[2],this.d[3]],
      { dash:d, strokeColor:'black', strokeWidth:this.th, layer:8}); 
+   // add to attractor list, to be used by crosshair
+   targets.push(this.p);	 
  }
  data(){ return this.d }
  name(){  return "0" }
