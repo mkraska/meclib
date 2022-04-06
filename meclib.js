@@ -1,5 +1,5 @@
-// Meclib version 2021 12 15
-// https://jsfiddle.net/x5zysqer/1/
+// Meclib version 2022 04 06
+// https://jsfiddle.net/br8ufwLh/3/
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -637,14 +637,14 @@ class force {
     if (this.off >= 0) {this.name1 = ""; this.name2 = toTEX(data[1]) } else
       {this.name2 = ""; this.name1 = toTEX(data[1]) }
     if (data[5]) { this.state = data[5] } else { this.state = "locked" }
-    var fix = true, size = 0, hl = false; 
-    if (this.state == "active") {fix = false; size = 2; hl = true} 
+    var fix = true, size = 0, hl = false, snap= false; 
+    if (this.state == "active") {fix = false; size = 2; hl = true; snap = true} 
     // start and end point
     this.p1 = board.create('point', data[2], { name: this.name1, 
-      ...controlSnapStyle, fixed:fix, size: size, label:labelopts, 
+      ...controlSnapStyle, snapToGrid: snap, fixed:fix, size: size, label:labelopts, 
       attractors:targets, attractorDistance: 0.2  }); 
     this.p2 = board.create('point', data[3], { name: this.name2, 
-      ...controlSnapStyle, fixed:fix, size: size, label:labelopts, 
+      ...controlSnapStyle, snapToGrid: snap, fixed:fix, size: size, label:labelopts, 
       attractors:targets, attractorDistance: 0.2  });
     // configure infobox
     this.p1.dp = [2,2];
@@ -668,7 +668,7 @@ class force {
     //this.vec.on('drag',function() {
     //  vec.point1.snapToGrid(); vec.point2.snapToGrid()})
     this.vec.on('up', function() {
-      if (Date.now()-this.lastclick < 500) { 
+      if (Date.now()-this.lastclick < 500 && this.state == "active") { 
         this.parent.state = "deleted"; cleanUp();
         board.removeObject(this.obj, true);
         update()
@@ -683,9 +683,9 @@ class force {
     // points for position check
     this.proximityPoints = [this.p1, this.p2];
   }
-  data() {  return [this.d[0], this.fname, 
-    [this.p1.X(), this.p1.Y()], 
-    [this.p2.X(), this.p2.Y()], this.off, this.state ] }
+  data() {  console.log([this.p2.X(), this.p2.Y()]); return [this.d[0], this.fname, 
+    XY(this.p1), 
+    XY(this.p2), this.off, this.state ] }
   name() { return toSTACK(this.fname) }
 }
 // [ "forceGen", "name", [x,y]]
@@ -801,7 +801,7 @@ class line {
    this.p = board.create('curve',[this.d[2],this.d[3]],
      { dash:d, strokeColor:'black', strokeWidth:this.th, layer:8}); 
    // add to attractor list, to be used by crosshair
-   targets.push(this.p);	 
+   targets.push(this.p);
  }
  data(){ return this.d }
  name(){  return "0" }
@@ -1563,3 +1563,4 @@ update();
 //board.on('up', function() {
 //  update()
 //});
+
