@@ -1,0 +1,61 @@
+fb_fix12(o, n, i, description):=block(
+    [L1, L2, R1, R2], txt: sconcat("<br>",description,": "),
+     /* Is object i an fixed support? */
+    if not member(o[i][1], ["fix12"]) 
+    then return ([sconcat(txt, "object ", string(i), " (", o[i][1], ") is not a fixed support."), false]),
+    /* Is object i de-activated */ 
+    if ( last(o[i]) # "hide") then return ([sconcat(txt, " ist nicht deaktiviert."), false]),
+    /* Any reactions found at i? */
+    if not listp(n[i]) or n[i]=[] then return([sconcat(txt, "Keine Reaktion gefunden."), false]),
+    /* Exactly 2 reaction found? */
+    if (length(n[i]) > 2) then return( [sconcat(txt, "Mehr als 2 Reaktionen gefunden."), false]),
+    /* Is the reaction a force? */
+    if (length(n[i]) < 2) then return( [sconcat(txt, "Weniger als 2 Reaktionen gefunden."), false]),
+    R1: o[n[i][1]], R2: o[n[i][2]], 
+    /* Is the reaction a force? */
+    if ( o[n[i][1]][1] # "force" )  
+    then return ([sconcat(txt, "Die Reaktion \\(", R1[2], "\\) muss eine Kraft sein."),false]),
+    if ( o[n[i][2]][1] # "force" ) 
+    then return ([sconcat(txt, "Die Reaktion \\(", R2[2], "\\) muss eine Kraft sein."),false]),
+    /* Equal names? */
+    if (R1[2] = R2[2]) then return ([sconcat(txt, "Die Reaktionen müssen verschiedene Namen haben."),false]),
+    /* Names match name of support? */
+    L1: charlist(R1[2]), L2: charlist(R2[2]),
+    if (first(L1) # o[i][2]) 
+    then return ([sconcat(txt, "Der Name \\(", R1[2], "\\) passt nicht zum Name des Lagerpunkts."),false]),
+    if (first(L2) # o[i][2]) 
+    then return ([sconcat(txt, "Der Name \\(", R2[2], "\\) passt nicht zum Name des Lagerpunkts."),false]),
+    /* Are the reactions non-parallel? */
+    if parallelp(R1, R2) then return ([sconcat(txt, "Die Reaktionen \\(", R1[2], ",", R2[2], "\\) sind parallel."),false]),
+    /* everything should be ok here */
+    return([sconcat(txt, "Reaktionen \\(", R1[2], ",", R2[2], "\\) gefunden. "),true])  
+);
+
+fb_fix12_name(o,i):=block([dir, name, nl, base, idx],
+    name: o[i][2], nl: split(name,"_"),
+    /* base name single character? */
+    if slength(first(nl)) > 1 
+    then return([sconcat("\\(", name, "\\): Physikalische Gr&ouml;&szlig;en immer nur mit einem Buchstabe und eventuell Index schreiben, z.B. <code>F_1</code>." ),false]),
+    /* is there an index? */
+    if length(nl) # 2 
+    then return([sconcat("\\(", name, "\\) sollte einen Richtungsindex (x, y, h, v) haben."),false]),
+    /* are name and index just a single character? */
+    idx: last(nl),
+    if slength(idx) > 1 
+    then return([sconcat("\\(", name, "\\): Ein Buchstabe sollte für den Index reichen." ),false]),
+    /* is the index known? */
+    if not member(sdowncase(idx), ["h","v","x","y"]) 
+    then return([sconcat("\\(", name, "\\): Der Richtungsindex sollte h, v, x oder y sein"),false]),
+    /* check directions */
+    dir: direction(o[i]),
+    if (sdowncase(idx)="h" and abs(dir[2]) > 0.01) then
+    return([sconcat("\\(", name, "\\) m&uuml;sste eine horizontale Kraft bezeichnen."),false]),   
+    if (sdowncase(idx)="v" and abs(dir[1]) > 0.01) then
+    return([sconcat("\\(", name, "\\) m&uuml;sste eine vertikale Kraft bezeichnen."),false]),         
+    if (sdowncase(idx)="x" and (abs(dir[2]) > 0.01 or dir[1] <0) ) then
+    return([sconcat("\\(", name, "\\) m&uuml;sste eine Kraft in positive x-Richtung (nach rechts) bezeichnen."),false]),         
+    if (sdowncase(idx)="y" and (abs(dir[1]) > 0.01 or dir[2] <0) ) then
+    return([sconcat("\\(", name, "\\) m&uuml;sste eine Kraft in positive y-Richtung (nach oben) bezeichnen."),false]),  
+    /* Name is ok */
+    return(["",true])
+);
