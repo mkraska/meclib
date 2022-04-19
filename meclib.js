@@ -1,6 +1,6 @@
-// Meclib version 2022 04 11
-// https://jsfiddle.net/br8ufwLh/17/ 1.4.3-dev
-// https://jsfiddle.net/3eq1dLjh/2/ 1.2.1 (STACK 4.3)
+// Meclib version 2022 04 19
+// https://jsfiddle.net/c6gn9xjw/2/ 1.4.3-dev
+// https://jsfiddle.net/z3u8fq6d/1/ 1.2.1 (STACK 4.3)
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -672,7 +672,7 @@ class force {
     //this.vec.on('drag',function() {
     //  vec.point1.snapToGrid(); vec.point2.snapToGrid()})
     this.vec.on('up', function() {
-      if (Date.now()-this.lastclick < 500 && this.state == "active") { 
+      if (Date.now()-this.lastclick < 500 && this.parent.state == "active") { 
         this.parent.state = "deleted"; cleanUp();
         board.removeObject(this.obj, true);
         update()
