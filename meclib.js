@@ -1,6 +1,6 @@
-// Meclib version 2022 04 19
-// https://jsfiddle.net/c6gn9xjw/2/ 1.4.3-dev
-// https://jsfiddle.net/z3u8fq6d/1/ 1.2.1 (STACK 4.3)
+// Meclib version 2022 04 25
+// https://jsfiddle.net/c6gn9xjw/6/ 1.4.3-dev
+// https://jsfiddle.net/z3u8fq6d/4/ 1.2.1 (STACK 4.3)
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -10,6 +10,8 @@ var pxunit = 1/40; // is reset by "grid"
 var a = 16*pxunit; // is reset by "grid"
 var deg2rad = Math.PI/180, rad2deg = 180/Math.PI;
 const tolPointLine = 0.001;
+var xscale = 1, yscale = 1; // default scale for infobox, can be modified by "grid"
+var dpx = 1, dpy = 1; // default decimal precision for infobox, can be modified by "grid"
 // infobox settings, further settings after board initiation
 JXG.Options.infobox.layer = defaultMecLayer+5;
 JXG.Options.infobox.strokeColor = 'black';
@@ -67,8 +69,8 @@ board.infobox.distanceY = 20;
 //board.infobox.setAttribute({highlight:false});
 board.highlightInfobox = function(x, y , el) {
     var ref = [0,0];
-    var scale = [1,1];
-    var dp = [1,1];
+    var scale = [xscale,yscale];
+    var dp = [dpx,dpy];
     var lbl = '';
     if (typeof (el.ref) == 'function') {ref = el.ref()} 
     else if (typeof(el.ref) != 'undefined') {ref = el.ref}
@@ -256,7 +258,8 @@ class circle {
 class circle2p {
   constructor(data){
     this.d = data.slice(0); //make a copy
-    this.f = data[5];
+    if (this.data[5]) {this.f = data[5]} 
+    else {this.f = xscale};
     const lStyle = {fixed:false, strokeColor:movableLineColor, highlightStrokeColor:highlightColor, highlight:true};
     const iStyle = { visible: true, size: 0 , label:{visible:false} };
     // x-axis for intersection points
@@ -651,9 +654,9 @@ class force {
       ...controlSnapStyle, snapToGrid: snap, fixed:fix, size: size, label:labelopts, 
       attractors:targets, attractorDistance: 0.2  });
     // configure infobox
-    this.p1.dp = [2,2];
+    this.p1.dp = [dpx+1,dpy+1];
     this.p2.start = this.p1;
-    this.p2.dp = [2,2];
+    this.p2.dp = [dpx+1,dpy+1];
     this.p2.ref = function() { return XY(this.start) };
     this.p2.infoboxlabel = "Vektor ";
     // arrow version with fixed:false doesn't snap to grid
@@ -752,7 +755,8 @@ class grid {
    const ymax = data [6];
    const pix = data [7];
    var fx = 1, fy = 1;
-   if (data[8]) {fx = data[8][0]; fy = data[8][1]};
+   if (data[8]) {fx = data[8][0]; fy = data[8][1]; xscale = fx; yscale = fy };
+   if (data[9]) {dpx = data[9][0]; dpy = data[9][1] };
    // logics of container sizing and grid scaling has changed between 1.2.1 and 1.3.2
    if (isNewerVersion ('1.3.1', JXG.version)) {
    	 board.resizeContainer(pix*(xmax-xmin), pix*(ymax-ymin),false,true); 
@@ -820,7 +824,8 @@ class line {
 class line2p {
   constructor(data){
     this.d = data.slice(0); //make a copy
-    this.f = data[4];
+    if (data[4]) {this.f = data[4]}
+    else {this.f = xscale};
     this.p1 = board.create('point', mult( 1/this.f, data[2] ), { 
     	label:{visible:false}, ...controlSnapStyle }); 
     this.p2 = board.create('point', mult( 1/this.f, data[3] ), { 
