@@ -1,6 +1,6 @@
 // Meclib version 2022 04 25
-// https://jsfiddle.net/c6gn9xjw/6/ 1.4.3-dev
-// https://jsfiddle.net/z3u8fq6d/4/ 1.2.1 (STACK 4.3)
+// https://jsfiddle.net/c6gn9xjw/7/ 1.4.3-dev
+// https://jsfiddle.net/z3u8fq6d/5/ 1.2.1 (STACK 4.3)
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -305,6 +305,7 @@ class crosshair {
     this.p4 = board.create('point', plus(data[2],[0,+f*r*pxunit]), pp);   
     this.v = board.create('segment',  [this.p3, this.p4], {strokeWidth:1});
     board.create('group', [this.p, this.p1, this.p2, this.h, this.p3, this.p4, this.v] );
+    this.p.on("up", update );
   }
   data() { var d = this.d; d[2] = XY( this.p ); return d } 
   name() { return "0" }
