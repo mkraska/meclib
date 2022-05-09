@@ -10,9 +10,8 @@ In STACK 4.4, Meclib can be dynamically inserted using an  `[[include /]]` text 
 
 Documentation: see [Wiki](https://github.com/mkraska/meclib/wiki).
 
-[jsfiddle tryout, JSXGraph 1.2.1]( https://jsfiddle.net/z3u8fq6d/1/) STACK 4.3<br>
-[jsfiddle tryout, JSXGraph 1.4.3]( https://jsfiddle.net/c6gn9xjw/2/) STACK 4.4
-
+[jsfiddle tryout, JSXGraph 1.4.3]( https://jsfiddle.net/ykoabs3p/1/) STACK 4.4<br>
+[jsfiddle tryout, JSXGraph 1.2.1]( https://jsfiddle.net/anjuod9k/1/) STACK 4.3
 
 ![Demo](images/Meclib%20demo.png?raw=true "Screenshot from the demo question")
 

@@ -1,10 +1,11 @@
-// Meclib version 2022 04 25
-// https://jsfiddle.net/c6gn9xjw/7/ 1.4.3-dev
-// https://jsfiddle.net/z3u8fq6d/5/ 1.2.1 (STACK 4.3)
+// Meclib version 2022 05 09
+// https://jsfiddle.net/ykoabs3p/1/ 1.4.3 (STACK 4.4)
+// https://jsfiddle.net/anjuod9k/1/ 1.2.1 (STACK 4.3)
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
 const movableLineColor = "blue";
+const loadColor = "blue";
 const defaultMecLayer = 6;
 var pxunit = 1/40; // is reset by "grid"
 var a = 16*pxunit; // is reset by "grid"
@@ -641,7 +642,7 @@ class force {
     this.d = data;
     this.fname = data[1];
     if (data[4]) { this.off = data[4] } else { this.off = 10 }
-    const labelopts = {offset:[this.off,0], autoPosition:true, color:'blue'};
+    const labelopts = {offset:[this.off,0], autoPosition:true, color:loadColor};
     if (this.off >= 0) {this.name1 = ""; this.name2 = toTEX(data[1]) } else
       {this.name2 = ""; this.name1 = toTEX(data[1]) }
     if (data[5]) { this.state = data[5] } else { this.state = "locked" }
@@ -665,7 +666,7 @@ class force {
     //  touchLastPoint: true, fixed:false, snapToGrid:true, lastArrow:{size:5, type:2}, highligh    
     this.vec = board.create('arrow', [this.p1, this.p2], {
       touchLastPoint: true, lastArrow:{size:5, type:2}, highlight:hl,
-      highlightStrokeColor:highlightColor, strokeColor:"blue"});
+      highlightStrokeColor:highlightColor, strokeColor:loadColor});
     this.vec.obj = [this.vec, this.p1, this.p2];
     this.vec.parent = this;  
     // translation by base point drag
@@ -871,10 +872,10 @@ class moment {
       name: '', ...controlSnapStyle, fixed:fix, size:size });
     this.p3 = board.create('point', data[4], { name: toTEX(this.mname), 
     ...controlSnapStyle, fixed:fix, size:size,
-      label:{offset:[0,0], autoPosition:true, color:'blue'} });
+      label:{offset:[0,0], autoPosition:true, color:loadColor} });
     this.arc = board.create('minorArc', [this.p1, this.p2, this.p3], {
       fixed: true, strokeWidth: 2, highlight:hl, highlightStrokeColor:highlightColor,
-      lastArrow: {type: 2, size: 5 }, strokeColor:"blue" });
+      lastArrow: {type: 2, size: 5 }, strokeColor:loadColor });
     var g = board.create('group', [this.p1, this.p2, this.p3, this.arc]);
     g.removeTranslationPoint(this.p2);
     g.removeTranslationPoint(this.p3);
@@ -1030,17 +1031,16 @@ class q {
           this.p[2*this.i+this.j][0]*this.cos[this.j]-this.p[2*this.i+this.j][1]*this.sin[this.j]+data[0][0]+this.cos[1]*(this.i*this.width/Math.floor(this.width/a)),
           this.p[2*this.i+this.j][0]*this.sin[this.j]+this.p[2*this.i+this.j][1]*this.cos[this.j]+data[0][1]+this.sin[1]*(this.i*this.width/Math.floor(this.width/a)) ] }
       this.arrow.push(board.create('arrow', [ this.p[2*this.i], this.p[2*this.i+1] ],
-        {lastarrow:{size:5}, strokewidth:1})) }
+        {lastarrow:{size:5}, strokewidth:1, strokeColor:loadColor})) }
     this.polygon = board.create('polygon', 
       [ this.p[0],this.p[1],this.p[this.p.length-1],this.p[this.p.length-2] ],
-      { fillcolor:'#0000ff44', strokecolor:'blue', fixed:true, hasInnerPoints:true,
         vertices:{visible:false}, borders:{fixed:true} });
     this.label.push(board.create('point',this.p[0],
       { name:toTEX(this.name1), size:0, fixed:true,
-        label:{autoPosition:true,offset:[-10,10],color:'blue'} }));
+        label:{autoPosition:true,offset:[-10,10],color:loadColor} }));
     this.label.push(board.create('point',this.p[this.p.length-2], 
       { name:toTEX(this.name2), size:0, fixed:true,
-        label:{autoPosition:true, offset:[5,10], color:'blue'} }));
+        label:{autoPosition:true, offset:[5,10], color:loadColor} }));
     // implement state switching
     this.obj = this.arrow.concat([this.polygon, this.label[0].label, this.label[1].label]); 
     this.obj = this.obj.concat(this.polygon.borders); 
