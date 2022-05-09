@@ -1,6 +1,6 @@
 // Meclib version 2022 05 09
-// https://jsfiddle.net/ykoabs3p/1/ 1.4.3 (STACK 4.4)
-// https://jsfiddle.net/anjuod9k/1/ 1.2.1 (STACK 4.3)
+// https://jsfiddle.net/761dz5Lh/1/ 1.4.3 (STACK 4.4)
+// https://jsfiddle.net/erjhnvp3/1/ 1.2.1 (STACK 4.3)
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -1034,7 +1034,7 @@ class q {
         {lastarrow:{size:5}, strokewidth:1, strokeColor:loadColor})) }
     this.polygon = board.create('polygon', 
       [ this.p[0],this.p[1],this.p[this.p.length-1],this.p[this.p.length-2] ],
-      { fillcolor:'#0000ff44', strokecolor:loadColor, fixed:true, hasInnerPoints:true,
+      { fillcolor:'#0000ff44', fillOpacity:1, strokecolor:loadColor, fixed:true, hasInnerPoints:true,
         vertices:{visible:false}, borders:{fixed:true} });
     this.label.push(board.create('point',this.p[0],
       { name:toTEX(this.name1), size:0, fixed:true,
