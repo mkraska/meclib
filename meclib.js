@@ -1034,6 +1034,7 @@ class q {
         {lastarrow:{size:5}, strokewidth:1, strokeColor:loadColor})) }
     this.polygon = board.create('polygon', 
       [ this.p[0],this.p[1],this.p[this.p.length-1],this.p[this.p.length-2] ],
+      { fillcolor:'#0000ff44', strokecolor:loadColor, fixed:true, hasInnerPoints:true,
         vertices:{visible:false}, borders:{fixed:true} });
     this.label.push(board.create('point',this.p[0],
       { name:toTEX(this.name1), size:0, fixed:true,
