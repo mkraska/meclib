@@ -1,6 +1,6 @@
-// Meclib version 2022 05 09
-// https://jsfiddle.net/761dz5Lh/1/ 1.4.3 (STACK 4.4)
-// https://jsfiddle.net/erjhnvp3/1/ 1.2.1 (STACK 4.3)
+// Meclib version 2022 05 11
+// https://jsfiddle.net/ct3bqwy2/1/ 1.4.3 (STACK 4.4)
+// https://jsfiddle.net/erjhnvp3/3/ 1.2.1 (STACK 4.3)
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -1177,10 +1177,14 @@ class spline {
     if (this.state == "active" || this.state == "inactive") {makeSwitchable(this.graph, this)};
     this.graph.setAttribute({highlightFillOpacity:0});
     // trigger update on changes
-    this.p1.on('up', update() );
-    this.p2.on('up', update() );
-    this.pt1.on('up', update() );
-    this.pt2.on('up', update() );
+    this.p1.on('up', (function() { console.log("p1");
+   update()}) );
+    this.p2.on('up', (function() { console.log("p2");
+   update()}) );
+    this.pt1.on('up', (function() { console.log("pt1");
+   update()}) );
+    this.pt2.on('up', (function() { console.log("pt2");
+   update()}) );
     // add to attractor list, to be used by crosshair
     targets.push(this.graph);
   }
@@ -1393,6 +1397,7 @@ function init() {
 }
 
 function update() {
+  console.log(stateRef);
   if (!stateRef) { return }
   console.log("update")
   var m;
