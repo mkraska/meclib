@@ -1,6 +1,6 @@
-// Meclib version 2022 05 11
-// https://jsfiddle.net/ct3bqwy2/1/ 1.4.3 (STACK 4.4)
-// https://jsfiddle.net/erjhnvp3/3/ 1.2.1 (STACK 4.3)
+// Meclib version 2022 05 13
+// https://jsfiddle.net/ct3bqwy2/3/ 1.4.3 (STACK 4.4)
+// https://jsfiddle.net/erjhnvp3/5/ 1.2.1 (STACK 4.3)
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -1149,6 +1149,12 @@ class spline {
     // configure infoboxes
     this.p1.ref = this.P;
     this.p2.ref = this.P;
+    if (typeof data[7] != 'string') 
+      {this.p1.scale = data[7][1]; this.p2.scale = data[7][1];
+       this.pt1.scale = data[7][1]; this.pt2.scale = data[7][1];
+       this.p1.dp = data[7][2]; this.p2.dp = data[7][2];
+       this.pt1.dp = data[7][2]; this.pt2.dp = data[7][2]};
+    // configure info box for the tangent lines
     this.pt1.start = this.p1;
     this.pt2.start = this.p2;
     this.pt1.ref = function() { return XY(this.start) };
@@ -1522,7 +1528,7 @@ function hermitename(Ref,p1, p2, t1, t2) {
   if (Math.abs(p2.X()-t2.X())<tol) {d2 = NaN};
   var c = hermite(x1,dx,y1,dy,d1,d2);
   if (!isNaN(c[0]+c[1]+c[2]+c[3])) {
-    var n = c[3].toFixed(3) + "*x^3+" + c[2].toFixed(3) + "*x^2+" + c[1].toFixed(3) + "*x+" + c[0].toFixed(3);
+    var n = c[3].toFixed(5) + "*x^3+" + c[2].toFixed(5) + "*x^2+" + c[1].toFixed(5) + "*x+" + c[0].toFixed(5);
     return n.replace(/\+\-/g,"-")  } 
   else {return "NaN"}
 }
