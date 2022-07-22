@@ -1,6 +1,7 @@
-// Meclib version 2022 05 13
-// https://jsfiddle.net/ct3bqwy2/3/ 1.4.3 (STACK 4.4)
-// https://jsfiddle.net/erjhnvp3/5/ 1.2.1 (STACK 4.3)
+// Meclib version 2022 07 22
+// https://jsfiddle.net/1k95f2qd/2/ nightly build
+// https://jsfiddle.net/qyw45jLs/5/ 1.4.3 (STACK 4.4)
+// https://jsfiddle.net/ezcbm9vw/2/ 1.2.1 (STACK 4.3)
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -218,12 +219,13 @@ class beam {
   name(){ return targetName(this) } 
 }
 // Circle with centerpoint, point on perimeter, optional: use name as radius indicator
+// [ "circle", "name", [xc, yc], [xp,yp] , angle]
+// [ "circle", "name", [xc, yc], radius , angle]
 class circle {
   constructor(data){
-    if (typeof(data[data.length-1]) == 'string') {this.state = data.pop()}
-      else {this.state = "locked"}
     this.d = data.slice(0); //make a copy
-    this.angle = data.pop()*deg2rad; // pop the angle for the label
+    if (data[5]) {this.state = data[5]} else {this.state = "locked"}
+    if (data[4]) {this.angle = data[4]*deg2rad} else {this.angle = 0} // pop the angle for the label
     // circle
     this.c = board.create('circle', [ data[2], data[3] ], {
       opacity: true, fillcolor:'lightgray', hasInnerPoints:true, 
@@ -661,6 +663,7 @@ class force {
     this.p2.dp = [dpx+1,dpy+1];
     this.p2.ref = function() { return XY(this.start) };
     this.p2.infoboxlabel = "Vektor ";
+    if (this.state == "silent") {this.p2.setAttribute({showInfobox:false})}
     // arrow version with fixed:false doesn't snap to grid
     //this.vec = board.create('arrow', [this.p1, this.p2], {
     //  touchLastPoint: true, fixed:false, snapToGrid:true, lastArrow:{size:5, type:2}, highligh    
@@ -1007,29 +1010,28 @@ class polygon {
 
 // line load 
 // line load perpendicular to the line
+// [ "q", "q1","q2", [x1, y1], [x2,y2], q1, q2, phi, state ]
 class q {
   constructor(data){
-    if (typeof(data[data.length-1]) == 'string') {this.state = data.pop()}
-      else {this.state = "locked"}
     this.d = data.slice(0);
-    this.loads = [];
-    data.shift(); //"q" wird ausgeblendet
-    this.name1 = data.shift();  this.name2 = data.shift();
-    [this.width, this.alpha] = polar( minus( data[1], data[0] ));
-    this.phi = data.pop()*deg2rad //Abweichung zur Normalen
-    this.n = data[2];
-    this.m = (data[3]-data[2])/this.width;
+    if (data[8]) {this.state = data[8]} else {this.state = "locked"}
+    this.name1 = data[1];  this.name2 = data[2];
+    [this.width, this.alpha] = polar( minus( data[4], data[3] ));
+    if (data[7]) {this.phi = data[7]*deg2rad} else {this.phi=0} //Abweichung zur Normalen
+    this.n = data[5];
+    this.m = (data[6]-data[5])/this.width;
+    // end of input processing
     this.sin = [Math.sin(this.alpha+this.phi), Math.sin(this.alpha)]; 
     this.cos = [Math.cos(this.alpha+this.phi), Math.cos(this.alpha)];
-    this.arrow = []; this.p = []; this.label = [];
+    this.arrow = []; this.p = []; this.label = []; this.loads = [];   
     for (this.i=0;this.i<=(this.width/a);this.i++) {
       this.p.push(
         [ 0, this.m*((this.i)*this.width/Math.floor(this.width/a))+this.n ]);
       this.p.push([0, 0]);
       for (this.j=0;this.j<=1;this.j++) {
         this.p[2*this.i+this.j] = [
-          this.p[2*this.i+this.j][0]*this.cos[this.j]-this.p[2*this.i+this.j][1]*this.sin[this.j]+data[0][0]+this.cos[1]*(this.i*this.width/Math.floor(this.width/a)),
-          this.p[2*this.i+this.j][0]*this.sin[this.j]+this.p[2*this.i+this.j][1]*this.cos[this.j]+data[0][1]+this.sin[1]*(this.i*this.width/Math.floor(this.width/a)) ] }
+          this.p[2*this.i+this.j][0]*this.cos[this.j]-this.p[2*this.i+this.j][1]*this.sin[this.j]+data[3][0]+this.cos[1]*(this.i*this.width/Math.floor(this.width/a)),
+          this.p[2*this.i+this.j][0]*this.sin[this.j]+this.p[2*this.i+this.j][1]*this.cos[this.j]+data[3][1]+this.sin[1]*(this.i*this.width/Math.floor(this.width/a)) ] }
       this.arrow.push(board.create('arrow', [ this.p[2*this.i], this.p[2*this.i+1] ],
         {lastarrow:{size:5}, strokewidth:1, strokeColor:loadColor})) }
     this.polygon = board.create('polygon', 
@@ -1050,7 +1052,7 @@ class q {
     if (this.state == "hide") { hide(this) }
     if (this.state != "locked") { makeSwitchable(this.polygon, this) }
   } 
-  data(){ var a = this.d.slice(0); a.push(this.state); return a}
+  data(){ var a = this.d.slice(0); a[8] = this.state; return a}
   name(){ return targetName(this) } 
   hasPoint(pt) {return isOn(pt,this.polygon)} 
 }
