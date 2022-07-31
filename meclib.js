@@ -1,7 +1,7 @@
 // Meclib version 2022 07 31
-// https://jsfiddle.net/1k95f2qd/5/ nightly build
-// https://jsfiddle.net/qyw45jLs/7/ 1.4.3 (STACK 4.4)
-// https://jsfiddle.net/ezcbm9vw/4/ 1.2.1 (STACK 4.3)
+// https://jsfiddle.net/1k95f2qd/6/ nightly build
+// https://jsfiddle.net/qyw45jLs/10/ 1.4.4 (STACK 4.4)
+// https://jsfiddle.net/ezcbm9vw/5/ 1.2.1 (STACK 4.3)
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
