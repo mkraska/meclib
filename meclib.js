@@ -1,7 +1,7 @@
-// Meclib version 2022 07 22
-// https://jsfiddle.net/1k95f2qd/2/ nightly build
-// https://jsfiddle.net/qyw45jLs/5/ 1.4.3 (STACK 4.4)
-// https://jsfiddle.net/ezcbm9vw/2/ 1.2.1 (STACK 4.3)
+// Meclib version 2022 07 31
+// https://jsfiddle.net/1k95f2qd/5/ nightly build
+// https://jsfiddle.net/qyw45jLs/7/ 1.4.3 (STACK 4.4)
+// https://jsfiddle.net/ezcbm9vw/4/ 1.2.1 (STACK 4.3)
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -28,6 +28,7 @@ JXG.Options.line.fixed = true;
 JXG.Options.circle.fixed = true;
 // label settings
 JXG.Options.text.useMathJax = true;
+JXG.Options.text.parse = false;
 JXG.Options.label.useMathJax = true;
 JXG.Options.label.offset = [0, 0];
 JXG.Options.label.anchorY = 'middle';
@@ -1602,7 +1603,4 @@ var objects = [];
 var targets = []; /* for sliding of points */
 init();
 update();
-//board.on('up', function() {
-//  update()
-//});
 
