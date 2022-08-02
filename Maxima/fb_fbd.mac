@@ -1,6 +1,7 @@
-/* https://github.com/mkraska/meclib    */
+/* https://github.com/mkraska/meclib/wiki/Feedback-for-Free-Body-Diagrams */
 /* 2022 08 02                           */
 
+/* https://github.com/mkraska/meclib/wiki/direction%28%29 */
 direction(o):=block([v, a0, le, r1, r2, a1],
   if member(o[1], ["bar", "force", "dashpot", "springt", "springc"]) then return(o[4]-o[3]),
   if member(o[1], ["fix1"]) then return([-sin(o[4]*%pi/180), cos(o[4]*%pi/180)]),
@@ -17,12 +18,14 @@ direction(o):=block([v, a0, le, r1, r2, a1],
     )
 );
 
+/* https://github.com/mkraska/meclib/wiki/angle%28%29 */
 angle(a,b):= block([da,db],
     da: direction(a), db: direction(b),
     if listp(da) and listp(db) then 
         return(-carg(da[1]+%i*da[2])+carg(db[1]+%i*db[2]) ) 
 );
 
+/* https://github.com/mkraska/meclib/wiki/moment_of_force%28%29 */
 moment_of_force(p, f, fname, rname):=block([vf,vr],
    vf: (f[4]-f[3]),
    vf: vf/sqrt(vf[1]^2+vf[2]^2)*fname,
@@ -30,6 +33,7 @@ moment_of_force(p, f, fname, rname):=block([vf,vr],
    vr[1]*vf[2]-vr[2]*vf[1]
 );
 
+/* https://github.com/mkraska/meclib/wiki/parallelp%28%29 */
 parallelp(a,b):= block([da,db],
     da: direction(a), db: direction(b),
     if listp(da) and listp(db) then 
