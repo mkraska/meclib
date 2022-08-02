@@ -40,6 +40,36 @@ parallelp(a,b):= block([da,db],
         return(is (abs(da[1]*db[2]-da[2]*db[1])<0.05) )
 );
 
+/* https://github.com/mkraska/meclib/wiki/fb_force_hvxy */
+fb_force_hvxy(o,i):=block([dir, name, nl, base, idx],
+    name: o[i][2], nl: split(name,"_"),
+    /* base name single character? */
+    if slength(first(nl)) > 1 
+    then return([sconcat("\\(", name, "\\): Physikalische Gr&ouml;&szlig;en immer nur mit einem Buchstabe und eventuell Index schreiben, z.B. <code>F_1</code>." ),false]),
+    /* is there an index? */
+    if length(nl) # 2 
+    then return([sconcat("\\(", name, "\\) sollte einen Richtungsindex (x, y, h, v) haben."),false]),
+    /* are name and index just a single character? */
+    idx: last(nl),
+    if slength(idx) > 1 
+    then return([sconcat("\\(", name, "\\): Ein Buchstabe sollte für den Index reichen." ),false]),
+    /* is the index known? */
+    if not member(sdowncase(idx), ["h","v","x","y"]) 
+    then return([sconcat("\\(", name, "\\): Der Richtungsindex sollte h, v, x oder y sein"),false]),
+    /* check directions */
+    dir: direction(o[i]),
+    if (sdowncase(idx)="h" and abs(dir[2]) > 0.01) then
+    return([sconcat("\\(", name, "\\) m&uuml;sste eine horizontale Kraft bezeichnen."),false]),   
+    if (sdowncase(idx)="v" and abs(dir[1]) > 0.01) then
+    return([sconcat("\\(", name, "\\) m&uuml;sste eine vertikale Kraft bezeichnen."),false]),         
+    if (sdowncase(idx)="x" and (abs(dir[2]) > 0.01 or dir[1] <0) ) then
+    return([sconcat("\\(", name, "\\) m&uuml;sste eine Kraft in positive x-Richtung (nach rechts) bezeichnen."),false]),         
+    if (sdowncase(idx)="y" and (abs(dir[1]) > 0.01 or dir[2] <0) ) then
+    return([sconcat("\\(", name, "\\) m&uuml;sste eine Kraft in positive y-Richtung (nach oben) bezeichnen."),false]),  
+    /* Name is ok */
+    return(["",true])
+);
+
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix1%22 */
 fb_fix1(o, n, i, description):=block(
     [txt, R], txt: sconcat("<br>",description,": "),
