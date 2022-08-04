@@ -1,0 +1,21 @@
+/* https://github.com/mkraska/meclib/wiki/Feedback-Overview */
+/* 2022 08 04                           */
+
+/* https://github.com/mkraska/meclib/wiki/Values-and-Slope-of-Splines */
+fb_spline(%_sans,%_tans,%_x1,%_x2, %_f):=block( [simp,%_s1,%_s2, %_ftol, %_dtol, %_OK, %_txt], 
+  simp:true, 
+  %_OK: true,
+  %_ftol: 0.02,
+  %_dtol: 0.02,
+  %_s1: string(%_x1),
+  %_s2: string(%_x2),
+  %_txt: sconcat( " zwischen \\(",  %_s1, "\\) und \\(",  %_s2, "\\)"),
+  if abs(at(%_sans,x=%_x1/%_f) - at(%_tans,x=%_x1/%_f)) > %_ftol then 
+        ( %_OK: false, %_txt: sconcat(%_txt, "<br>Der Wert bei \\(", %_s1, "\\) stimmt nicht.")), 
+  if abs(at(%_sans,x=%_x2/%_f) - at(%_tans,x=%_x2/%_f)) > %_ftol then 
+        ( %_OK: false, %_txt: sconcat(%_txt, "<br>Der Wert bei \\(", %_s2, "\\) stimmt nicht.")),
+  if abs(at(diff(%_sans,x),x=%_x1/%_f) - at(diff(%_tans,x),x=%_x1/%_f)) > %_dtol then 
+        ( %_OK: false, %_txt: sconcat(%_txt, "<br>Der Anstieg bei \\(", %_s1, "\\) stimmt nicht.")), 
+  if abs(at(diff(%_sans,x),x=%_x2/%_f) - at(diff(%_tans,x),x=%_x2/%_f)) > %_dtol then 
+        ( %_OK: false, %_txt: sconcat(%_txt, "<br>Der Anstieg bei \\(", %_s2, "\\) stimmt nicht.")), 
+  [%_txt,%_OK]);
