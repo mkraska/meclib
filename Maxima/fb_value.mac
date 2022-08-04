@@ -2,30 +2,39 @@
 /* 2022 08 03                           */
 
 /* https://github.com/mkraska/meclib/wiki/fb_vars */
-fb_vars(%_sans,%_tans, [%_opt] ) := block([%_vars, %_label, %_tansvar,%_sansvar,%_extras, %_missing,simp, %_txt, %_L],
+fb_strip_list(_list_of_things):= castext("[[define _first='true'/]][[foreach _thing='_list_of_things']][[if test='not _first']], [[else]][[define _first='false'/]][[/if]]{@_thing@}[[/foreach]]"); 
+/* fb_strip_list function proposed by Matti Harjula 2022 04 10 */
+
+fb_vars(%_sans,%_tans, [%_opt] ) := block([%_vars, %_label,%_tansvar,%_sansvar,%_extras, %_missing, simp, %_txt, %_L],
+    simp: true, /* Extract vars with simp:true does mean that "x/x+y" -> [y] */
     if length(%_opt)>0 then %_vars: %_opt[1] else %_vars: [], 
     if length(%_opt)>1 then %_label: %_opt[2] else %_label: "",
     %_txt: %_label,
-    simp: true, /* Extract vars with simp:true does mean that "x/x+y" -> [y] */
     %_sansvar: setify(listofvars(%_sans)),
     %_tansvar: setify(listofvars(%_tans)),
-    /* Say nothing if tans is free of vars (e.g. because it is zero) */
+    /* Say nothing is tans is free of vars (e.g. because it is zero) */
     if emptyp(%_tansvar) then return(""),
     /* Check for spurious (extra) vars */
     %_extras: setdifference(%_sansvar, %_tansvar),
-    if length(%_extras) > 0 then 
-    %_txt: sconcat(%_txt," Unerwartete Variable: \\(", stack_disp_comma_separate(listify(%_extras)), "\\)." ),
+    if length(%_extras) > 0 then (
+      %_txt: castext_concat(%_txt, "&nbsp;Unerwartete Variable: " ),
+      %_txt: castext_concat(%_txt, fb_strip_list(listify(%_extras)) ),
+      %_txt: castext_concat(%_txt, "."  ) ),
     /* Check for missing vars */
     %_missing: setdifference(%_tansvar, %_sansvar),
-    if length(%_missing) > 0 then 
-    %_txt: sconcat(%_txt," Fehlende Variable: \\(", stack_disp_comma_separate(listify(%_missing)), "\\) (<code>", stack_disp_comma_separate(listify(%_missing)), "</code>)."  ),
+    if length(%_missing) > 0 then  (
+      %_txt: castext_concat(%_txt, "&nbsp;Fehlende Variable: " ),
+      %_txt: castext_concat(%_txt, fb_strip_list(listify(%_missing)) ),
+      %_txt: castext_concat(%_txt,  castext(" (<code>{@stack_disp_comma_separate(listify(%_missing))@}</code>)." ))),
+    if %_txt # %_label then return(%_txt),
     /* if set of vars is ok, then check for the terms with vars from given list (%_vars). */ 
-    if %_txt # %_label then return(sconcat(%_txt, "<br>")),
     %_L: sublist (%_vars, lambda ([x], diff(%_sans-%_tans, x)#0)),
-    if length(%_L)=0 then return( ""),
-    if length(%_L)=1 then return(sconcat(%_label," Pr&uuml;fen Sie den Term mit \\(", %_L[1], "\\).<br>")),
-    return(sconcat(%_label," Pr&uuml;fen Sie die Terme mit \\(",stack_disp_comma_separate(%_L ), "\\).<br>")),
-  "" );
+    if length(%_L)=0 then return(%_txt),
+    if length(%_L)=1 then return( castext_concat (%_txt, castext("&nbsp;Pr&uuml;fen Sie den Term mit {@%_L[1]@}.") ) ),
+    %_txt: castext_concat( %_txt, "&nbsp;Pr&uuml;fen Sie die Terme mit " ), 
+    %_txt: castext_concat( %_txt, fb_strip_list(%_L) ), 
+    castext_concat(%_txt, "." ) 
+);
 
 /* https://github.com/mkraska/meclib/wiki/fb_number */  
 fb_number(%_snum, %_tnum, %_tol) := block([%_oom, %_mnt, %_d],
