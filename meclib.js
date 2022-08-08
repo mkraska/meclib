@@ -1,7 +1,7 @@
-// Meclib version 2022 07 31
-// https://jsfiddle.net/1k95f2qd/6/ nightly build
-// https://jsfiddle.net/qyw45jLs/10/ 1.4.4 (STACK 4.4)
-// https://jsfiddle.net/ezcbm9vw/5/ 1.2.1 (STACK 4.3)
+// Meclib version 2022 08 08
+// https://jsfiddle.net/1k95f2qd/11/ nightly build
+// https://jsfiddle.net/6tm4gjkq/2/ 1.4.4 (STACK 4.4)
+// https://jsfiddle.net/ezcbm9vw/7/ 1.2.1 (STACK 4.3)
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -826,12 +826,12 @@ class line {
  data(){ return this.d }
  name(){  return "0" }
 }
-//[ "line2P", "label", [x1,y1],[x2,y2], f ]//
+//[ "line2P", "label", [x1,y1],[x2,y2], f ]// f is ignored, set scale using "grid"
+//[ "line2P", "label", [x1,y1],[x2,y2], "normal" ]//
 class line2p {
   constructor(data){
     this.d = data.slice(0); //make a copy
-    if (data[4]) {this.f = data[4]}
-    else {this.f = xscale};
+    this.f = xscale;
     this.p1 = board.create('point', mult( 1/this.f, data[2] ), { 
     	label:{visible:false}, ...controlSnapStyle }); 
     this.p2 = board.create('point', mult( 1/this.f, data[3] ), { 
@@ -839,10 +839,19 @@ class line2p {
     this.g = board.create('line', [this.p1, this.p2], { fixed:false,
       strokecolor: movableLineColor, strokeWidth:1, 
       highlight:true, highlightStrokeColor:highlightColor, 
-      name:data[1],withLabel:true,label:{offset:[10,0]}});
+      name:data[1],withLabel:true});
     for (var pt of [this.p1, this.p2]) {	pt.scale = [this.f,this.f] }
     this.p1.on("up", update );
     this.p2.on("up", update );
+    // if required, add normal
+    if (typeof(data[4]) === 'string')  {
+      this.n = board.create('perpendicular',[this.g, this.p1], { fixed:false,
+      strokecolor: movableLineColor, strokeWidth:1, 
+      highlight:true, highlightStrokeColor:highlightColor, 
+      name:data[4],withLabel:true});
+      this.a = board.create('angle', [this.n, this.g, 1,1], {radius:0.5, withLabel:false })
+    }  
+    
   }
   data(){ return [this.d[0], this.d[1], [this.p1.X()*this.f,this.p1.Y()*this.f],[this.p2.X()*this.f,this.p2.Y()*this.f], this.f] } 
   name(){ return "[["+this.data()[2].toString() + "],[" + this.data()[3].toString() + "]]" } 
