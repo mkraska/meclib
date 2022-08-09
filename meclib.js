@@ -1,7 +1,4 @@
-// Meclib version 2022 08 08
-// https://jsfiddle.net/1k95f2qd/11/ nightly build
-// https://jsfiddle.net/6tm4gjkq/2/ 1.4.4 (STACK 4.4)
-// https://jsfiddle.net/ezcbm9vw/7/ 1.2.1 (STACK 4.3)
+// Meclib version 2022 08 09
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -850,10 +847,13 @@ class line2p {
       highlight:true, highlightStrokeColor:highlightColor, 
       name:data[4],withLabel:true});
       this.a = board.create('angle', [this.n, this.g, 1,1], {radius:0.5, withLabel:false })
-    }  
-    
+    }     
   }
-  data(){ return [this.d[0], this.d[1], [this.p1.X()*this.f,this.p1.Y()*this.f],[this.p2.X()*this.f,this.p2.Y()*this.f], this.f] } 
+  data(){ 
+    var ans = this.d; 
+    ans[2] = [this.p1.X()*this.f,this.p1.Y()*this.f];
+    ans[3] = [this.p2.X()*this.f,this.p2.Y()*this.f];
+    return ans } 
   name(){ return "[["+this.data()[2].toString() + "],[" + this.data()[3].toString() + "]]" } 
 }
 //  point mass [ "mass", [x,y],r, off]
