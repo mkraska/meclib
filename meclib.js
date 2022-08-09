@@ -46,7 +46,8 @@ const pointStyle = { fillcolor: 'black', strokeColor: 'black', size: 1, strokeWi
 // invisible points with infobox
 const silentPStyle = {size:0, withLabel:false};
 // grid snap for control points
-const controlSnapStyle = { snapToGrid:true, snapToPoints: true, attractorDistance: 0.2, fixed:false, layer:11};
+const controlSnapStyle = { snapToGrid:true, snapToPoints: true, 
+attractorDistance: 0.2, fixed:false, layer:11};
 // Style for bars
 const barStyle = { strokewidth: 4, strokecolor: "black" };
 // Normal line (body outline)
@@ -834,9 +835,9 @@ class line2p {
     this.d = data.slice(0); //make a copy
     this.f = xscale;
     this.p1 = board.create('point', mult( 1/this.f, data[2] ), { 
-    	label:{visible:false}, ...controlSnapStyle }); 
+    	label:{visible:false}, attractors:targets,...controlSnapStyle }); 
     this.p2 = board.create('point', mult( 1/this.f, data[3] ), { 
-    	label:{visible:false}, ...controlSnapStyle }); 
+    	label:{visible:false}, attractors:targets,...controlSnapStyle }); 
     this.g = board.create('line', [this.p1, this.p2], { fixed:false,
       strokecolor: movableLineColor, strokeWidth:1, 
       highlight:true, highlightStrokeColor:highlightColor, 
