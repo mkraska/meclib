@@ -292,7 +292,9 @@ class crosshair {
     const f = 2, r = 7;
     const pp =  {size:0, name:'', fixed:false, snapToGrid:false, showInfobox:false};
     this.p = board.create('point', data[2], {
-      name: '', fixed:false, size:r, fillOpacity:0, highlightFillOpacity:0, strokeWidth:1, color:"blue", snapToGrid:false, attractors:targets, attractorDistance: 0.2
+      name: '', fixed:false, size:r, fillOpacity:0, highlightFillOpacity:0, 
+	  strokeWidth:1, color:movableLineColor, snapToGrid:false, 
+	  attractors:targets, attractorDistance: 0.2
     });
     // set properties of infobox
     if (data[3]) { this.p.ref = data[3] }
@@ -301,10 +303,12 @@ class crosshair {
     // cross
     this.p1 = board.create('point', plus(data[2],[-f*r*pxunit,0]),pp);
     this.p2 = board.create('point', plus(data[2],[+f*r*pxunit,0]), pp);   
-    this.h = board.create('segment',  [this.p1, this.p2], {strokeWidth:1});
+    this.h = board.create('segment',  [this.p1, this.p2], 
+      {strokeWidth:1, strokeColor:movableLineColor});
     this.p3 = board.create('point', plus(data[2],[0,-f*r*pxunit]), pp);
     this.p4 = board.create('point', plus(data[2],[0,+f*r*pxunit]), pp);   
-    this.v = board.create('segment',  [this.p3, this.p4], {strokeWidth:1});
+    this.v = board.create('segment',  [this.p3, this.p4],  
+      {strokeWidth:1, strokeColor:movableLineColor});
     board.create('group', [this.p, this.p1, this.p2, this.h, this.p3, this.p4, this.v] );
     this.p.on("up", update );
   }
