@@ -303,12 +303,12 @@ class crosshair {
     if (data[5]) { this.p.dp = data[5] }
     // cross
     const that = this;
-    this.v = board.create('curve', [ [], [] ], { strokeWidth:1 ,
+    this.v = board.create('curve', [ [], [] ], { strokeWidth:1 ,
       strokeColor: movableLineColor });
-	this.v.updateDataArray = function() {
-      this.dataX = [that.p.X() - f*r*pxunit, that.p.X() + f*r*pxunit, NaN, that.p.X(), that.p.X()];
+    this.v.updateDataArray = function() {
+      this.dataX = [that.p.X() - f*r*pxunit, that.p.X() + f*r*pxunit, NaN, that.p.X(), that.p.X()];
       this.dataY = [that.p.Y(), that.p.Y(), NaN, that.p.Y() - f*r*pxunit, that.p.Y() + f*r*pxunit] 
-	};
+    };
     // this doesn't work in JSXGraph version 1.2.1
     //this.p1 = board.create('point', [ ()=>that.p.X(), ()=>that.p.Y() ), 
     //  {size:2*r, face: 'plus',strokeWidth:1 , strokeColor: movableLineColor  });
