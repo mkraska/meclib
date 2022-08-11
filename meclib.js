@@ -1,4 +1,4 @@
-// Meclib version 2022 08 09
+// Meclib version 2022 08 11
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -302,16 +302,18 @@ class crosshair {
     if (data[4]) { this.p.scale = data[4] }
     if (data[5]) { this.p.dp = data[5] }
     // cross
-    this.p1 = board.create('point', plus(data[2],[-f*r*pxunit,0]),pp);
-    this.p2 = board.create('point', plus(data[2],[+f*r*pxunit,0]), pp);   
-    this.h = board.create('segment',  [this.p1, this.p2], 
-      {strokeWidth:1, strokeColor:movableLineColor});
-    this.p3 = board.create('point', plus(data[2],[0,-f*r*pxunit]), pp);
-    this.p4 = board.create('point', plus(data[2],[0,+f*r*pxunit]), pp);   
-    this.v = board.create('segment',  [this.p3, this.p4],  
-      {strokeWidth:1, strokeColor:movableLineColor});
-    board.create('group', [this.p, this.p1, this.p2, this.h, this.p3, this.p4, this.v] );
-    this.p.on("up", update );
+    const that = this;
+    this.v = board.create('curve', [ [], [] ], { strokeWidth:1 ,
+      strokeColor: movableLineColor });
+    this.v.updateDataArray = function() {
+        this.dataX = [that.p.X() - f*r*pxunit, that.p.X() + f*r*pxunit,
+          NaN, that.p.X(), that.p.X()];
+        this.dataY = [that.p.Y(), that.p.Y(), 
+          NaN, that.p.Y() - f*r*pxunit, that.p.Y() + f*r*pxunit];
+    };
+    // this doesn't work in JSXGraph version 1.2.1
+    //this.p1 = board.create('point', [ ()=>that.p.X(), ()=>that.p.Y() ), 
+    //  {size:2*r, face: 'plus',strokeWidth:1 , strokeColor: movableLineColor  });
   }
   data() { var d = this.d; d[2] = XY( this.p ); return d } 
   name() { return "0" }
