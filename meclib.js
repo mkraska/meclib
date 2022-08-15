@@ -1,4 +1,4 @@
-// Meclib version 2022 08 11
+// Meclib version 2022 08 15
 // https://github.com/mkraska/meclib
 
 const highlightColor = "orange";
@@ -269,12 +269,18 @@ class circle2p {
     // circle
     this.A = board.create('point', mult( 1/this.f, data[3] ), { 
       name: data[1], ...controlSnapStyle, snapToPoints:false,label:{offset:[5,5]}}); 
-	  this.AS = board.create('point', mult( 1/this.f, data[4] ), { 
+    this.AS = board.create('point', mult( 1/this.f, data[4] ), { 
       name: data[2], ...controlSnapStyle, snapToPoints:false,label:{offset:[5,5]} }); 
     this.MSK1 = board.create('semicircle', [this.A, this.AS], lStyle ); 
     this.MSK2 = board.create('semicircle', [this.AS, this.A], lStyle ); 
-    this.int1 = board.create('intersection', [this.MSK1, this.xaxis], iStyle );
-	  this.int2 = board.create('intersection', [this.MSK2, this.xaxis], iStyle ); 
+    // the intersection signature has changed between 1.2.1 and 1.4.4
+    if (isNewerVersion ('1.2.1', JXG.version)) {
+      this.int1 = board.create('intersection', [this.MSK1, this.xaxis,0], iStyle );
+      this.int2 = board.create('intersection', [this.MSK2, this.xaxis,1], iStyle ); 
+    } else {
+      this.int1 = board.create('intersection', [this.MSK1, this.xaxis], iStyle );
+      this.int2 = board.create('intersection', [this.MSK2, this.xaxis], iStyle ); 
+    }
     for (var pt of [this.A, this.AS, this.int1, this.int2]) {
     	pt.scale = [this.f,this.f] }
     this.A.on("up", update );
