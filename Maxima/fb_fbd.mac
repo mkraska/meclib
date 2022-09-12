@@ -311,7 +311,7 @@ fb_unidir(o, n, i, description):=block(
 fb_q(o, n, i, description,q1,q2,le):=block(
     [varcheck, txt: sconcat("<br>",description), %_v: o[i][5]-o[i][4], ir, ir1, ir2],
     /* Resultant force */
-    mag: (cabs(%_v[1]+%i*v[2]))*le*(q1+q2)/2, a0: carg(%_v[1]+%i*v[2]),
+    mag: (cabs(%_v[1]+%i*%_v[2]))*le*(q1+q2)/2, a0: carg(%_v[1]+%i*%_v[2]),
     xref: (o[i][4]*(2/3*q1+q2/3)+o[i][5]*(q1/3+2/3*q2))/(q1+q2), 
     Rref: [ "force", mag, xref, xref+[-sin(a0+o[i][8]*pi/180), -cos(a0+o[i][8]*pi/180)] ],
     /* Is object a line load? */
