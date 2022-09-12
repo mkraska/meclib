@@ -1,20 +1,20 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-Free-Body-Diagrams */
-/* 2022 08 02                           */
+/* 2022 09 12                           */
 
 /* https://github.com/mkraska/meclib/wiki/direction%28%29 */
-direction(o):=block([v, a0, le, r1, r2, a1],
+direction(o):=block([%_v, a0, le, r1, r2, a1],
   if member(o[1], ["bar", "force", "dashpot", "springt", "springc"]) then return(o[4]-o[3]),
   if member(o[1], ["fix1"]) then return([-sin(o[4]*%pi/180), cos(o[4]*%pi/180)]),
   if member(o[1], ["fix13"]) then return([cos(o[4]*%pi/180), sin(o[4]*%pi/180)]),
   if member(o[1], ["q"]) then (
-    v: o[5]-o[4], le: cabs(v[1]+%i*v[2]), a0: carg(v[1]+%i*v[2]),
+    %_v: o[5]-o[4], le: cabs(%_v[1]+%i*%_v[2]), a0: carg(%_v[1]+%i*%_v[2]),
     return([cos(a0+o[8]*pi/180), sin(a0+o[8]*pi/180)]) 
     ),
   if member(o[1], ["rope"]) then (
     /* same math as in meclib */
-    v: o[5]-o[3], le: cabs(v[1]+%i*v[2]), a0: carg(v[1]+%i*v[2]),
+    %_v: o[5]-o[3], le: cabs(%_v[1]+%i*%_v[2]), a0: carg(%_v[1]+%i*%_v[2]),
     r1: o[4], r2: o[6], a1: acos((r1-r2)/le),
-    return(float(v+[(r2-r1)*cos(a0-a1), (r2-r1)*sin(a0-a1)]))
+    return(float(%_v+[(r2-r1)*cos(a0-a1), (r2-r1)*sin(a0-a1)]))
     )
 );
 
