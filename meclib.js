@@ -1,5 +1,5 @@
-// Meclib version 2022 08 15
-// https://github.com/mkraska/meclib
+// Meclib version 2022 09 12
+// https://github.com/mkraska/meclib/wiki
 
 const highlightColor = "orange";
 const movableLineColor = "blue";
@@ -60,7 +60,9 @@ const hatchStyle = function () { return {fixed: true, width:4*pxunit , frequency
 const board = JXG.JSXGraph.initBoard(divid, {
   boundingbox: [-5, 5, 5, -5], //default values, use "grid" to customize
   axis: false, grid:true, showNavigation:false, showCopyright:true, 
-  keepAspectRatio:true, resize: {enabled: false, throttle: 200}
+  keepAspectRatio:true, resize: {enabled: false, throttle: 200},
+  pan: {enabled:false}, //suppress uninteded pan on touchscreens
+  keyboard:{enabled:false} //would spoil textinput in momentGen and forceGen
 });
 
 var state;
