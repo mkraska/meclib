@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-Free-Body-Diagrams */
-/* 2022 09 12                           */
+/* 2022 09 22                           */
 
 /* https://github.com/mkraska/meclib/wiki/direction%28%29 */
 direction(o):=block([%_v, a0, le, r1, r2, a1],
@@ -72,7 +72,7 @@ fb_force_hvxy(o,i):=block([dir, name, nl, base, idx],
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix1%22 */
 fb_fix1(o, n, i, description):=block(
-    [txt, R], txt: sconcat("<br>",description,": "),
+    [txt, R], txt: sconcat("<br>",description),
     /* Is object i a fixed support */
     if ( o[i][1] # "fix1" ) then return ([sconcat(txt, "object ", string(i), " is not a fixed support (fix1)"), false]),
     /* Is object i de-activated */ 
@@ -95,15 +95,15 @@ fb_fix1_name(o, n, i):=block(
     if not listp(names[i]) then return(["",false]),
     R: o[names[i][1]], 
     /* name checking */
-    if slength(R[2]) # 1 then return(["Ein einzelner Buchstabe sollte f&uuml;r die Bezeichnung der Kraft ausreichen.",false]),
-    if R[2] # o[i][2] then return(["Der Name der Reaktionskraft sollte zum Namen des Lagerpunkts passen.", false]),
+    if slength(R[2]) # 1 then return(["<br>Ein einzelner Buchstabe sollte f&uuml;r die Bezeichnung der Kraft ausreichen.",false]),
+    if R[2] # o[i][2] then return(["<br>Der Name der Reaktionskraft sollte zum Namen des Lagerpunkts passen.", false]),
     /* everything should be ok here */
     return(["",true])   
 );
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix12%22 */
 fb_fix12(o, n, i, description):=block(
-    [L1, L2, R1, R2], txt: sconcat("<br>",description,": "),
+    [L1, L2, R1, R2], txt: sconcat("<br>",description),
      /* Is object i an fixed support? */
     if not member(o[i][1], ["fix12"]) 
     then return ([sconcat(txt, "object ", string(i), " (", o[i][1], ") is not a fixed support."), false]),
@@ -128,8 +128,8 @@ fb_fix12(o, n, i, description):=block(
     /* everything should be ok here */
     return([sconcat(txt, "Reaktionen \\(", R1[2], ",", R2[2], "\\) gefunden. "),true])  
 );
-fb_fix12_names(o, n, i, description):=block(
-    [dir, idx, nl, L, R, txt: description, flag:false],
+fb_fix12_name(o, n, i):=block(
+    [dir, idx, nl, L, R, txt: "", flag:false],
     /* do the non-name checks to avoid runtime-errors */
     if not member(o[i][1], ["fix12"]) then return (["", false]),
     /* Is object i de-activated */ 
@@ -200,8 +200,8 @@ fb_fix123(o, n, i, description):=block(
     /* everything should be ok here */
     return([sconcat(txt, "Reaktionskräfte \\(", n[lf[1]], ",", n[lf[2]], "\\) und Moment \\(", n[lm[1]], "\\) gefunden."),true])
 );
-fb_fix123_names(o, n, i, description):=block(
-    [sname: o[i][2], txt: sconcat("<br>",description), ir],
+fb_fix123_name(o, n, i):=block(
+    [sname: o[i][2], txt: "", ir],
     /* make sure that there is at least one reaction */
     if not listp(n[i]) or n[i]=[] then return(["", false]),
     /*iterate over reactions*/
@@ -217,6 +217,7 @@ fb_fix123_names(o, n, i, description):=block(
                 txt: sconcat(txt, "<br>", ntxt), 
                 fb_required: true)
          ),
+		/* Feedback for moments */
         if o[ir][1]="moment" then (
             if (sname # last(charlist( o[ir][2] ))  ) then (
                 txt: sconcat(txt, "<br>Der Name \\(", n[ir], "\\) passt nicht zum Name des Lagerpunktes."), 
@@ -253,8 +254,8 @@ fb_fix13(o, n, i, description):=block(
     /* everything should be ok here */
     return([sconcat(txt, "Reaktionskraft \\(", n[lf[1]], "\\) und Moment \\(", n[lm[1]], "\\) gefunden."),true])
 );
-fb_fix13_names(o, n, i, description):=block(
-    [sname: o[i][2], txt: sconcat("",description), ir],
+fb_fix13_names(o, n, i):=block(
+    [sname: o[i][2], txt: "", ir],
     /* make sure that there is at least one reaction */
     if not listp(n[i]) or n[i]=[] then return(["", false]),
     /*iterate over reactions*/
