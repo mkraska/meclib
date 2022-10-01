@@ -51,7 +51,7 @@ fb_number(%_snum, %_tnum, %_tol) := block([%_oom, %_mnt, %_d],
      if %_snum+1.0=1.0 then return("&nbsp;Abweichung: 0") 
      else return("&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;."),
   /* say nothing if student's answer is zero (further down log() might fail) */
-  if %_snum = 0 then return(""); 
+  if %_snum = 0 then return(""),
   /* check of the sign */
   if %_snum/%_tnum <0 then return("&nbsp;Pr&uuml;fen Sie das Vorzeichen."),
   /* go back if error is less than tolerance */
@@ -85,7 +85,7 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d],
   /* special feedback if teacher's answer is zero */
   if %_tnum+1.0=1.0  then return("&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;."),
   /* say nothing if student's answer is zero (further down log() might fail) */
-  if %_snum = 0 then return(""); 
+  if %_snum = 0 then return(""),
   /* check of the sign */
   if %_snum/%_tnum <0 then return("&nbsp;Pr&uuml;fen Sie das Vorzeichen."),
   /* go back if error is less than tolerance */
