@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-Overview */
-/* 2022 08 03                           */
+/* 2022 10 01                           */
 
 /* https://github.com/mkraska/meclib/wiki/fb_vars */
 fb_strip_list(_list_of_things):= castext("[[define _first='true'/]][[foreach _thing='_list_of_things']][[if test='not _first']], [[else]][[define _first='false'/]][[/if]]{@_thing@}[[/foreach]]"); 
@@ -35,6 +35,8 @@ fb_vars(%_sans,%_tans, [%_opt] ) := block([%_vars, %_label,%_tansvar,%_sansvar,%
     %_txt: castext_concat( %_txt, fb_strip_list(%_L) ), 
     castext_concat(%_txt, "." ) 
 );
+/* this should return true if the check passes, false otherwise */
+fb_varsOK(%_sans,%_tans, [%_opt] ):= stringp(fb_varsOK(%_sans,%_tans, [%_opt] ));
 
 /* https://github.com/mkraska/meclib/wiki/fb_number */  
 fb_number(%_snum, %_tnum, %_tol) := block([%_oom, %_mnt, %_d],
@@ -65,6 +67,8 @@ fb_number(%_snum, %_tnum, %_tol) := block([%_oom, %_mnt, %_d],
         return(sconcat("&nbsp;Der Betrag ist um mindestens ", %_d , "% zu gro&szlig;."))       
   ), 
 [%_snum,%_tnum] );
+/* this should return true if the check passes, false otherwise */
+fb_numberOK(%_snum, %_tnum, %_tol):=stringp(fb_number(%_snum, %_tnum, %_tol));
 
 /* https://github.com/mkraska/meclib/wiki/fb_unit */
 fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d],
@@ -95,3 +99,5 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d],
         return(sconcat("&nbsp;Der Betrag ist um mindestens ", %_d , "% zu gro&szlig;."))       
   ), 
 [%_snum,%_tnum] );
+/* this should return true if the check passes, false otherwise */
+fb_unitOK(%_sans, %_tans, %_tol):=stringp(fb_unit(%_sans, %_tans, %_tol));
