@@ -105,3 +105,6 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d],
 [%_snum,%_tnum] );
 /* this should return true if the check passes, false otherwise */
 fb_unitOK(%_sans, %_tans, %_tol):=stringp(fb_unit(%_sans, %_tans, %_tol));
+
+/* chttps://github.com/mkraska/meclib/wiki/fb_dim */
+fb_dim(%_res, %_vars, %_dims):=rat(subst(map("=", %_vars, map("*", %_vars, %_dims)),%_res)/%_res);
