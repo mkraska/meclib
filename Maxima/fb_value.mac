@@ -78,8 +78,8 @@ fb_numberOK(%_snum, %_tnum, %_tol):=stringp(fb_number(%_snum, %_tnum, %_tol));
 
 /* https://github.com/mkraska/meclib/wiki/fb_unit */
 fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d],
-  %_snum: stack_units_nums(stack_unit_si_to_si_base(%_sans)),
-  %_tnum: stack_units_nums(stack_unit_si_to_si_base(%_tans)),
+  %_snum: simplify(stack_units_nums(stack_unit_si_to_si_base(%_sans))),
+  %_tnum: simplify(stack_units_nums(stack_unit_si_to_si_base(%_tans))),
   /* if tol=0 just indicate deviation */
   if %_tol=0 and %_tnum # 0 then return(sconcat("&nbsp;Abweichung: ", float( round((%_snum-%_tnum)/abs(%_tnum)*1000)/10) , "%")),
   /* special feedback if teacher's answer is zero */
