@@ -36,7 +36,11 @@ fb_vars(%_sans,%_tans, [%_opt] ) := block([%_vars, %_label,%_tansvar,%_sansvar,%
     castext_concat(%_txt, "." ) 
 );
 /* this should return true if the check passes, false otherwise */
-fb_varsOK(%_sans,%_tans, [%_opt] ):= stringp(fb_vars(%_sans,%_tans, [%_opt] ));
+fb_varsOK(%_sans,%_tans, [%_opt] ):= block([%_res],
+  if length(%_opt)=0 then %_res: fb_vars(%_sans,%_tans ),
+  if length(%_opt)=1 then %_res: fb_vars(%_sans,%_tans, %_opt[1] ),
+  if length(%_opt)=2 then %_res: fb_vars(%_sans,%_tans, %_opt[1], %_opt[2] ),
+  stringp(%_res));
 
 /* https://github.com/mkraska/meclib/wiki/fb_number */  
 fb_number(%_snum, %_tnum, %_tol) := block([%_oom, %_mnt, %_d],
