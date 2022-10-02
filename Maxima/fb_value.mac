@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-Overview */
-/* 2022 10 01                           */
+/* 2022 10 02                           */
 
 /* https://github.com/mkraska/meclib/wiki/fb_vars */
 fb_strip_list(_list_of_things):= castext("[[define _first='true'/]][[foreach _thing='_list_of_things']][[if test='not _first']], [[else]][[define _first='false'/]][[/if]]{@_thing@}[[/foreach]]"); 
@@ -80,6 +80,11 @@ fb_numberOK(%_snum, %_tnum, %_tol):=stringp(fb_number(%_snum, %_tnum, %_tol));
 fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d],
   %_snum: simplify(stack_units_nums(stack_unit_si_to_si_base(%_sans))),
   %_tnum: simplify(stack_units_nums(stack_unit_si_to_si_base(%_tans))),
+  /* complain about wrong unit */
+  %_sunit: stack_units_units(stack_unit_si_to_si_base(%_sans)),
+  %_tunit: stack_units_units(stack_unit_si_to_si_base(%_tans)),
+  if %_sunit # %_tunit then return(
+    castext_concat("&nbsp;Unerwartete Basiseinheit: ", castext("{@(stack_disp_fractions(\"i\"),%_sunit)@}"  )  )),   
   /* if tol=0 just indicate deviation */
   if %_tol=0 and %_tnum # 0 then return(sconcat("&nbsp;Abweichung: ", float( round((%_snum-%_tnum)/abs(%_tnum)*1000)/10) , "%")),
   /* special feedback if teacher's answer is zero */
@@ -110,5 +115,5 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d],
 /* this should return true if the check passes, false otherwise */
 fb_unitOK(%_sans, %_tans, %_tol):=stringp(fb_unit(%_sans, %_tans, %_tol));
 
-/* chttps://github.com/mkraska/meclib/wiki/fb_dim */
+/* https://github.com/mkraska/meclib/wiki/fb_dim */
 fb_dim(%_res, %_vars, %_dims):=rat(subst(map("=", %_vars, map("*", %_vars, %_dims)),%_res)/%_res);
