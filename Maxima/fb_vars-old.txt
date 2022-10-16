@@ -1,0 +1,22 @@
+fb_vars(%_sans,%_tans,%_vars) := block([%_tansvar,%_sansvar,%_extras, %_missing,simp, %_txt, %_L],
+    simp: true, /* Extract vars with simp:true does mean that "x/x+y" -> [y] */
+    %_txt: "",
+    %_sansvar: setify(listofvars(%_sans)),
+    %_tansvar: setify(listofvars(%_tans)),
+    /* Say nothing if tans is free of vars (e.g. because it is zero) */
+    if emptyp(%_tansvar) then return(""),
+    /* Check for spurious (extra) vars */
+    %_extras: setdifference(%_sansvar, %_tansvar),
+    if length(%_extras) > 0 then 
+    %_txt: sconcat(%_txt," Unerwartete Variable: \\(", stack_disp_comma_separate(listify(%_extras)), "\\)." ),
+    /* Check for missing vars */
+    %_missing: setdifference(%_tansvar, %_sansvar),
+    if length(%_missing) > 0 then 
+    %_txt: sconcat(%_txt," Erwartete Variable: \\(", stack_disp_comma_separate(listify(%_missing)), "\\) (<code>", stack_disp_comma_separate(listify(%_missing)), "</code>)."  ),
+    /* if set of vars is ok, then check for the terms with vars from given list (%_vars). */ 
+    if %_txt # "" then return(%_txt),
+    %_L: sublist (%_vars, lambda ([x], diff(%_sans-%_tans, x)#0)),
+    if length(%_L)=0 then return( ""),
+    if length(%_L)=1 then return(sconcat(" Pr&uuml;fen Sie den Term mit \\(", %_L[1], "\\).")),
+    return(sconcat(" Pr&uuml;fen Sie die Terme mit \\(",stack_disp_comma_separate(%_L ), "\\).")),
+  "" );

@@ -1,0 +1,30 @@
+fb_vars(%_sans,%_tans, [%_opt] ) := block([%_vars, %_label,%_tansvar,%_sansvar,%_extras, %_missing, simp, %_txt, %_L],
+    simp: true, /* Extract vars with simp:true does mean that "x/x+y" -> [y] */
+    if length(%_opt)>0 then %_vars: %_opt[1] else %_vars: [], 
+    if length(%_opt)>1 then %_label: %_opt[2] else %_label: "",
+    %_txt: %_label,
+    %_sansvar: setify(listofvars(%_sans)),
+    %_tansvar: setify(listofvars(%_tans)),
+    /* Say nothing is tans is free of vars (e.g. because it is zero) */
+    if emptyp(%_tansvar) then return(""),
+    /* Check for spurious (extra) vars */
+    %_extras: setdifference(%_sansvar, %_tansvar),
+    if length(%_extras) > 0 then (
+      %_txt: castext_concat(%_txt, "&nbsp;Unerwartete Variable: " ),
+      %_txt: castext_concat(%_txt, fb_strip_list(listify(%_extras)) ),
+      %_txt: castext_concat(%_txt, "."  ) ),
+    /* Check for missing vars */
+    %_missing: setdifference(%_tansvar, %_sansvar),
+    if length(%_missing) > 0 then  (
+      %_txt: castext_concat(%_txt, "&nbsp;Fehlende Variable: " ),
+      %_txt: castext_concat(%_txt, fb_strip_list(listify(%_missing)) ),
+      %_txt: castext_concat(%_txt,  castext(" (<code>{@stack_disp_comma_separate(listify(%_missing))@}</code>)." ))),
+    if %_txt # %_label then return(%_txt),
+    /* if set of vars is ok, then check for the terms with vars from given list (%_vars). */ 
+    %_L: sublist (%_vars, lambda ([x], diff(%_sans-%_tans, x)#0)),
+    if length(%_L)=0 then return(%_txt),
+    if length(%_L)=1 then return( castext_concat (%_txt, castext("&nbsp;Pr&uuml;fen Sie den Term mit {@%_L[1]@}.") ) ),
+    %_txt: castext_concat( %_txt, "&nbsp;Pr&uuml;fen Sie die Terme mit " ), 
+    %_txt: castext_concat( %_txt, fb_strip_list(%_L) ), 
+    castext_concat(%_txt, "." ) 
+);

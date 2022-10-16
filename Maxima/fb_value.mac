@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-Overview */
-/* 2022 10 02                           */
+/* 2022 10 16                           */
 
 /* https://github.com/mkraska/meclib/wiki/fb_vars */
 fb_strip_list(_list_of_things):= castext("[[define _first='true'/]][[foreach _thing='_list_of_things']][[if test='not _first']], [[else]][[define _first='false'/]][[/if]]{@_thing@}[[/foreach]]"); 
@@ -77,20 +77,26 @@ fb_number(%_snum, %_tnum, %_tol) := block([%_oom, %_mnt, %_d],
 fb_numberOK(%_snum, %_tnum, %_tol):=stringp(fb_number(%_snum, %_tnum, %_tol));
 
 /* https://github.com/mkraska/meclib/wiki/fb_unit */
-fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d],
-  %_snum: simplify(stack_units_nums(stack_unit_si_to_si_base(%_sans))),
-  %_tnum: simplify(stack_units_nums(stack_unit_si_to_si_base(%_tans))),
-  /* complain about wrong unit */
+fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d, simp: true],
+  /* Debug strings */
+  if debug then debug1: "tnum=0 and snum=0" else debug1:"",
+  /* extract numbers and units */
+  %_snum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_sans)))),
+  if %_snum = NULLNUM then %_snum:1.0, 
+  %_tnum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_tans)))),
+  if %_tnum = NULLNUM then %_tnum:1.0, 
   %_sunit: stack_units_units(stack_unit_si_to_si_base(%_sans)),
+  if %_sunit = NULLUNITS then %_sunit:1,  /* display as 1 if not correct */
   %_tunit: stack_units_units(stack_unit_si_to_si_base(%_tans)),
+  /* complain if units don't match */
   if %_sunit # %_tunit then return(
     castext_concat("&nbsp;Unerwartete Basiseinheit: ", castext("{@(stack_disp_fractions(\"i\"),%_sunit)@}"  )  )),   
   /* if tol=0 just indicate deviation */
-  if %_tol=0 and %_tnum # 0 then return(sconcat("&nbsp;Abweichung: ", float( round((%_snum-%_tnum)/abs(%_tnum)*1000)/10) , "%")),
+  if %_tol=0 and %_tnum # 0.0 then return(sconcat("&nbsp;Abweichung: ", float(round((%_snum-%_tnum)/abs(%_tnum)*1000)/10) , "%")),
   /* special feedback if teacher's answer is zero */
-  if %_tnum+1.0=1.0  then return("&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;."),
-  /* say nothing if student's answer is zero (further down log() might fail) */
-  if %_snum = 0 then return(""),
+  if %_tnum = 0.0  and %_snum  # 0.0 then return("&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;."),
+  if %_tnum = 0.0  then return(debug1), 
+  if %_snum = 0.0 then return("&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein."),
   /* check of the sign */
   if %_snum/%_tnum <0 then return("&nbsp;Pr&uuml;fen Sie das Vorzeichen."),
   /* go back if error is less than tolerance */
@@ -111,7 +117,8 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d],
         return(sconcat("&nbsp;Der Betrag ist um mindestens ", %_d , "% zu klein.")) else
         return(sconcat("&nbsp;Der Betrag ist um mindestens ", %_d , "% zu gro&szlig;."))       
   ), 
-[%_snum,%_tnum] );
+[%_snum,%_tnum, %_oom, %_d] );
+
 /* this should return true if the check passes, false otherwise */
 fb_unitOK(%_sans, %_tans, %_tol):=stringp(fb_unit(%_sans, %_tans, %_tol));
 
