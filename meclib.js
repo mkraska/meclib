@@ -1149,20 +1149,22 @@ class spline {
     var PT1 = plus(this.P, data[5]);
     var PT2 = plus(this.P, data[6]);
     var B1 = [P1[0], this.P[1]];
-    var B2 = [P2[0], this.P[1]];  
+    var B2 = [P2[0], this.P[1]]; 
+    var yStyle = {name: '', fixed: false ,size:6, color:'red',fillOpacity:0, snapToGrid:true};
+    var dyStyle = { name: '', fixed: false, snapToGrid:true }
+    if (this.state == "pure") {
+      yStyle = {name: '', fixed: true ,size:0, color:'red',fillOpacity:0, snapToGrid:false};
+      dyStyle = { name: '', fixed: true, snapToGrid:false }
+    }
     // vertical slide lines
     this.v1 = board.create('line',[P1,plus(P1,[0,1])], {visible:false, fixed:true});
     this.v2 = board.create('line',[P2,plus(P2,[0,1])], {visible:false, fixed:true});
     // sliding points
-    this.p1 = board.create('glider',[P1[0], P1[1],this.v1], { 
-      name: '', fixed: false ,size:6, color:'red',fillOpacity:0,
-      snapToGrid:true});
-    this.p2 = board.create('glider',[P2[0], P2[1],this.v2], { 
-      name: '', fixed: false ,size:6, color:'red',fillOpacity:0,
-      snapToGrid:true});
+    this.p1 = board.create('glider',[P1[0], P1[1],this.v1], yStyle);
+    this.p2 = board.create('glider',[P2[0], P2[1],this.v2], yStyle);
     // tangent points
-    this.pt1 = board.create('point',PT1, { name: '', fixed: false, snapToGrid:true });
-    this.pt2 = board.create('point',PT2, { name: '', fixed: false, snapToGrid:true });
+    this.pt1 = board.create('point',PT1, dyStyle);
+    this.pt2 = board.create('point',PT2, dyStyle);
     // tangent lines
     this.t1 = board.create('segment',[this.p1, this.pt1], {fixed:false, strokecolor:'black', strokewidth: 1});
     this.t2 = board.create('segment',[this.p2, this.pt2], {fixed:false, strokecolor:'black', strokewidth: 1});
