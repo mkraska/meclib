@@ -371,6 +371,29 @@ float(log(10));
 /* [wxMaxima: input   end   ] */
 
 
+/* [wxMaxima: input   start ] */
+aW:0.55;
+Y0:2.9*(aW)^0.5-4.6*(aW)^1.5+21.8*(aW)^2.5-37.6*(aW)^3.5+38.7*(aW)^4.5;
+S_B: 30*mm;
+S_K: 10*MPa*sqrt(m);
+W0: stack_unit_si_to_si_base(2*S_B/m);W0:0.06;
+s0:4*W0;
+Fq: stack_unit_si_to_si_base(S_K/(Pa*sqrt(m))*S_B/m)*sqrt(W0)*W0/s0/Y0;
+Fq: S_K/(Pa*sqrt(m))*S_B/m*1e6*Pa*0.001*m/Pa/m*sqrt(W0)*W0/s0/Y0;
+
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+invert(%);
+/* [wxMaxima: input   end   ] */
+
+
+/* [wxMaxima: input   start ] */
+eigenvalues(%);
+/* [wxMaxima: input   end   ] */
+
+
 
 /* Maxima can't load/batch files which end with a comment! */
 "Created with wxMaxima"$

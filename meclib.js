@@ -1,6 +1,8 @@
-// Meclib version 2022 09 12
+// Meclib version 2022 11 05
 // https://github.com/mkraska/meclib/wiki
 
+// version info
+const versionText= "JXG "+JXG.version+" Meclib 22 11 05";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -59,7 +61,7 @@ const hatchStyle = function () { return {fixed: true, width:4*pxunit , frequency
 
 const board = JXG.JSXGraph.initBoard(divid, {
   boundingbox: [-5, 5, 5, -5], //default values, use "grid" to customize
-  axis: false, grid:true, showNavigation:false, showCopyright:true, 
+  axis: false, grid:true, showNavigation:false, showCopyright:false, 
   keepAspectRatio:true, resize: {enabled: false, throttle: 200},
   pan: {enabled:false}, //suppress uninteded pan on touchscreens
   keyboard:{enabled:false} //would spoil textinput in momentGen and forceGen
@@ -799,7 +801,9 @@ class grid {
 		  	{name:toTEX(data[2]), withLabel: true,
 				label: {position: 'rt', offset: [-20, 0]},
         ticks: {generateLabelValue:function(p1,p2) {return (p1.usrCoords[2]-p2.usrCoords[2])*fy}} });    
-      }   
+      } 
+   // version info
+   board.create("text", [xmin+0.5*a,ymax-0.5*a, versionText], {strokeColor:"lightgray"})  
    }
  data(){  return this.d }
  name(){  return "0" }
