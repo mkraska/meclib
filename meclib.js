@@ -657,16 +657,16 @@ class force {
     this.d = data;
     this.fname = data[1];
     if (data[4]) { this.off = data[4] } else { this.off = 10 }
-    const labelopts = {offset:[this.off,0], autoPosition:true, color:loadColor};
     if (this.off >= 0) {this.name1 = ""; this.name2 = toTEX(data[1]) } else
       {this.name2 = ""; this.name1 = toTEX(data[1]) }
     if (data[5]) { this.state = data[5] } else { this.state = "locked" }
 	// snap and appearance depending on state
+    const labelopts = {offset:[this.off,0], autoPosition:true, color:loadColor};
     var pstyle = {snapToGrid:false, size:0, fixed:true, label:labelopts};
     var	hl = false; 
     if (this.state == "active") {
 		pstyle = {snapToGrid:true, fixed:false, size:2, snapToPoints:true, 
-		attractors:targets, attractorDistance: 0.2  };
+		attractors:targets, attractorDistance: 0.2, label:labelopts};
 		hl = true;
 	}
     // start and end point
