@@ -1,4 +1,4 @@
-// Meclib version 2022 11 05
+// Meclib version 2022 11 11
 // https://github.com/mkraska/meclib/wiki
 
 // version info
@@ -663,15 +663,19 @@ class force {
     if (this.off >= 0) {this.name1 = ""; this.name2 = toTEX(data[1]) } else
       {this.name2 = ""; this.name1 = toTEX(data[1]) }
     if (data[5]) { this.state = data[5] } else { this.state = "locked" }
-    var fix = true, size = 0, hl = false, snap= false; 
-    if (this.state == "active") {fix = false; size = 2; hl = true; snap = true} 
+	// snap and appearance depending on state
+    var pstyle = {snapToGrid:false, size:0, fixed:true, label:labelopts};
+    var	hl = false; 
+    if (this.state == "active") {
+		pstyle = {snapToGrid:true, fixed:false, size:2, snapToPoints:true, 
+		attractors:targets, attractorDistance: 0.2  };
+		hl = true;
+	}
     // start and end point
     this.p1 = board.create('point', data[2], { name: this.name1, 
-      ...controlSnapStyle, snapToGrid: snap, fixed:fix, size: size, label:labelopts, 
-      attractors:targets, attractorDistance: 0.2  }); 
+      ...controlSnapStyle, ...pstyle }); 
     this.p2 = board.create('point', data[3], { name: this.name2, 
-      ...controlSnapStyle, snapToGrid: snap, fixed:fix, size: size, label:labelopts, 
-      attractors:targets, attractorDistance: 0.2  });
+      ...controlSnapStyle, ...pstyle }); 
     // configure infobox
     this.p1.dp = [dpx+1,dpy+1];
     this.p2.start = this.p1;
@@ -1069,10 +1073,10 @@ class q {
         vertices:{visible:false}, borders:{fixed:true} });
     this.label.push(board.create('point',this.p[0],
       { name:toTEX(this.name1), size:0, fixed:true,
-        label:{autoPosition:true,offset:[-10,10],color:loadColor} }));
+        label:{autoPosition:true,offset:[-5,5],color:loadColor} }));
     this.label.push(board.create('point',this.p[this.p.length-2], 
       { name:toTEX(this.name2), size:0, fixed:true,
-        label:{autoPosition:true, offset:[5,10], color:loadColor} }));
+        label:{autoPosition:true, offset:[5,5], color:loadColor} }));
     // implement state switching
     this.obj = this.arrow.concat([this.polygon, this.label[0].label, this.label[1].label]); 
     this.obj = this.obj.concat(this.polygon.borders); 
