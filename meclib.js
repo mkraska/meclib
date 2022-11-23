@@ -1505,7 +1505,12 @@ function plus(a,b) { return [ a[0]+b[0], a[1]+b[1] ] }
 function minus(a,b) { return [ a[0]-b[0], a[1]-b[1] ] }
 function dist(a,b) { return Math.sqrt( (a[0]-b[0])**2 + (a[1]-b[1])**2 ) }
 // function for string conversion
-function toSTACK(str) {return str.replace(/\s+/g,"*") }// converts whitespace to stars
+// converts whitespace to stars, avoids empty strings
+function toSTACK(str) { 
+  var st = str.replace(/\s+/g, "*");
+  if (st === "") {st = "_"}
+  return st
+}
 function toTEX(str) {return '\\('+str.replace(/[\*\s]/g, "\\;")+'\\)' }// converts stars to small math spaces and adds math mode brackets
 
 // functions for proximity check
