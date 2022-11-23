@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 22 11 11";
+const versionText= "JXG "+JXG.version+" Meclib 22 11 23";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -769,47 +769,50 @@ class forceGen {
 // grid control object: [ "grid", "xlabel", "ylabel",  xmin, xmax, ymin, ymax, pix ]
 // grid control object: [ "grid", "xlabel", "ylabel",  xmin, xmax, ymin, ymax, pix, [fx, fy] ]
 class grid {
- constructor(data) {
-   this.d = data;
-   const xmin = data[3];
-   const xmax = data[4];
-   const ymin = data [5];
-   const ymax = data [6];
-   const pix = data [7];
-   var fx = 1, fy = 1;
-   if (data[8]) {fx = data[8][0]; fy = data[8][1]; xscale = fx; yscale = fy };
-   if (data[9]) {dpx = data[9][0]; dpy = data[9][1] };
-   // logics of container sizing and grid scaling has changed between 1.2.1 and 1.3.2
-   if (isNewerVersion ('1.3.1', JXG.version)) {
-   	 board.resizeContainer(pix*(xmax-xmin), pix*(ymax-ymin),false,true); 
-     board.setBoundingBox([xmin, ymax, xmax, ymin ], true)
-   } else {
-     board.setBoundingBox([xmin, ymax, xmax, ymin ]);
-     board.resizeContainer(pix*(xmax-xmin), pix*(ymax-ymin)); 
-   }
+  constructor(data) {
+    this.d = data;
+    const xmin = data[3];
+    const xmax = data[4];
+    const ymin = data [5];
+    const ymax = data [6];
+    const pix = data [7];
+    var fx = 1, fy = 1;
+    if (data[8]) {fx = data[8][0]; fy = data[8][1]; xscale = fx; yscale = fy };
+    if (data[9]) {dpx = data[9][0]; dpy = data[9][1] };
+    // logics of container sizing and grid scaling has changed between 1.2.1 and 1.3.2
+    if (isNewerVersion ('1.3.1', JXG.version)) {
+      board.resizeContainer(pix*Math.abs(xmax-xmin), pix*Math.abs(ymax-ymin),false,true); 
+      board.setBoundingBox([xmin, ymax, xmax, ymin ], true)
+    } else {
+      board.setBoundingBox([xmin, ymax, xmax, ymin ]);
+      board.resizeContainer(pix*Math.abs(xmax-xmin), pix*Math.abs(ymax-ymin)); 
+    }
     // convenience units
-   a = 16/pix; 
-   pxunit = 1/pix;
-   //labelshift = 0.2*a;
-   //if (data[1] || data[2]) {board.removeGrids()};
-   if (data[1]) { 
-   		var xaxis = board.create('axis', [[0, 0], [1,0]], 
-		  	{name:toTEX(data[1]), withLabel: true,
-				label: {position: 'rt', offset: [-5, 12], anchorX:'right'},
-        ticks: {generateLabelValue:function(p1,p2) {return (p1.usrCoords[1]-p2.usrCoords[1])*fx}} });
-      }
-   if (data[2]) {  
-   		var yaxis = board.create('axis', [[0, 0], [0,1]], 
-		  	{name:toTEX(data[2]), withLabel: true,
-				label: {position: 'rt', offset: [-20, 0]},
+    a = 16/pix; 
+    pxunit = 1/pix;
+    //labelshift = 0.2*a;
+    //if (data[1] || data[2]) {board.removeGrids()};
+    var labelopt;
+    if (data[1]) { 
+      if (xmin<xmax) {labelopt = {position: 'rt', offset: [-5, 12] } } 
+      else {labelopt = {position: 'lft', offset: [-5, 12] }}
+      var xaxis = board.create('axis', [[0, 0], [1,0]], 
+	    {name:toTEX(data[1]), withLabel: true, label: labelopt,
+        ticks: {generateLabelValue:function(p1,p2) {return (p1.usrCoords[1]-p2.usrCoords[1])*fx}} });}
+    if (data[2]) { 
+      if (ymin<ymax) {labelopt = {position: 'rt', offset: [10, 0] } } 
+      else {labelopt = {position: 'rt', offset: [10, 0] }}
+   	  var yaxis = board.create('axis', [[0, 0], [0,1]], 
+	    {name:toTEX(data[2]), withLabel: true, label: labelopt,
         ticks: {generateLabelValue:function(p1,p2) {return (p1.usrCoords[2]-p2.usrCoords[2])*fy}} });    
-      } 
-   // version info
-   board.create("text", [xmin+0.5*a,ymax-0.5*a, versionText], {strokeColor:"lightgray"})  
-   }
- data(){  return this.d }
- name(){  return "0" }
+    } 
+    // version info
+    board.create("text", [xmin+0.5*a,ymax-0.5*a, versionText], {strokeColor:"lightgray"})  
+  }   
+  data(){  return this.d }
+  name(){  return "0" }
 }
+
 // Text label
 class label {
   constructor(data){
