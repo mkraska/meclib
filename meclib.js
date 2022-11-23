@@ -807,7 +807,8 @@ class grid {
         ticks: {generateLabelValue:function(p1,p2) {return (p1.usrCoords[2]-p2.usrCoords[2])*fy}} });    
     } 
     // version info
-    board.create("text", [xmin+0.5*a,ymax-0.5*a, versionText], {strokeColor:"lightgray"})  
+    var vs = board.create("text", [xmin + 0.5 * a, ymax - 0.5 * a, versionText], {strokeColor: "lightgray" });
+    vs.setPositionDirectly(JXG.COORDS_BY_SCREEN, [10,10]);
   }   
   data(){  return this.d }
   name(){  return "0" }
