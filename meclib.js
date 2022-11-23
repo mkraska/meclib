@@ -1508,7 +1508,7 @@ function dist(a,b) { return Math.sqrt( (a[0]-b[0])**2 + (a[1]-b[1])**2 ) }
 // converts whitespace to stars, avoids empty strings
 function toSTACK(str) { 
   var st = str.replace(/\s+/g, "*");
-  if (st === "") {st = "_"}
+  if (st === "") {st = "NONAME"}
   return st
 }
 function toTEX(str) {return '\\('+str.replace(/[\*\s]/g, "\\;")+'\\)' }// converts stars to small math spaces and adds math mode brackets
