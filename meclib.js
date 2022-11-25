@@ -299,32 +299,45 @@ class crosshair {
   constructor(data) {
     this.d = data;
     const f = 2, r = 7;
-    const pp =  {size:0, name:'', fixed:false, snapToGrid:false, showInfobox:false};
     this.p = board.create('point', data[2], {
-      name: '', fixed:false, size:r, fillOpacity:0, highlightFillOpacity:0, 
-	  strokeWidth:1, color:movableLineColor, snapToGrid:false, 
-	  attractors:targets, attractorDistance: 0.2
+      name: '',
+      fixed: false,
+      size: r,
+      fillOpacity: 0,
+      highlightFillOpacity: 0,
+      strokeWidth: 1,
+      color: movableLineColor,
+      snapToGrid: false,
+      attractors: targets,
+      attractorDistance: 0.2
     });
     // set properties of infobox
-    if (data[3]) { this.p.ref = data[3] }
-    if (data[4]) { this.p.scale = data[4] }
+    if (data[3]) { this.p.ref = data[3] } else {this.p.ref = [0,0]}
+    if (data[4]) { this.p.scale = data[4] } else {this.p.scale = [1,1]}
     if (data[5]) { this.p.dp = data[5] }
     // cross
     const that = this;
-    this.v = board.create('curve', [ [], [] ], { strokeWidth:1 ,
-      strokeColor: movableLineColor });
+    this.v = board.create('curve', [ [],[] ], { strokeWidth: 1, strokeColor: movableLineColor });
     this.v.updateDataArray = function() {
-      this.dataX = [that.p.X() - f*r*pxunit, that.p.X() + f*r*pxunit, NaN, that.p.X(), that.p.X()];
-      this.dataY = [that.p.Y(), that.p.Y(), NaN, that.p.Y() - f*r*pxunit, that.p.Y() + f*r*pxunit] 
+      this.dataX = [that.p.X() - f * r * pxunit, that.p.X() + f * r * pxunit, NaN, that.p.X(), that.p.X()];
+      this.dataY = [that.p.Y(), that.p.Y(), NaN, that.p.Y() - f * r * pxunit, that.p.Y() + f * r * pxunit]
     };
-	this.v.fullUpdate();
+    this.v.fullUpdate();
     // this doesn't work in JSXGraph version 1.2.1
     //this.p1 = board.create('point', [ ()=>that.p.X(), ()=>that.p.Y() ), 
     //  {size:2*r, face: 'plus',strokeWidth:1 , strokeColor: movableLineColor  });
-	this.p.on("up", update );
+    this.p.on("up", update);
   }
-  data() { var d = this.d; d[2] = XY( this.p ); return d } 
-  name() { return "0" }
+  data() {
+    var d = this.d;
+    d[2] = XY(this.p);
+    return d
+  }
+  name() {
+    return "[" +
+      ((this.p.X() - this.p.ref[0]) * this.p.scale[0]).toString() + "," +  
+      ((this.p.Y() - this.p.ref[1]) * this.p.scale[1]).toString() +"]"
+  }
 }
 // damper 
 // [ "dashpot", "name", [x1,y1], [x2,y2], r, offset ]
