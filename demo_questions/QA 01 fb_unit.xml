@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+<!-- question: 105096  -->
+  <question type="stack">
+    <name>
+      <text>QA 01 fb_unit unit test</text>
+    </name>
+    <questiontext format="markdown">
+      <text><![CDATA[**QA 01**
+
+This is a unit test question for the function `fb_unit`. In the question variables, we make the settings
+
+- `debug: true`
+- `simp: false`
+
+**Interactive test**
+
+Here you can try the behaviour of the feedback function. 
+
+<p><code>fb_unit([[input:sans]], [[input:tans]], [[input:tol]])</code></p> [[validation:sans]] [[validation:tans]] [[validation:tol]] 
+
+[[feedback:prt1]]
+
+<details><summary><strong>Pre-defined tests</strong></summary>
+
+R: # Result from the feedback function#<br>
+E: # Expected text#
+
+- Report deviation in percent (with 1 decimal place) when tolerance is zero or deviation is less then tolerance. 
+
+<p><code>fb_unit(1.1*m, stackunits(1.11, m),0)</code> </p>
+R: #{@fb_unit(1.1*m, stackunits(1.11, m),0)@}#<br>
+E: # Abweichung: -0.9%#
+
+<p><code>fb_unit(1.1*m, stackunits(1.101, m),0.005)</code><br>
+R: #{@fb_unit(1.1*m, stackunits(1.101, m),0.005)@}#<br>
+E: # Abweichung: -0.1%#</p>
+
+<p><code>fb_unit(1.1*m, stackunits(1.1001, m),0.005)</code><br>
+R: #{@fb_unit(1.1*m, stackunits(1.1001, m),0.005)@}#<br>
+E: # Abweichung: 0.0%#</p>
+
+- Nonzero sans, zero tans, specified as product
+
+<p><code>fb_unit(1.1*m, 0*m,0.005)</code></p>
+R: #{@fb_unit(1.1*m, 0*m,0.005)@}#<br>
+E: # Der Wert ist betragsmäßig zu groß.#
+
+- Nonzero sans, zero tans, specified with `stackunits()`
+
+<p><code>fb_unit(1.1*m, stackunits(0,m),0.005)</code></p>
+R: #{@fb_unit(1.1*m, stackunits(0,m),0.005)@}#<br>
+E: # Der Wert ist betragsmäßig zu groß.#
+
+- Zero sans with unit factor, zero tans, specified with `stackunits()`
+
+<p><code>fb_unit(0*m, stackunits(0,m),0.005)</code></p>
+R: #{@fb_unit(0*m, stackunits(0,m),0.005)@}#<br>
+E: #tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)#
+
+- Zero sans without unit, zero tans, specified with `stackunits()`
+
+<p><code>fb_unit(0, stackunits(zero, m),0.005)</code><br>
+R: #{@fb_unit(0, stackunits(zero, m),0.005)@}#<br>
+E: #tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)#</p>
+
+- Zero sans without unit, zero tans, specified with `stackunits()`
+
+<p><code>fb_unit(0*m, stackunits(zero, m),0.005)</code><br>
+R: #{@fb_unit(0*m, stackunits(zero, m),0.005)@}#<br>
+E: #tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)#</p>
+
+- Zero sans with wrong unit, zero tans, specified with `stackunits()`
+
+<p><code>fb_unit(0*N, stackunits(zero, m),0.005)</code><br>
+R: #{@fb_unit(0*N, stackunits(zero, m),0.005)@}#<br>
+E: # Unerwartete Basiseinheit: \(\rm kg\cdot m\cdot s^-2\)#</p>
+
+- Zero sans (with correct, no or wrong unit), nonzero tans
+
+<p><code>fb_unit(0*m, stackunits(1, m),0.005)</code><br>
+R: #{@fb_unit(0*m, stackunits(1, m),0.005)@}#<br>
+E: # Der Wert ist betragsmäßig zu klein.#</p>
+
+<p><code>fb_unit(0, stackunits(1, m),0.005)</code><br>
+R: #{@fb_unit(0, stackunits(1, m),0.005)@}#<br>
+E: # Der Wert ist betragsmäßig zu klein.#</p>
+
+<p><code>fb_unit(0*kg, stackunits(1, m),0.005)</code><br>
+R: #{@fb_unit(0*kg, stackunits(1, m),0.005)@}#<br>
+E: # Unerwartete Basiseinheit: \(\rm kg\)#</p>
+
+- Test for sign feedback
+
+<p><code>fb_unit(-1.1*m, stackunits(1.11, m),0.005)</code><br>
+R: #{@fb_unit(-1.1*m, stackunits(1.11, m),0.005)@}#<br>
+E: # Prüfen Sie das Vorzeichen.#</p>
+
+- Mantissa correct, order of magnitude not correct
+
+<p><code>fb_unit(1.1*m, stackunits(11, m),0.005)</code><br>
+R: #{@fb_unit(1.1*m, stackunits(11, m),0.005)@}#<br>
+E: # Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Größenordnung ab. Prüfen Sie Ihre Einheitenumrechnung. #</p>
+
+- Value too small
+
+<p><code>fb_unit(1.0*m, stackunits(11, m),0.005)</code><br>
+R: #{@fb_unit(1.0*m, stackunits(11, m),0.005)@}#<br>
+E: # Der Betrag ist um mindestens 90% zu klein.#</p>
+
+- Value too big
+
+<p><code>fb_unit(100*m, stackunits(11, m),0.005)</code><br>
+R: #{@fb_unit(100*m, stackunits(11, m),0.005)@}#<br>
+E: # Der Betrag ist um mindestens 800% zu groß.#</p>
+
+</details>]]></text>
+    </questiontext>
+    <generalfeedback format="markdown">
+      <text></text>
+    </generalfeedback>
+    <defaultgrade>1</defaultgrade>
+    <penalty>0.1</penalty>
+    <hidden>0</hidden>
+    <idnumber></idnumber>
+    <stackversion>
+      <text>2022082900</text>
+    </stackversion>
+    <questionvariables>
+      <text><![CDATA[stack_unit_si_declare(true);
+
+zero: 0 ; 
+debug:true;
+
+stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_value.mac" );
+
+
+simp:false; /* to convey argumentes into fb_unit() */]]></text>
+    </questionvariables>
+    <specificfeedback format="markdown">
+      <text></text>
+    </specificfeedback>
+    <questionnote>
+      <text></text>
+    </questionnote>
+    <questionsimplify>1</questionsimplify>
+    <assumepositive>0</assumepositive>
+    <assumereal>0</assumereal>
+    <prtcorrect format="markdown">
+      <text>Correct answer, well done.</text>
+    </prtcorrect>
+    <prtpartiallycorrect format="markdown">
+      <text>Your answer is partially correct.</text>
+    </prtpartiallycorrect>
+    <prtincorrect format="markdown">
+      <text>Incorrect answer.</text>
+    </prtincorrect>
+    <multiplicationsign>dot</multiplicationsign>
+    <sqrtsign>1</sqrtsign>
+    <complexno>i</complexno>
+    <inversetrig>cos-1</inversetrig>
+    <logicsymbol>lang</logicsymbol>
+    <matrixparens>[</matrixparens>
+    <variantsselectionseed></variantsselectionseed>
+    <input>
+      <name>sans</name>
+      <type>algebraic</type>
+      <tans>sans</tans>
+      <boxsize>8</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>sans</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>tans</name>
+      <type>algebraic</type>
+      <tans>tans</tans>
+      <boxsize>8</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>tans</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>tol</name>
+      <type>numerical</type>
+      <tans>0.005</tans>
+      <boxsize>8</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint>tol</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <prt>
+      <name>prt1</name>
+      <value>1.0000000</value>
+      <autosimplify>0</autosimplify>
+      <feedbackstyle>0</feedbackstyle>
+      <feedbackvariables>
+        <text></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>1</sans>
+        <tans>1</tans>
+        <testoptions>0.005</testoptions>
+        <quiet>1</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>prt1-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@fb_unit(sans, tans,tol)@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>prt1-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text>{@fb_unit(sans, tans,tol)@}</text>
+        </falsefeedback>
+      </node>
+    </prt>
+  </question>
+
+</quiz>
