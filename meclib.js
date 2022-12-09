@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 22 11 23";
+const versionText= "JXG "+JXG.version+" Meclib 2022 12 09";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -1418,38 +1418,39 @@ function init() {
       case "angle":     objects.push(new angle(m)); break;
       case "angle1":    objects.push(new angle(m)); break;
       case "angle2":    objects.push(new angle(m)); break;
-      case "bar":	      objects.push(new bar(m)); break;
+      case "bar":	    objects.push(new bar(m)); break;
       case "beam":	    objects.push(new beam(m)); break;
-      case "circle":	  objects.push(new circle(m)); break;
+      case "circle":	objects.push(new circle(m)); break;
       case "circle2p":	objects.push(new circle2p(m)); break;
       case "crosshair":	objects.push(new crosshair(m)); break;
-      case "dashpot":		objects.push(new dashpot(m)); break;
-      case "dim": 			objects.push(new dim(m)); break;
-      case "dir": 			objects.push(new dir(m)); break;
-      case "disp": 			objects.push(new disp(m)); break;
+      case "dashpot":	objects.push(new dashpot(m)); break;
+      case "dim": 		objects.push(new dim(m)); break;
+      case "dir": 		objects.push(new dir(m)); break;
+      case "disp": 		objects.push(new disp(m)); break;
       case "fix1": 	  	objects.push(new fix1(m)); break;
-      case "fix12": 	  objects.push(new fix12(m)); break;
-      case "fix123": 	  objects.push(new fix123(m)); break;
-      case "fix13": 	  objects.push(new fix13(m)); break;
-      case "force": 		objects.push(new force(m)); break;
+      case "fix12": 	objects.push(new fix12(m)); break;
+      case "fix123": 	objects.push(new fix123(m)); break;
+      case "fix13": 	objects.push(new fix13(m)); break;
+      case "force": 	objects.push(new force(m)); break;
       case "forceGen":  objects.push(new forceGen(m)); break;
-      case "grid":  		objects.push(new grid(m)); break;
+      case "grid":  	objects.push(new grid(m)); break;
       case "label":   	objects.push(new label(m)); break;
-      case "line": 			objects.push(new line(m)); break
-      case "line2p": 		objects.push(new line2p(m)); break
-      case "mass": 			objects.push(new mass(m)); break;     
+      case "line": 		objects.push(new line(m)); break
+      case "line2p": 	objects.push(new line2p(m)); break
+      case "mass": 		objects.push(new mass(m)); break;     
       case "moment":  	objects.push(new moment(m)); break;
       case "momentGen":	objects.push(new momentGen(m)); break;
       case "node":      objects.push(new node(m)); break;
       case "point":     objects.push(new point(m)); break;
       case "polygon":   objects.push(new polygon(m)); break;
-      case "q":  	      objects.push(new q(m)); break;
+      case "q":  	    objects.push(new q(m)); break;
       case "rope":      objects.push(new rope(m)); break;
       case "rot":       objects.push(new rot(m)); break;
       case "spline":  	objects.push(new spline(m)); break;
       case "springc":   objects.push(new springc(m)); break;
       case "springt":  	objects.push(new springt(m)); break;
-      case "wall": 			objects.push(new wall(m)); break;
+      case "wall": 		objects.push(new wall(m)); break;
+	  default: console.log("Unknown object",m);
     }
   }
 }
