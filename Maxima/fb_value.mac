@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-Overview */
-/* 2022 10 16                           */
+/* 2022 12 11                           */
 
 /* https://github.com/mkraska/meclib/wiki/fb_vars */
 fb_strip_list(_list_of_things):= castext("[[define _first='true'/]][[foreach _thing='_list_of_things']][[if test='not _first']], [[else]][[define _first='false'/]][[/if]]{@_thing@}[[/foreach]]"); 
@@ -77,7 +77,7 @@ fb_number(%_snum, %_tnum, %_tol) := block([%_oom, %_mnt, %_d],
 fb_numberOK(%_snum, %_tnum, %_tol):=stringp(fb_number(%_snum, %_tnum, %_tol));
 
 /* https://github.com/mkraska/meclib/wiki/fb_unit */
-fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d, simp: true],
+fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d, %_d0, simp: true],
   /* Debug strings */
   if debug then debug1: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)" else debug1:"",
   /* extract numbers and units */
@@ -88,9 +88,12 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d, simp
   %_sunit: stack_units_units(stack_unit_si_to_si_base(%_sans)),
   if %_sunit = NULLUNITS then %_sunit:0,  /* display as 0 if not correct */
   %_tunit: stack_units_units(stack_unit_si_to_si_base(%_tans)),
+  if %_tunit = NULLUNITS then %_tunit:0,  /* display as 0 if not correct */
   /* complain if units don't match */
   if (%_sunit # %_tunit) and (%_sunit # 0) then return(   
     castext_concat("&nbsp;Unerwartete Basiseinheit: ", castext("{@(stack_disp_fractions(\"i\"),%_sunit)@}"  )  )),   
+  if (%_sunit # %_tunit) and (%_sunit = 0) and (%_snum # 0.0) then return(   
+   "&nbsp;Der Wert sollte nicht dimensionslos sein."),   
   /* if tol=0 just indicate deviation */
   if %_tol=0 and %_tnum # 0.0 then return(sconcat("&nbsp;Abweichung: ", float(round((%_snum-%_tnum)/abs(%_tnum)*1000)/10) , "%")),
   /* special feedback if teacher's answer is zero */
@@ -102,22 +105,22 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d, simp
   /* go back if error is less than tolerance */
   if abs((%_snum-%_tnum)/%_tnum) < %_tol then return(sconcat("&nbsp;Abweichung: ", float( round((%_snum-%_tnum)/abs(%_tnum)*1000)/10) , "%")), 
   /* OoM and mantissa error */
-  %_oom: log(abs(%_snum/%_tnum))/log(10),
-  %_mnt: 10^( %_oom - round(%_oom)),
+  %_oom: ev(log(abs(%_snum/%_tnum))/log(10.0), simp),
+  %_mnt: ev(10.0^( %_oom - round(%_oom)),simp),
   /* Mantissa check */
-  if abs(1-%_mnt) <%_tol and abs(%_oom)>0.1 then 
+  if ev(abs(1.0-%_mnt), simp) <%_tol and ev(abs(%_oom), simp)>0.1 then 
     return("&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. ") 
   /* general hint on precision */
   else(
-    %_d: float(abs((1-abs(%_snum)/abs(%_tnum)))*100),  /* % Abweichung */
-    %_oom:10^round(log(%_d)/log(10.)-0.5),
-    %_d: float(round(floor(%_d/%_oom)))*%_oom,
-    if %_d>=1 then %_d:round(%_d),
-    if abs(%_snum)<abs(%_tnum) then        
+    %_d0: ev(abs((1.0-abs(%_snum)/abs(%_tnum)))*100.0, simp),  /* % Abweichung */
+    %_oom: ev(10.0^round(log(%_d0)/log(10.)-0.5), simp),
+    %_d: ev(round(floor(%_d0/%_oom))*%_oom, simp),
+    if %_d>=1 then %_d: ev(round(%_d),simp),
+    if ev(abs(%_snum)<abs(%_tnum), simp) then        
         return(sconcat("&nbsp;Der Betrag ist um mindestens ", %_d , "% zu klein.")) else
-        return(sconcat("&nbsp;Der Betrag ist um mindestens ", %_d , "% zu gro&szlig;."))       
-  ), 
-[%_snum,%_tnum, %_oom, %_d] );
+        return(sconcat("&nbsp;Der Betrag ist um mindestens ", %_d , "% zu gro&szlig;."))
+ ), 
+[%_snum,%_tnum, %_oom, %_d, %_mnt, %_d0] );
 
 /* this should return true if the check passes, false otherwise */
 fb_unitOK(%_sans, %_tans, %_tol):=stringp(fb_unit(%_sans, %_tans, %_tol));
