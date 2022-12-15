@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2022 12 09";
+const versionText= "JXG "+JXG.version+" Meclib 2022 12 15";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -1526,10 +1526,8 @@ function toSTACK(str) {
   return st
 }
 function toTEX(str) {return '\\('+str.replace(/[\*\s]/g, "\\;")+'\\)' }// converts stars to small math spaces and adds math mode brackets
-
-// functions for proximity check
-function isOn(pt,po) { 
-  return po.hasPoint(pt.coords.scrCoords[1], pt.coords.scrCoords[2]) }
+// functions for proximity check (Allfred Wassermann, 2022-12-13)
+function isOn(pt, po) {return pt.isOn(po, tolPointLine) }	
 function targetName(obj) {if (obj.loads[0]) {return '['+obj.loads+']'} else {return '"'+obj.state+'"' } } 
 // functions for splines
 function hermite(x1,dx,y1,dy,d1,d2) {
