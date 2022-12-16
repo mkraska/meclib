@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-Free-Body-Diagrams */
-/* 2022 09 22                           */
+/* 2022 12 16                           */
 
 /* https://github.com/mkraska/meclib/wiki/direction%28%29 */
 direction(o):=block([%_v, a0, le, r1, r2, a1],
@@ -370,4 +370,51 @@ fb_q(o, n, i, description,q1,q2,le):=block(
 
     ),
    [sconcat(txt, "Resultierende OK") ,true]
+);
+
+fb_bar_name(%_o, %_n, %_i):=block(
+  [%_str,%_R,%_nl,%_OK,%_var, %_bl],
+  /* are the values consistent? */
+  if length(%_n) # length(%_o) then return(sconcat("length(o)= ",length(%_o), " length(n)=", length(%_n))),
+  if length(%_n) < %_i then return(sconcat("length(n)= ",length(%_n), " <", %_i)),
+  /* is the object a bar */
+  if not member(%_o[%_i][1], ["bar"]) then return ([sconcat("object ", %_i, " is not of type 'bar'"), false]),
+  /* Is object i de-activated */ 
+  if debug then %_str: sconcat("object ", %_i, " is not deactivated (debug message)" ) else %_str: "",
+  if ( last(%_o[%_i]) # "hide") then return ([%_str, false]),
+  /* Any reactions found at i? */
+  if debug then %_str: sconcat("no reaction found at object ", %_i, " (debug message)" ) else %_str: "",
+  if not listp(%_n[%_i]) or %_n[%_i]=[] then return([%_str, false]),
+  /* Exactly 1 reaction found? */
+  if debug then %_str: sconcat("more than one reaction found ", %_n[%_i], " (debug message)" ) else %_str: "",
+  if (length(%_n[%_i]) > 1) then return( [%_str, false]),  
+  /* now we know it is a single reaction */ 
+  %_R: %_o[%_n[%_i][1]],
+  %_var: %_n[%_n[%_i][1]],
+  /* Is the reaction a force? */
+  if debug then %_str: sconcat("Reaction ", %_R[2], " is not a force (debug message)" ) else %_str: "",
+  if %_R[1] # "force" then return( [%_str, false]), 
+  /* now we have a valid reaction, the remainder is about naming */
+  %_str: "",
+  %_OK: true,
+  /* Extract name parts */
+  %_nl: split(%_R[2],"_"),
+  /* base name single character? */    
+  if slength(%_nl[1]) > 1 then [ %_str, %_OK ]: 
+    [ castext( "<br>{@%_var@}: Physikalische Gr&ouml;&szlig;en immer nur mit einem Buchstabe und eventuell Index schreiben, z.B. <code>F_1</code>." 
+        ), false ],    
+  /* base name a sensible character? (F-Kraft, N-Normalkraft, S-Stabkraft)  */ 
+  if not member(charlist(%_nl[1])[1], ["F", "N", "S" ])  then [ %_str, %_OK ]: 
+    [ castext_concat( %_str, castext("<br>{@%_var@}: Sinnvolle Namen für eine Stabkraft sind \\(F\\) (Kraft), \\(N\\) (Normalkraft) oder \\(S\\) (Stabkraft)") ), false ],   
+  /* label of the bar */
+  %_bl: %_o[%_i][2], 
+  if %_bl # "" then (
+    /* the label is not empty */
+    if length(%_nl) = 2 then /* the reaction should have an index */
+      if %_bl # %_nl[2] then /* the index and the label don't match */
+        [ %_str, %_OK ]: 
+    [ castext_concat( %_str, castext("<br>Der Index {@%_nl[2]@} passt nicht zum Stabname {@%_bl@}.")), false ]
+  ), 
+      
+  [%_str, %_OK]
 );
