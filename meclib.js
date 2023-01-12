@@ -1,13 +1,13 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2022 12 16";
+const versionText= "JXG "+JXG.version+" Meclib 2022 12 17";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
 const defaultMecLayer = 6;
 var pxunit = 1/40; // is reset by "grid"
 var a = 16*pxunit; // is reset by "grid"
-var deg2rad = Math.PI/180, rad2deg = 180/Math.PI;
+const deg2rad = Math.PI/180, rad2deg = 180/Math.PI;
 const tolPointLine = 0.001;
 var xscale = 1, yscale = 1; // default scale for infobox, can be modified by "grid"
 var dpx = 1, dpy = 1; // default decimal precision for infobox, can be modified by "grid"
