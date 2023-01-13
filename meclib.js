@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2022 12 17";
+const versionText= "JXG "+JXG.version+" Meclib 2023 01 13";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
