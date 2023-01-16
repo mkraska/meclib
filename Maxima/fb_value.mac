@@ -77,7 +77,7 @@ fb_number(%_snum, %_tnum, %_tol) := block([%_oom, %_mnt, %_d],
 fb_numberOK(%_snum, %_tnum, %_tol):=stringp(fb_number(%_snum, %_tnum, %_tol));
 
 /* https://github.com/mkraska/meclib/wiki/fb_unit */
-fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d, %_d0, simp: true],
+fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom, %_mnt, %_d, %_d0, simp: true, debug1],
   /* Debug strings */
   if debug then debug1: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)" else debug1:"",
   /* extract numbers and units */
@@ -102,8 +102,11 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_oom, %_mnt, %_d, %_d0
   if %_snum = 0.0 then return("&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein."),
   /* check of the sign */
   if %_snum/%_tnum <0 then return("&nbsp;Pr&uuml;fen Sie das Vorzeichen."),
-  /* go back if error is less than tolerance */
-  if abs((%_snum-%_tnum)/%_tnum) < %_tol then return(sconcat("&nbsp;Abweichung: ", float( round((%_snum-%_tnum)/abs(%_tnum)*1000)/10) , "%")), 
+  /* go back if error is less than tolerance */ 
+  if ev(abs((%_snum-%_tnum)/%_tnum),simp) < %_tol then (
+    if debug then return(sconcat("&nbsp;Abweichung: ", ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp) , "% (display because debug=true. Would be empty otherwise.)")) 
+    else return("") 
+  ),
   /* OoM and mantissa error */
   %_oom: ev(log(abs(%_snum/%_tnum))/log(10.0), simp),
   %_mnt: ev(10.0^( %_oom - round(%_oom)),simp),
