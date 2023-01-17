@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-Free-Body-Diagrams */
-/* 2022 12 16                           */
+/* 2023 01 17                           */
 
 /* https://github.com/mkraska/meclib/wiki/direction%28%29 */
 direction(o):=block([%_v, a0, le, r1, r2, a1],
@@ -336,7 +336,9 @@ fb_q(o, n, i, description,q1,q2,le):=block(
         return([sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir])), " \\) hat nicht die richtige Richtung.") ,false]),
       /* correct value */
       varcheck: fb_vars(n[ir], mag, []),
-      if varcheck # "" then return([sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir])), " \\) hat nicht den richtigen Betrag. ", varcheck) ,false]),
+      if varcheck # "" then return([
+	    castext_concat( 
+		  sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir])), " \\) hat nicht den richtigen Betrag. "), varcheck) ,false]),
       if (mag-n[ir])/mag>0.01 then 
          return([sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir])), " \\) hat nicht den richtigen Betrag. ") ,false]),
       /* correct position? */
@@ -359,9 +361,9 @@ fb_q(o, n, i, description,q1,q2,le):=block(
         return([sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir2])), " \\) hat nicht die richtige Richtung.") ,false]),
       /* correct value */
       varcheck: fb_vars(n[ir1], mag, []),
-      if varcheck # "" then return([sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir1])), " \\) kann nicht stimmen. ", varcheck) ,false]),
+      if varcheck # "" then return([castext_concat(sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir1])), " \\) kann nicht stimmen. "), varcheck) ,false]),
       varcheck: fb_vars(n[ir2], mag, []),
-      if varcheck # "" then return([sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir2])), " \\) kann nicht stimmen. ", varcheck) ,false]),
+      if varcheck # "" then return([castext_concat(sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir2])), " \\) kann nicht stimmen. "), varcheck) ,false]),
       if (mag-n[ir1]-n[ir2])/mag>0.01 then 
          return([sconcat(txt, "<br>Die Summe der Resultierenden \\(", ssubst ("\\,","*" , string(n[ir1]+n[ir2])), " \\) hat nicht den richtigen Wert. ") ,false]),
       /* correct position? */
