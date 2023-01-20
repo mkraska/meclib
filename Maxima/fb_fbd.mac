@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-Free-Body-Diagrams */
-/* 2023 01 17                           */
+/* 2023 01 16                           */
 
 /* https://github.com/mkraska/meclib/wiki/direction%28%29 */
 direction(o):=block([%_v, a0, le, r1, r2, a1],
@@ -289,10 +289,10 @@ fb_fix13_names(o, n, i):=block(
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-unidirectional-supports */
 fb_unidir(o, n, i, description):=block(
-    [txt, R], txt: sconcat("<br>",description),
+    [txt, R], txt: description,
     /* Is object i an unidirectional support? */
     if not member(o[i][1], ["bar", "dashpot", "springt", "springc", "fix1", "rope"]) 
-    then return ([sconcat(txt, "object ", string(i), "(",o[i][1],") is not an unidirectional support."), false]),
+    then return ([sconcat(txt, "object ", string(i), " (",o[i][1],") is not an unidirectional support."), false]),
     /* Is object i de-activated */ 
     if ( last(o[i]) # "hide") then return ([sconcat(txt, " ist nicht deaktiviert."), false]),
     /* Any reactions found at i? */
@@ -303,9 +303,9 @@ fb_unidir(o, n, i, description):=block(
     if ( o[n[i][1]][1] # "force" ) then return ([sconcat(txt, "Die Reaktion muss eine Kraft sein."),false]),
     R: o[n[i][1]], 
     /* Is the force normal to the support? */
-    if not parallelp(R, o[i]) then return ([sconcat(txt, "Die Reaktion \\(", R[2], "\\) hat nicht die richtige Richtung."),false]),
+    if not parallelp(R, o[i]) then return ([castext_concat(txt, castext("Die Reaktion \\({@n[n[i][1]]@}\\) hat nicht die richtige Richtung.") ),false]),
     /* everything should be ok here */
-    return([sconcat(txt, "Reaktion \\(", R[2], "\\) gefunden."),true])
+    return([castext_concat(txt, castext("Reaktion \\({@n[n[i][1]]@}\\) gefunden.") ),true])
 );
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-line-loads */
