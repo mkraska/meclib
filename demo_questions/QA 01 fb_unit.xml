@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <quiz>
-<!-- question: 105096  -->
+<!-- question: 45  -->
   <question type="stack">
     <name>
       <text>QA 01 fb_unit unit test</text>
@@ -8,14 +8,14 @@
     <questiontext format="markdown">
       <text><![CDATA[**QA 01**
 
-This is a unit test question for the function `fb_unit`. In the question variables, we make the settings
+This is a unit test question for the function [`fb_unit`](https://github.com/mkraska/meclib/wiki/fb_unit). In the question variables, we make the settings
 
 - `debug: true`
 - `simp: false`
 
 **Interactive test**
 
-Here you can try the behaviour of the feedback function. 
+Here you can try the behaviour of the feedback function. Provide `sans`, `tans` and `tol`.
 
 <p><code>fb_unit([[input:sans]], [[input:tans]], [[input:tol]])</code></p> [[validation:sans]] [[validation:tans]] [[validation:tol]] 
 
@@ -23,96 +23,111 @@ Here you can try the behaviour of the feedback function.
 
 <details><summary><strong>Pre-defined tests</strong></summary>
 
+If the test fails, then the result and the expected result are displayed as below, otherwise just the actual result is displayed.
+
 R: # Result from the feedback function#<br>
 E: # Expected text#
 
-- Report deviation in percent (with 1 decimal place) when tolerance is zero or deviation is less then tolerance. 
 
-<p><code>fb_unit(1.1*m, stackunits(1.11, m),0)</code> </p>
-R: #{@fb_unit(1.1*m, stackunits(1.11, m),0)@}#<br>
-E: # Abweichung: -0.9%#
 
-<p><code>fb_unit(1.1*m, stackunits(1.101, m),0.005)</code><br>
-R: #{@fb_unit(1.1*m, stackunits(1.101, m),0.005)@}#<br>
-E: # Abweichung: -0.1%#</p>
+Report deviation in percent (with 1 decimal place) when tolerance is zero or deviation is less then tolerance.  Giving that precise feedback would enable the student to judge the result just from the deviation. That's why such feedback should only be given when the result was within tolerance.
 
-<p><code>fb_unit(1.1*m, stackunits(1.1001, m),0.005)</code><br>
-R: #{@fb_unit(1.1*m, stackunits(1.1001, m),0.005)@}#<br>
-E: # Abweichung: 0.0%#</p>
+**T01**  `fb_unit(1.1*m, stackunits(1.11, m),0)`<br>
+  [[feedback:t01]]
 
-- Nonzero sans, zero tans, specified as product
+**T02**  `fb_unit(1.1*m, stackunits(1.101, m),0.005)`<br>
+  [[feedback:t02]]
 
-<p><code>fb_unit(1.1*m, 0*m,0.005)</code></p>
-R: #{@fb_unit(1.1*m, 0*m,0.005)@}#<br>
-E: # Der Wert ist betragsmäßig zu groß.#
+**T03**  `fb_unit(1.1*m, stackunits(1.1001, m),0.005)`<br>
+  [[feedback:t03]]
 
-- Nonzero sans, zero tans, specified with `stackunits()`
+Nonzero sans, zero tans, specified as product.
+  
+If the correct answer is zero, then no feedback on relative deviation can be given. Yet, in order to avoid that expressions like `0*kg`  are marked correct when the actual unit would be m, we have to switch off simplification in order not to convey just `0` to the feedback function.
 
-<p><code>fb_unit(1.1*m, stackunits(0,m),0.005)</code></p>
-R: #{@fb_unit(1.1*m, stackunits(0,m),0.005)@}#<br>
-E: # Der Wert ist betragsmäßig zu groß.#
+**T04** `fb_unit(1.1*m, 0*m,0.005)` Auto-simplify: No<br>
+[[feedback:t04]]
 
-- Zero sans with unit factor, zero tans, specified with `stackunits()`
+Nonzero sans, zero tans, specified with `stackunits()`
 
-<p><code>fb_unit(0*m, stackunits(0,m),0.005)</code></p>
-R: #{@fb_unit(0*m, stackunits(0,m),0.005)@}#<br>
-E: #tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)#
+**T05** `fb_unit(1.1*m, stackunits(0,m),0.005)` Auto-simplify: No<br>
+[[feedback:t05]]
 
-- Zero sans without unit, zero tans, specified with `stackunits()`
+Zero sans with unit factor, zero tans, specified with `stackunits()`
 
-<p><code>fb_unit(0, stackunits(zero, m),0.005)</code><br>
-R: #{@fb_unit(0, stackunits(zero, m),0.005)@}#<br>
-E: #tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)#</p>
+**T06** `fb_unit(0*m, stackunits(0,m),0.005)` Auto-simplify: No<br>
+[[feedback:t06]]
 
-- Zero sans without unit, zero tans, specified with `stackunits()`
+Zero sans without unit, with correct or wrong unit, zero tans, specified with `stackunits()`
 
-<p><code>fb_unit(0*m, stackunits(zero, m),0.005)</code><br>
-R: #{@fb_unit(0*m, stackunits(zero, m),0.005)@}#<br>
-E: #tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)#</p>
+**T07** `fb_unit(0, stackunits(zero, m),0.005)`  Auto-simplify: No<br>
+[[feedback:t07]]
 
-- Zero sans with wrong unit, zero tans, specified with `stackunits()`
+**T08** `fb_unit(0*m, stackunits(zero, m),0.005)`  Auto-simplify: No<br>
+[[feedback:t08]]
 
-<p><code>fb_unit(0*N, stackunits(zero, m),0.005)</code><br>
-R: #{@fb_unit(0*N, stackunits(zero, m),0.005)@}#<br>
-E: # Unerwartete Basiseinheit: \(\rm kg\cdot m\cdot s^-2\)#</p>
+**T09** `fb_unit(0*N, stackunits(zero, m),0.005)`  Auto-simplify: No<br>
+[[feedback:t09]]
 
-- Zero sans (with correct, no or wrong unit), nonzero tans
+Zero sans (with correct, no or wrong unit), nonzero tans
 
-<p><code>fb_unit(0*m, stackunits(1, m),0.005)</code><br>
-R: #{@fb_unit(0*m, stackunits(1, m),0.005)@}#<br>
-E: # Der Wert ist betragsmäßig zu klein.#</p>
+**T10** `fb_unit(0*m, stackunits(1, m),0.005)`  Auto-simplify: No<br>
+[[feedback:t10]]
 
-<p><code>fb_unit(0, stackunits(1, m),0.005)</code><br>
-R: #{@fb_unit(0, stackunits(1, m),0.005)@}#<br>
-E: # Der Wert ist betragsmäßig zu klein.#</p>
+**T11** `fb_unit(0, stackunits(1, m),0.005)`  Auto-simplify: No<br>
+[[feedback:t11]]
 
-<p><code>fb_unit(0*kg, stackunits(1, m),0.005)</code><br>
-R: #{@fb_unit(0*kg, stackunits(1, m),0.005)@}#<br>
-E: # Unerwartete Basiseinheit: \(\rm kg\)#</p>
+**T12** `fb_unit(0*kg, stackunits(1, m),0.005)`  Auto-simplify: No<br>
+[[feedback:t12]]
 
-- Test for sign feedback
+Nonzero sans with missing unit
 
-<p><code>fb_unit(-1.1*m, stackunits(1.11, m),0.005)</code><br>
-R: #{@fb_unit(-1.1*m, stackunits(1.11, m),0.005)@}#<br>
-E: # Prüfen Sie das Vorzeichen.#</p>
+**T13** `fb_unit(1, stackunits(1, m),0.005)`<br>
+[[feedback:t13]]
 
-- Mantissa correct, order of magnitude not correct
+Test for sign feedback
 
-<p><code>fb_unit(1.1*m, stackunits(11, m),0.005)</code><br>
-R: #{@fb_unit(1.1*m, stackunits(11, m),0.005)@}#<br>
-E: # Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Größenordnung ab. Prüfen Sie Ihre Einheitenumrechnung. #</p>
+**T14** `fb_unit(-1.1*m, stackunits(1.11, m),0.005)`<br>
+[[feedback:t14]]
 
-- Value too small
+Mantissa correct, order of magnitude not correct
 
-<p><code>fb_unit(1.0*m, stackunits(11, m),0.005)</code><br>
-R: #{@fb_unit(1.0*m, stackunits(11, m),0.005)@}#<br>
-E: # Der Betrag ist um mindestens 90% zu klein.#</p>
+**T15** `fb_unit(1.1*m, stackunits(11, m),0.005)`<br>
+[[feedback:t15]]
 
-- Value too big
+Value too small
 
-<p><code>fb_unit(100*m, stackunits(11, m),0.005)</code><br>
-R: #{@fb_unit(100*m, stackunits(11, m),0.005)@}#<br>
-E: # Der Betrag ist um mindestens 800% zu groß.#</p>
+**T16** `fb_unit(1.0*m, stackunits(11, m),0.005)`<br>
+[[feedback:t16]]
+
+Value too big
+
+**T17** `fb_unit(100*m, stackunits(11, m),0.005)`<br>
+[[feedback:t17]]
+
+
+Test with zero tans without unit
+
+**T18** `fb_unit(0*m, 0,0.005)` Auto-simplify: No<br>
+[[feedback:t18]]
+
+different but unitless values (because we might use it also for pure numeric comparisons)
+
+**T19** `fb_unit(0.1, 0.01,0.005)`<br>
+[[feedback:t19]]
+
+**T20** `fb_unit(1.0, 11, 0.005)`<br>
+[[feedback:t20]]
+
+**T21** `fb_unit(100, 11, 0.005)`<br>
+[[feedback:t21]]
+
+Deviation within tolerance
+
+**T22** `fb_unit(1, 1.001, 0.005)`<br>
+[[feedback:t22]]
+
+[[debug/]]
 
 </details>]]></text>
     </questiontext>
@@ -124,18 +139,91 @@ E: # Der Betrag ist um mindestens 800% zu groß.#</p>
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2022082900</text>
+      <text>2023010400</text>
     </stackversion>
     <questionvariables>
-      <text><![CDATA[stack_unit_si_declare(true);
+      <text><![CDATA[/* history
+2023 01 14 Automate the comparison by use of Answer tests (requires STACK 4.4.2);
+*/
+
+stack_unit_si_declare(true);
 
 zero: 0 ; 
 debug:true;
 
+
 stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_value.mac" );
 
 
-simp:false; /* to convey argumentes into fb_unit() */]]></text>
+/* https://github.com/mkraska/meclib/wiki/fb_unit */
+fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom, %_mnt, %_d, %_d0, simp: true, debug1],
+  /* Debug strings */
+  if debug then debug1: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)" else debug1:"",
+  /* extract numbers and units */
+  %_snum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_sans)))),
+  if %_snum = NULLNUM then %_snum:1.0, 
+  %_tnum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_tans)))),
+  if %_tnum = NULLNUM then %_tnum:1.0, 
+  %_sunit: stack_units_units(stack_unit_si_to_si_base(%_sans)),
+  if %_sunit = NULLUNITS then %_sunit:0,  /* display as 0 if not correct */
+  %_tunit: stack_units_units(stack_unit_si_to_si_base(%_tans)),
+  if %_tunit = NULLUNITS then %_tunit:0,  /* display as 0 if not correct */
+  /* complain if units don't match */
+  if (%_sunit # %_tunit) and (%_sunit # 0) then return(   
+    castext_concat("&nbsp;Unerwartete Basiseinheit: ", castext("{@(stack_disp_fractions(\"i\"),%_sunit)@}"  )  )),   
+  if (%_sunit # %_tunit) and (%_sunit = 0) and (%_snum # 0.0) then return(   
+   "&nbsp;Der Wert sollte nicht dimensionslos sein."),   
+  /* if tol=0 just indicate deviation */
+  if %_tol=0 and %_tnum # 0.0 then return(sconcat("&nbsp;Abweichung: ", float(round((%_snum-%_tnum)/abs(%_tnum)*1000)/10) , "%")),
+  /* special feedback if teacher's answer is zero */
+  if %_tnum = 0.0  and %_snum  # 0.0 then return("&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;."),
+  if %_tnum = 0.0  then return(debug1), 
+  if %_snum = 0.0 then return("&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein."),
+  /* check of the sign */
+  if %_snum/%_tnum <0 then return("&nbsp;Pr&uuml;fen Sie das Vorzeichen."),
+  /* go back if error is less than tolerance */ 
+  if ev(abs((%_snum-%_tnum)/%_tnum),simp) < %_tol then (
+    if debug then return(sconcat("&nbsp;Abweichung: ", ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp) , "% (display because debug=true. Would be empty otherwise.)")) 
+    else return("") 
+  ),
+  /* OoM and mantissa error */
+  %_oom: ev(log(abs(%_snum/%_tnum))/log(10.0), simp),
+  %_mnt: ev(10.0^( %_oom - round(%_oom)),simp),
+  /* Mantissa check */
+  if ev(abs(1.0-%_mnt), simp) <%_tol and ev(abs(%_oom), simp)>0.1 then 
+    return("&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. ") 
+  /* general hint on precision */
+  else(
+    %_d0: ev(abs((1.0-abs(%_snum)/abs(%_tnum)))*100.0, simp),  /* % Abweichung */
+    %_oom: ev(10.0^round(log(%_d0)/log(10.)-0.5), simp),
+    %_d: ev(round(floor(%_d0/%_oom))*%_oom, simp),
+    if %_d>=1 then %_d: ev(round(%_d),simp),
+    if ev(abs(%_snum)<abs(%_tnum), simp) then        
+        return(sconcat("&nbsp;Der Betrag ist um mindestens ", %_d , "% zu klein.")) else
+        return(sconcat("&nbsp;Der Betrag ist um mindestens ", %_d , "% zu gro&szlig;."))
+ ), 
+[%_snum,%_tnum, %_oom, %_d, %_mnt, %_d0] );
+
+/* this should return true if the check passes, false otherwise */
+fb_unitOK(%_sans, %_tans, %_tol):=stringp(fb_unit(%_sans, %_tans, %_tol));
+
+simp:false; /* to convey argumentes into fb_unit() */
+
+E01: fb_unit(1.1*m, stackunits(1.11, m),0);
+E02: fb_unit(1.1*m, stackunits(1.101, m),0.005);
+E03: fb_unit(1.1*m, stackunits(1.1001, m),0.005);
+E13: fb_unit(1, stackunits(1, m),0.005);
+E14: fb_unit(-1.1*m, stackunits(1.11, m),0.005);
+E15: fb_unit(1.1*m, stackunits(11, m),0.005);
+E16: fb_unit(1.0*m, stackunits(11, m),0.005);
+E17: fb_unit(100*m, stackunits(11, m),0.005);
+E18: fb_unit(0*m, 0,0.005);
+E19: fb_unit(0.1, 0.01,0.005);
+E20: fb_unit(1.0, 11, 0.005);
+E21: fb_unit(100, 11, 0.005);
+E22: fb_unit(1, 1.001, 0.005);
+
+lbl: castext("[[lang code='en, other']]english[[/lang]][[lang code='ru']]русский[[/lang]]");]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
       <text></text>
@@ -165,7 +253,7 @@ simp:false; /* to convey argumentes into fb_unit() */]]></text>
     <input>
       <name>sans</name>
       <type>algebraic</type>
-      <tans>sans</tans>
+      <tans>10*mm</tans>
       <boxsize>8</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
@@ -183,7 +271,7 @@ simp:false; /* to convey argumentes into fb_unit() */]]></text>
     <input>
       <name>tans</name>
       <type>algebraic</type>
-      <tans>tans</tans>
+      <tans>11*m</tans>
       <boxsize>8</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
@@ -246,6 +334,786 @@ simp:false; /* to convey argumentes into fb_unit() */]]></text>
         <falseanswernote>prt1-1-F</falseanswernote>
         <falsefeedback format="html">
           <text>{@fb_unit(sans, tans,tol)@}</text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t01</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(1.1*m, stackunits(1.11, m),0);
+E: "&nbsp;Abweichung: -0.9%"]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t01-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t01-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t02</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(1.1*m, stackunits(1.101, m),0.005);
+E: "&nbsp;Abweichung: -0.1% (display because debug=true. Would be empty otherwise.)";]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>R</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t02-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t02-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t03</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(1.1*m, stackunits(1.1001, m),0.005);
+E: "&nbsp;Abweichung: 0.0% (display because debug=true. Would be empty otherwise.)";]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t03-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t03-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t04</name>
+      <value>1.0000000</value>
+      <autosimplify>0</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(1.1*m, 0*m,0.005);
+E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.";
+]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t04-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t04-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t05</name>
+      <value>1.0000000</value>
+      <autosimplify>0</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(1.1*m, stackunits(0,m),0.005);
+E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.";
+]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t05-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t05-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t06</name>
+      <value>1.0000000</value>
+      <autosimplify>0</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(1.1*m, 0*m,0.005);
+E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.";]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t06-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t06-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t07</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(0, stackunits(zero, m),0.005);
+E: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)";
+]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t07-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t07-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t08</name>
+      <value>1.0000000</value>
+      <autosimplify>0</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(0*m, stackunits(zero, m),0.005);
+E: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)";
+]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t08-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t08-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t09</name>
+      <value>1.0000000</value>
+      <autosimplify>0</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(0*N, stackunits(zero, m),0.005);
+E: ["%root","&nbsp;Unerwartete Basiseinheit: ",["smlt","\\({\\mathrm{k}\\mathrm{g}\\cdot \\mathrm{m}\\cdot \\mathrm{s}^ {- 2 }}\\)"]];
+]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t09-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t09-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t10</name>
+      <value>1.0000000</value>
+      <autosimplify>0</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(0*m, stackunits(1, m),0.005);
+E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.";
+]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t10-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t10-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t11</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(0, stackunits(1, m),0.005);
+E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.";
+]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t11-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t11-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t12</name>
+      <value>1.0000000</value>
+      <autosimplify>0</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(0*kg, stackunits(1, m),0.005);
+E: ["%root","&nbsp;Unerwartete Basiseinheit: ",["smlt","\\({\\mathrm{k}\\mathrm{g}}\\)"]];]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t12-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t12-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t13</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(1, stackunits(1, m),0.005);
+E: "&nbsp;Der Wert sollte nicht dimensionslos sein.";]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t13-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t13-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t14</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(-1.1*m, stackunits(1.11, m),0.005);
+E: "&nbsp;Pr&uuml;fen Sie das Vorzeichen.";]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t14-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t14-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t15</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(1.1*m, stackunits(11, m),0.005);
+E: "&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. "]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t15-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t15-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t16</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(1.0*m, stackunits(11, m),0.005);
+E: "&nbsp;Der Betrag ist um mindestens 90% zu klein.";
+
+]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t16-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t16-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t17</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(100*m, stackunits(11, m),0.005);
+E: "&nbsp;Der Betrag ist um mindestens 800% zu gro&szlig;."]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t17-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t17-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t18</name>
+      <value>1.0000000</value>
+      <autosimplify>0</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(0*m, 0,0.005);
+E: ["%root","&nbsp;Unerwartete Basiseinheit: ",["smlt","\\({\\mathrm{m}}\\)"]];]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t18-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t18-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t19</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(0.1, 0.01,0.005);
+E: "&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. ";]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t19-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t19-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t20</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(1.0, 11, 0.005);
+E: "&nbsp;Der Betrag ist um mindestens 90% zu klein.";]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t20-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t20-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t21</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(100, 11, 0.005);
+E: "&nbsp;Der Betrag ist um mindestens 800% zu gro&szlig;.";]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t21-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t21-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t22</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(1, 1.001, 0.005);
+E: "&nbsp;Abweichung: -0.1% (display because debug=true. Would be empty otherwise.)";
+]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t22-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@} {@lbl@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t22-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
         </falsefeedback>
       </node>
     </prt>
