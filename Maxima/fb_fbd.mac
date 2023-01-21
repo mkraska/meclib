@@ -310,7 +310,7 @@ fb_unidir(o, n, i, description):=block(
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-line-loads */
 fb_q(o, n, i, description,q1,q2,le):=block(
-    [varcheck, txt: sconcat("<br>",description), %_v, ir, ir1, ir2, %_R],
+    [varcheck, txt: sconcat("<br>",description, "<br>"), %_v, ir, ir1, ir2, %_R],
     /* Is object a line load? */
     if not member(o[i][1], ["q"]) 
        then return ([sconcat(txt, "object ", string(i), " (",o[i][1],") is not a line load."), false]),
@@ -344,31 +344,31 @@ fb_q(o, n, i, description,q1,q2,le):=block(
          return([castext_concat(txt, castext("Die Resultierende {@n[ir]@} hat nicht den richtigen Betrag.") ) ,false]),
       /* correct position? */
       if abs(moment_of_force(xref, o[ir], 1, 1) ) > 0.01 then  
-        return([castext_concat(txt, castext("<br>Die Resultierende {@n[ir]@} geht nicht durch den Schwerpunkt.") ) ,false])
+        return([castext_concat(txt, castext("Die Resultierende {@n[ir]@} geht nicht durch den Schwerpunkt.") ) ,false])
     ) else ( /* two resultants, should be a trapezoidal load */
       /* just two resultants? */
       if (length(n[i]) >2) then (
-        %_R: makelist(n[n[i][ir]], ir, 1, length(n[i]) ),
-        return([castext_concat(txt, castext("Mehr als zwei Resultierende gefunden:<br>{@%_R@}<br>Höchstens zwei Resultierende sind sinnvoll.") ), false])
+        %_R: fb_strip_list(makelist(n[n[i][ir]], ir, 1, length(n[i]) ) ),
+        return([lreduce(castext_concat, [txt, "Höchstens zwei Resultierende sind sinnvoll. Gefunden wurden mehr:<br>", %_R ] ), false])
       ),
-      if q1 = q2 then return([sconcat(txt, "<br>Bei konstanter Streckenlast sollte eine Resultierende ausreichen.") ,false]),
-      if q1*q2 =0 then return([sconcat(txt, "<br>Bei einer Dreiecks-Streckenlast sollte eine Resultierende ausreichen.") ,false]),
+      if q1 = q2 then return([sconcat(txt, "Bei konstanter Streckenlast sollte eine Resultierende ausreichen.") ,false]),
+      if q1*q2 =0 then return([sconcat(txt, "Bei einer Dreiecks-Streckenlast sollte eine Resultierende ausreichen.") ,false]),
       /* correct direction? */
       ir1: n[i][1], ir2: n[i][2],
       if abs(angle(Rref, o[ir1]))>0.01 then 
-        return([castext_concat(txt, castext("<br>Die Resultierende {@n[ir1]@} hat nicht die richtige Richtung.") ) ,false]),
+        return([castext_concat(txt, castext("Die Resultierende {@n[ir1]@} hat nicht die richtige Richtung.") ) ,false]),
       if abs(angle(Rref, o[ir2]))>0.01 then 
-        return([castext_concat(txt, castext("<br>Die Resultierende {@n[ir2]@} hat nicht die richtige Richtung.") ) ,false]),
+        return([castext_concat(txt, castext("Die Resultierende {@n[ir2]@} hat nicht die richtige Richtung.") ) ,false]),
       /* correct value */
       varcheck: fb_vars(n[ir1], mag, []),
-      if varcheck # "" then return([ castext_concat( castext_concat( txt, castext("<br>Die Resultierende {@n[ir1]@} kann nicht stimmen. ") ), varcheck) ,false]),
+      if varcheck # "" then return([ castext_concat( castext_concat( txt, castext("Die Resultierende {@n[ir1]@} kann nicht stimmen. ") ), varcheck) ,false]),
       varcheck: fb_vars(n[ir2], mag, []),
-      if varcheck # "" then return([ castext_concat( castext_concat( txt, castext("<br>Die Resultierende {@n[ir2]@} kann nicht stimmen. ") ), varcheck) ,false]),
+      if varcheck # "" then return([ castext_concat( castext_concat( txt, castext("Die Resultierende {@n[ir2]@} kann nicht stimmen. ") ), varcheck) ,false]),
       if (mag-n[ir1]-n[ir2])/mag>0.01 then 
-         return([castext_concat(txt, castext("<br>Die Summe der Resultierenden {@n[ir1]+n[ir2]@} hat nicht den richtigen Wert. ") ) ,false]),
+         return([castext_concat(txt, castext("Die Summe der Resultierenden {@n[ir1]+n[ir2]@} hat nicht den richtigen Wert. ") ) ,false]),
       /* correct position? */
       if abs((moment_of_force(xref, o[ir1], n[ir1], 1) + moment_of_force(xref, o[ir2], n[ir2], 1))/mag ) > 0.01 then  
-        return([castext_concat(txt, castext("<br>Pr&uuml;fen Sie die Lage der Resultierenden.  <br>{@n[ir1]@} <br>{@n[ir2]@}<br>Der gemeinsame Schwerpunkt passt nicht zu dem der Streckenlast. ") ) ,false])
+        return( [castext_concat(txt, castext("Pr&uuml;fen Sie die Lage der Resultierenden. Der gemeinsame Schwerpunkt entspricht nicht der Streckenlast. <br>{@n[ir1]@}, {@n[ir2]@}") ) ,false])
     ),
    [sconcat(txt, "Resultierende OK") ,true]
 );
