@@ -310,14 +310,15 @@ fb_unidir(o, n, i, description):=block(
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-line-loads */
 fb_q(o, n, i, description,q1,q2,le):=block(
-    [varcheck, txt: sconcat("<br>",description), %_v: o[i][5]-o[i][4], ir, ir1, ir2],
+    [varcheck, txt: sconcat("<br>",description), %_v, ir, ir1, ir2, %_R],
+    /* Is object a line load? */
+    if not member(o[i][1], ["q"]) 
+       then return ([sconcat(txt, "object ", string(i), " (",o[i][1],") is not a line load."), false]),
     /* Resultant force */
+    %_v: o[i][5]-o[i][4],
     mag: (cabs(%_v[1]+%i*%_v[2]))*le*(q1+q2)/2, a0: carg(%_v[1]+%i*%_v[2]),
     xref: (o[i][4]*(2/3*q1+q2/3)+o[i][5]*(q1/3+2/3*q2))/(q1+q2), 
     Rref: [ "force", mag, xref, xref+[-sin(a0+o[i][8]*pi/180), -cos(a0+o[i][8]*pi/180)] ],
-    /* Is object a line load? */
-    if not member(o[i][1], ["q"]) 
-       then return ([sconcat(txt, "object ", string(i), "(",o[i][1],") is not a line load."), false]),
     /* Is object i de-activated */ 
     if ( last(o[i]) # "hide") then return ([sconcat(txt, " ist nicht deaktiviert."), false]),
     /* Any reactions found at i? */
@@ -325,51 +326,49 @@ fb_q(o, n, i, description,q1,q2,le):=block(
     /* forces only?*/
     lm: sublist(n[i], lambda ([x], o[x][1]="moment")),
     if ( length(lm) # 0 ) then (
-        for ir in lm do txt: sconcat(txt, "\\(", ssubst ("\\,","*" , string(n[ir])), "\\) "),
-        return ([sconcat(txt, "ist keine Kraft." ),false])
+        for ir in lm do txt: castext_concat(txt, castext("{@n[ir]@}") ),
+        return ([castext_concat(txt, " ist keine Kraft." ),false])
     ),
-
     if (length(n[i]) =1) then (     /* just one reaction */
       /* correct direction? */
       ir: n[i][1],
       if abs(angle(Rref, o[ir]))>0.01 then 
-        return([sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir])), " \\) hat nicht die richtige Richtung.") ,false]),
-      /* correct value */
+        return([castext_concat(txt, castext("Die Resultierende {@n[ir]@} hat nicht die richtige Richtung.") ) ,false]),
+      /* correct set of variables in the expression */
       varcheck: fb_vars(n[ir], mag, []),
-      if varcheck # "" then return([
-	    castext_concat( 
-		  sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir])), " \\) hat nicht den richtigen Betrag. "), varcheck) ,false]),
+      if varcheck # "" then return( [
+	  castext_concat( castext_concat( txt, castext("Die Resultierende {@n[ir]@} hat nicht den richtigen Betrag. ") ), varcheck),
+          false]),
+      /* correct value (comparison requires consistent set of variables) */
       if (mag-n[ir])/mag>0.01 then 
-         return([sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir])), " \\) hat nicht den richtigen Betrag. ") ,false]),
+         return([castext_concat(txt, castext("Die Resultierende {@n[ir]@} hat nicht den richtigen Betrag.") ) ,false]),
       /* correct position? */
       if abs(moment_of_force(xref, o[ir], 1, 1) ) > 0.01 then  
-        return([sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir])), " \\) geht nicht durch den Schwerpunkt. ") ,false])
+        return([castext_concat(txt, castext("<br>Die Resultierende {@n[ir]@} geht nicht durch den Schwerpunkt.") ) ,false])
     ) else ( /* two resultants, should be a trapezoidal load */
       /* just two resultants? */
       if (length(n[i]) >2) then (
-        txt: sconcat(txt, "Mehr als zwei Resultierende gefunden: "),
-        for ir in n[i] do txt: sconcat(txt, "<br>\\(", ssubst ("\\,","*" , string(n[ir])), "\\) "),
-        return([sconcat(txt, "<br>Höchstens zwei Resultierende sind sinnvoll.") ,false])
+        %_R: makelist(n[n[i][ir]], ir, 1, length(n[i]) ),
+        return([castext_concat(txt, castext("Mehr als zwei Resultierende gefunden:<br>{@%_R@}<br>Höchstens zwei Resultierende sind sinnvoll.") ), false])
       ),
       if q1 = q2 then return([sconcat(txt, "<br>Bei konstanter Streckenlast sollte eine Resultierende ausreichen.") ,false]),
       if q1*q2 =0 then return([sconcat(txt, "<br>Bei einer Dreiecks-Streckenlast sollte eine Resultierende ausreichen.") ,false]),
       /* correct direction? */
       ir1: n[i][1], ir2: n[i][2],
       if abs(angle(Rref, o[ir1]))>0.01 then 
-        return([sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir1])), " \\) hat nicht die richtige Richtung.") ,false]),
+        return([castext_concat(txt, castext("<br>Die Resultierende {@n[ir1]@} hat nicht die richtige Richtung.") ) ,false]),
       if abs(angle(Rref, o[ir2]))>0.01 then 
-        return([sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir2])), " \\) hat nicht die richtige Richtung.") ,false]),
+        return([castext_concat(txt, castext("<br>Die Resultierende {@n[ir2]@} hat nicht die richtige Richtung.") ) ,false]),
       /* correct value */
       varcheck: fb_vars(n[ir1], mag, []),
-      if varcheck # "" then return([castext_concat(sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir1])), " \\) kann nicht stimmen. "), varcheck) ,false]),
+      if varcheck # "" then return([ castext_concat( castext_concat( txt, castext("<br>Die Resultierende {@n[ir1]@} kann nicht stimmen. ") ), varcheck) ,false]),
       varcheck: fb_vars(n[ir2], mag, []),
-      if varcheck # "" then return([castext_concat(sconcat(txt, "<br>Die Resultierende \\(", ssubst ("\\,","*" , string(n[ir2])), " \\) kann nicht stimmen. "), varcheck) ,false]),
+      if varcheck # "" then return([ castext_concat( castext_concat( txt, castext("<br>Die Resultierende {@n[ir2]@} kann nicht stimmen. ") ), varcheck) ,false]),
       if (mag-n[ir1]-n[ir2])/mag>0.01 then 
-         return([sconcat(txt, "<br>Die Summe der Resultierenden \\(", ssubst ("\\,","*" , string(n[ir1]+n[ir2])), " \\) hat nicht den richtigen Wert. ") ,false]),
+         return([castext_concat(txt, castext("<br>Die Summe der Resultierenden {@n[ir1]+n[ir2]@} hat nicht den richtigen Wert. ") ) ,false]),
       /* correct position? */
-     if abs(moment_of_force(xref, o[ir1], n[ir1], 1) + moment_of_force(xref, o[ir2], n[ir2], 1) ) > 0.01 then  
-        return([sconcat(txt, "<br>Pr&uuml;fen Sie die Lage der Resultierenden.  <br>\\(", ssubst ("\\,","*" , string(n[ir1])), " \\) <br>\\(", ssubst ("\\,","*" , string(n[ir2])), " \\) <br>Der gemeinsame Schwerpunkt passt nicht zu dem der Streckenlast. ") ,false])
-
+      if abs((moment_of_force(xref, o[ir1], n[ir1], 1) + moment_of_force(xref, o[ir2], n[ir2], 1))/mag ) > 0.01 then  
+        return([castext_concat(txt, castext("<br>Pr&uuml;fen Sie die Lage der Resultierenden.  <br>{@n[ir1]@} <br>{@n[ir2]@}<br>Der gemeinsame Schwerpunkt passt nicht zu dem der Streckenlast. ") ) ,false])
     ),
    [sconcat(txt, "Resultierende OK") ,true]
 );
