@@ -393,12 +393,12 @@ fb_bar(o, n, i, [opt]):=block(
     if L = [] then return ([ sconcat(txt, "Keine Stabkraft mit passendem Namen (mit Index ", name, ") gefunden.") , false]),
     /* Single force required */    
     if not test2 then (
-      R: o[n[i][1]],
+      R: o[L[1]],
       /* force parallel to bar? */
-      if not parallelp(R, o[i]) then return ([castext_concat(txt, castext("{@n[n[i][1]]@} ist nicht parallel zum Stab.") ),false]),
+      if not parallelp(R, o[i]) then return ([castext_concat(txt, castext("{@n[L[1]]@} ist nicht parallel zum Stab.") ),false]),
       /* eventually complaining about wrong direction */
-      if testT and (abs(angle(R, o[i])) > 0.1) then return ([castext_concat(txt, castext("{@n[n[i][1]]@} ist nicht als Zugkraft definiert.") ), false] ),
-      return ([castext_concat(txt, castext("{@n[n[i][1]]@} OK.") ), true] ) 
+      if testT and (abs(angle(R, o[i])) > 0.1) then return ([castext_concat(txt, castext("{@n[L[1]]@} ist nicht als Zugkraft definiert.") ), false] ),
+      return ([castext_concat(txt, castext("{@n[L[1]]@} OK.") ), true] ) 
     )
 );
 
