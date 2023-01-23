@@ -61,7 +61,15 @@ Contents of the `names` input field correct? This is pre-requisite for correct f
 
 `fb_bar_name(obj, names, 10)` antiparallel force accepted
 
-[[feedback:fb9a]]]]></text>
+[[feedback:fb9a]]
+
+`fb_bar_name(obj, names, 10)` Swapped forces from a single origin
+
+[[feedback:fb10]]
+
+`fb_bar_name(obj, names, 11)` 
+
+[[feedback:fb11]]]]></text>
     </questiontext>
     <generalfeedback format="markdown">
       <text></text>
@@ -88,16 +96,21 @@ initdata:  [
   [ "bar", "9", [5,0], [5,2], "hide"],
   [ "node", "A", [5,0] ],
   [ "force", "S_9", [5,0.5], [5,-0.5], 1, "active"],
-  [ "force", "S_11", [4,1.5], [4,2.5], 1, "active"]
+  [ "force", "S_11", [4,1.5], [4,2.5], 1, "active"],
+  [ "bar", "10", [6,0], [6,2], "hide" ],
+  [ "bar", "11", [7,0], [6,2], "hide" ],
+  [ "force", "S_10", [6,2], [6.5,1], 1, "active"],
+  [ "force", "S_11", [6,2], [6,1], 1, "active"]
 ];
 init: stackjson_stringify(initdata) ;
+
+i10: 14; i11: 15;
 
 names1: [0,[3],S_3,"show","hide",[7],S_7,[9,13],S_8,[12],"A",S_9,S_11];
 
 debug: true;
 
 stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_fbd.mac") ;
-
 ]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
@@ -161,6 +174,80 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_f
       <showvalidation>0</showvalidation>
       <options></options>
     </input>
+    <prt>
+      <name>fb10</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects);
+[str, OK]: fb_bar(obj, names, i10);
+E: ["%root","Stab 10: ",["smlt","\\({{S}_{10}}\\)"]," ist nicht parallel zum Stab."];]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>str</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>fb10-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@str@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>fb10-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>
+R: {#str#}<br>
+E: {#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>fb11</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects);
+[str, OK]: fb_bar(obj, names, i11);
+E: ["%root","Stab 11: ",["smlt","\\({{S}_{11}}\\)"]," ist nicht parallel zum Stab."];]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>str</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>fb11-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@str@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>fb11-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>
+R: {#str#}<br>
+E: {#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
     <prt>
       <name>fb2</name>
       <value>1.0000000</value>
