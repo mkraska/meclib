@@ -310,7 +310,7 @@ fb_unidir(o, n, i, description):=block(
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-line-loads */
 fb_q(o, n, i, description,q1,q2,le):=block(
-    [varcheck, txt: sconcat("<br>",description, "<br>"), %_v, ir, ir1, ir2, %_R],
+    [varcheck, txt: description, %_v, ir, ir1, ir2, %_R],
     /* Is object a line load? */
     if not member(o[i][1], ["q"]) 
        then return ([sconcat(txt, "object ", string(i), " (",o[i][1],") is not a line load."), false]),
@@ -320,7 +320,7 @@ fb_q(o, n, i, description,q1,q2,le):=block(
     xref: (o[i][4]*(2/3*q1+q2/3)+o[i][5]*(q1/3+2/3*q2))/(q1+q2), 
     Rref: [ "force", mag, xref, xref+[-sin(a0+o[i][8]*pi/180), -cos(a0+o[i][8]*pi/180)] ],
     /* Is object i de-activated */ 
-    if ( last(o[i]) # "hide") then return ([sconcat(txt, " ist nicht deaktiviert."), false]),
+    if ( last(o[i]) # "hide") then return ([sconcat(txt, "ist nicht deaktiviert."), false]),
     /* Any reactions found at i? */
     if not listp(n[i]) or n[i]=[] then return([sconcat(txt, "Keine Resultierende gefunden."), false]),
     /* forces only?*/
