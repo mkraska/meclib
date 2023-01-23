@@ -294,7 +294,7 @@ fb_unidir(o, n, i, description):=block(
     if not member(o[i][1], ["bar", "dashpot", "springt", "springc", "fix1", "rope"]) 
     then return ([sconcat(txt, "object ", string(i), " (",o[i][1],") is not an unidirectional support."), false]),
     /* Is object i de-activated */ 
-    if ( last(o[i]) # "hide") then return ([sconcat(txt, " ist nicht deaktiviert."), false]),
+    if ( last(o[i]) # "hide") then return ([sconcat(txt, "Nicht deaktiviert."), false]),
     /* Any reactions found at i? */
     if not listp(n[i]) or n[i]=[] then return([sconcat(txt, "Keine Reaktion gefunden."), false]),
     /* Exactly 1 reaction found? */
