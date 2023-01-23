@@ -373,6 +373,35 @@ fb_q(o, n, i, description,q1,q2,le):=block(
    [sconcat(txt, "Resultierende OK") ,true]
 );
 
+/* https://github.com/mkraska/meclib/wiki/fb_bar */
+fb_bar(o, n, i, [opt]):=block(
+    [txt, R, name], 
+    if length(opt) = 1 then opt: string(opt[1]) else opt: "",
+    testT: member("T", charlist(opt)),
+    test2: member("2", charlist(opt)),
+    /* Is object i a bar? */
+    if o[i][1]  # "bar" then return ([sconcat("object ", string(i), " (",o[i][1],") is not a bar."), false]),
+    /* Has the object a name? The name is used later to identify associated reactions. */
+    name: o[i][2],
+    if name = "" then return ([ sconcat("object #", string(i), " has no name."), false]),
+    txt: sconcat("Stab ", name, ": "),
+    /* Is object i de-activated */ 
+    if ( last(o[i]) # "hide") then return ([sconcat(txt, "Nicht deaktiviert."), false]),
+    /* Extract forces with matching name*/
+    if listp(n[i]) then L: sublist (n[i], lambda ([x], o[x][1]="force" and split(o[x][2],"_")[2] = name )) else L: [],
+    /* Check number of forces */
+    if L = [] then return ([ sconcat(txt, "Keine Stabkraft mit passendem Namen (mit Index ", name, ") gefunden.") , false]),
+    /* Single force required */    
+    if not test2 then (
+      R: o[n[i][1]],
+      /* force parallel to bar? */
+      if not parallelp(R, o[i]) then return ([castext_concat(txt, castext("{@n[n[i][1]]@} ist nicht parallel zum Stab.") ),false]),
+      /* eventually complaining about wrong direction */
+      if testT and (abs(angle(R, o[i])) > 0.1) then return ([castext_concat(txt, castext("{@n[n[i][1]]@} ist nicht als Zugkraft definiert.") ), false] ),
+      return ([castext_concat(txt, castext("{@n[n[i][1]]@} OK.") ), true] ) 
+    )
+);
+
 fb_bar_name(%_o, %_n, %_i):=block(
   [%_str,%_R,%_nl,%_OK,%_var, %_bl],
   /* are the values consistent? */
@@ -393,7 +422,7 @@ fb_bar_name(%_o, %_n, %_i):=block(
   %_R: %_o[%_n[%_i][1]],
   %_var: %_n[%_n[%_i][1]],
   /* Is the reaction a force? */
-  if debug then %_str: sconcat("Reaction ", %_R[2], " is not a force (debug message)" ) else %_str: "",
+  if debug then %_str: sconcat("Reaction ", %_R[2], " is not a force (debug message)" ) else	 %_str: "",
   if %_R[1] # "force" then return( [%_str, false]), 
   /* now we have a valid reaction, the remainder is about naming */
   %_str: "",
