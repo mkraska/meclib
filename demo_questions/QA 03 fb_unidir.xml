@@ -106,11 +106,12 @@ initdata:  [
 ];
 init: stackjson_stringify(initdata) ;
 
-names1: [0,"show",S_3,"hide",[6,7],S_6,M_7,[7],[10],S_10,"locked",[13],S_12];
+names1: [0,"show",S_3,"hide",[6,7],S_6,M_7,[7],[10],S_10,"locked",[13],S_12,[15,17],S_14,[15,17],S_16] ;
 
 debug: true;
 
 stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_fbd.mac") ;
+
 ]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
@@ -258,7 +259,7 @@ E: {#E#}]]></text>
       <feedbackvariables>
         <text><![CDATA[obj: stackjson_parse(objects);
 [str, OK]: fb_unidir(obj, names, 2, "2: ");
-E: "2: ist nicht deaktiviert.";]]></text>
+E: "2: Nicht deaktiviert.";]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
