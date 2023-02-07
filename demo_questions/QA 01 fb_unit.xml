@@ -44,6 +44,9 @@ Report deviation in percent (with 1 decimal place) when tolerance is zero or dev
 **T03a**  `fb_unit((300*kg*m)/s^2, (300*kg*m)/s^2, 0.0)`<br>
   [[feedback:t03a]]
 
+**T03b**  `fb_unit((1.5, round(((1.4-0.5*sin(0.111111111111*3.14159265359)^-1)/abs(0.5*sin(0.111111111111*3.14159265359)^-1))*1000.0)/10.0, 0.0)`<br>
+  [[feedback:t03b]]
+
 Nonzero sans, zero tans, specified as product.
   
 If the correct answer is zero, then no feedback on relative deviation can be given. Yet, in order to avoid that expressions like `0*kg`  are marked correct when the actual unit would be m, we have to switch off simplification in order not to convey just `0` to the feedback function.
@@ -146,7 +149,7 @@ Deviation within tolerance
     </stackversion>
     <questionvariables>
       <text><![CDATA[/* history
-2023 02 07 add test T03a
+2023 02 07 add tests T03a and T03b
 2023 01 14 Automate the comparison by use of Answer tests (requires STACK 4.4.2);
 */
 
@@ -177,7 +180,7 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom
   if (%_sunit # %_tunit) and (%_sunit = 0) and (%_snum # 0.0) then return(   
    "&nbsp;Der Wert sollte nicht dimensionslos sein."),   
   /* if tol=0 just indicate deviation */
-  if (%_tol=0 or %_tol=0.0) and %_tnum # 0.0 then return(sconcat("&nbsp;Abweichung: ", float(round((%_snum-%_tnum)/abs(%_tnum)*1000)/10) , "%")),
+  if (%_tol=0 or %_tol=0.0) and %_tnum # 0.0 then return(sconcat("&nbsp;Abweichung: ", ev(float(round((%_snum-%_tnum)/abs(%_tnum)*1000)/10), simp) , "%")),
   /* special feedback if teacher's answer is zero */
   if %_tnum = 0.0  and %_snum  # 0.0 then return("&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;."),
   if %_tnum = 0.0  then return(debug1), 
@@ -217,6 +220,7 @@ E01: fb_unit(1.1*m, stackunits(1.11, m),0);
 E02: fb_unit(1.1*m, stackunits(1.101, m),0.005);
 E03: fb_unit(1.1*m, stackunits(1.1001, m),0.005);
 E03a: fb_unit((300*kg*m)/s^2, (300*kg*m)/s^2, 0.0);
+E03b: fb_unit(1.5, round(((1.4-0.5*sin(0.111111111111*3.14159265359)^-1)/abs(0.5*sin(0.111111111111*3.14159265359)^-1))*1000.0)/10.0, 0.0);
 E13: fb_unit(1, stackunits(1, m),0.005);
 E14: fb_unit(-1.1*m, stackunits(1.11, m),0.005);
 E15: fb_unit(1.1*m, stackunits(11, m),0.005);
@@ -476,6 +480,41 @@ E: "&nbsp;Abweichung: 0.0%";]]></text>
         <falsepenalty></falsepenalty>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>t03a-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t03b</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(1.5, round(((1.4-0.5*sin(0.111111111111*3.14159265359)^-1)/abs(0.5*sin(0.111111111111*3.14159265359)^-1))*1000.0)/10.0, 0.0);
+E: "&nbsp;Abweichung: 135.7%";]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t03b-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t03b-1-F</falseanswernote>
         <falsefeedback format="html">
           <text><![CDATA[{#R#}<br>
 {#E#}]]></text>
