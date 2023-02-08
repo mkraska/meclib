@@ -1,5 +1,6 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-Overview */
-/* 2023 02 07                           */
+/* 2023 02 08                           */
+fb_value_version: "2023 03 08, 12:15";
 
 /* https://github.com/mkraska/meclib/wiki/fb_vars */
 fb_strip_list(_list_of_things):= castext("[[define _first='true'/]][[foreach _thing='_list_of_things']][[if test='not _first']], [[else]][[define _first='false'/]][[/if]]{@_thing@}[[/foreach]]"); 
