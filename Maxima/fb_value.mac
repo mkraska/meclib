@@ -77,7 +77,8 @@ fb_number(%_snum, %_tnum, %_tol) := block([%_oom, %_mnt, %_d],
 fb_numberOK(%_snum, %_tnum, %_tol):=stringp(fb_number(%_snum, %_tnum, %_tol));
 
 /* https://github.com/mkraska/meclib/wiki/fb_unit */
-fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom, %_mnt, %_d, %_d0, simp: true, debug1],
+fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom, %_mnt, %_d, %_d0, simp, debug1],
+  simp:true,
   /* Debug strings */
   if debug then debug1: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)" else debug1:"",
   /* extract numbers and units */
