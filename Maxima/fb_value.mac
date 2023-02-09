@@ -1,6 +1,5 @@
-/* https://github.com/mkraska/meclib/wiki/Feedback-Overview */
-/* 2023 02 08                           */
-fb_value_version: "2023 03 08, 12:15";
+/* https://github.com/mkraska/meclib/wiki/Feedback-Overview */ 
+fb_value_version: "2023 02 09, 15:50";
 
 /* https://github.com/mkraska/meclib/wiki/fb_vars */
 fb_strip_list(_list_of_things):= castext("[[define _first='true'/]][[foreach _thing='_list_of_things']][[if test='not _first']], [[else]][[define _first='false'/]][[/if]]{@_thing@}[[/foreach]]"); 
@@ -13,7 +12,7 @@ fb_vars(%_sans,%_tans, [%_opt] ) := block([%_vars, %_label,%_tansvar,%_sansvar,%
     %_txt: %_label,
     %_sansvar: setify(listofvars(%_sans)),
     %_tansvar: setify(listofvars(%_tans)),
-    /* Say nothing is tans is free of vars (e.g. because it is zero) */
+    /* Say nothing if tans is free of vars (e.g. because it is zero) */
     if emptyp(%_tansvar) then return(""),
     /* Check for spurious (extra) vars */
     %_extras: setdifference(%_sansvar, %_tansvar),
@@ -30,7 +29,7 @@ fb_vars(%_sans,%_tans, [%_opt] ) := block([%_vars, %_label,%_tansvar,%_sansvar,%
     if %_txt # %_label then return(%_txt),
     /* if set of vars is ok, then check for the terms with vars from given list (%_vars). */ 
     %_L: sublist (%_vars, lambda ([x], diff(%_sans-%_tans, x)#0)),
-    if length(%_L)=0 then return(%_txt),
+    if length(%_L)=0 then return(""),
     if length(%_L)=1 then return( castext_concat (%_txt, castext("&nbsp;Pr&uuml;fen Sie den Term mit {@%_L[1]@}.") ) ),
     %_txt: castext_concat( %_txt, "&nbsp;Pr&uuml;fen Sie die Terme mit " ), 
     %_txt: castext_concat( %_txt, fb_strip_list(%_L) ), 
