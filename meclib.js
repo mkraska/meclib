@@ -1702,6 +1702,35 @@ function isNewerVersion (oldVer, newVer) {
 	return false
 }
 
+function createPath(...arrays) {
+  let path = [];
+  for (let i = 0; i < arrays.length; i++) {
+    const array = arrays[i];
+    path = path.concat(i === 0 ? array : array.reverse());
+    if (i >= 1) {
+      path.push(array[0]);
+      path.push(arrays[0][arrays[0].length-1]);
+    }
+  }
+  return path;
+}
+
+function findConnectingLines(mainPolygon, ...coordsArrays) {
+  const lines = [];
+  let lastPoint = 0;
+  lines.push(mainPolygon.length - 1);
+  lastPoint += mainPolygon.length - 1;
+  for (let i = 0; i < coordsArrays.length; i++) {
+    lines.push(lastPoint + coordsArrays[i].length + 1);
+    lastPoint += coordsArrays[i].length + 1;
+    if (i !== coordsArrays.length - 1) {
+      lines.push(lastPoint + 1);
+      lastPoint += 1;
+    }
+  }
+  return lines;
+}
+
 // initialization
 var objects = [];
 var targets = []; /* for sliding of points */
