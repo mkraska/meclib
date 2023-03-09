@@ -1037,60 +1037,69 @@ class point {
 }
 // grau gefülltes Polygon mit schwarzem Rand. Z.B. für Scheiben oder Balken
 class polygon {
-  constructor(data){
-    if (typeof(data[data.length-1]) == 'string') {this.state = data.pop()}
-      else {this.state = "locked"}
-    this.loads = []; 
-    this.d = data.slice(0);
-    this.v = data.slice(2); //Array mit den Vertices Arrays
-    this.p = [];  //Array für die Polygone
-    this.c = [];  //Array für die curved-Differenz-Objekte
-    this.obj = [];  //Array für die Objekte
-	  
-    try {
-  	for (let i = 0; i < this.v.length; i++) {
-    		let attributes = {opacity: true, fillcolor: 'lightgrey', vertices: {size: 0, fixed: true}, borders: normalStyle, hasInnerPoints: true};
-      		if (this.v.length > 1) {
-      			attributes.borders = {
-        		visible: false
-      			};
-      			attributes.fillcolor = 'none';
-    		}
-   		this.p[i] = board.create('polygon', this.v[i], attributes);
-     		this.obj = this.obj.concat(this.p[i]).concat(this.p[i].borders);
-      		// Erstellen der Curved Differenz Objekte
-     		// Derzeit keine möglichkeit mehr als eine Differenz zu erstellen, aber Möglichkeit offen gehalten
-      		if (i > 0) {
-     			this.c[i-1] = board.create('curvedifference', [this.p[0], this.p[i]], {strokeWidth: 2, fillColor: 'lightgrey', fillOpacity: 0.7, strokecolor: 'black'});
-     			this.obj = this.obj.concat(this.c[i-1]);
-   		}   
-  	}
-    } catch (error) {
-  	this.p = board.create('polygon', this.v, {opacity: true, fillcolor: 'lightgray', vertices: {size: 0, fixed: true}, borders: normalStyle, hasInnerPoints: true});
-        this.obj = [this.p].concat(this.p.borders);
-    }
-    // state init
-    if (this.state == "show") { show(this) }
-    if (this.state == "hide") { hide(this) }
-    if (this.state != "locked") {
-    if (this.v.length > 1){
-      	makeSwitchable(this.c[0], this);
+  constructor(data) {
+    if (typeof(data[data.length - 1]) == 'string') {
+      this.state = data.pop()
     } else {
-      	makeSwitchable(this.p[0], this);
+      this.state = "locked"
     }
+    this.loads = [];
+    this.d = data.slice(0);
+    this.v = data.slice(2);
+    
+   	if (this.v[0].length > 2){
+    	this.path = createPath(...this.v);
+    	this.connectingLines = findConnectingLines(...this.v);
+    	this.p = board.create('polygon', this.path, {
+      	opacity: true,
+      	fillcolor: 'lightgray',
+      	vertices: {
+        	size: 0,
+        	fixed: true
+      	},
+      	borders: normalStyle,
+      	hasInnerPoints: true
+    	});
+    	for (let i = 0; i < this.connectingLines.length; i++){
+				this.p.borders[this.connectingLines[i]].setAttribute({visible:false});
+			}
+    } else {
+    	this.p = board.create('polygon', this.v, {
+      	opacity: true,
+      	fillcolor: 'lightgray',
+      	vertices: {
+       	 size: 0,
+       	 fixed: true
+     	 },
+      	borders: normalStyle,
+      	hasInnerPoints: true
+    	});
+    }
+    // switching objects
+    this.obj = [this.p].concat(this.p.borders);
+    // state init
+    if (this.state == "show") {
+      show(this)
+    }
+    if (this.state == "hide") {
+      hide(this)
+    }
+    if (this.state != "locked") {
+      makeSwitchable(this.p, this)
+    }
+
   }
- }
-  
-hasPoint(pt) {
-   for (let i = 0; i < this.p.length; i++) {
-     if (isOn(pt, this.p[i])) {
-       return true;
-     }
-   }
-   return false;
+  hasPoint(pt) {
+    return isOn(pt, this.p)
   }
-  data(){ var a = this.d.slice(0); a.push(this.state); return a}
-  name(){ return targetName(this) }  
+  data() {
+    var a = this.d.slice(0);
+    a.push(this.state);
+    return a
+  }
+  name() {
+    return targetName(this)
+  }
 }
 
 // line load 
