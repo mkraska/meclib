@@ -452,8 +452,8 @@ fb_bar_name(%_o, %_n, %_i):=block(
 
 /* https://github.com/mkraska/meclib/wiki/fb_name */
 fb_name(n,i,lon):=block([name,txt],
-    name: none,
-    if listp(n[i]) then
-      if not emptyp(n[i]) then name: n[n[i][1]], 
-    if member(name,lon) then return( ["",true]) else return([castext("\\({@name@} \\) ist kein passender Name für die Lagerreaktion."), false]) 
+  name: none,
+  if listp(n[i]) and  not emptyp(n[i]) then name: n[n[i][1]] else return(["", false]),
+  if member(name,lon) then return( ["",true]) else 
+    return([castext("\\({@name@} \\) ist kein passender Name für die Lagerreaktion."), false]) 
 );
