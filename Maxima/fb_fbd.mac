@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-Free-Body-Diagrams */
-/* 2023 01 16                           */
+/* 2023 04 07                           */
 
 /* https://github.com/mkraska/meclib/wiki/direction%28%29 */
 direction(o):=block([%_v, a0, le, r1, r2, a1],
@@ -402,6 +402,7 @@ fb_bar(o, n, i, [opt]):=block(
     )
 );
 
+/* https://github.com/mkraska/meclib/wiki/fb_bar_name */
 fb_bar_name(%_o, %_n, %_i):=block(
   [%_str,%_R,%_nl,%_OK,%_var, %_bl],
   /* are the values consistent? */
@@ -447,4 +448,12 @@ fb_bar_name(%_o, %_n, %_i):=block(
   ), 
       
   [%_str, %_OK]
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_name */
+fb_name(n,i,lon):=block([name,txt],
+    name: none,
+    if listp(n[i]) then
+      if not emptyp(n[i]) then name: n[n[i][1]], 
+    if member(name,lon) then return( ["",true]) else return([castext("\\({@name@} \\) ist kein passender Name für die Lagerreaktion."), false]) 
 );
