@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <quiz>
-<!-- question: 46  -->
+<!-- question: 105105  -->
   <question type="stack">
     <name>
-      <text>QA 03 fb_unidir unit test</text>
+      <text>fb_unidir() unit test</text>
     </name>
     <questiontext format="markdown">
-      <text><![CDATA[**QA 03**
+      <text><![CDATA[**fb_unidir() unit test**
 
 This is a unit test question for the function [`fb_unidir`](https://github.com/mkraska/meclib/wiki/Feedback-for-unidirectional-supports). 
 
@@ -23,60 +23,52 @@ src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
 [[/jsxgraph]]
 
 
-Contents of the `names` input field correct? This is pre-requisite for correct feedback.
+Is the `names` field as expected?
 
 [[feedback:names]]
 
-**This is a debug message independent of  `debug: true`**. 
+`fb_unidir(obj, names, 3, "force \(S_3\): ")` Force \\\(S_3\\\) is not an unidirectional support
 
-The object 3 is a force. No point to apply the function here. 
+[[feedback:S3]]
 
-Object 11 is a fixed support, it is bi-directional, not unidirectional.
+`fb_unidir(obj, names, 2, "bar 2: ")` Bar 2 is not de-activated
 
-This error is independent of the student's input and must be fixed by the question author.
+[[feedback:fb]]
 
-`fb_unidir(obj, names, 3, "3: ")` 
-
-[[feedback:fb3]]
-
-`fb_unidir(obj, names, 11, "11: ")` 
-
-[[feedback:fb18]]
-
-**Test of interactive input**.
-
-Non-deactivated object
-
-`fb_unidir(obj, names, 2, "2: ")` 
+`fb_unidir(obj, names, 4, "bar 4: ")` Bar 4 has no reaction
 
 [[feedback:fb2]]
 
-Object with no reaction
-
-`fb_unidir(obj, names, 4, "4: ")` 
+`fb_unidir(obj, names, 5, "bar 5: ")` more than one reaction
 
 [[feedback:fb4]]
 
-`fb_unidir(obj, names, 5, "5: ")`  Bar 5 has more than one reaction (one moment and one force)
+`fb_unidir(obj, names,8, "bar 8: ")` reaction is not a force
 
 [[feedback:fb5]]
 
-`fb_unidir(obj, names, 8, "8: ")`  Bar 8 has a reaction but that is not a force
+`fb_unidir(obj, names,9, "bar 9: ")` reaction has wrong direction
 
 [[feedback:fb8]]
 
-`fb_unidir(obj, names, 9, "9: ")`  Reaction force not parallel to the support
+`fb_unidir(obj, names,11, "bar 11: ")` correct reaction
 
 [[feedback:fb9]]
 
-`fb_unidir(obj, names, 12, "12: ")`  Correct reaction force
+<p hidden> spare PRTs for later tests
 
-[[feedback:fb12]]]]></text>
+[[feedback:fb12]]
+
+[[feedback:fb14]]
+
+[[feedback:fb16]] 
+
+</p>]]></text>
     </questiontext>
     <generalfeedback format="markdown">
       <text></text>
     </generalfeedback>
-    <defaultgrade>1</defaultgrade>
+    <defaultgrade>0</defaultgrade>
     <penalty>0.1</penalty>
     <hidden>0</hidden>
     <idnumber></idnumber>
@@ -84,9 +76,14 @@ Object with no reaction
       <text>2023010400</text>
     </stackversion>
     <questionvariables>
-      <text><![CDATA[/* input with correct direction and name */
+      <text><![CDATA[/* history
+2023 04 08: cleanup local variables in fb_fbd.mac
+*/
+counter:1;
+
+/* input with correct direction and name */
 initdata:  [
-  [ "grid", "x", "y", -1,10,-4,4,40],
+  [ "grid", "", "", -1,10,-2,4,40],
   [ "bar", "2", [0,0], [0,2], "show"],
   [ "force", "S_3", [0,0], [0,-1], 1, "active"],
   [ "bar", "4", [1,0], [1,2], "hide"],
@@ -96,23 +93,18 @@ initdata:  [
   [ "bar", "8", [3,0], [2,2], "hide"],
   [ "bar", "9", [4,0], [4,2], "hide"],
   [ "force", "S_10", [4,0.5], [4.5,-0.5], 1, "active"],
-  [ "fix12", "11", [0, -2], 0],
-  [ "bar", "12", [5,0], [5,2], "hide"],
-  [ "force", "S_12", [5,0.5], [5,-0.5], 1, "active"],
-  [ "bar", "14", [6,0], [6,2], "hide"],
-  [ "force", "S_14", [6,2], [6,1], 1, "active"],
-  [ "bar", "16", [6,2], [7,0], "hide"],
-  [ "force", "S_16", [6,2], [6.5,1], 1, "active"]
+  [ "bar", "11", [5,0], [5,2], "hide"],
+  [ "force", "SK_12", [5,0.5], [5,-0.5], 1, "active"]
 ];
 init: stackjson_stringify(initdata) ;
 
-names1: [0,"show",S_3,"hide",[6,7],S_6,M_7,[7],[10],S_10,"locked",[13],S_12,[15,17],S_14,[15,17],S_16] ;
+names1: [0,"show",S_3,"hide",[6,7],S_6,M_7,[7],[10],S_10,[12],SK_12];
 
 debug: true;
 
 stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_fbd.mac") ;
 
-]]></text>
+FB_9: fb_unidir(initdata, names1,9, "bar 9: ");]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
       <text></text>
@@ -176,18 +168,55 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_f
       <options></options>
     </input>
     <prt>
+      <name>fb</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects);
+[str, OK]: fb_unidir(obj, names, 2, "bar 2: ");
+E: "bar 2: Nicht deaktiviert.";]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>StringSloppy</answertest>
+        <sans>str</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>fb-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@str@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>fb-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>
+R: {#str#}<br>
+E: {#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
       <name>fb12</name>
       <value>1.0000000</value>
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[obj: stackjson_parse(objects);
-[str, OK]: fb_unidir(obj, names, 12, "12: ");
-E:  ["%root","12: Reaktion \\(",["smlt","{{S}_{12}}"],"\\) gefunden."];]]></text>
+[str, OK]: fb_bar_name(obj, names, 12);
+E: castext( "<br>{@SK_12@}: Physikalische Gr&ouml;&szlig;en immer nur mit einem Buchstabe und eventuell Index schreiben, z.B. <code>F_1</code>.");]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
-        <answertest>AlgEquiv</answertest>
+        <answertest>String</answertest>
         <sans>str</sans>
         <tans>E</tans>
         <testoptions></testoptions>
@@ -201,32 +230,30 @@ E:  ["%root","12: Reaktion \\(",["smlt","{{S}_{12}}"],"\\) gefunden."];]]></text
           <text>{@str@}</text>
         </truefeedback>
         <falsescoremode>=</falsescoremode>
-        <falsescore>0</falsescore>
+        <falsescore>0.5</falsescore>
         <falsepenalty></falsepenalty>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>fb12-1-F</falseanswernote>
         <falsefeedback format="html">
           <text><![CDATA[<br>
-R: {#str#}<br>
-E: {#E#}<br>
-[[debug /]]]]></text>
+R: {@str@}<br>
+E: {@E@}<br>]]></text>
         </falsefeedback>
       </node>
     </prt>
     <prt>
-      <name>fb18</name>
+      <name>fb14</name>
       <value>1.0000000</value>
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[obj: stackjson_parse(objects);
-[str, OK]: fb_unidir(obj, names, 11, "11: ");
-E: "11: object 11 (fix12) is not an unidirectional support.";
-]]></text>
+[str, OK]: fb_bar_name(obj, names, 14);
+E: castext("<br>{@A_14@}: Sinnvolle Namen für eine Stabkraft sind {@F@} (Kraft), {@N@} (Normalkraft) oder {@S@} (Stabkraft)" );]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
-        <answertest>AlgEquiv</answertest>
+        <answertest>String</answertest>
         <sans>str</sans>
         <tans>E</tans>
         <testoptions></testoptions>
@@ -235,7 +262,7 @@ E: "11: object 11 (fix12) is not an unidirectional support.";
         <truescore>1</truescore>
         <truepenalty></truepenalty>
         <truenextnode>-1</truenextnode>
-        <trueanswernote>fb18-1-T</trueanswernote>
+        <trueanswernote>fb14-1-T</trueanswernote>
         <truefeedback format="html">
           <text>{@str@}</text>
         </truefeedback>
@@ -243,11 +270,48 @@ E: "11: object 11 (fix12) is not an unidirectional support.";
         <falsescore>0</falsescore>
         <falsepenalty></falsepenalty>
         <falsenextnode>-1</falsenextnode>
-        <falseanswernote>fb18-1-F</falseanswernote>
+        <falseanswernote>fb14-1-F</falseanswernote>
         <falsefeedback format="html">
           <text><![CDATA[<br>
-R: {#str#}<br>
-E: {#E#}]]></text>
+R: {@str@}<br>
+E: {@E@}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>fb16</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects) ;
+[str, OK]: fb_bar_name(obj, names, 16);
+E: castext("<br>Der Index 17 passt nicht zum Stabname 16." );]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>String</answertest>
+        <sans>str</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>fb16-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@str@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>fb16-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>
+R: {@str@}<br>
+E: {@E@}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -258,12 +322,12 @@ E: {#E#}]]></text>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[obj: stackjson_parse(objects);
-[str, OK]: fb_unidir(obj, names, 2, "2: ");
-E: "2: Nicht deaktiviert.";]]></text>
+[str, OK]: fb_unidir(obj, names, 4, "bar 4: ");
+E: "bar 4: Keine Reaktion gefunden.";]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
-        <answertest>AlgEquiv</answertest>
+        <answertest>StringSloppy</answertest>
         <sans>str</sans>
         <tans>E</tans>
         <testoptions></testoptions>
@@ -284,46 +348,7 @@ E: "2: Nicht deaktiviert.";]]></text>
         <falsefeedback format="html">
           <text><![CDATA[<br>
 R: {#str#}<br>
-E: {#E#}<br>
-[[debug /]]]]></text>
-        </falsefeedback>
-      </node>
-    </prt>
-    <prt>
-      <name>fb3</name>
-      <value>1.0000000</value>
-      <autosimplify>1</autosimplify>
-      <feedbackstyle>2</feedbackstyle>
-      <feedbackvariables>
-        <text><![CDATA[obj: stackjson_parse(objects);
-[str, OK]: fb_unidir(obj, names, 3, "3: ");
-E: "3: object 3 (force) is not an unidirectional support.";]]></text>
-      </feedbackvariables>
-      <node>
-        <name>0</name>
-        <answertest>AlgEquiv</answertest>
-        <sans>str</sans>
-        <tans>E</tans>
-        <testoptions></testoptions>
-        <quiet>0</quiet>
-        <truescoremode>=</truescoremode>
-        <truescore>1</truescore>
-        <truepenalty></truepenalty>
-        <truenextnode>-1</truenextnode>
-        <trueanswernote>fb3-1-T</trueanswernote>
-        <truefeedback format="html">
-          <text>{@str@}</text>
-        </truefeedback>
-        <falsescoremode>=</falsescoremode>
-        <falsescore>0</falsescore>
-        <falsepenalty></falsepenalty>
-        <falsenextnode>-1</falsenextnode>
-        <falseanswernote>fb3-1-F</falseanswernote>
-        <falsefeedback format="html">
-          <text><![CDATA[<br>
-R: {#str#}<br>
-E: {#E#}
-[[debug /]]]]></text>
+E: {#E#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -334,8 +359,8 @@ E: {#E#}
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[obj: stackjson_parse(objects);
-[str, OK]: fb_unidir(obj, names, 4, "4: ");
-E: "4: Keine Reaktion gefunden.";]]></text>
+[str, OK]: fb_unidir(obj, names, 5, "bar 5: ");
+E: "bar 5: Mehr als eine Reaktion gefunden.";]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -360,8 +385,7 @@ E: "4: Keine Reaktion gefunden.";]]></text>
         <falsefeedback format="html">
           <text><![CDATA[<br>
 R: {#str#}<br>
-E: {#E#}<br>
-[[debug /]]]]></text>
+E: {#E#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -372,8 +396,8 @@ E: {#E#}<br>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[obj: stackjson_parse(objects);
-[str, OK]: fb_unidir(obj, names, 5, "5: ");
-E: "5: Mehr als eine Reaktion gefunden.";]]></text>
+[str, OK]: fb_unidir(obj, names,8, "bar 8: ");
+E: "bar 8: Die Reaktion muss eine Kraft sein.";]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -398,8 +422,7 @@ E: "5: Mehr als eine Reaktion gefunden.";]]></text>
         <falsefeedback format="html">
           <text><![CDATA[<br>
 R: {#str#}<br>
-E: {#E#}<br>
-[[debug /]]]]></text>
+E: {#E#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -410,8 +433,8 @@ E: {#E#}<br>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[obj: stackjson_parse(objects);
-[str, OK]: fb_unidir(obj, names, 8, "8: ");
-E:  "8: Die Reaktion muss eine Kraft sein.";]]></text>
+[str, OK]: fb_unidir(obj, names,9, "bar 9: ");
+E: castext("bar 9: Die Reaktion \\({@S_10@}\\) hat nicht die richtige Richtung.");]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -436,8 +459,7 @@ E:  "8: Die Reaktion muss eine Kraft sein.";]]></text>
         <falsefeedback format="html">
           <text><![CDATA[<br>
 R: {#str#}<br>
-E: {#E#}<br>
-[[debug /]]]]></text>
+E: {#E#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -448,8 +470,8 @@ E: {#E#}<br>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[obj: stackjson_parse(objects);
-[str, OK]: fb_unidir(obj, names, 9, "9: ");
-E:  ["%root","9: Die Reaktion \\(",["smlt","{{S}_{10}}"],"\\) hat nicht die richtige Richtung."];]]></text>
+[str, OK]: fb_unidir(obj, names,11, "bar 11: ");
+E:  castext("bar 11: Reaktion \\({@SK_12@}\\) gefunden.");]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -474,8 +496,7 @@ E:  ["%root","9: Die Reaktion \\(",["smlt","{{S}_{10}}"],"\\) hat nicht die rich
         <falsefeedback format="html">
           <text><![CDATA[<br>
 R: {#str#}<br>
-E: {#E#}<br>
-[[debug /]]]]></text>
+E: {#E#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -511,6 +532,43 @@ E: {#E#}<br>
           <text><![CDATA[Result/Expected:<br>
 {@names@}<br>
 {@names1@}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>S3</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects);
+[str, OK]: fb_unidir(obj, names, 3, "force \(S_3\): ");
+E: "force \(S_3\): object 3 (force) is not an unidirectional support.";]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>String</answertest>
+        <sans>str</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>S3-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@str@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>S3-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>
+R: {#str#}<br>
+E: {#E#}]]></text>
         </falsefeedback>
       </node>
     </prt>
