@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <quiz>
-<!-- question: 44  -->
+<!-- question: 105108  -->
   <question type="stack">
     <name>
-      <text>QA 02 fb_bar_name unit test</text>
+      <text>fb_bar_name() unit test</text>
     </name>
     <questiontext format="markdown">
-      <text><![CDATA[**QA 02**
+      <text><![CDATA[**fb_bar_name() unit test**
 
 This is a unit test question for the function [`fb_bar_name`](https://github.com/mkraska/meclib/wiki/fb_bar_name). 
+
+Just press the "Check" button to perform the test.
 
 <p >[[input:objects]] [[validation:objects]]</p>
 <p >[[input:names]] [[validation:names]] </p>
@@ -21,7 +23,6 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
 [[include 
 src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
 [[/jsxgraph]]
-
 
 Contents of the `names` input field correct? This is pre-requisite for correct feedback.
 
@@ -78,7 +79,9 @@ The object 3 is a force. No point to apply the function here. This error is inde
       <text>2023010400</text>
     </stackversion>
     <questionvariables>
-      <text><![CDATA[/* input with correct direction and name */
+      <text><![CDATA[counter: 1;
+
+/* input with correct direction and name */
 initdata:  [
   [ "grid", "", "", -1,10,-2,4,40],
   [ "bar", "2", [0,0], [0,2], "show"],
@@ -342,7 +345,7 @@ E: "no reaction found at object 4 (debug message)"]]></text>
         <truenextnode>-1</truenextnode>
         <trueanswernote>fb4-1-T</trueanswernote>
         <truefeedback format="html">
-          <text>{#str#}</text>
+          <text>{@str@}</text>
         </truefeedback>
         <falsescoremode>=</falsescoremode>
         <falsescore>0</falsescore>
@@ -379,7 +382,7 @@ E: "more than one reaction found [6,7] (debug message)";]]></text>
         <truenextnode>-1</truenextnode>
         <trueanswernote>fb5-1-T</trueanswernote>
         <truefeedback format="html">
-          <text>{#str#}</text>
+          <text>{@str@}</text>
         </truefeedback>
         <falsescoremode>=</falsescoremode>
         <falsescore>0</falsescore>
@@ -416,7 +419,7 @@ E: "Reaction M_7 is not a force (debug message)";]]></text>
         <truenextnode>-1</truenextnode>
         <trueanswernote>fb8-1-T</trueanswernote>
         <truefeedback format="html">
-          <text>{#str#}</text>
+          <text>{@str@}</text>
         </truefeedback>
         <falsescoremode>=</falsescoremode>
         <falsescore>0</falsescore>
@@ -453,7 +456,7 @@ E: "more than one reaction found [10,11] (debug message)";]]></text>
         <truenextnode>-1</truenextnode>
         <trueanswernote>fb9-1-T</trueanswernote>
         <truefeedback format="html">
-          <text>{#str#}</text>
+          <text>{@str@}</text>
         </truefeedback>
         <falsescoremode>=</falsescoremode>
         <falsescore>0</falsescore>

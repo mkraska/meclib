@@ -310,7 +310,7 @@ fb_unidir(o, n, i, description):=block(
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-line-loads */
 fb_q(o, n, i, description,q1,q2,le):=block(
-    [varcheck, txt: description, %_v, ir, ir1, ir2, %_R, mag, a0, xref, Rref],
+    [varcheck, txt: description, %_v, ir, ir1, ir2, %_R, mag, a0, xref, Rref, lm],
     /* Is object a line load? */
     if not member(o[i][1], ["q"]) 
        then return ([sconcat(txt, "object ", string(i), " (",o[i][1],") is not a line load."), false]),
