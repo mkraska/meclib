@@ -179,7 +179,7 @@ fb_fix12_name(o, n, i):=block(
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix123%22 */
 fb_fix123(o, n, i, description):=block(
-    [sname: o[i][2], txt: sconcat("<br>",description)],
+    [sname: o[i][2], txt: sconcat("<br>",description), lf, lm],
     /* Is object i a built-in support? */
     if not member(o[i][1], ["fix123"]) 
     then return ([sconcat(txt, "object ", string(i), "(",o[i][1],") is not a built-in support."), false]),
@@ -201,7 +201,7 @@ fb_fix123(o, n, i, description):=block(
     return([sconcat(txt, "Reaktionskräfte \\(", n[lf[1]], ",", n[lf[2]], "\\) und Moment \\(", n[lm[1]], "\\) gefunden."),true])
 );
 fb_fix123_name(o, n, i):=block(
-    [sname: o[i][2], txt: "", ir],
+    [sname: o[i][2], txt: "", ir, fb_required, ntxt, nok],
     /* make sure that there is at least one reaction */
     if not listp(n[i]) or n[i]=[] then return(["", false]),
     /*iterate over reactions*/
@@ -233,7 +233,7 @@ fb_fix123_name(o, n, i):=block(
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix13%22 */
 fb_fix13(o, n, i, description):=block(
-    [sname: o[i][2], txt: sconcat("<br>",description)],
+    [sname: o[i][2], txt: sconcat("<br>",description), lf, lm],
     /* Is object a frictionless support? */
     if not member(o[i][1], ["fix13"]) 
     then return ([sconcat(txt, "object ", string(i), "(",o[i][1],") is not a frictionless support."), false]),
@@ -255,7 +255,7 @@ fb_fix13(o, n, i, description):=block(
     return([sconcat(txt, "Reaktionskraft \\(", n[lf[1]], "\\) und Moment \\(", n[lm[1]], "\\) gefunden."),true])
 );
 fb_fix13_names(o, n, i):=block(
-    [sname: o[i][2], txt: "", ir],
+    [sname: o[i][2], txt: "", ir, fb_required, ntxt, nok],
     /* make sure that there is at least one reaction */
     if not listp(n[i]) or n[i]=[] then return(["", false]),
     /*iterate over reactions*/
@@ -310,7 +310,7 @@ fb_unidir(o, n, i, description):=block(
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-line-loads */
 fb_q(o, n, i, description,q1,q2,le):=block(
-    [varcheck, txt: description, %_v, ir, ir1, ir2, %_R],
+    [varcheck, txt: description, %_v, ir, ir1, ir2, %_R, mag, a0, xref, Rref],
     /* Is object a line load? */
     if not member(o[i][1], ["q"]) 
        then return ([sconcat(txt, "object ", string(i), " (",o[i][1],") is not a line load."), false]),
@@ -375,7 +375,8 @@ fb_q(o, n, i, description,q1,q2,le):=block(
 
 /* https://github.com/mkraska/meclib/wiki/fb_bar */
 fb_bar(o, n, i, [opt]):=block(
-    [txt, R, name], 
+    [txt, R, name, testT, test2, opt, L], 
+	/* Extract options */
     if length(opt) = 1 then opt: string(opt[1]) else opt: "",
     testT: member("T", charlist(opt)),
     test2: member("2", charlist(opt)),
