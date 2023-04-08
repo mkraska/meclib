@@ -1,34 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <quiz>
-<!-- question: 45  -->
+<!-- question: 105156  -->
   <question type="stack">
     <name>
-      <text>QA 01 fb_unit unit test</text>
+      <text>fb_unit() test suite</text>
     </name>
     <questiontext format="markdown">
-      <text><![CDATA[**QA 01**
+      <text><![CDATA[**fb_unit() test suite**
 
-This is a unit test question for the function [`fb_unit`](https://github.com/mkraska/meclib/wiki/fb_unit). In the question variables, we make the settings
+This is a unit test question for the function [`fb_unit`](https://github.com/mkraska/meclib/wiki/fb_unit). 
+
+There is nothing to input for you. **Just submit the test** to see the results.
+
+In the question variables, we make the settings
 
 - `debug: true`
 - `simp: false`
 
-**Interactive test**
-
-Here you can try the behaviour of the feedback function. Provide `sans`, `tans` and `tol`.
-
-<p><code>fb_unit([[input:sans]], [[input:tans]], [[input:tol]])</code></p> [[validation:sans]] [[validation:tans]] [[validation:tol]] 
-
-[[feedback:prt1]]
-
-<details><summary><strong>Pre-defined tests</strong></summary>
-
-If the test fails, then the result and the expected result are displayed as below, otherwise just the actual result is displayed.
+If a test fails, then the result and the expected result are displayed as below, otherwise just the actual result is displayed.
 
 R: # Result from the feedback function#<br>
 E: # Expected text#
 
-
+<p hidden>[[input:dummy]] [[validation:dummy]]</p>
 
 Report deviation in percent (with 1 decimal place) when tolerance is zero or deviation is less then tolerance.  Giving that precise feedback would enable the student to judge the result just from the deviation. That's why such feedback should only be given when the result was within tolerance.
 
@@ -43,9 +37,6 @@ Report deviation in percent (with 1 decimal place) when tolerance is zero or dev
 
 **T03a**  `fb_unit((300*kg*m)/s^2, (300*kg*m)/s^2, 0.0)`<br>
   [[feedback:t03a]]
-
-**T03b**  `fb_unit((1.5, round(((1.4-0.5*sin(0.111111111111*3.14159265359)^-1)/abs(0.5*sin(0.111111111111*3.14159265359)^-1))*1000.0)/10.0, 0.0)`<br>
-  [[feedback:t03b]]
 
 Nonzero sans, zero tans, specified as product.
   
@@ -133,8 +124,6 @@ Deviation within tolerance
 **T22** `fb_unit(1, 1.001, 0.005)`<br>
 [[feedback:t22]]
 
-[[debug/]]
-
 </details>]]></text>
     </questiontext>
     <generalfeedback format="markdown">
@@ -149,7 +138,8 @@ Deviation within tolerance
     </stackversion>
     <questionvariables>
       <text><![CDATA[/* history
-2023 02 07 add tests T03a and T03b
+2023 04 08 split into interactive and pre-defined (this one) tests
+2023 02 07 add test T03a
 2023 01 14 Automate the comparison by use of Answer tests (requires STACK 4.4.2);
 */
 
@@ -162,57 +152,6 @@ debug:true;
 stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_value.mac" );
 
 
-fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom, %_mnt, %_d, %_d0, simp: true, debug1],
-  /* Debug strings */
-  if debug then debug1: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)" else debug1:"",
-  /* extract numbers and units */
-  %_snum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_sans)))),
-  if %_snum = NULLNUM then %_snum:1.0, 
-  %_tnum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_tans)))),
-  if %_tnum = NULLNUM then %_tnum:1.0, 
-  %_sunit: stack_units_units(stack_unit_si_to_si_base(%_sans)),
-  if %_sunit = NULLUNITS then %_sunit:0,  /* display as 0 if not correct */
-  %_tunit: stack_units_units(stack_unit_si_to_si_base(%_tans)),
-  if %_tunit = NULLUNITS then %_tunit:0,  /* display as 0 if not correct */
-  /* complain if units don't match */
-  if (%_sunit # %_tunit) and (%_sunit # 0) then return(   
-    castext_concat("&nbsp;Unerwartete Basiseinheit: ", castext("{@(stack_disp_fractions(\"i\"),%_sunit)@}"  )  )),   
-  if (%_sunit # %_tunit) and (%_sunit = 0) and (%_snum # 0.0) then return(   
-   "&nbsp;Der Wert sollte nicht dimensionslos sein."),   
-  /* if tol=0 just indicate deviation */
-  if (%_tol=0 or %_tol=0.0) and %_tnum # 0.0 then return(sconcat("&nbsp;Abweichung: ", ev(float(round((%_snum-%_tnum)/abs(%_tnum)*1000)/10), simp) , "%")),
-  /* special feedback if teacher's answer is zero */
-  if %_tnum = 0.0  and %_snum  # 0.0 then return("&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;."),
-  if %_tnum = 0.0  then return(debug1), 
-  if %_snum = 0.0 then return("&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein."),
-  /* check of the sign */
-  if %_snum/%_tnum <0 then return("&nbsp;Pr&uuml;fen Sie das Vorzeichen."),
-  /* go back if error is less than tolerance */ 
-  if ev(abs((%_snum-%_tnum)/%_tnum),simp) < %_tol then (
-    if debug then return(sconcat("&nbsp;Abweichung: ", ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp) , "% (display because debug=true. Would be empty otherwise.)")) 
-    else return("") 
-  ),
-  /* OoM and mantissa error */
-  %_oom: ev(log(abs(%_snum/%_tnum))/log(10.0), simp),
-  %_mnt: ev(10.0^( %_oom - round(%_oom)),simp),
-  /* Mantissa check */
-  if ev(abs(1.0-%_mnt), simp) <%_tol and ev(abs(%_oom), simp)>0.1 then 
-    return("&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. ") 
-  /* general hint on precision */
-  else(
-    %_d0: ev(abs((1.0-abs(%_snum)/abs(%_tnum)))*100.0, simp),  /* % Abweichung */
-    %_oom: ev(10.0^round(log(%_d0)/log(10.)-0.5), simp),
-    %_d: ev(round(floor(%_d0/%_oom))*%_oom, simp),
-    if %_d>=1 then %_d: ev(round(%_d),simp),
-    if ev(abs(%_snum)<abs(%_tnum), simp) then        
-        return(sconcat("&nbsp;Der Betrag ist um mindestens ", %_d , "% zu klein.")) else
-        return(sconcat("&nbsp;Der Betrag ist um mindestens ", %_d , "% zu gro&szlig;."))
- ), 
-[%_snum,%_tnum, %_oom, %_d, %_mnt, %_d0] );
-
-
-/* this should return true if the check passes, false otherwise */
-fb_unitOK(%_sans, %_tans, %_tol):=stringp(fb_unit(%_sans, %_tans, %_tol));
 
 simp:false; /* to convey argumentes into fb_unit() */
 
@@ -220,7 +159,6 @@ E01: fb_unit(1.1*m, stackunits(1.11, m),0);
 E02: fb_unit(1.1*m, stackunits(1.101, m),0.005);
 E03: fb_unit(1.1*m, stackunits(1.1001, m),0.005);
 E03a: fb_unit((300*kg*m)/s^2, (300*kg*m)/s^2, 0.0);
-E03b: fb_unit(1.5, round(((1.4-0.5*sin(0.111111111111*3.14159265359)^-1)/abs(0.5*sin(0.111111111111*3.14159265359)^-1))*1000.0)/10.0, 0.0);
 E13: fb_unit(1, stackunits(1, m),0.005);
 E14: fb_unit(-1.1*m, stackunits(1.11, m),0.005);
 E15: fb_unit(1.1*m, stackunits(11, m),0.005);
@@ -260,92 +198,23 @@ lbl: castext("[[lang code='en, other']]english[[/lang]][[lang code='ru']]рус�
     <matrixparens>[</matrixparens>
     <variantsselectionseed></variantsselectionseed>
     <input>
-      <name>sans</name>
+      <name>dummy</name>
       <type>algebraic</type>
-      <tans>10*mm</tans>
-      <boxsize>8</boxsize>
-      <strictsyntax>1</strictsyntax>
-      <insertstars>3</insertstars>
-      <syntaxhint>sans</syntaxhint>
-      <syntaxattribute>1</syntaxattribute>
-      <forbidwords></forbidwords>
-      <allowwords></allowwords>
-      <forbidfloat>0</forbidfloat>
-      <requirelowestterms>0</requirelowestterms>
-      <checkanswertype>0</checkanswertype>
-      <mustverify>1</mustverify>
-      <showvalidation>3</showvalidation>
-      <options></options>
-    </input>
-    <input>
-      <name>tans</name>
-      <type>algebraic</type>
-      <tans>11*m</tans>
-      <boxsize>8</boxsize>
-      <strictsyntax>1</strictsyntax>
-      <insertstars>3</insertstars>
-      <syntaxhint>tans</syntaxhint>
-      <syntaxattribute>1</syntaxattribute>
-      <forbidwords></forbidwords>
-      <allowwords></allowwords>
-      <forbidfloat>0</forbidfloat>
-      <requirelowestterms>0</requirelowestterms>
-      <checkanswertype>0</checkanswertype>
-      <mustverify>1</mustverify>
-      <showvalidation>3</showvalidation>
-      <options></options>
-    </input>
-    <input>
-      <name>tol</name>
-      <type>numerical</type>
-      <tans>0.005</tans>
-      <boxsize>8</boxsize>
+      <tans>a</tans>
+      <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>0</insertstars>
-      <syntaxhint>tol</syntaxhint>
-      <syntaxattribute>1</syntaxattribute>
+      <syntaxhint></syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>
-      <forbidfloat>0</forbidfloat>
+      <forbidfloat>1</forbidfloat>
       <requirelowestterms>0</requirelowestterms>
       <checkanswertype>0</checkanswertype>
       <mustverify>1</mustverify>
       <showvalidation>3</showvalidation>
       <options></options>
     </input>
-    <prt>
-      <name>prt1</name>
-      <value>1.0000000</value>
-      <autosimplify>0</autosimplify>
-      <feedbackstyle>0</feedbackstyle>
-      <feedbackvariables>
-        <text></text>
-      </feedbackvariables>
-      <node>
-        <name>0</name>
-        <answertest>AlgEquiv</answertest>
-        <sans>1</sans>
-        <tans>1</tans>
-        <testoptions>0.005</testoptions>
-        <quiet>1</quiet>
-        <truescoremode>=</truescoremode>
-        <truescore>1</truescore>
-        <truepenalty></truepenalty>
-        <truenextnode>-1</truenextnode>
-        <trueanswernote>prt1-1-T</trueanswernote>
-        <truefeedback format="html">
-          <text>{@fb_unit(sans, tans,tol)@}</text>
-        </truefeedback>
-        <falsescoremode>=</falsescoremode>
-        <falsescore>0</falsescore>
-        <falsepenalty></falsepenalty>
-        <falsenextnode>-1</falsenextnode>
-        <falseanswernote>prt1-1-F</falseanswernote>
-        <falsefeedback format="html">
-          <text>{@fb_unit(sans, tans,tol)@}</text>
-        </falsefeedback>
-      </node>
-    </prt>
     <prt>
       <name>t01</name>
       <value>1.0000000</value>
@@ -487,49 +356,13 @@ E: "&nbsp;Abweichung: 0.0%";]]></text>
       </node>
     </prt>
     <prt>
-      <name>t03b</name>
-      <value>1.0000000</value>
-      <autosimplify>1</autosimplify>
-      <feedbackstyle>2</feedbackstyle>
-      <feedbackvariables>
-        <text><![CDATA[R: fb_unit(1.5, round(((1.4-0.5*sin(0.111111111111*3.14159265359)^-1)/abs(0.5*sin(0.111111111111*3.14159265359)^-1))*1000.0)/10.0, 0.0);
-E: "&nbsp;Abweichung: 135.7%";]]></text>
-      </feedbackvariables>
-      <node>
-        <name>0</name>
-        <answertest>AlgEquiv</answertest>
-        <sans>R</sans>
-        <tans>E</tans>
-        <testoptions></testoptions>
-        <quiet>0</quiet>
-        <truescoremode>=</truescoremode>
-        <truescore>1</truescore>
-        <truepenalty></truepenalty>
-        <truenextnode>-1</truenextnode>
-        <trueanswernote>t03b-1-T</trueanswernote>
-        <truefeedback format="html">
-          <text>{@R@}</text>
-        </truefeedback>
-        <falsescoremode>=</falsescoremode>
-        <falsescore>0</falsescore>
-        <falsepenalty></falsepenalty>
-        <falsenextnode>-1</falsenextnode>
-        <falseanswernote>t03b-1-F</falseanswernote>
-        <falsefeedback format="html">
-          <text><![CDATA[{#R#}<br>
-{#E#}]]></text>
-        </falsefeedback>
-      </node>
-    </prt>
-    <prt>
       <name>t04</name>
       <value>1.0000000</value>
       <autosimplify>0</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit(1.1*m, 0*m,0.005);
-E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.";
-]]></text>
+E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.";]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -564,8 +397,7 @@ E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.";
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit(1.1*m, stackunits(0,m),0.005);
-E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.";
-]]></text>
+E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.";]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -635,8 +467,7 @@ E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.";]]></text>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit(0, stackunits(zero, m),0.005);
-E: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)";
-]]></text>
+E: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)";]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -671,8 +502,7 @@ E: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)";
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit(0*m, stackunits(zero, m),0.005);
-E: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)";
-]]></text>
+E: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)";]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -707,8 +537,7 @@ E: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)";
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit(0*N, stackunits(zero, m),0.005);
-E: ["%root","&nbsp;Unerwartete Basiseinheit: ",["smlt","\\({\\mathrm{k}\\mathrm{g}\\cdot \\mathrm{m}\\cdot \\mathrm{s}^ {- 2 }}\\)"]];
-]]></text>
+E: ["%root","&nbsp;Unerwartete Basiseinheit: ",["smlt","\\({\\mathrm{k}\\mathrm{g}\\cdot \\mathrm{m}\\cdot \\mathrm{s}^ {- 2 }}\\)"]];]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -743,8 +572,7 @@ E: ["%root","&nbsp;Unerwartete Basiseinheit: ",["smlt","\\({\\mathrm{k}\\mathrm{
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit(0*m, stackunits(1, m),0.005);
-E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.";
-]]></text>
+E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.";]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -779,8 +607,7 @@ E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.";
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit(0, stackunits(1, m),0.005);
-E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.";
-]]></text>
+E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.";]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -955,9 +782,7 @@ E: "&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine G
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit(1.0*m, stackunits(11, m),0.005);
-E: "&nbsp;Der Betrag ist um mindestens 90% zu klein.";
-
-]]></text>
+E: "&nbsp;Der Betrag ist um mindestens 90% zu klein.";]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -1167,8 +992,7 @@ E: "&nbsp;Der Betrag ist um mindestens 800% zu gro&szlig;.";]]></text>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit(1, 1.001, 0.005);
-E: "&nbsp;Abweichung: -0.1% (display because debug=true. Would be empty otherwise.)";
-]]></text>
+E: "&nbsp;Abweichung: -0.1% (display because debug=true. Would be empty otherwise.)";]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
