@@ -1,0 +1,134 @@
+/* https://github.com/mkraska/meclib/wiki/Feedback-Overview */ 
+fb_value_version: "2023 02 09, 15:50, EN 2023 04 16";
+
+/* https://github.com/mkraska/meclib/wiki/fb_vars */
+fb_strip_list(_list_of_things):= castext("[[define _first='true'/]][[foreach _thing='_list_of_things']][[if test='not _first']], [[else]][[define _first='false'/]][[/if]]{@_thing@}[[/foreach]]"); 
+/* fb_strip_list function proposed by Matti Harjula 2022 04 10 */
+
+fb_vars(%_sans,%_tans, [%_opt] ) := block([%_vars, %_label,%_tansvar,%_sansvar,%_extras, %_missing, simp, %_txt, %_L],
+    simp: true, /* Extract vars with simp:true does mean that "x/x+y" -> [y] */
+    if length(%_opt)>0 then %_vars: %_opt[1] else %_vars: [], 
+    if length(%_opt)>1 then %_label: %_opt[2] else %_label: "",
+    %_txt: %_label,
+    %_sansvar: setify(listofvars(%_sans)),
+    %_tansvar: setify(listofvars(%_tans)),
+    /* Say nothing if tans is free of vars (e.g. because it is zero) */
+    if emptyp(%_tansvar) then return(""),
+    /* Check for spurious (extra) vars */
+    %_extras: setdifference(%_sansvar, %_tansvar),
+    if length(%_extras) > 0 then (
+      %_txt: castext_concat(%_txt, "&nbsp;Unexpected variable: " ),
+      %_txt: castext_concat(%_txt, fb_strip_list(listify(%_extras)) ),
+      %_txt: castext_concat(%_txt, "."  ) ),
+    /* Check for missing vars */
+    %_missing: setdifference(%_tansvar, %_sansvar),
+    if length(%_missing) > 0 then  (
+      %_txt: castext_concat(%_txt, "&nbsp;Missing variable: " ),
+      %_txt: castext_concat(%_txt, fb_strip_list(listify(%_missing)) ),
+      %_txt: castext_concat(%_txt,  castext(" (<code>{@stack_disp_comma_separate(listify(%_missing))@}</code>)." ))),
+    if %_txt # %_label then return(%_txt),
+    /* if set of vars is ok, then check for the terms with vars from given list (%_vars). */ 
+    %_L: sublist (%_vars, lambda ([x], diff(%_sans-%_tans, x)#0)),
+    if length(%_L)=0 then return(""),
+    if length(%_L)=1 then return( castext_concat (%_txt, castext("&nbsp;Check the term with {@%_L[1]@}.") ) ),
+    %_txt: castext_concat( %_txt, "&nbsp;Check the terms with " ), 
+    %_txt: castext_concat( %_txt, fb_strip_list(%_L) ), 
+    castext_concat(%_txt, "." ) 
+);	
+/* this should return true if the check passes, false otherwise */
+fb_varsOK(%_sans,%_tans, [%_opt] ):= block([%_res],
+  if length(%_opt)=0 then %_res: fb_vars(%_sans,%_tans ),
+  if length(%_opt)=1 then %_res: fb_vars(%_sans,%_tans, %_opt[1] ),
+  if length(%_opt)=2 then %_res: fb_vars(%_sans,%_tans, %_opt[1], %_opt[2] ),
+  stringp(%_res));
+
+/* https://github.com/mkraska/meclib/wiki/fb_number */  
+fb_number(%_snum, %_tnum, %_tol) := block([%_oom, %_mnt, %_d],
+  /* if tol=0 just indicate deviation */
+  if %_tol=0 and %_tnum # 0 then return(sconcat("&nbsp;Error: ", float( round((%_snum-%_tnum)/abs(%_tnum)*1000)/10) , "%")),
+  /* special feedback if teacher's answer is zero */
+  if %_tnum+1.0=1.0  then 
+     if %_snum+1.0=1.0 then return("&nbsp;Error: 0") 
+     else return("&nbsp;The absolute value is too large."),
+  /* say nothing if student's answer is zero (further down log() might fail) */
+  if %_snum = 0 then return(""),
+  /* check of the sign */
+  if %_snum/%_tnum <0 then return("&nbsp;Check the sign."),
+  /* go back if error is less than tolerance */
+  if abs((%_snum-%_tnum)/%_tnum) < %_tol then return(sconcat("&nbsp;Error: ", float( round((%_snum-%_tnum)/abs(%_tnum)*1000)/10) , "%")), 
+  /* OoM and mantissa error */
+  %_oom: log(abs(%_snum/%_tnum))/log(10),
+  %_mnt: 10^( %_oom - round(%_oom)),
+  /* Mantissa check */
+  if abs(1-%_mnt) <%_tol and abs(%_oom)>0.1 then 
+    return("&nbsp;The mantissa is correct, yet the value is off by at least one order of magnitude. Check your unit conversions. ") 
+  /* general hint on precision */
+  else(
+    %_d: float(abs((1-abs(%_snum)/abs(%_tnum)))*100),  /* % Abweichung */
+    %_oom:10^round(log(%_d)/log(10.)-0.5),
+    %_d: float(round(floor(%_d/%_oom)))*%_oom,
+    if %_d>=1 then %_d:round(%_d),
+    if abs(%_snum)<abs(%_tnum) then        
+        return(sconcat("&nbsp;The absolute value is at least ", %_d , "% too small.")) else
+        return(sconcat("&nbsp;The absolute value is at least ", %_d , "% too large."))       
+  ), 
+[%_snum,%_tnum] );
+/* this should return true if the check passes, false otherwise */
+fb_numberOK(%_snum, %_tnum, %_tol):=stringp(fb_number(%_snum, %_tnum, %_tol));
+
+/* https://github.com/mkraska/meclib/wiki/fb_unit */
+fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom, %_mnt, %_d, %_d0, simp, debug1],
+  simp:true,
+  /* Debug strings */
+  if debug then debug1: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)" else debug1:"",
+  /* extract numbers and units */
+  %_snum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_sans)))),
+  if %_snum = NULLNUM then %_snum:1.0, 
+  %_tnum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_tans)))),
+  if %_tnum = NULLNUM then %_tnum:1.0, 
+  %_sunit: stack_units_units(stack_unit_si_to_si_base(%_sans)),
+  if %_sunit = NULLUNITS then %_sunit:0,  /* display as 0 if not correct */
+  %_tunit: stack_units_units(stack_unit_si_to_si_base(%_tans)),
+  if %_tunit = NULLUNITS then %_tunit:0,  /* display as 0 if not correct */
+  /* complain if units don't match */
+  if (%_sunit # %_tunit) and (%_sunit # 0) then return(   
+    castext_concat("&nbsp;Unexpected base unit: ", castext("{@(stack_disp_fractions(\"i\"),%_sunit)@}"  )  )),   
+  if (%_sunit # %_tunit) and (%_sunit = 0) and (%_snum # 0.0) then return(   
+   "&nbsp;The value should not be unitless."),   
+  /* if tol=0 just indicate deviation */
+  if (%_tol=0 or %_tol=0.0) and %_tnum # 0.0 then return(sconcat("&nbsp;Error: ", ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp) , "%")), 
+  /* special feedback if teacher's answer is zero */
+  if %_tnum = 0.0  and %_snum  # 0.0 then return("&nbsp;The absolute value is too large."),
+  if %_tnum = 0.0  then return(debug1), 
+  if %_snum = 0.0 then return("&nbsp;The absolute value is too small."),
+  /* check of the sign */
+  if %_snum/%_tnum <0 then return("&nbsp;Check the sign."),
+  /* go back if error is less than tolerance */ 
+  if ev(abs((%_snum-%_tnum)/%_tnum),simp) < %_tol then (
+    if debug then return(sconcat("&nbsp;Error: ", ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp) , "% (display because debug=true. Would be empty otherwise.)")) 
+    else return("") 
+  ),
+  /* OoM and mantissa error */
+  %_oom: ev(log(abs(%_snum/%_tnum))/log(10.0), simp),
+  %_mnt: ev(10.0^( %_oom - round(%_oom)),simp),
+  /* Mantissa check */
+  if ev(abs(1.0-%_mnt), simp) <%_tol and ev(abs(%_oom), simp)>0.1 then 
+    return("&nbsp;The mantissa is correct, yet the value is off by at least one order of magnitude. Check your unit conversions.") 
+  /* general hint on precision */
+  else(
+    %_d0: ev(abs((1.0-abs(%_snum)/abs(%_tnum)))*100.0, simp),  /* % Abweichung */
+    %_oom: ev(10.0^round(log(%_d0)/log(10.)-0.5), simp),
+    %_d: ev(round(floor(%_d0/%_oom))*%_oom, simp),
+    if %_d>=1 then %_d: ev(round(%_d),simp),
+    if ev(abs(%_snum)<abs(%_tnum), simp) then        
+        return(sconcat("&nbsp;The absolute value is at least ", %_d , "% too small.")) else
+        return(sconcat("&nbsp;The absolute value is at least ", %_d , "% too large."))
+ ), 
+[%_snum,%_tnum, %_oom, %_d, %_mnt, %_d0] );
+
+/* this should return true if the check passes, false otherwise */
+fb_unitOK(%_sans, %_tans, %_tol):=stringp(fb_unit(%_sans, %_tans, %_tol));
+
+/* https://github.com/mkraska/meclib/wiki/fb_dim */
+fb_dim(%_res, %_vars, %_dims):=rat(subst(map("=", %_vars, map("*", %_vars, %_dims)),%_res)/%_res);
+
