@@ -1,4 +1,4 @@
-# iMecLib
+# iMecLib (obsolete, outdated, see Wiki instead)
 
 iMeclib is the interactive version of MecLib.
 
