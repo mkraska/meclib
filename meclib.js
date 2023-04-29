@@ -840,11 +840,13 @@ class label {
   name(){  return "0" }
 }
 
-// line between along x and y data vectors with optional dash style and thickness
-// [ "line", "name", [x1, x2,...], [y1, y2,...] ,dash, th ]
+// line between along x and y data vectors with optional dash style, thickness and color
+// [ "line", "color", [x1, x2,...], [y1, y2,...] ,dash, th ]
 class line {
  constructor(data) {
    this.d = data;
+   if (data[1]) {this.c = data[1]} else {this.c = "black"}
+   console.log(this.c)
    if (data.length<5) {this.dash = "-"} else {this.dash = data[4]}
    if (data.length<6) {this.th = 0.8 } else {this.th = data[5]}
    var d;
@@ -855,7 +857,7 @@ class line {
      case "-.": d = 6; break;
    }
    this.p = board.create('curve',[this.d[2],this.d[3]],
-     { dash:d, strokeColor:'black', strokeWidth:this.th, layer:8}); 
+     { dash:d, strokeColor:this.c, strokeWidth:this.th, layer:8}); 
    // add to attractor list, to be used by crosshair
    targets.push(this.p);
  }
