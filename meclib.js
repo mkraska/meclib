@@ -1036,27 +1036,70 @@ class point {
   name() { return '"'+this.d[1]+'"'}
 }
 // grau gefülltes Polygon mit schwarzem Rand. Z.B. für Scheiben oder Balken
-// Version with hole taken from https://github.com/Niclas17/meclib 
-class polygon {
-  constructor(data){
-    if (typeof(data[data.length-1]) == 'string') {this.state = data.pop()}
-      else {this.state = "locked"}
-    this.loads = []; 
-    this.d = data.slice(0);
-    this.v = data.slice(2);
-    this.p = board.create('polygon',this.v, {opacity: true, fillcolor:'lightgray', vertices:{size:0, fixed: true} ,borders: normalStyle, hasInnerPoints:true } );
-    // switching objects
-    this.obj = [this.p].concat(this.p.borders);
-    // state init
-    if (this.state == "show") { show(this) }
-    if (this.state == "hide") { hide(this) }
-    if (this.state != "locked") { makeSwitchable(this.p, this) }
-
+// Version with hole adapted from https://github.com/Niclas17/meclib 
+// gray filled polygon with black border
+  class polygon {
+    constructor(data) {
+      let pstyle = {
+        opacity: true,
+        fillcolor: 'lightgray',
+        vertices: {
+          size: 0,
+          fixed: true
+        },
+        borders: normalStyle,
+        hasInnerPoints: true
+      }
+      // if last argument is a string, use it as state flag and remove from list
+      if (typeof(data[data.length - 1]) == 'string') {
+        this.state = data.pop()
+      } else {
+        this.state = "locked"
+      }
+      // data for name()
+      this.loads = [];
+      this.d = data.slice(0);
+      // geometric data
+      this.v = data.slice(2);
+      // we assume that a polygon has more than 2 points
+      // if v[0] has more than two entries, it is a list of points (new format), otherwise it is a point (old format)
+      if (this.v[0].length > 2){
+        // new format, can have holes
+        this.clines = []                         // storage for connector lines
+        this.path = this.v.shift()               // store outer contour (counterclöckwise)
+        this.path.push(this.path[0])             // close the contour by repeating the first point
+        for (const border of this.v) {           // iterate over inner contours      
+          this.clines.push(this.path.length-1)   // store connection line 
+          this.path = this.path.concat(border)   // add contour
+          this.path.push(border[0])              // close contour
+          this.clines.push(this.path.length-1)   // store conection line
+        } 
+        // Create the polygon 
+        this.p = board.create('polygon', this.path, pstyle);
+        // suppress the connector lines
+        for (const i of this.clines)
+          this.p.borders[i].setAttribute({visible:false});
+      // old format, just a single contour
+      } else this.p = board.create('polygon', this.v, pstyle);
+      // switching objects
+      this.obj = [this.p].concat(this.p.borders);
+      // state init
+      if (this.state == "show") show(this)
+      if (this.state == "hide") hide(this)
+      if (this.state != "locked") makeSwitchable(this.p, this)
+    }
+    hasPoint(pt) {
+      return isOn(pt, this.p)
+    }
+    data() {
+      var a = this.d.slice(0);
+      a.push(this.state);
+      return a
+    }
+    name() {
+      return targetName(this)
+    }
   }
-  hasPoint(pt) {return isOn(pt,this.p)} 
-  data(){ var a = this.d.slice(0); a.push(this.state); return a}
-  name(){ return targetName(this) }  
-}
 
 // line load 
 // line load perpendicular to the line
@@ -1656,35 +1699,6 @@ function isNewerVersion (oldVer, newVer) {
 		if (a < b) return false
 	}
 	return false
-}
-
-// helper functions for class polygon, taken from https://github.com/Niclas17/meclib
-function createPath(...arrays) {
-  let path = [];
-  for (let i = 0; i < arrays.length; i++) {
-    const array = arrays[i];
-    path = path.concat(i === 0 ? array : array.reverse());
-    if (i >= 1) {
-      path.push(array[0]);
-      path.push(arrays[0][arrays[0].length-1]);
-    }
-  }
-  return path;
-}
-function findConnectingLines(mainPolygon, ...coordsArrays) {
-  const lines = [];
-  let lastPoint = 0;
-  lines.push(mainPolygon.length - 1);
-  lastPoint += mainPolygon.length - 1;
-  for (let i = 0; i < coordsArrays.length; i++) {
-    lines.push(lastPoint + coordsArrays[i].length + 1);
-    lastPoint += coordsArrays[i].length + 1;
-    if (i !== coordsArrays.length - 1) {
-      lines.push(lastPoint + 1);
-      lastPoint += 1;
-    }
-  }
-  return lines;
 }
 
 // initialization
