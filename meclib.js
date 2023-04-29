@@ -1038,52 +1038,24 @@ class point {
 // grau gefülltes Polygon mit schwarzem Rand. Z.B. für Scheiben oder Balken
 // Version with hole taken from https://github.com/Niclas17/meclib 
 class polygon {
-  constructor(data) {
-    if (typeof(data[data.length - 1]) == 'string') {
-      this.state = data.pop()
-    } else {
-      this.state = "locked"
-    }
-    let pstyle = {
-    	opacity: true,
-    	fillcolor: 'lightgray',
-     	vertices: {
-       	size: 0,
-       	fixed: true
-     	},
-     	borders: normalStyle,
-     	hasInnerPoints: true
-    }
-    this.loads = [];
+  constructor(data){
+    if (typeof(data[data.length-1]) == 'string') {this.state = data.pop()}
+      else {this.state = "locked"}
+    this.loads = []; 
     this.d = data.slice(0);
     this.v = data.slice(2);
-    
-   	if (this.v[0].length > 2){
-    	this.path = createPath(...this.v);
-    	this.connectingLines = findConnectingLines(...this.v);
-    	this.p = board.create('polygon', this.path, pstyle);
-    	for (let i = 0; i < this.connectingLines.length; i++){
-				this.p.borders[this.connectingLines[i]].setAttribute({visible:false});
-			}
-    } else this.p = board.create('polygon', this.v, pstyle);
+    this.p = board.create('polygon',this.v, {opacity: true, fillcolor:'lightgray', vertices:{size:0, fixed: true} ,borders: normalStyle, hasInnerPoints:true } );
     // switching objects
     this.obj = [this.p].concat(this.p.borders);
     // state init
-    if (this.state == "show") show(this)
-    if (this.state == "hide") hide(this)
-    if (this.state != "locked") makeSwitchable(this.p, this)
+    if (this.state == "show") { show(this) }
+    if (this.state == "hide") { hide(this) }
+    if (this.state != "locked") { makeSwitchable(this.p, this) }
+
   }
-  hasPoint(pt) {
-    return isOn(pt, this.p)
-  }
-  data() {
-    var a = this.d.slice(0);
-    a.push(this.state);
-    return a
-  }
-  name() {
-    return targetName(this)
-  }
+  hasPoint(pt) {return isOn(pt,this.p)} 
+  data(){ var a = this.d.slice(0); a.push(this.state); return a}
+  name(){ return targetName(this) }  
 }
 
 // line load 
