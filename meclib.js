@@ -1037,24 +1037,68 @@ class point {
 }
 // grau gefülltes Polygon mit schwarzem Rand. Z.B. für Scheiben oder Balken
 class polygon {
-  constructor(data){
-    if (typeof(data[data.length-1]) == 'string') {this.state = data.pop()}
-      else {this.state = "locked"}
-    this.loads = []; 
+  constructor(data) {
+    if (typeof(data[data.length - 1]) == 'string') {
+      this.state = data.pop()
+    } else {
+      this.state = "locked"
+    }
+    this.loads = [];
     this.d = data.slice(0);
     this.v = data.slice(2);
-    this.p = board.create('polygon',this.v, {opacity: true, fillcolor:'lightgray', vertices:{size:0, fixed: true} ,borders: normalStyle, hasInnerPoints:true } );
+    
+   	if (this.v[0].length > 2){
+    	this.path = createPath(...this.v);
+    	this.connectingLines = findConnectingLines(...this.v);
+    	this.p = board.create('polygon', this.path, {
+      	opacity: true,
+      	fillcolor: 'lightgray',
+      	vertices: {
+        	size: 0,
+        	fixed: true
+      	},
+      	borders: normalStyle,
+      	hasInnerPoints: true
+    	});
+    	for (let i = 0; i < this.connectingLines.length; i++){
+				this.p.borders[this.connectingLines[i]].setAttribute({visible:false});
+			}
+    } else {
+    	this.p = board.create('polygon', this.v, {
+      	opacity: true,
+      	fillcolor: 'lightgray',
+      	vertices: {
+       	 size: 0,
+       	 fixed: true
+     	 },
+      	borders: normalStyle,
+      	hasInnerPoints: true
+    	});
+    }
     // switching objects
     this.obj = [this.p].concat(this.p.borders);
     // state init
-    if (this.state == "show") { show(this) }
-    if (this.state == "hide") { hide(this) }
-    if (this.state != "locked") { makeSwitchable(this.p, this) }
-
+    if (this.state == "show") {
+      show(this)
+    }
+    if (this.state == "hide") {
+      hide(this)
+    }
+    if (this.state != "locked") {
+      makeSwitchable(this.p, this)
+    }
   }
-  hasPoint(pt) {return isOn(pt,this.p)} 
-  data(){ var a = this.d.slice(0); a.push(this.state); return a}
-  name(){ return targetName(this) }  
+  hasPoint(pt) {
+    return isOn(pt, this.p)
+  }
+  data() {
+    var a = this.d.slice(0);
+    a.push(this.state);
+    return a
+  }
+  name() {
+    return targetName(this)
+  }
 }
 
 // line load 
@@ -1655,6 +1699,35 @@ function isNewerVersion (oldVer, newVer) {
 		if (a < b) return false
 	}
 	return false
+}
+
+function createPath(...arrays) {
+  let path = [];
+  for (let i = 0; i < arrays.length; i++) {
+    const array = arrays[i];
+    path = path.concat(i === 0 ? array : array.reverse());
+    if (i >= 1) {
+      path.push(array[0]);
+      path.push(arrays[0][arrays[0].length-1]);
+    }
+  }
+  return path;
+}
+
+function findConnectingLines(mainPolygon, ...coordsArrays) {
+  const lines = [];
+  let lastPoint = 0;
+  lines.push(mainPolygon.length - 1);
+  lastPoint += mainPolygon.length - 1;
+  for (let i = 0; i < coordsArrays.length; i++) {
+    lines.push(lastPoint + coordsArrays[i].length + 1);
+    lastPoint += coordsArrays[i].length + 1;
+    if (i !== coordsArrays.length - 1) {
+      lines.push(lastPoint + 1);
+      lastPoint += 1;
+    }
+  }
+  return lines;
 }
 
 // initialization
