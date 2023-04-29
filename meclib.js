@@ -1087,7 +1087,6 @@ class polygon {
     if (this.state != "locked") {
       makeSwitchable(this.p, this)
     }
-
   }
   hasPoint(pt) {
     return isOn(pt, this.p)
