@@ -1016,9 +1016,10 @@ class node {
   constructor(data) {
     this.d = data;
     if (data.length > 3) {this.dist = data[3]} else {this.dist = 10};
+    if (data.length > 4) {this.lc = data[4]; this.fc= data[4]} else {this.lc ="black"; this.fc = "white"};
     // node
     this.p1 = board.create('point', data[2],  {name:toTEX(data[1]), 
-      label:{autoPosition:true, offset:[0,this.dist]}, ...nodeStyle} );
+      label:{autoPosition:true, offset:[0,this.dist], strokeColor:this.lc}, ...nodeStyle, fillcolor:this.fc} );
     // label
   }
   data() { return this.d }
