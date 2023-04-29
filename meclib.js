@@ -1686,7 +1686,19 @@ function isNewerVersion (oldVer, newVer) {
 	return false
 }
 
-// helper function for class polygon, taken from https://github.com/Niclas17/meclib
+// helper functions for class polygon, taken from https://github.com/Niclas17/meclib
+function createPath(...arrays) {
+  let path = [];
+  for (let i = 0; i < arrays.length; i++) {
+    const array = arrays[i];
+    path = path.concat(i === 0 ? array : array.reverse());
+    if (i >= 1) {
+      path.push(array[0]);
+      path.push(arrays[0][arrays[0].length-1]);
+    }
+  }
+  return path;
+}
 function findConnectingLines(mainPolygon, ...coordsArrays) {
   const lines = [];
   let lastPoint = 0;
