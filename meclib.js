@@ -810,14 +810,14 @@ class grid {
       if (xmin<xmax) {labelopt = {position: 'rt', offset: [-5, 12] } } 
       else {labelopt = {position: 'lft', offset: [-5, 12] }}
       var xaxis = board.create('axis', [[0, 0], [1,0]], 
-	    {name:toTEX(data[1]), withLabel: true, label: labelopt,
-        ticks: {generateLabelValue:function(p1,p2) {return (p1.usrCoords[1]-p2.usrCoords[1])*fx}} });}
+	    {name:toTEX(data[1]), withLabel: true, label: labelopt, layer:8,
+        ticks: { layer:8, generateLabelValue:function(p1,p2) {return (p1.usrCoords[1]-p2.usrCoords[1])*fx}} });}
     if (data[2]) { 
       if (ymin<ymax) {labelopt = {position: 'rt', offset: [10, 0] } } 
       else {labelopt = {position: 'rt', offset: [10, 0] }}
    	  var yaxis = board.create('axis', [[0, 0], [0,1]], 
-	    {name:toTEX(data[2]), withLabel: true, label: labelopt,
-        ticks: {generateLabelValue:function(p1,p2) {return (p1.usrCoords[2]-p2.usrCoords[2])*fy}} });    
+	    {name:toTEX(data[2]), withLabel: true, label: labelopt, layer:8,
+        ticks: { layer:8, generateLabelValue:function(p1,p2) {return (p1.usrCoords[2]-p2.usrCoords[2])*fy}} });    
     } 
     // version info
     this.vs = board.create("text", [xmin + 0.5 * a, ymax - 0.5 * a, versionText], 
