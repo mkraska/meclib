@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2023 04 29";
+const versionText= "JXG "+JXG.version+" Meclib 2023 05 04";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -60,7 +60,7 @@ const hatchStyle = function () { return {fixed: true, width:4*pxunit , frequency
 const board = JXG.JSXGraph.initBoard(divid, {
   boundingbox: [-5, 5, 5, -5], //default values, use "grid" to customize
   axis: false, grid:true, showNavigation:false, showCopyright:false, 
-  keepAspectRatio:true, resize: {enabled: false, throttle: 200},
+  keepAspectRatio:false, resize: {enabled: false, throttle: 200},
   pan: {enabled:false}, //suppress uninteded pan on touchscreens
   keyboard:{enabled:false} //would spoil textinput in momentGen and forceGen
 });
@@ -792,13 +792,32 @@ class grid {
     var fx = 1, fy = 1;
     if (data[8]) {fx = data[8][0]; fy = data[8][1]; xscale = fx; yscale = fy };
     if (data[9]) {dpx = data[9][0]; dpy = data[9][1] };
-    // logics of container sizing and grid scaling has changed between 1.2.1 and 1.3.2
-    if (isNewerVersion ('1.3.1', JXG.version)) {
-      board.resizeContainer(pix*Math.abs(xmax-xmin), pix*Math.abs(ymax-ymin),false,true); 
-      board.setBoundingBox([xmin, ymax, xmax, ymin ], true)
-    } else {
-      board.setBoundingBox([xmin, ymax, xmax, ymin ]);
-      board.resizeContainer(pix*Math.abs(xmax-xmin), pix*Math.abs(ymax-ymin)); 
+    var width = pix*Math.abs(xmax-xmin)
+    var height = pix*Math.abs(ymax-ymin)
+    // logics of container sizing and grid scaling has changed between 1.2.1 and 1.3.2 and in 2023
+    try {
+      if (stack_js) {
+        // Stack 2023
+		// JSXGraph box sizing and coordinate system
+        board.resizeContainer(width, height); 
+        board.setBoundingBox([xmin, ymax, xmax, ymin ])
+        // sizing the wrapper div
+        document.getElementById(divid).parentElement.style.width = width.toFixed(0)+"px";
+        document.getElementById(divid).parentElement.style.height = height.toFixed(0)+"px";
+		// sizing the iframe
+        stack_js.resize_containing_frame((width+3).toFixed(0)+"px", (height+3).toFixed(0)+"px");
+      }
+    } catch (error) {
+      if (error instanceof ReferenceError) {
+        // older
+        if (isNewerVersion ('1.3.1', JXG.version)) {
+          board.resizeContainer(width, height,false,true); 
+          board.setBoundingBox([xmin, ymax, xmax, ymin ], true)
+        } else {
+        board.setBoundingBox([xmin, ymax, xmax, ymin ]);
+        board.resizeContainer(width, height); 
+        }
+      }
     }
     // convenience units
     a = 16/pix; 
@@ -819,6 +838,9 @@ class grid {
 	    {name:toTEX(data[2]), withLabel: true, label: labelopt, layer:8,
         ticks: { layer:8, generateLabelValue:function(p1,p2) {return (p1.usrCoords[2]-p2.usrCoords[2])*fy}} });    
     } 
+    // grid to background
+    board.grids[0].setAttribute({layer:0});
+
     // version info
     this.vs = board.create("text", [xmin + 0.5 * a, ymax - 0.5 * a, versionText], 
       {strokeColor: "lightgray", fixed:true});
@@ -1545,10 +1567,13 @@ function update() {
   names = names.concat("]");
   if (mode == "jsfiddle") {
     stateInput.innerHTML = JSON.stringify(dfield);
-    document.getElementById(fbd_names).innerHTML = names } 
+    document.getElementById(fbd_names).innerHTML = names}
   else {
     stateInput.value = JSON.stringify(dfield);
-    document.getElementById(fbd_names).value = names }
+    stateInput.dispatchEvent(new Event('change'));
+    document.getElementById(fbd_names).value = names;
+    document.getElementById(fbd_names).dispatchEvent(new Event('change'))}
+    
 }
 
 function cleanUp() {
