@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <quiz>
-<!-- question: 105156  -->
+<!-- question: 105596  -->
   <question type="stack">
     <name>
       <text>fb_unit() test suite</text>
@@ -124,6 +124,9 @@ Deviation within tolerance
 **T22** `fb_unit(1, 1.001, 0.005)`<br>
 [[feedback:t22]]
 
+**T23** `fb_unit(-3.17, 3.17, 0.05)` [Issue #38](https://github.com/mkraska/meclib/issues/38)
+[[feedback:t23]]
+
 </details>]]></text>
     </questiontext>
     <generalfeedback format="markdown">
@@ -138,6 +141,7 @@ Deviation within tolerance
     </stackversion>
     <questionvariables>
       <text><![CDATA[/* history
+2023 05 08 add T23 (issue #38)
 2023 04 08 split into interactive and pre-defined (this one) tests
 2023 02 07 add test T03a
 2023 01 14 Automate the comparison by use of Answer tests (requires STACK 4.4.2);
@@ -170,7 +174,8 @@ E20: fb_unit(1.0, 11, 0.005);
 E21: fb_unit(100, 11, 0.005);
 E22: fb_unit(1, 1.001, 0.005);
 
-lbl: castext("[[lang code='en, other']]english[[/lang]][[lang code='ru']]русский[[/lang]]");]]></text>
+lbl: castext("[[lang code='en, other']]english[[/lang]][[lang code='ru']]русский[[/lang]]");
+]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
       <text></text>
@@ -1014,6 +1019,41 @@ E: "&nbsp;Abweichung: -0.1% (display because debug=true. Would be empty otherwis
         <falsepenalty></falsepenalty>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>t22-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[{#R#}<br>
+{#E#}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>t23</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[R: fb_unit(-3.17, 3.17, 0.05);
+E: E: "&nbsp;Pr&uuml;fen Sie das Vorzeichen.";]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <answertest>AlgEquiv</answertest>
+        <sans>R</sans>
+        <tans>E</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>t23-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@R@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>t23-1-F</falseanswernote>
         <falsefeedback format="html">
           <text><![CDATA[{#R#}<br>
 {#E#}]]></text>
