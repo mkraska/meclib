@@ -102,7 +102,7 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom
   if %_tnum = 0.0  then return(debug1), 
   if %_snum = 0.0 then return("&nbsp;The absolute value is too small."),
   /* check of the sign */
-  if %_snum/%_tnum <0 then return("&nbsp;Check the sign."),
+  if ev(%_snum/%_tnum, simp) <0 then return("&nbsp;Check the sign."),
   /* go back if error is less than tolerance */ 
   if ev(abs((%_snum-%_tnum)/%_tnum),simp) < %_tol then (
     if debug then return(sconcat("&nbsp;Error: ", ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp) , "% (display because debug=true. Would be empty otherwise.)")) 
