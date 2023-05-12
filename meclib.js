@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2023 05 04";
+const versionText= "JXG "+JXG.version+" Meclib 2023 05 12";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -694,12 +694,14 @@ class force {
     this.p2.ref = function() { return XY(this.start) };
     this.p2.infoboxlabel = "Vektor ";
     if (this.state == "silent") {this.p2.setAttribute({showInfobox:false})}
+    // dash
+    var d = 0; if (this.state == "dotted") d=2
     // arrow version with fixed:false doesn't snap to grid
     //this.vec = board.create('arrow', [this.p1, this.p2], {
     //  touchLastPoint: true, fixed:false, snapToGrid:true, lastArrow:{size:5, type:2}, highligh    
     this.vec = board.create('arrow', [this.p1, this.p2], {
       touchLastPoint: true, lastArrow:{size:5, type:2}, highlight:hl,
-      highlightStrokeColor:highlightColor, strokeColor:loadColor});
+      highlightStrokeColor:highlightColor, strokeColor:loadColor, dash:d});
     this.vec.obj = [this.vec, this.p1, this.p2];
     this.vec.parent = this;  
     // translation by base point drag
