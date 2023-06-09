@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2023 05 12";
+const versionText= "JXG "+JXG.version+" Meclib 2023 06 09";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -816,8 +816,8 @@ class grid {
           board.resizeContainer(width, height,false,true); 
           board.setBoundingBox([xmin, ymax, xmax, ymin ], true)
         } else {
-        board.setBoundingBox([xmin, ymax, xmax, ymin ]);
-        board.resizeContainer(width, height); 
+          board.setBoundingBox([xmin, ymax, xmax, ymin ]);
+          board.resizeContainer(width, height); 
         }
       }
     }
@@ -826,19 +826,22 @@ class grid {
     pxunit = 1/pix;
     //labelshift = 0.2*a;
     //if (data[1] || data[2]) {board.removeGrids()};
+    // Axes specification
     var labelopt;
     if (data[1]) { 
       if (xmin<xmax) {labelopt = {position: 'rt', offset: [-5, 12] } } 
       else {labelopt = {position: 'lft', offset: [-5, 12] }}
       var xaxis = board.create('axis', [[0, 0], [1,0]], 
 	    {name:toTEX(data[1]), withLabel: true, label: labelopt, layer:8,
-        ticks: { layer:8, generateLabelValue:function(p1,p2) {return (p1.usrCoords[1]-p2.usrCoords[1])*fx}} });}
+        ticks: { layer:8, generateLabelValue:function(p1,p2) {
+	      return ((p1.usrCoords[1]-p2.usrCoords[1])*fx).toFixed(dpx-1)}} });}
     if (data[2]) { 
       if (ymin<ymax) {labelopt = {position: 'rt', offset: [10, 0] } } 
       else {labelopt = {position: 'rt', offset: [10, 0] }}
    	  var yaxis = board.create('axis', [[0, 0], [0,1]], 
 	    {name:toTEX(data[2]), withLabel: true, label: labelopt, layer:8,
-        ticks: { layer:8, generateLabelValue:function(p1,p2) {return (p1.usrCoords[2]-p2.usrCoords[2])*fy}} });    
+        ticks: { layer:8, generateLabelValue:function(p1,p2) {
+	      return ((p1.usrCoords[2]-p2.usrCoords[2])*fy).toFixed(dpy-1)}} });    
     } 
     // grid to background
     board.grids[0].setAttribute({layer:0});
