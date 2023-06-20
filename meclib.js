@@ -1448,6 +1448,29 @@ class wall {
       [1,pt.X(),pt.Y()], this.bl.stdform) < tolPointLine } 
 }
 
+// [ "frame", [ Array of ccordinates ], tension]
+class frame {
+	constructor(data) {
+  	this.d = data;
+    if(data[2]){
+    	this.t = data[2];
+    } else{
+    	this.t = 100;
+    }
+    this.fr = board.create('metapostspline', [data[1], {
+		tension: this.t,  // <--- Je höher desto kantiger
+  	isClosed: true
+		}], {
+		strokeColor: 'grey',
+  		strokeWidth: 2,
+  		dash: 2,
+  		points: {visible: false}
+});
+  }
+  data() { return this.d }
+  name(){  return "frame" }
+}
+
 function init() {
   let state;
   if (stateRef) {
@@ -1478,6 +1501,7 @@ function init() {
       case "fix13": 	objects.push(new fix13(m)); break;
       case "force": 	objects.push(new force(m)); break;
       case "forceGen":  objects.push(new forceGen(m)); break;
+      case "frame":	objects.push(new frame(m)); break;
       case "grid":  	objects.push(new grid(m)); break;
       case "label":   	objects.push(new label(m)); break;
       case "line": 		objects.push(new line(m)); break
