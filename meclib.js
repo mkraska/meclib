@@ -781,16 +781,16 @@ class forceGen {
   name(){  return "0" }
 }
 
-// [ "frame", [ Array of ccordinates ], tension]
+// [ "frame", "", [ Array of ccordinates ], tension]
 class frame {
 	constructor(data) {
   	this.d = data;
-    if(data[2]){
-    	this.t = data[2];
+    if(data[3]){
+    	this.t = data[3];
     } else{
-    	this.t = 100;
+    	this.t = 3;
     }
-    this.fr = board.create('metapostspline', [data[1], {
+    this.fr = board.create('metapostspline', [data[2], {
 		tension: this.t,  // <--- Je höher desto kantiger
   	isClosed: true
 		}], {
