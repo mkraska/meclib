@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2023 06 28";
+const versionText= "JXG "+JXG.version+" Meclib 2023 07 08";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -756,6 +756,7 @@ class forceGen {
     // callback creates new force object and new name
     vec.parent = this;
     t.on('out', function(e) {
+	  document.getElementById(fid).value = cleanupName(document.getElementById(fid).value)
       p2.setAttribute({name:toTEX(document.getElementById(fid).value) })});
     vec.on('up', function(e) {
       //only generate force if distance is sufficient to not create overlapping objects
@@ -1036,6 +1037,7 @@ class momentGen {
     // callback creates new moment object and new name
     arc.parent = this;
     t.on('out', function(e) {
+	  document.getElementById(mid).value = cleanupName(document.getElementById(mid).value)
       p3.setAttribute({name:toTEX(document.getElementById(mid).value )})});
     arc.on('up', function(e) {
       //only generate force if distance is sufficient to not create overlapping objects
@@ -1633,6 +1635,26 @@ function toTEX(str) {
   };
   str = '\\('+str.replace(/[\*\s]/g, "\\;")+'\\)'; // converts stars to small math spaces and adds math mode brackets
   return  str}
+// makes sure that a name consists of a single character with or without subscript. 
+// If there is more than one character before the end or before the first subscript, then the name is modified.
+// https://jsfiddle.net/0pzeu68g/1/
+function cleanupName(str) {
+  let strList = str.split(/\s+|\*/);
+  let out =""
+  console.log(strList)
+  strList.forEach(function(st) {
+    console.log(st);
+    var pos = st.search("_") 
+    if (st.length>1 && pos>1) { 
+      // remove underscores at wrong places
+      st = st.replace(/_/g, '')
+      pos = -1}
+    if (st.length>1 && pos===-1) { st = st.substring(0, 1) + "_" + st.substring(1);} // insert an underscore if string is longer than one character
+    out = out+st+" "
+  });
+  out = out.slice(0, -1); // renove trailing space
+  return out
+}
 // functions for proximity check (Allfred Wassermann, 2022-12-13)
 function isOn(pt, po) {return pt.isOn(po, tolPointLine) }	
 function targetName(obj) {if (obj.loads[0]) {return '['+obj.loads+']'} else {return '"'+obj.state+'"' } } 
