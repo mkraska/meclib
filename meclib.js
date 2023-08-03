@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2023 07 08";
+const versionText= "JXG "+JXG.version+" Meclib 2023 08 03";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -29,6 +29,8 @@ JXG.Options.text.parse = false;
 JXG.Options.label.useMathJax = true;
 JXG.Options.label.offset = [0, 0];
 JXG.Options.label.anchorY = 'middle';
+// suppress automatic labels
+JXG.Options.point.name = ""; 
 // highlighting is activated explicitly for interactive objects
 JXG.Options.curve.highlight = false;
 JXG.Options.label.highlight = false;
