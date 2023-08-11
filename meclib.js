@@ -57,7 +57,7 @@ const normalStyle = { strokeWidth: 2, strokeColor: 'black', lineCap: 'round' };
 // helper line
 const thinStyle = { strokeWidth: 1, strokeColor: 'black', lineCap: 'round' };
 // hatch style, must be a function because depending on pxunit
-const hatchStyle = function () { return {fixed: true, width:4*pxunit , frequency:4*pxunit, angle:45*deg2rad, layer:8 } };
+const hatchStyle = function () { return {fixed: true, width:5*pxunit , frequency:5*pxunit, angle:45*deg2rad, layer:8, strokeColor:'black' } };
 
 const board = JXG.JSXGraph.initBoard(divid, {
   boundingbox: [-5, 5, 5, -5], //default values, use "grid" to customize
