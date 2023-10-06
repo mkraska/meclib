@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2023 08 03";
+const versionText= "JXG "+JXG.version+" Meclib 2023 10 06";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -40,6 +40,8 @@ JXG.Options.line.highlight = false;
 JXG.Options.polygon.highlight = false;
 JXG.Options.polygon.borders.highlight = false;
 JXG.Options.point.highlight = false;
+// grid control
+JXG.Options.axis.ticks.insertTicks = false;
 // Styles
 // nodes (hinges)
 const nodeStyle = { fillcolor: 'white', strokeColor: 'black', size: 2, strokeWidth: 1.5 }; 
