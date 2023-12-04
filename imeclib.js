@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" iMeclib 2023 12 02";
+const versionText= "JXG "+JXG.version+" iMeclib 2023 12 04";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -1027,22 +1027,22 @@ class grid {
     pxunit = 1/pix;
     //labelshift = 0.2*a;
     //if (data[1] || data[2]) {board.removeGrids()};
-    // Axes specification
+    // Axes specification. The dp is 1 less than infobox dp but not less than 0
     var labelopt;
     if (data[1]) { 
       if (xmin<xmax) {labelopt = {position: 'rt', offset: [-5, 12] } } 
       else {labelopt = {position: 'lft', offset: [-5, 12] }}
       var xaxis = board.create('axis', [[0, 0], [1,0]], 
 	    {name:toTEX(data[1]), withLabel: true, label: labelopt, layer:0,
-        ticks: { layer:0, generateLabelValue:function(p1,p2) {
-	      return ((p1.usrCoords[1]-p2.usrCoords[1])*fx).toFixed(dpx-1)}} });}
+        ticks: { label:{layer:3}, generateLabelValue:function(p1,p2) {
+	      return ((p1.usrCoords[1]-p2.usrCoords[1])*fx).toFixed([0,dpx-1].max)}} });}
     if (data[2]) { 
       if (ymin<ymax) {labelopt = {position: 'rt', offset: [10, 0] } } 
       else {labelopt = {position: 'rt', offset: [10, 0] }}
    	  var yaxis = board.create('axis', [[0, 0], [0,1]], 
 	    {name:toTEX(data[2]), withLabel: true, label: labelopt, layer:0,
-        ticks: { layer:0, generateLabelValue:function(p1,p2) {
-	      return ((p1.usrCoords[2]-p2.usrCoords[2])*fy).toFixed(dpy-1)}} });    
+        ticks: { label:{layer:3}, generateLabelValue:function(p1,p2) {
+	      return ((p1.usrCoords[2]-p2.usrCoords[2])*fy).toFixed([0,dpy-1].max)}} });    
     } 
     // version info
     this.vs = board.create("text", [xmin + 0.5 * a, ymax - 0.5 * a, versionText], 
