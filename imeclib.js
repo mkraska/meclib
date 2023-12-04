@@ -1419,7 +1419,7 @@ class rope {
     this.c1 = board.create('circle', [this.p1, r1], vis);
     this.c2 = board.create('circle', [this.p2, r2], vis);
     this.cm = board.create('circle', [this.pm, this.p1], vis);
-    this.ropeAttr = {name: data[1], layer: defaultMecLayer, withLabel:true, ...normalStyle, label:{offset:[0,0],autoPosition:true}};
+    this.ropeAttr = {name:"", layer: defaultMecLayer, withLabel:true, ...normalStyle, label:{offset:[0,0],autoPosition:true}};
 	
     if (Math.abs(r1) > Math.abs(r2)) {
    	    this.c3 = board.create('circle', [this.p1, 
