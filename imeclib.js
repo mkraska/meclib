@@ -848,19 +848,14 @@ class force {
     let pstyle = {snapToGrid:false, size:0, fixed:true, snapToPoints:false, label:labelopts};
     let	hl = false; 
     if (this.state == "active") {
-		pstyle = {snapToGrid:true, fixed:false, size:2, snapToPoints:true, 
-		attractors:targets, attractorDistance: 0.2, label:labelopts};
-		hl = true; }
+		  pstyle = {snapToGrid:true, fixed:false, size:2, snapToPoints:true, 
+		  attractors:targets, attractorDistance: 0.2, label:labelopts};
+		  hl = true; }
     // start and end point
     this.p1 = board.create('point', data[2], { name: this.name1, 
       ...controlSnapStyle, ...pstyle }); 
-    console.log('Force Point 1 Coordinates: (' + this.p1.X() + ', ' + this.p1.Y() + ')');
     this.p2 = board.create('point', data[3], { name: this.name2, 
-      ...controlSnapStyle, ...pstyle });
-    console.log('Force Point 2 Coordinates: (' + this.p2.X() + ', ' + this.p2.Y() + ')');
-    let forcelength = Math.sqrt(Math.pow(this.p2.X() - this.p1.X(), 2) + Math.pow(this.p2.Y() - this.p1.Y(), 2));
-    console.log('Force Length: ' + forcelength);
-    
+      ...controlSnapStyle, ...pstyle });   
     // configure infobox
     this.p1.dp = [dpx+1,dpy+1];
     this.p2.start = this.p1;
@@ -873,27 +868,28 @@ class force {
     this.vec = board.create('arrow', [this.p1, this.p2], {
       touchLastPoint: true, lastArrow:{size:5, type:2}, highlight:hl,
       highlightStrokeColor:highlightColor, strokeColor:loadColor, dash:d});
-    if (this.state == "active") {this.vec.setAttribute({fixed:false, snapToGrid:true});
-    const moveF = board.create('group', 
-      [this.p1, this.p2]).setRotationCenter(this.p1).setRotationPoints(this.p2);}
+    // interactive control
+    if (this.state == "active") {this.vec.setAttribute({fixed:false, snapToGrid:true})}
     this.vec.obj = [this.vec, this.p1, this.p2];
     this.vec.parent = this;  
-    // translation by base point drag
-    const g = board.create('group', [this.p1, this.p2]);
-    g.removeTranslationPoint(this.p2);
-    // delete-function
+    // postproceswsing
     this.vec.lastclick = Date.now(); 
+    let that = this
+    // remove object on doubleclick
     this.vec.on('up', function() {
-      if (Date.now()-this.lastclick < 500 && this.parent.state == "active") { 
-        this.parent.state = "deleted"; cleanUp();
+      if (Date.now()-this.lastclick < 500 && that.state == "active") { 
+        console.log("delete force")
+        that.state = "deleted"; cleanUp();
         board.removeObject(this.obj, true);
-        update()
-      }
-    else {this.lastclick = Date.now() } })
-       if (forcelength === 0) {
-      console.log('Force length should not be zero.');
-      this.state = "hideforce";
-    }
+      } else {this.lastclick = Date.now()}
+    })
+    // avoid zero length of vector
+    this.p2.on('up', function() {
+      console.log("length check")
+      if (that.vec.L() === 0) {
+        console.log('Force length should not be zero.');
+        that.p2.moveTo(plus(XY(that.p2),[0.5,0]),0)
+    } })
     // switch off highlighting if locked
     this.obj = [this.vec, this.p1, this.p2, this.p2.label];
     if (this.state == "locked") { lock(this) } 
