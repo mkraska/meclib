@@ -12,8 +12,8 @@ fb_vars(%_sans,%_tans, [%_opt] ) := block([%_vars, %_label,%_tansvar,%_sansvar,%
     %_txt: %_label,
     %_sansvar: setify(listofvars(%_sans)),
     %_tansvar: setify(listofvars(%_tans)),
-    /* Say nothing if tans is free of vars (e.g. because it is zero) */
-    if emptyp(%_tansvar) then return(""),
+    /* Say nothing if tans is free of vars and is zero) */
+    if (emptyp(%_tansvar) and %_tans=0) then return(""),
     /* Check for spurious (extra) vars */
     %_extras: setdifference(%_sansvar, %_tansvar),
     if length(%_extras) > 0 then (
