@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" iMeclib 2023 12 04";
+const versionText= "JXG "+JXG.version+" iMeclib 2024 19";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -881,7 +881,7 @@ class force {
         console.log("delete force")
         that.state = "deleted"; cleanUp();
         board.removeObject(this.obj, true);
-      } else {this.lastclick = Date.now()}
+      } else {this.lastclick = Date.now(); update()}
     })
     // avoid zero length of vector
     this.p2.on('up', function() {
