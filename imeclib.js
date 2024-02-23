@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" iMeclib 2024 02 21";
+const versionText= "JXG "+JXG.version+" iMeclib 2024 02 23";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -1418,120 +1418,115 @@ class rope {
     this.ropeAttr = {name:"", layer: defaultMecLayer, withLabel:true, ...normalStyle, label:{offset:[0,0],autoPosition:true}};
 	
     if (Math.abs(r1) > Math.abs(r2)) {
-   	    this.c3 = board.create('circle', [this.p1, 
-            function() {return r1 - r2}], {strokeWidth:'1px', strokeColor:'red', ...vis});
-   	    this.i1 = board.create('intersection', [this.cm, this.c3], {name:'i1', ...vis});
-   	    this.i2 = board.create('otherintersection', [this.cm, this.c3, this.i1], {name:'i2', ...vis});
-   	    this.l1 = board.create('line', [this.p1, this.i2], vis);
-            this.l2 = board.create('line', [this.p1, this.i1], vis);
-   	    this.i3 = board.create('intersection', [this.c1, this.l1], {name:'i3', ...vis});
-            this.i31 = board.create('otherintersection', [this.c1, this.l1, this.i3], {name:'i31', ...vis});
-            this.i4 = board.create('intersection', [this.c1, this.l2], {name:'i4', ...vis});
-            this.i41 = board.create('otherintersection', [this.c1, this.l2, this.i4], {name:'i41', ...vis});
-            if (r1 < 0) {
-        	this.lpl = board.create('parallel', [this.i1,this.p2,this.i41], {color:'purple', ...vis});
-   	    	this.lpr = board.create('parallel', [this.i2,this.p2,this.i31], {color:'green', ...vis});
-            } else {
-        	this.lpl = board.create('parallel', [this.i1,this.p2,this.i4], {color:'purple', ...vis});
-   	    	this.lpr = board.create('parallel', [this.i2,this.p2,this.i3], {color:'green', ...vis});
-            }
-   	    this.i5 = board.create('intersection', [this.c2, this.lpr], {name:'i5', ...vis});
-            this.i6 = board.create('intersection', [this.c2, this.lpl], {name:'i6', ...vis});
-            if (r1 > 0) { 
-            this.l = board.create('segment', [this.i3, this.i5], this.ropeAttr); 
-            this.mp = board.create('midpoint', [this.i3, this.i5], {name:'mp', visible:false});
-            const alpha = this.l.getAngle()+90*deg2rad;
-            this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i3), XY(this.i5) ) ), rect(11*pxunit, alpha)), {visible:false});
-            } 
-            else { 
-            this.l = board.create('segment', [this.i31, this.i5], this.ropeAttr);
-            this.mp = board.create('midpoint', [this.i31, this.i5], {name:'mp', visible:false});
-            const alpha = this.l.getAngle()+90*deg2rad;
-            this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i31), XY(this.i5) ) ), rect(11*pxunit, alpha)), {visible:false});
-            }      
-   } 
-   else if (Math.abs(r1) < Math.abs(r2)) {
-   	    this.c3 = board.create('circle', [this.p2, 
-   	    function() {return r2 - r1}], {strokeWidth:'1px', strokeColor:'red', ...vis});
-   	    this.i1 = board.create('intersection', [this.cm, this.c3], {name:'i1', ...vis});
-   	    this.i2 = board.create('otherintersection', [this.cm, this.c3, this.i1], {name:'i2', ...vis});
-   	    this.l1 = board.create('line', [this.p2, this.i2], vis);
-   	    this.l2 = board.create('line', [this.p2, this.i1], vis);
-   	    this.i3 = board.create('intersection', [this.c2, this.l1], {name:'i3', ...vis});
-   	    this.i31 = board.create('otherintersection', [this.c2, this.l1, this.i3], {name:'i31', ...vis});
-   	    this.i4 = board.create('intersection', [this.c2, this.l2], {name:'i4', ...vis});
-   	    this.i41 = board.create('otherintersection', [this.c2, this.l2, this.i4], {name:'i41', ...vis});
-   	    if (r2 < 0) {
-   	    	this.lpl = board.create('parallel', [this.i1,this.p1,this.i41], {color:'purple', ...vis});
-   	    	this.lpr = board.create('parallel', [this.i2,this.p1,this.i31], {color:'green', ...vis});
-   	    } else {
-   	    	this.lpl = board.create('parallel', [this.i1,this.p1,this.i4], {color:'purple', ...vis});
-   	    	this.lpr = board.create('parallel', [this.i2,this.p1,this.i3], {color:'green', ...vis});
-   	    }
-   	    this.i5 = board.create('intersection', [this.c1, this.lpr], {name:'i5', ...vis});
-        this.i6 = board.create('intersection', [this.c1, this.lpl], {name:'i6', ...vis});
-   	    if (r2 > 0) { 
+   	  this.c3 = board.create('circle', [this.p1, function() {return r1 - r2}], {strokeWidth:'1px', strokeColor:'red', ...vis});
+   	  this.i1 = board.create('intersection', [this.cm, this.c3], {name:'i1', ...vis});
+   	  this.i2 = board.create('otherintersection', [this.cm, this.c3, this.i1], {name:'i2', ...vis});
+   	  this.l1 = board.create('line', [this.p1, this.i2], vis);
+      this.l2 = board.create('line', [this.p1, this.i1], vis);
+   	  this.i3 = board.create('intersection', [this.c1, this.l1], {name:'i3', ...vis});
+      this.i31 = board.create('otherintersection', [this.c1, this.l1, this.i3], {name:'i31', ...vis});
+      this.i4 = board.create('intersection', [this.c1, this.l2], {name:'i4', ...vis});
+      this.i41 = board.create('otherintersection', [this.c1, this.l2, this.i4], {name:'i41', ...vis});
+      if (r1 < 0) {
+        this.lpl = board.create('parallel', [this.i1,this.p2,this.i41], {color:'purple', ...vis});
+   	    this.lpr = board.create('parallel', [this.i2,this.p2,this.i31], {color:'green', ...vis});
+      } else {
+        this.lpl = board.create('parallel', [this.i1,this.p2,this.i4], {color:'purple', ...vis});
+   	    this.lpr = board.create('parallel', [this.i2,this.p2,this.i3], {color:'green', ...vis});
+      }
+   	  this.i5 = board.create('intersection', [this.c2, this.lpr], {name:'i5', ...vis});
+      this.i6 = board.create('intersection', [this.c2, this.lpl], {name:'i6', ...vis});
+      if (r1 > 0) { 
+        this.l = board.create('segment', [this.i3, this.i5], this.ropeAttr); 
+        this.mp = board.create('midpoint', [this.i3, this.i5], {name:'mp', visible:false});
+            //const alpha = this.l.getAngle()+90*deg2rad;
+            //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i3), XY(this.i5) ) ), rect(11*pxunit, alpha)), {visible:false});
+      } else { 
+        this.l = board.create('segment', [this.i31, this.i5], this.ropeAttr);
+        this.mp = board.create('midpoint', [this.i31, this.i5], {name:'mp', visible:false});
+            //const alpha = this.l.getAngle()+90*deg2rad;
+            //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i31), XY(this.i5) ) ), rect(11*pxunit, alpha)), {visible:false});
+      }      
+    } 
+    else if (Math.abs(r1) < Math.abs(r2)) {
+   	  this.c3 = board.create('circle', [this.p2, function() {return r2 - r1}], {strokeWidth:'1px', strokeColor:'red', ...vis});
+   	  this.i1 = board.create('intersection', [this.cm, this.c3], {name:'i1', ...vis});
+   	  this.i2 = board.create('otherintersection', [this.cm, this.c3, this.i1], {name:'i2', ...vis});
+   	  this.l1 = board.create('line', [this.p2, this.i2], vis);
+   	  this.l2 = board.create('line', [this.p2, this.i1], vis);
+   	  this.i3 = board.create('intersection', [this.c2, this.l1], {name:'i3', ...vis});
+   	  this.i31 = board.create('otherintersection', [this.c2, this.l1, this.i3], {name:'i31', ...vis});
+   	  this.i4 = board.create('intersection', [this.c2, this.l2], {name:'i4', ...vis});
+   	  this.i41 = board.create('otherintersection', [this.c2, this.l2, this.i4], {name:'i41', ...vis});
+   	  if (r2 < 0) {
+   	    this.lpl = board.create('parallel', [this.i1,this.p1,this.i41], {color:'purple', ...vis});
+   	    this.lpr = board.create('parallel', [this.i2,this.p1,this.i31], {color:'green', ...vis});
+   	  } else {
+   	    this.lpl = board.create('parallel', [this.i1,this.p1,this.i4], {color:'purple', ...vis});
+   	    this.lpr = board.create('parallel', [this.i2,this.p1,this.i3], {color:'green', ...vis});
+   	  }
+   	  this.i5 = board.create('intersection', [this.c1, this.lpr], {name:'i5', ...vis});
+      this.i6 = board.create('intersection', [this.c1, this.lpl], {name:'i6', ...vis});
+   	  if (r2 > 0) { 
         this.l = board.create('segment', [this.i4, this.i6], this.ropeAttr);
         this.mp = board.create('midpoint', [this.i4, this.i6], {name:'mp', visible:false});
         const alpha = this.l.getAngle()+90*deg2rad;
         this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i4), XY(this.i6) ) ), rect(11*pxunit, alpha)), {visible:false});
-        } 
-   	    else { 
+      } else { 
         this.l = board.create('segment', [this.i41, this.i6], this.ropeAttr);
         this.mp = board.create('midpoint', [this.i41, this.i6], {name:'mp', visible:false});
-        const alpha = this.l.getAngle()+90*deg2rad;
-        this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i41), XY(this.i6) ) ), rect(11*pxunit, alpha)), {visible:false});
-        }  
+        //const alpha = this.l.getAngle()+90*deg2rad;
+        //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i41), XY(this.i6) ) ), rect(11*pxunit, alpha)), {visible:false});
+      }  
    	} 
    
     else if (Math.abs(r1) == Math.abs(r2)) {
-    	    if ((r1 > 0 && r2 > 0) || (r1 < 0 && r2 < 0)) {
-    		this.l1 = board.create('line', [this.p1, this.p2], vis);
-    		this.perp1 = board.create('perpendicular', [this.l1, this.p1], vis);
-    		this.i1 = board.create('intersection', [this.c1, this.perp1], {name:'i1', ...vis});
-    		this.i2 = board.create('otherintersection', [this.c1, this.perp1, this.i1], {name:'i2', ...vis});
-    		this.perp2 = board.create('perpendicular', [this.l1, this.p2], vis);
-    		this.i3 = board.create('intersection', [this.c2, this.perp2], {name:'i3', ...vis});
-    		this.i4 = board.create('otherintersection', [this.c2, this.perp2, this.i3], {name:'i4', ...vis});
-    		this.l = board.create('segment', [this.i1,this.i3], this.ropeAttr);
+      if ((r1 > 0 && r2 > 0) || (r1 < 0 && r2 < 0)) {
+    	this.l1 = board.create('line', [this.p1, this.p2], vis);
+    	this.perp1 = board.create('perpendicular', [this.l1, this.p1], vis);
+    	this.i1 = board.create('intersection', [this.c1, this.perp1], {name:'i1', ...vis});
+    	this.i2 = board.create('otherintersection', [this.c1, this.perp1, this.i1], {name:'i2', ...vis});
+    	this.perp2 = board.create('perpendicular', [this.l1, this.p2], vis);
+    	this.i3 = board.create('intersection', [this.c2, this.perp2], {name:'i3', ...vis});
+    	this.i4 = board.create('otherintersection', [this.c2, this.perp2, this.i3], {name:'i4', ...vis});
+    	this.l = board.create('segment', [this.i1,this.i3], this.ropeAttr);
         this.mp = board.create('midpoint', [this.i1, this.i3], {name:'mp', visible:false});
-        const alpha = this.l.getAngle()+90*deg2rad;
-        this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i1), XY(this.i3) ) ), rect(11*pxunit, alpha)), {visible:false});
-    	    } else if (r1 == 0 && r2 == 0) {
-    		this.l = board.create('segment', [this.p1, this.p2], this.ropeAttr); 
+        //const alpha = this.l.getAngle()+90*deg2rad;
+        //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i1), XY(this.i3) ) ), rect(11*pxunit, alpha)), {visible:false});
+      } else if (r1 == 0 && r2 == 0) {
+    	this.l = board.create('segment', [this.p1, this.p2], this.ropeAttr); 
         this.mp = board.create('midpoint', [this.p1, this.p2], {name:'mp', visible:false});
-        const alpha = this.l.getAngle()+90*deg2rad;
-        this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.p1), XY(this.p2) ) ), rect(11*pxunit, alpha)), {visible:false});
-    	    }
-    	    else {
-    		this.i1 = board.create('intersection', [this.c1, this.cm], {name:'i1', ...vis});
-    		this.i2 = board.create('otherintersection', [this.c1, this.cm, this.i1], {name:'i2', ...vis});
-    		this.mp1 = board.create('midpoint', [this.i1, this.i2], {name:'mp1', ...vis});
-    		this.c3 = board.create('circle', [this.pm, this.mp1], vis);
-    		this.i3 = board.create('intersection', [this.c1, this.c3], {name:'i3', ...vis});
-    		this.i4 = board.create('otherintersection', [this.c1, this.c3, this.i3], {name:'i4', ...vis});
-    		this.i5 = board.create('intersection', [this.c2, this.c3], {name:'i5', ...vis});
-    		this.i6 = board.create('otherintersection', [this.c2, this.c3, this.i5], {name:'i6', ...vis});
-    	    if (r1 > 0 && r2 < 0) {
-    		this.l = board.create('segment', [this.i3,this.i5], this.ropeAttr); 
-        this.mp = board.create('midpoint', [this.i3, this.i5], {name:'mp', visible:false});
-        const alpha = this.l.getAngle()+90*deg2rad;
-        this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i3), XY(this.i5) ) ), rect(11*pxunit, alpha)), {visible:false});
-    	    } else if (r1 < 0 && r2 > 0) {
-    		this.l = board.create('segment', [this.i4,this.i6], this.ropeAttr); 
-        this.mp = board.create('midpoint', [this.i4, this.i6], {name:'mp', visible:false});
-        const alpha = this.l.getAngle()+90*deg2rad;
-        this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i4), XY(this.i6) ) ), rect(11*pxunit, alpha)), {visible:false});
-    	    }
-    	    }
+        //const alpha = this.l.getAngle()+90*deg2rad;
+        //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.p1), XY(this.p2) ) ), rect(11*pxunit, alpha)), {visible:false});
+      } else {
+    	this.i1 = board.create('intersection', [this.c1, this.cm], {name:'i1', ...vis});
+    	this.i2 = board.create('otherintersection', [this.c1, this.cm, this.i1], {name:'i2', ...vis});
+    	this.mp1 = board.create('midpoint', [this.i1, this.i2], {name:'mp1', ...vis});
+    	this.c3 = board.create('circle', [this.pm, this.mp1], vis);
+    	this.i3 = board.create('intersection', [this.c1, this.c3], {name:'i3', ...vis});
+    	this.i4 = board.create('otherintersection', [this.c1, this.c3, this.i3], {name:'i4', ...vis});
+    	this.i5 = board.create('intersection', [this.c2, this.c3], {name:'i5', ...vis});
+    	this.i6 = board.create('otherintersection', [this.c2, this.c3, this.i5], {name:'i6', ...vis});
+        if (r1 > 0 && r2 < 0) {
+    	  this.l = board.create('segment', [this.i3,this.i5], this.ropeAttr); 
+          this.mp = board.create('midpoint', [this.i3, this.i5], {name:'mp', visible:false});
+        //const alpha = this.l.getAngle()+90*deg2rad;
+        //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i3), XY(this.i5) ) ), rect(11*pxunit, alpha)), {visible:false});
+    	} else if (r1 < 0 && r2 > 0) {
+    	  this.l = board.create('segment', [this.i4,this.i6], this.ropeAttr); 
+          this.mp = board.create('midpoint', [this.i4, this.i6], {name:'mp', visible:false});
+        //const alpha = this.l.getAngle()+90*deg2rad;
+        //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i4), XY(this.i6) ) ), rect(11*pxunit, alpha)), {visible:false});
+    	}
+      }
     } 
 
 		// rope label
-		const alpha = this.l.getAngle()+90*deg2rad;
-    this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.p1), XY(this.p2) ) ), rect(11*pxunit, alpha)), {visible:false});
-    const r = Math.sqrt((this.lp.X()-this.mp.X())**2 + (this.lp.Y()-this.mp.Y())**2);
+	//	const alpha = this.l.getAngle()+90*deg2rad;
+    //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.p1), XY(this.p2) ) ), rect(11*pxunit, alpha)), {visible:false});
+    //const r = Math.sqrt((this.lp.X()-this.mp.X())**2 + (this.lp.Y()-this.mp.Y())**2);
     this.ppl = board.create('perpendicular', [this.mp, this.l], vis);
-    this.cl = board.create('circle', [this.mp, r/2], vis);
+    this.cl = board.create('circle', [this.mp, 11*pxunit], vis);
     this.int1 = board.create('intersection', [this.ppl, this.cl], {name:data[1], size:0, visible:false});
     this.int2 = board.create('otherintersection', [this.ppl, this.cl, this.int1], {name:data[1], size:0, visible:true});
 	  
