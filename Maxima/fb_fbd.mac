@@ -458,3 +458,22 @@ fb_name(n,i,lon):=block([name,txt],
   if member(name,lon) then return( ["",true]) else 
     return([castext("\\({@name@} \\) ist kein passender Name für die Lagerreaktion."), false]) 
 );
+
+// remove all reactions of unidir supports which don't match the direction.
+matchByParallel(o,n):=block([res, llist],res: [],
+    /* for all objects */
+    for i:1 thru length(o) do (
+        /* if names entry is not a list, copy it to result */
+        if (not listp(n[i])) then res: endcons(n[i], res) else (
+            /* either a nondirectional item or parallel to the force */
+            llist: sublist(n[i], 
+                lambda([x], 
+                    member(o[i][1], [ "fix12, fix123", "circle"]) or
+                    parallelp(o[i], o[x] )
+                )
+            ),
+            res: endcons(llist, res)
+        )
+    ),
+    return(res)
+);
