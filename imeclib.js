@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" iMeclib 2024 02 23";
+const versionText= "JXG "+JXG.version+" iMeclib 2024 03 02";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -881,8 +881,12 @@ class force {
         console.log("delete force")
         that.state = "deleted"; cleanUp();
         board.removeObject(this.obj, true); update()
-      } else {this.lastclick = Date.now(); that.p1.moveTo(XY(that.p1)); that.p2.moveTo(XY(that.p2)); update()}
+      } else {this.lastclick = Date.now(); update()}
     })
+	// make force snap to grid upon dragging the vector
+    this.vec.on('drag', function() {
+      that.p1.moveTo(XY(that.p1)); that.p2.moveTo(XY(that.p2)); update() }
+    )
     // avoid zero length of vector
     this.p2.on('up', function() {
       console.log("length check")
