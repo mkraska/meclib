@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" iMeclib 2024 03 02a";
+const versionText= "JXG "+JXG.version+" iMeclib 2024 03 02b";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -849,13 +849,13 @@ class force {
     let	hl = false; 
     if (this.state == "active") {
 		  pstyle = {snapToGrid:true, fixed:false, size:2, snapToPoints:true, 
-		  attractors:targets, attractorDistance: 0.2, snatchDistance: 0.3, label:labelopts};
+		  attractors:targets, attractorDistance: 0.1, snatchdistance:0.2, label:labelopts};
 		  hl = true; }
     // start and end point
     this.p1 = board.create('point', data[2], { name: this.name1, 
-      ...controlSnapStyle, ...pstyle }); 
+       ...pstyle }); 
     this.p2 = board.create('point', data[3], { name: this.name2, 
-      ...controlSnapStyle, ...pstyle });   
+       ...pstyle });   
     // configure infobox
     this.p1.dp = [dpx+1,dpy+1];
     this.p2.start = this.p1;
@@ -866,7 +866,7 @@ class force {
     // dash
     let d = 0; if (this.state == "dotted") d=2  
     this.vec = board.create('arrow', [this.p1, this.p2], {
-      touchLastPoint: true, lastArrow:{size:5, type:2}, highlight:hl,
+      touchLastPoint: true, lastArrow:{size:5, type:2}, highlight:hl, snaptogrid:true,
       highlightStrokeColor:highlightColor, strokeColor:loadColor, dash:d});
     // interactive control
     if (this.state == "active") {this.vec.setAttribute({fixed:false, snapToGrid:true})}
@@ -883,23 +883,21 @@ class force {
         board.removeObject(this.obj, true); update()
       } else {this.lastclick = Date.now(); update()}
     })
-	// make force snap to grid upon dragging the vector
-    this.vec.on('drag', function() {
-      that.p1.moveTo(XY(that.p1)); that.p2.moveTo(XY(that.p2)); update() }
-    )
+    this.vec.on('drag', function() {  board.update(); that.p1.moveTo(XY(that.p1)); that.p2.moveTo(XY(that.p2))
+    //  that.p1.moveTo(XY(that.p1)); that.p2.moveTo(XY(that.p2)) }
+    })
     // avoid zero length of vector
     this.p2.on('up', function() {
       console.log("length check")
       if (that.vec.L() === 0) {
         console.log('Force length should not be zero.');
-        that.p2.moveTo(plus(XY(that.p2),[0.5,0]),0)
-    } })
+        that.p2.moveTo(plus(XY(that.p2),[0.5,0]),0) }
+        else {board.update(); update()} })
     // switch off highlighting if locked
     this.obj = [this.vec, this.p1, this.p2, this.p2.label];
     if (this.state == "locked") { lock(this) } 
     // update conditions
-    this.p1.on("up", update )
-    this.p2.on("up", update )
+    this.p1.on("up", function () {board.update(); update()})
     // points for position check
     this.proximityPoints = [this.p1, this.p2];
   }
