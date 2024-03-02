@@ -849,7 +849,7 @@ class force {
     let	hl = false; 
     if (this.state == "active") {
 		  pstyle = {snapToGrid:true, fixed:false, size:2, snapToPoints:true, 
-		  attractors:targets, attractorDistance: 0.2, label:labelopts};
+		  attractors:targets, attractorDistance: 0.2, snatchDistance: 0.3, label:labelopts};
 		  hl = true; }
     // start and end point
     this.p1 = board.create('point', data[2], { name: this.name1, 
