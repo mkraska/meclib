@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-Free-Body-Diagrams */
-/* 2023 04 08                           */
+/* 2024 03 03                           */
 
 /* https://github.com/mkraska/meclib/wiki/direction%28%29 */
 direction(o):=block([%_v, a0, le, r1, r2, a1],
@@ -457,4 +457,17 @@ fb_name(n,i,lon):=block([name,txt],
   if listp(n[i]) and  not emptyp(n[i]) then name: n[n[i][1]] else return(["", false]),
   if member(name,lon) then return( ["",true]) else 
     return([castext("\\({@name@} \\) ist kein passender Name für die Lagerreaktion."), false]) 
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_reactions() */
+fb_reactions(%_o, %_f, %_m):=block(
+  [%_fnum, %_mnum, %_txt, %_OK],
+  %_fnum: length(sublist_indices (%_o, lambda ([x], x[1]="force" and last(x)="active"))),
+  %_mnum: length(sublist_indices (%_o, lambda ([x], x[1]="moment" and last(x)="active"))),
+  if (%_fnum=%_f) and (%_mnum=%_m) then [%_txt, %_OK]: ["&nbsp;Die Zahl der Reaktionen stimmt",true] else (
+    %_OK: false, %_txt: "", 
+    if %_fnum # %_f then %_txt: sconcat(%_txt, "<br>Die Zahl der Reaktionskräfte stimmt nicht."),
+    if %_mnum # %_m then %_txt: sconcat(%_txt, "<br>Die Zahl der Reaktionsmomente stimmt nicht.")
+  ),
+  [%_txt,%_OK]  
 );
