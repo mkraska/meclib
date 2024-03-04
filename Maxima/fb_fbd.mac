@@ -71,32 +71,32 @@ fb_force_hvxy(o,i):=block([dir, name, nl, base, idx],
 );
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix1%22 */
-fb_fix1(o, n, i, description):=block(
-    [txt, R], txt: sconcat("<br>",description),
+fb_fix1(%_o, %_n, %_i, %_description):=block(
+    [%_txt: sconcat("<br>",%_description), %_R],
     /* Is object i a fixed support */
-    if ( o[i][1] # "fix1" ) then return ([sconcat(txt, "object ", string(i), " is not a fixed support (fix1)"), false]),
+    if ( %_o[%_i][1] # "fix1" ) then return ([sconcat(%_txt, "object ", string(%_i), " is not a fixed support (fix1)"), false]),
     /* Is object i de-activated */ 
-    if ( o[i][length(o[i])] # "hide") then return ([sconcat(txt, " ist nicht deaktiviert."), false]),
+    if ( %_o[%_i][length(%_o[%_i])] # "hide") then return ([sconcat(%_txt, " ist nicht deaktiviert."), false]),
     /* Any reactions found at i? */
-    if not listp(n[i]) or n[i]=[] then return([sconcat(txt, "Keine Reaktion gefunden."), false]),
+    if not listp(%_n[%_i]) or %_n[%_i]=[] then return([sconcat(%_txt, "Keine Reaktion gefunden."), false]),
     /* Exactly 1 reaction found? */
-    if (length(names[i]) > 1) then return( [sconcat(txt, "Mehr als eine Reaktion gefunden."), false]),
+    if (length(%_n[%_i]) > 1) then return( [sconcat(%_txt, "Mehr als eine Reaktion gefunden."), false]),
     /* Is the reaction a force? */
-    if ( o[names[i][1]][1] # "force" ) then return ([sconcat(txt, "Die Reaktion muss eine Kraft sein."),false]),
+    if ( %_o[%_n[%_i][1]][1] # "force" ) then return ([sconcat(%_txt, "Die Reaktion muss eine Kraft sein."),false]),
     /* Now ready for examination of the reaction */
-    R: o[names[i][1]], 
+    %_R: %_o[%_n[%_i][1]], 
     /* Is the force normal to the support? */
-    if not parallelp(R, o[i]) then return ([sconcat(txt, "Die Reaktion \\(", R[2], "\\) hat nicht die richtige Richtung."),false]),
+    if not parallelp(%_R, %_o[%_i]) then return ([sconcat(%_txt, "Die Reaktion \\(", %_R[2], "\\) hat nicht die richtige Richtung."),false]),
     /* everything should be ok here */
-    return([sconcat(txt, "Reaktion \\(", R[2], "\\) gefunden."),true])   
+    return([sconcat(%_txt, "Reaktion \\(", %_R[2], "\\) gefunden."),true])   
 );
-fb_fix1_name(o, n, i):=block(
-    [R], 
-    if not listp(names[i]) then return(["",false]),
-    R: o[names[i][1]], 
+fb_fix1_name(%_o, %_n, %_i):=block(
+    [%_R], 
+    if not listp(%_n[%_i]) then return(["",false]),
+    R: %_o[%_n[%_i][1]], 
     /* name checking */
-    if slength(R[2]) # 1 then return(["<br>Ein einzelner Buchstabe sollte f&uuml;r die Bezeichnung der Kraft ausreichen.",false]),
-    if R[2] # o[i][2] then return(["<br>Der Name der Reaktionskraft sollte zum Namen des Lagerpunkts passen.", false]),
+    if slength(%_R[2]) # 1 then return(["<br>Ein einzelner Buchstabe sollte f&uuml;r die Bezeichnung der Kraft ausreichen.",false]),
+    if %_R[2] # %_o[%_i][2] then return(["<br>Der Name der Reaktionskraft sollte zum Namen des Lagerpunkts passen.", false]),
     /* everything should be ok here */
     return(["",true])   
 );
