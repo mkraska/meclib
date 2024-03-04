@@ -471,3 +471,12 @@ fb_reactions(%_o, %_f, %_m):=block(
   ),
   [%_txt,%_OK]  
 );
+
+/* https://github.com/mkraska/meclib/wiki/fb_system() */
+fb_system(%_names, %_sys, %_env, %_hint):=block( 
+  [%_i, %_fb: ["&nbsp;Die Systemgrenzen stimmen. ", true], 
+        %_fbfalse: [sconcat("&nbsp;Die Systemgrenzen stimmen nicht. ", %_hint), false ] ],
+  for %_i in %_sys do if (%_names[%_i]  # "show") then %_fb: %_fbfalse,
+  for %_i in %_env do if (%_names[%_i]  = "show") then %_fb: %_fbfalse,
+  return(%_fb)
+);
