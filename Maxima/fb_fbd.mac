@@ -90,10 +90,11 @@ fb_fix1(%_o, %_n, %_i, %_description):=block(
     /* everything should be ok here */
     return([sconcat(%_txt, "Reaktion \\(", %_R[2], "\\) gefunden."),true])   
 );
+
 fb_fix1_name(%_o, %_n, %_i):=block(
     [%_R], 
     if not listp(%_n[%_i]) then return(["",false]),
-    R: %_o[%_n[%_i][1]], 
+    %_R: %_o[%_n[%_i][1]], 
     /* name checking */
     if slength(%_R[2]) # 1 then return(["<br>Ein einzelner Buchstabe sollte f&uuml;r die Bezeichnung der Kraft ausreichen.",false]),
     if %_R[2] # %_o[%_i][2] then return(["<br>Der Name der Reaktionskraft sollte zum Namen des Lagerpunkts passen.", false]),
