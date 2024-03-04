@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-Free-Body-Diagrams */
-/* 2024 03 03                           */
+/* 2024 03 04                          */
 
 /* https://github.com/mkraska/meclib/wiki/direction%28%29 */
 direction(o):=block([%_v, a0, le, r1, r2, a1],
@@ -479,4 +479,23 @@ fb_system(%_names, %_sys, %_env, %_hint):=block(
   for %_i in %_sys do if (%_names[%_i]  # "show") then %_fb: %_fbfalse,
   for %_i in %_env do if (%_names[%_i]  = "show") then %_fb: %_fbfalse,
   return(%_fb)
+);
+
+/* https://github.com/mkraska/meclib/wiki/MatchByParallel%28%29 */
+matchByParallel(o,n):=block([res, llist],res: [],
+    /* for all objects */
+    for i:1 thru length(o) do (
+        /* if names entry is not a list, copy it to result */
+        if (not listp(n[i])) then res: endcons(n[i], res) else (
+            /* either a nondirectional item or parallel to the force */
+            llist: sublist(n[i], 
+                lambda([x], 
+                    member(o[i][1], [ "fix12, fix123", "circle"]) or
+                    parallelp(o[i], o[x] )
+                )
+            ),
+            res: endcons(llist, res)
+        )
+    ),
+    return(res)
 );
