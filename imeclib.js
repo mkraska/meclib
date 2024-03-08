@@ -1030,17 +1030,17 @@ class grid {
     if (data[1]) { 
       if (xmin<xmax) {labelopt = {position: 'rt', offset: [-5, 12] } } 
       else {labelopt = {position: 'lft', offset: [-5, 12] }}
-      var xaxis = board.create('axis', [[0, 0], [1,0]], 
+      this.xaxis = board.create('axis', [[0, 0], [1,0]], 
 	    {name:toTEX(data[1]), withLabel: true, label: labelopt, layer:0,
         ticks: { label:{layer:3}, generateLabelValue:function(p1,p2) {
-	      return ((p1.usrCoords[1]-p2.usrCoords[1])*fx).toFixed([0,dpx-1].max)}} });}
+	      return ((p1.usrCoords[1]-p2.usrCoords[1])*fx).toFixed(Math.max(...[0,dpx-1]))}} });}
     if (data[2]) { 
       if (ymin<ymax) {labelopt = {position: 'rt', offset: [10, 0] } } 
       else {labelopt = {position: 'rt', offset: [10, 0] }}
-   	  var yaxis = board.create('axis', [[0, 0], [0,1]], 
+   	  this.yaxis = board.create('axis', [[0, 0], [0,1]], 
 	    {name:toTEX(data[2]), withLabel: true, label: labelopt, layer:0,
         ticks: { label:{layer:3}, generateLabelValue:function(p1,p2) {
-	      return ((p1.usrCoords[2]-p2.usrCoords[2])*fy).toFixed([0,dpy-1].max)}} });    
+	      return ((p1.usrCoords[2]-p2.usrCoords[2])*fy).toFixed(Math.max(...[0,dpy-1]))}} });    
     } 
     // version info
     this.vs = board.create("text", [xmin + 0.5 * a, ymax - 0.5 * a, versionText], 
