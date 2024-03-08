@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" iMeclib 2024 03 02b";
+const versionText= "JXG "+JXG.version+" iMeclib 2024 03 08";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -1390,7 +1390,7 @@ class q {
   } 
   data(){ let a = this.d.slice(0); a[8] = this.state; return a}
   name(){ return targetName(this) } 
-  hasPoint(pt) {return isOn(pt,this.polygon)} 
+  hasPoint(pt) {return this.polygon.hasPoint(pt.coords.scrCoords[1], pt.coords.scrCoords[2])} 
 }
 
 // rope, tangent line to two circles ["rope", "name",[x1,y1], r1, [x2,y2],r2 ]
