@@ -3,15 +3,26 @@
 <!-- question: 0  -->
   <question type="category">
     <category>
-      <text>$course$/top/Standard für MO/Meclib tutorial</text>
+      <text>top/Standard für MO</text>
     </category>
-    <info format="markdown">
+    <info format="moodle_auto_format">
       <text></text>
     </info>
     <idnumber></idnumber>
   </question>
 
-<!-- question: 105377  -->
+<!-- question: 0  -->
+  <question type="category">
+    <category>
+      <text>top/Standard für MO/Meclib tutorial</text>
+    </category>
+    <info format="moodle_auto_format">
+      <text></text>
+    </info>
+    <idnumber></idnumber>
+  </question>
+
+<!-- question: 1529  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P1 Minimum version</text>
@@ -27,11 +38,10 @@
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2023010400</text>
+      <text>2024012900</text>
     </stackversion>
     <questionvariables>
-      <text>
-</text>
+      <text></text>
     </questionvariables>
     <specificfeedback format="markdown">
       <text></text>
@@ -39,6 +49,9 @@
     <questionnote>
       <text></text>
     </questionnote>
+    <questiondescription format="html">
+      <text></text>
+    </questiondescription>
     <questionsimplify>1</questionsimplify>
     <assumepositive>0</assumepositive>
     <assumereal>0</assumereal>
@@ -51,6 +64,7 @@
     <prtincorrect format="markdown">
       <text>Incorrect answer.</text>
     </prtincorrect>
+    <decimals>.</decimals>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -65,7 +79,7 @@
       <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint></syntaxhint>
+      <syntaxhint>expression</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>
@@ -86,6 +100,7 @@
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>S_Ha</sans>
         <tans>Ha</tans>
@@ -111,7 +126,7 @@
     </prt>
   </question>
 
-<!-- question: 105390  -->
+<!-- question: 1532  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P1b Extended version</text>
@@ -130,7 +145,7 @@
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2023010400</text>
+      <text>2024012900</text>
     </stackversion>
     <questionvariables>
       <text>Ha: sqrt(a^2+b^2);</text>
@@ -141,6 +156,9 @@
     <questionnote>
       <text></text>
     </questionnote>
+    <questiondescription format="html">
+      <text></text>
+    </questiondescription>
     <questionsimplify>1</questionsimplify>
     <assumepositive>0</assumepositive>
     <assumereal>0</assumereal>
@@ -153,6 +171,7 @@
     <prtincorrect format="markdown">
       <text>Incorrect answer.</text>
     </prtincorrect>
+    <decimals>.</decimals>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -167,7 +186,7 @@
       <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint></syntaxhint>
+      <syntaxhint>expression</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>
@@ -175,19 +194,20 @@
       <requirelowestterms>0</requirelowestterms>
       <checkanswertype>0</checkanswertype>
       <mustverify>1</mustverify>
-      <showvalidation>1</showvalidation>
+      <showvalidation>3</showvalidation>
       <options></options>
     </input>
     <prt>
       <name>Ha</name>
       <value>1.0000000</value>
       <autosimplify>1</autosimplify>
-      <feedbackstyle>1</feedbackstyle>
+      <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>S_Ha</sans>
         <tans>Ha</tans>
@@ -213,7 +233,7 @@
     </prt>
   </question>
 
-<!-- question: 105374  -->
+<!-- question: 1535  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P2 Meclib image</text>
@@ -229,7 +249,7 @@ const initstring = {#init#};
 const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
   anchorX:'left', anchorY:'middle'}};
 // End of STACK header
-[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/imeclib.js" /]]
 [[/jsxgraph]]</div>
 
 <p>[[input:S_Ha]] [[validation:S_Ha]] [[feedback:Ha]]</p>]]></text>
@@ -242,7 +262,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2023010400</text>
+      <text>2024012900</text>
     </stackversion>
     <questionvariables>
       <text><![CDATA[Ha: sqrt(a^2+b^2);
@@ -253,23 +273,13 @@ pB: [0,0]; pC: [aa,0]; pA: [aa,bb];
 initdata: [
   [ "grid", "","", -1,aa+1,-1,bb+1, 40 ],
   [ "polygon", "", pA, pB, pC ],
-  [ "label", "\\(a\\)", (pB+pC)/2 +[ 0,-0.5] ],
+  [ "label", "\\(a\\)", (pB+pC)/2 +[ 0,-0.4] ],
   [ "label", "\\(b\\)", (pA+pC)/2 +[0.2,0] ],
-  [ "label", "\\(c\\)", (pA+pB)/2 +[-0.5,0.5] ]
+  [ "label", "\\(c\\)", (pA+pB)/2 +[-0.4,0.4] ]
 ];
 init: stackjson_stringify(initdata);
 
-/*
-initdata: [
-  [ "grid", "","", -1,aa+1,-1,bb+1, 40 ],
-  [ "polygon", "", pA, pB, pC ]
-];
-init: stackjson_stringify(initdata);
-
-initdata: [
-  [ "grid", "x","y", -5,5,-5,5, 40 ]
-];
-init: stackjson_stringify(initdata);*/]]></text>
+]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
       <text></text>
@@ -277,6 +287,9 @@ init: stackjson_stringify(initdata);*/]]></text>
     <questionnote>
       <text></text>
     </questionnote>
+    <questiondescription format="html">
+      <text></text>
+    </questiondescription>
     <questionsimplify>1</questionsimplify>
     <assumepositive>0</assumepositive>
     <assumereal>0</assumereal>
@@ -289,6 +302,7 @@ init: stackjson_stringify(initdata);*/]]></text>
     <prtincorrect format="markdown">
       <text>Incorrect answer.</text>
     </prtincorrect>
+    <decimals>.</decimals>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -303,7 +317,7 @@ init: stackjson_stringify(initdata);*/]]></text>
       <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint></syntaxhint>
+      <syntaxhint>expression</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>
@@ -324,6 +338,7 @@ init: stackjson_stringify(initdata);*/]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>S_Ha</sans>
         <tans>Ha</tans>
@@ -349,7 +364,7 @@ init: stackjson_stringify(initdata);*/]]></text>
     </prt>
   </question>
 
-<!-- question: 105380  -->
+<!-- question: 1536  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P3 Randomization</text>
@@ -365,7 +380,7 @@ const initstring = {#init#};
 const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
   anchorX:'left', anchorY:'middle'}};
 // End of STACK header
-[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/imeclib.js" /]]
 [[/jsxgraph]]</div>
 
 <p>[[input:S_Ha]] [[validation:S_Ha]] [[feedback:Ha]]</p>]]></text>
@@ -378,7 +393,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2023010400</text>
+      <text>2024012900</text>
     </stackversion>
     <questionvariables>
       <text><![CDATA[Ha: sqrt(a^2+b^2);
@@ -391,23 +406,12 @@ pB: [0,0]; pC: [aa,0]; pA: [aa,bb];
 initdata: [
   [ "grid", "","", -1,aa+1,-1,bb+1, 40 ],
   [ "polygon", "", pA, pB, pC ],
-  [ "label", "\\(a\\)", (pB+pC)/2 +[ 0,-0.5] ],
+  [ "label", "\\(a\\)", (pB+pC)/2 +[ 0,-0.4] ],
   [ "label", "\\(b\\)", (pA+pC)/2 +[0.2,0] ],
-  [ "label", "\\(c\\)", (pA+pB)/2 +[-0.5,0.5] ]
+  [ "label", "\\(c\\)", (pA+pB)/2 +[-0.4,0.4] ]
 ];
 init: stackjson_stringify(initdata);
-
-/*
-initdata: [
-  [ "grid", "","", -1,a+1,-1,b+1, 40 ],
-  [ "polygon", "", pA, pB, pC ]
-];
-init: stackjson_stringify(initdata);
-
-initdata: [
-  [ "grid", "x","y", -5,5,-5,5, 40 ]
-];
-init: stackjson_stringify(initdata);*/]]></text>
+]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
       <text></text>
@@ -415,6 +419,9 @@ init: stackjson_stringify(initdata);*/]]></text>
     <questionnote>
       <text>{@'a=aa@}, {@'b=bb@}</text>
     </questionnote>
+    <questiondescription format="html">
+      <text></text>
+    </questiondescription>
     <questionsimplify>1</questionsimplify>
     <assumepositive>0</assumepositive>
     <assumereal>0</assumereal>
@@ -427,6 +434,7 @@ init: stackjson_stringify(initdata);*/]]></text>
     <prtincorrect format="markdown">
       <text>Incorrect answer.</text>
     </prtincorrect>
+    <decimals>.</decimals>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -441,7 +449,7 @@ init: stackjson_stringify(initdata);*/]]></text>
       <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint></syntaxhint>
+      <syntaxhint>expression</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>
@@ -462,6 +470,7 @@ init: stackjson_stringify(initdata);*/]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>S_Ha</sans>
         <tans>Ha</tans>
@@ -487,7 +496,7 @@ init: stackjson_stringify(initdata);*/]]></text>
     </prt>
   </question>
 
-<!-- question: 105381  -->
+<!-- question: 1538  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P4 Input 2</text>
@@ -503,7 +512,7 @@ const initstring = {#init#};
 const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
   anchorX:'left', anchorY:'middle'}};
 // End of STACK header
-[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/imeclib.js" /]]
 [[/jsxgraph]]</div>
 
 <p>[[input:S_Ha]] [[validation:S_Ha]] [[feedback:Ha]]</p>
@@ -519,7 +528,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2023010400</text>
+      <text>2024012900</text>
     </stackversion>
     <questionvariables>
       <text><![CDATA[Ha: sqrt(a^2+b^2);
@@ -535,23 +544,12 @@ pB: [0,0]; pC: [aa,0]; pA: [aa,bb];
 initdata: [
   [ "grid", "","", -1,aa+1,-1,bb+1, 40 ],
   [ "polygon", "", pA, pB, pC ],
-  [ "label", "\\(a\\)", (pB+pC)/2 +[ 0,-0.5] ],
+  [ "label", "\\(a\\)", (pB+pC)/2 +[ 0,-0.4] ],
   [ "label", "\\(b\\)", (pA+pC)/2 +[0.2,0] ],
-  [ "label", "\\(c\\)", (pA+pB)/2 +[-0.5,0.5] ]
+  [ "label", "\\(c\\)", (pA+pB)/2 +[-0.4,0.4] ]
 ];
 init: stackjson_stringify(initdata);
-
-/*
-initdata: [
-  [ "grid", "","", -1,a+1,-1,b+1, 40 ],
-  [ "polygon", "", pA, pB, pC ]
-];
-init: stackjson_stringify(initdata);
-
-initdata: [
-  [ "grid", "x","y", -5,5,-5,5, 40 ]
-];
-init: stackjson_stringify(initdata);*/]]></text>
+]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
       <text></text>
@@ -559,6 +557,9 @@ init: stackjson_stringify(initdata);*/]]></text>
     <questionnote>
       <text>{@'a=aa@}, {@'b=bb@}</text>
     </questionnote>
+    <questiondescription format="html">
+      <text></text>
+    </questiondescription>
     <questionsimplify>1</questionsimplify>
     <assumepositive>0</assumepositive>
     <assumereal>0</assumereal>
@@ -571,6 +572,7 @@ init: stackjson_stringify(initdata);*/]]></text>
     <prtincorrect format="markdown">
       <text>Incorrect answer.</text>
     </prtincorrect>
+    <decimals>.</decimals>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -585,7 +587,7 @@ init: stackjson_stringify(initdata);*/]]></text>
       <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint>Expression</syntaxhint>
+      <syntaxhint>expression</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>
@@ -603,7 +605,7 @@ init: stackjson_stringify(initdata);*/]]></text>
       <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint>Expression</syntaxhint>
+      <syntaxhint>expression</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>
@@ -624,6 +626,7 @@ init: stackjson_stringify(initdata);*/]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>S_H</sans>
         <tans>H</tans>
@@ -657,6 +660,7 @@ init: stackjson_stringify(initdata);*/]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>S_Ha</sans>
         <tans>Ha</tans>
@@ -682,7 +686,7 @@ init: stackjson_stringify(initdata);*/]]></text>
     </prt>
   </question>
 
-<!-- question: 105384  -->
+<!-- question: 1540  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P5 Input 3</text>
@@ -698,7 +702,7 @@ const initstring = {#init#};
 const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
   anchorX:'left', anchorY:'middle'}};
 // End of STACK header
-[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/imeclib.js" /]]
 [[/jsxgraph]]</div>
 
 <p>[[input:S_Ha]] [[validation:S_Ha]] [[feedback:Ha]]</p>
@@ -717,7 +721,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2023010400</text>
+      <text>2024012900</text>
     </stackversion>
     <questionvariables>
       <text><![CDATA[Ha: sqrt(a^2+b^2);
@@ -733,23 +737,13 @@ pB: [0,0]; pC: [aa,0]; pA: [aa,bb];
 initdata: [
   [ "grid", "","", -1,aa+1,-1,bb+1, 40 ],
   [ "polygon", "", pA, pB, pC ],
-  [ "label", "\\(a\\)", (pB+pC)/2 +[ 0,-0.5] ],
+  [ "label", "\\(a\\)", (pB+pC)/2 +[ 0,-0.4] ],
   [ "label", "\\(b\\)", (pA+pC)/2 +[0.2,0] ],
-  [ "label", "\\(c\\)", (pA+pB)/2 +[-0.5,0.5] ]
+  [ "label", "\\(c\\)", (pA+pB)/2 +[-0.4,0.4] ]
 ];
 init: stackjson_stringify(initdata);
 
-/*
-initdata: [
-  [ "grid", "","", -1,a+1,-1,b+1, 40 ],
-  [ "polygon", "", pA, pB, pC ]
-];
-init: stackjson_stringify(initdata);
-
-initdata: [
-  [ "grid", "x","y", -5,5,-5,5, 40 ]
-];
-init: stackjson_stringify(initdata);*/]]></text>
+]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
       <text></text>
@@ -757,6 +751,9 @@ init: stackjson_stringify(initdata);*/]]></text>
     <questionnote>
       <text>{@'a=aa@}, {@'b=bb@}</text>
     </questionnote>
+    <questiondescription format="html">
+      <text></text>
+    </questiondescription>
     <questionsimplify>1</questionsimplify>
     <assumepositive>0</assumepositive>
     <assumereal>0</assumereal>
@@ -769,6 +766,7 @@ init: stackjson_stringify(initdata);*/]]></text>
     <prtincorrect format="markdown">
       <text>Incorrect answer.</text>
     </prtincorrect>
+    <decimals>.</decimals>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -783,7 +781,7 @@ init: stackjson_stringify(initdata);*/]]></text>
       <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint>Expression</syntaxhint>
+      <syntaxhint>expression</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>
@@ -792,7 +790,7 @@ init: stackjson_stringify(initdata);*/]]></text>
       <checkanswertype>0</checkanswertype>
       <mustverify>1</mustverify>
       <showvalidation>3</showvalidation>
-      <options></options>
+      <options>nounits</options>
     </input>
     <input>
       <name>S_Ha</name>
@@ -801,16 +799,16 @@ init: stackjson_stringify(initdata);*/]]></text>
       <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint>Expression</syntaxhint>
+      <syntaxhint>expression</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords></forbidwords>
-      <allowwords>a,b</allowwords>
+      <allowwords></allowwords>
       <forbidfloat>1</forbidfloat>
       <requirelowestterms>0</requirelowestterms>
       <checkanswertype>0</checkanswertype>
       <mustverify>1</mustverify>
       <showvalidation>3</showvalidation>
-      <options></options>
+      <options>nounits</options>
     </input>
     <input>
       <name>S_Hnum</name>
@@ -840,6 +838,7 @@ init: stackjson_stringify(initdata);*/]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>S_H</sans>
         <tans>H</tans>
@@ -873,6 +872,7 @@ init: stackjson_stringify(initdata);*/]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>S_Ha</sans>
         <tans>Ha</tans>
@@ -906,6 +906,7 @@ init: stackjson_stringify(initdata);*/]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>UnitsRelative</answertest>
         <sans>S_Hnum</sans>
         <tans>Hnum*cm</tans>
@@ -931,7 +932,7 @@ init: stackjson_stringify(initdata);*/]]></text>
     </prt>
   </question>
 
-<!-- question: 105387  -->
+<!-- question: 1543  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P6 Feedback on unit input</text>
@@ -947,7 +948,7 @@ const initstring = {#init#};
 const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
   anchorX:'left', anchorY:'middle'}};
 // End of STACK header
-[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/imeclib.js" /]]
 [[/jsxgraph]]</div>
 
 <p>[[input:S_Ha]] [[validation:S_Ha]] [[feedback:Ha]]</p>
@@ -966,7 +967,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2023010400</text>
+      <text>2024012900</text>
     </stackversion>
     <questionvariables>
       <text><![CDATA[Ha: sqrt(a^2+b^2);
@@ -982,9 +983,9 @@ pB: [0,0]; pC: [aa,0]; pA: [aa,bb];
 initdata: [
   [ "grid", "","", -1,aa+1,-1,bb+1, 40 ],
   [ "polygon", "", pA, pB, pC ],
-  [ "label", "\\(a\\)", (pB+pC)/2 +[ 0,-0.5] ],
+  [ "label", "\\(a\\)", (pB+pC)/2 +[ 0,-0.4] ],
   [ "label", "\\(b\\)", (pA+pC)/2 +[0.2,0] ],
-  [ "label", "\\(c\\)", (pA+pB)/2 +[-0.5,0.5] ]
+  [ "label", "\\(c\\)", (pA+pB)/2 +[-0.4,0.4] ]
 ];
 init: stackjson_stringify(initdata);
 
@@ -996,6 +997,9 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
     <questionnote>
       <text>{@'a=aa@}, {@'b=bb@}</text>
     </questionnote>
+    <questiondescription format="html">
+      <text></text>
+    </questiondescription>
     <questionsimplify>1</questionsimplify>
     <assumepositive>0</assumepositive>
     <assumereal>0</assumereal>
@@ -1008,6 +1012,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
     <prtincorrect format="markdown">
       <text>Incorrect answer.</text>
     </prtincorrect>
+    <decimals>.</decimals>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -1022,7 +1027,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
       <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint>Expression</syntaxhint>
+      <syntaxhint>expression</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>
@@ -1031,7 +1036,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
       <checkanswertype>0</checkanswertype>
       <mustverify>1</mustverify>
       <showvalidation>3</showvalidation>
-      <options></options>
+      <options>nounits</options>
     </input>
     <input>
       <name>S_Ha</name>
@@ -1040,16 +1045,16 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
       <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint>Expression</syntaxhint>
+      <syntaxhint>expression</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords></forbidwords>
-      <allowwords>a,b</allowwords>
+      <allowwords></allowwords>
       <forbidfloat>1</forbidfloat>
       <requirelowestterms>0</requirelowestterms>
       <checkanswertype>0</checkanswertype>
       <mustverify>1</mustverify>
       <showvalidation>3</showvalidation>
-      <options></options>
+      <options>nounits</options>
     </input>
     <input>
       <name>S_Hnum</name>
@@ -1079,6 +1084,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>S_H</sans>
         <tans>H</tans>
@@ -1089,7 +1095,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
         <truepenalty></truepenalty>
         <truenextnode>-1</truenextnode>
         <trueanswernote>H-1-T</trueanswernote>
-        <truefeedback format="markdown">
+        <truefeedback format="html">
           <text></text>
         </truefeedback>
         <falsescoremode>=</falsescoremode>
@@ -1097,8 +1103,8 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
         <falsepenalty></falsepenalty>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>H-1-F</falseanswernote>
-        <falsefeedback format="markdown">
-          <text></text>
+        <falsefeedback format="html">
+          <text>{@fb_vars(S_H,H)@}</text>
         </falsefeedback>
       </node>
     </prt>
@@ -1112,6 +1118,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>S_Ha</sans>
         <tans>Ha</tans>
@@ -1122,7 +1129,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
         <truepenalty></truepenalty>
         <truenextnode>-1</truenextnode>
         <trueanswernote>Ha-1-T</trueanswernote>
-        <truefeedback format="markdown">
+        <truefeedback format="html">
           <text></text>
         </truefeedback>
         <falsescoremode>=</falsescoremode>
@@ -1130,8 +1137,8 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
         <falsepenalty></falsepenalty>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>Ha-1-F</falseanswernote>
-        <falsefeedback format="markdown">
-          <text></text>
+        <falsefeedback format="html">
+          <text>{@fb_vars(S_Ha,Ha)@}</text>
         </falsefeedback>
       </node>
     </prt>
@@ -1145,6 +1152,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>UnitsRelative</answertest>
         <sans>S_Hnum</sans>
         <tans>Hnum*cm</tans>
@@ -1170,252 +1178,14 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
     </prt>
   </question>
 
-<!-- question: 105392  -->
+<!-- question: 1547  -->
   <question type="stack">
     <name>
-      <text>MK: Meclib workshop P7 More Feedback</text>
+      <text>MK: Meclib workshop P7 Interactive Input</text>
     </name>
     <questiontext format="html">
       <text><![CDATA[<p>Give the general formula for the length of the hypotenuse \(c\) of a right-angled triangle with sides \(a\) and \(b\).</p>
 
-<div style="float:right">
-[[jsxgraph width='250px' height='250px' ]] 
-var mode  = "STACK";
-var stateRef;
-const initstring = {#init#};
-const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
-  anchorX:'left', anchorY:'middle'}};
-// End of STACK header
-[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
-[[/jsxgraph]]</div>
-
-<p>[[input:S_Ha]] [[validation:S_Ha]] [[feedback:Ha]]</p>
-
-<p>What is the exact length of the hypotenuse if the grid width is \(L\)?
-<p>[[input:S_H]] [[validation:S_H]] [[feedback:H]]</p>
-
-<p>What is the length of the hypotenuse if the grid width is \(1\,\rm{cm}\)?
-<p>[[input:S_Hnum]] [[validation:S_Hnum]] [[feedback:Hnum]]</p>]]></text>
-    </questiontext>
-    <generalfeedback format="markdown">
-      <text></text>
-    </generalfeedback>
-    <defaultgrade>1.0000000</defaultgrade>
-    <penalty>0.1000000</penalty>
-    <hidden>0</hidden>
-    <idnumber></idnumber>
-    <stackversion>
-      <text>2023010400</text>
-    </stackversion>
-    <questionvariables>
-      <text><![CDATA[Ha: sqrt(a^2+b^2);
-
-aa:4; bb: 3;
-[aa,bb]: rand([ [1,4], [1,3], [2,4], [2,3], [2,2], [3,3], [3,2], [3,1], [4,2], [4,1] ]);
-
-H: sqrt(aa^2+bb^2)*L;
-Hnum: float(sqrt(aa^2+bb^2));
-
-pB: [0,0]; pC: [aa,0]; pA: [aa,bb];
-
-initdata: [
-  [ "grid", "","", -1,aa+1,-1,bb+1, 40 ],
-  [ "polygon", "", pA, pB, pC ],
-  [ "label", "\\(a\\)", (pB+pC)/2 +[ 0,-0.5] ],
-  [ "label", "\\(b\\)", (pA+pC)/2 +[0.2,0] ],
-  [ "label", "\\(c\\)", (pA+pB)/2 +[-0.5,0.5] ]
-];
-init: stackjson_stringify(initdata);
-
-stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_value_EN.mac");]]></text>
-    </questionvariables>
-    <specificfeedback format="markdown">
-      <text></text>
-    </specificfeedback>
-    <questionnote>
-      <text>{@'a=aa@}, {@'b=bb@}</text>
-    </questionnote>
-    <questionsimplify>1</questionsimplify>
-    <assumepositive>0</assumepositive>
-    <assumereal>0</assumereal>
-    <prtcorrect format="markdown">
-      <text>Correct answer, well done.</text>
-    </prtcorrect>
-    <prtpartiallycorrect format="markdown">
-      <text>Your answer is partially correct.</text>
-    </prtpartiallycorrect>
-    <prtincorrect format="markdown">
-      <text>Incorrect answer.</text>
-    </prtincorrect>
-    <multiplicationsign>dot</multiplicationsign>
-    <sqrtsign>1</sqrtsign>
-    <complexno>i</complexno>
-    <inversetrig>cos-1</inversetrig>
-    <logicsymbol>lang</logicsymbol>
-    <matrixparens>[</matrixparens>
-    <variantsselectionseed></variantsselectionseed>
-    <input>
-      <name>S_H</name>
-      <type>algebraic</type>
-      <tans>H</tans>
-      <boxsize>15</boxsize>
-      <strictsyntax>1</strictsyntax>
-      <insertstars>3</insertstars>
-      <syntaxhint>Expression</syntaxhint>
-      <syntaxattribute>1</syntaxattribute>
-      <forbidwords></forbidwords>
-      <allowwords></allowwords>
-      <forbidfloat>1</forbidfloat>
-      <requirelowestterms>0</requirelowestterms>
-      <checkanswertype>0</checkanswertype>
-      <mustverify>1</mustverify>
-      <showvalidation>3</showvalidation>
-      <options></options>
-    </input>
-    <input>
-      <name>S_Ha</name>
-      <type>algebraic</type>
-      <tans>Ha</tans>
-      <boxsize>15</boxsize>
-      <strictsyntax>1</strictsyntax>
-      <insertstars>3</insertstars>
-      <syntaxhint>Expression</syntaxhint>
-      <syntaxattribute>1</syntaxattribute>
-      <forbidwords></forbidwords>
-      <allowwords>a,b</allowwords>
-      <forbidfloat>1</forbidfloat>
-      <requirelowestterms>0</requirelowestterms>
-      <checkanswertype>0</checkanswertype>
-      <mustverify>1</mustverify>
-      <showvalidation>3</showvalidation>
-      <options></options>
-    </input>
-    <input>
-      <name>S_Hnum</name>
-      <type>units</type>
-      <tans>Hnum*cm</tans>
-      <boxsize>15</boxsize>
-      <strictsyntax>1</strictsyntax>
-      <insertstars>3</insertstars>
-      <syntaxhint>number with unit</syntaxhint>
-      <syntaxattribute>1</syntaxattribute>
-      <forbidwords>+,-,sqrt</forbidwords>
-      <allowwords></allowwords>
-      <forbidfloat>0</forbidfloat>
-      <requirelowestterms>0</requirelowestterms>
-      <checkanswertype>0</checkanswertype>
-      <mustverify>1</mustverify>
-      <showvalidation>3</showvalidation>
-      <options></options>
-    </input>
-    <prt>
-      <name>H</name>
-      <value>1.0000000</value>
-      <autosimplify>1</autosimplify>
-      <feedbackstyle>2</feedbackstyle>
-      <feedbackvariables>
-        <text></text>
-      </feedbackvariables>
-      <node>
-        <name>0</name>
-        <answertest>AlgEquiv</answertest>
-        <sans>S_H</sans>
-        <tans>H</tans>
-        <testoptions></testoptions>
-        <quiet>0</quiet>
-        <truescoremode>=</truescoremode>
-        <truescore>1</truescore>
-        <truepenalty></truepenalty>
-        <truenextnode>-1</truenextnode>
-        <trueanswernote>H-1-T</trueanswernote>
-        <truefeedback format="html">
-          <text></text>
-        </truefeedback>
-        <falsescoremode>=</falsescoremode>
-        <falsescore>0</falsescore>
-        <falsepenalty></falsepenalty>
-        <falsenextnode>-1</falsenextnode>
-        <falseanswernote>H-1-F</falseanswernote>
-        <falsefeedback format="html">
-          <text>{@fb_vars(S_H,H)@}</text>
-        </falsefeedback>
-      </node>
-    </prt>
-    <prt>
-      <name>Ha</name>
-      <value>1.0000000</value>
-      <autosimplify>1</autosimplify>
-      <feedbackstyle>2</feedbackstyle>
-      <feedbackvariables>
-        <text></text>
-      </feedbackvariables>
-      <node>
-        <name>0</name>
-        <answertest>AlgEquiv</answertest>
-        <sans>S_Ha</sans>
-        <tans>Ha</tans>
-        <testoptions></testoptions>
-        <quiet>0</quiet>
-        <truescoremode>=</truescoremode>
-        <truescore>1</truescore>
-        <truepenalty></truepenalty>
-        <truenextnode>-1</truenextnode>
-        <trueanswernote>Ha-1-T</trueanswernote>
-        <truefeedback format="html">
-          <text></text>
-        </truefeedback>
-        <falsescoremode>=</falsescoremode>
-        <falsescore>0</falsescore>
-        <falsepenalty></falsepenalty>
-        <falsenextnode>-1</falsenextnode>
-        <falseanswernote>Ha-1-F</falseanswernote>
-        <falsefeedback format="html">
-          <text>{@fb_vars(S_Ha,Ha)@}</text>
-        </falsefeedback>
-      </node>
-    </prt>
-    <prt>
-      <name>Hnum</name>
-      <value>1.0000000</value>
-      <autosimplify>1</autosimplify>
-      <feedbackstyle>2</feedbackstyle>
-      <feedbackvariables>
-        <text></text>
-      </feedbackvariables>
-      <node>
-        <name>0</name>
-        <answertest>UnitsRelative</answertest>
-        <sans>S_Hnum</sans>
-        <tans>Hnum*cm</tans>
-        <testoptions>0.05</testoptions>
-        <quiet>1</quiet>
-        <truescoremode>=</truescoremode>
-        <truescore>1</truescore>
-        <truepenalty></truepenalty>
-        <truenextnode>-1</truenextnode>
-        <trueanswernote>Hnum-1-T</trueanswernote>
-        <truefeedback format="html">
-          <text></text>
-        </truefeedback>
-        <falsescoremode>=</falsescoremode>
-        <falsescore>0</falsescore>
-        <falsepenalty></falsepenalty>
-        <falsenextnode>-1</falsenextnode>
-        <falseanswernote>Hnum-1-F</falseanswernote>
-        <falsefeedback format="html">
-          <text>{@fb_unit(S_Hnum, Hnum*cm, 0.05)@}</text>
-        </falsefeedback>
-      </node>
-    </prt>
-  </question>
-
-<!-- question: 105395  -->
-  <question type="stack">
-    <name>
-      <text>MK: Meclib workshop P8 Interactive</text>
-    </name>
-    <questiontext format="html">
-      <text><![CDATA[<p><strong>Meclib Demo</strong></p>
 <p hidden>[[input:objects]] [[validation:objects]]</p>
 <p hidden>[[input:names]] [[validation:names]] </p>
 <div style="float:right">
@@ -1425,20 +1195,19 @@ const initstring = {#init#};
 const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
   anchorX:'left', anchorY:'middle'}};
 // End of STACK header
-[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/imeclib.js" /]]
 [[/jsxgraph]]</div>
 
-<p>Indicate the center of gravity using the blue crosshair.</p>
-<p>[[feedback:CG]]</p>
-
-<p>Give the general formula for the length of the hypotenuse \(c\) of a right-angled triangle with sides \(a\) and \(b\).</p>
 <p>[[input:S_Ha]] [[validation:S_Ha]] [[feedback:Ha]]</p>
 
 <p>What is the exact length of the hypotenuse if the grid width is \(L\)?
 <p>[[input:S_H]] [[validation:S_H]] [[feedback:H]]</p>
 
 <p>What is the length of the hypotenuse if the grid width is \(1\,\rm{cm}\)?
-<p>[[input:S_Hnum]] [[validation:S_Hnum]] [[feedback:Hnum]]</p>]]></text>
+<p>[[input:S_Hnum]] [[validation:S_Hnum]] [[feedback:Hnum]]</p>
+
+<p>Indicate the center of gravity using the blue crosshair.</p>
+<p>[[feedback:CG]]</p>]]></text>
     </questiontext>
     <generalfeedback format="markdown">
       <text></text>
@@ -1448,7 +1217,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2023010400</text>
+      <text>2024012900</text>
     </stackversion>
     <questionvariables>
       <text><![CDATA[Ha: sqrt(a^2+b^2);
@@ -1465,334 +1234,13 @@ initdata: [
   [ "grid", "","", -1,aa+1,-1,bb+1, 40 ],
   [ "crosshair", "", [0, bb], [0,0], [1,1], [2,2] ],
   [ "polygon", "", pA, pB, pC ],
-  [ "label", "\\(a\\)", (pB+pC)/2 +[ 0,-0.5] ],
+  [ "label", "\\(a\\)", (pB+pC)/2 +[ 0,-0.4] ],
   [ "label", "\\(b\\)", (pA+pC)/2 +[0.2,0] ],
-  [ "label", "\\(c\\)", (pA+pB)/2 +[-0.5,0.5] ]
+  [ "label", "\\(c\\)", (pA+pB)/2 +[-0.4,0.4] ]
 ];
 init: stackjson_stringify(initdata);
 ic: 2;
-
-stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_value_EN.mac");]]></text>
-    </questionvariables>
-    <specificfeedback format="markdown">
-      <text></text>
-    </specificfeedback>
-    <questionnote>
-      <text>{@'a=aa@}, {@'b=bb@}</text>
-    </questionnote>
-    <questionsimplify>1</questionsimplify>
-    <assumepositive>0</assumepositive>
-    <assumereal>0</assumereal>
-    <prtcorrect format="markdown">
-      <text>Correct answer, well done.</text>
-    </prtcorrect>
-    <prtpartiallycorrect format="markdown">
-      <text>Your answer is partially correct.</text>
-    </prtpartiallycorrect>
-    <prtincorrect format="markdown">
-      <text>Incorrect answer.</text>
-    </prtincorrect>
-    <multiplicationsign>dot</multiplicationsign>
-    <sqrtsign>1</sqrtsign>
-    <complexno>i</complexno>
-    <inversetrig>cos-1</inversetrig>
-    <logicsymbol>lang</logicsymbol>
-    <matrixparens>[</matrixparens>
-    <variantsselectionseed></variantsselectionseed>
-    <input>
-      <name>S_H</name>
-      <type>algebraic</type>
-      <tans>H</tans>
-      <boxsize>15</boxsize>
-      <strictsyntax>1</strictsyntax>
-      <insertstars>3</insertstars>
-      <syntaxhint>Expression</syntaxhint>
-      <syntaxattribute>1</syntaxattribute>
-      <forbidwords></forbidwords>
-      <allowwords></allowwords>
-      <forbidfloat>1</forbidfloat>
-      <requirelowestterms>0</requirelowestterms>
-      <checkanswertype>0</checkanswertype>
-      <mustverify>1</mustverify>
-      <showvalidation>3</showvalidation>
-      <options></options>
-    </input>
-    <input>
-      <name>S_Ha</name>
-      <type>algebraic</type>
-      <tans>Ha</tans>
-      <boxsize>15</boxsize>
-      <strictsyntax>1</strictsyntax>
-      <insertstars>3</insertstars>
-      <syntaxhint>Expression</syntaxhint>
-      <syntaxattribute>1</syntaxattribute>
-      <forbidwords></forbidwords>
-      <allowwords>a,b</allowwords>
-      <forbidfloat>1</forbidfloat>
-      <requirelowestterms>0</requirelowestterms>
-      <checkanswertype>0</checkanswertype>
-      <mustverify>1</mustverify>
-      <showvalidation>3</showvalidation>
-      <options></options>
-    </input>
-    <input>
-      <name>S_Hnum</name>
-      <type>units</type>
-      <tans>Hnum*cm</tans>
-      <boxsize>15</boxsize>
-      <strictsyntax>1</strictsyntax>
-      <insertstars>3</insertstars>
-      <syntaxhint>number with unit</syntaxhint>
-      <syntaxattribute>1</syntaxattribute>
-      <forbidwords>+,-,sqrt</forbidwords>
-      <allowwords></allowwords>
-      <forbidfloat>0</forbidfloat>
-      <requirelowestterms>0</requirelowestterms>
-      <checkanswertype>0</checkanswertype>
-      <mustverify>1</mustverify>
-      <showvalidation>3</showvalidation>
-      <options></options>
-    </input>
-    <input>
-      <name>names</name>
-      <type>algebraic</type>
-      <tans>[]</tans>
-      <boxsize>40</boxsize>
-      <strictsyntax>1</strictsyntax>
-      <insertstars>0</insertstars>
-      <syntaxhint></syntaxhint>
-      <syntaxattribute>0</syntaxattribute>
-      <forbidwords></forbidwords>
-      <allowwords></allowwords>
-      <forbidfloat>0</forbidfloat>
-      <requirelowestterms>0</requirelowestterms>
-      <checkanswertype>0</checkanswertype>
-      <mustverify>0</mustverify>
-      <showvalidation>0</showvalidation>
-      <options></options>
-    </input>
-    <input>
-      <name>objects</name>
-      <type>string</type>
-      <tans>tans</tans>
-      <boxsize>15</boxsize>
-      <strictsyntax>1</strictsyntax>
-      <insertstars>0</insertstars>
-      <syntaxhint></syntaxhint>
-      <syntaxattribute>0</syntaxattribute>
-      <forbidwords></forbidwords>
-      <allowwords></allowwords>
-      <forbidfloat>1</forbidfloat>
-      <requirelowestterms>0</requirelowestterms>
-      <checkanswertype>0</checkanswertype>
-      <mustverify>0</mustverify>
-      <showvalidation>0</showvalidation>
-      <options></options>
-    </input>
-    <prt>
-      <name>CG</name>
-      <value>1.0000000</value>
-      <autosimplify>1</autosimplify>
-      <feedbackstyle>2</feedbackstyle>
-      <feedbackvariables>
-        <text>CG: [2/3*aa, 1/3*bb];
-S_CG: names[ic];
-vec: CG-S_CG;
-dist: sqrt(vec[1]^2+vec[2]^2);</text>
-      </feedbackvariables>
-      <node>
-        <name>0</name>
-        <answertest>NumAbsolute</answertest>
-        <sans>dist</sans>
-        <tans>0</tans>
-        <testoptions>0.05</testoptions>
-        <quiet>0</quiet>
-        <truescoremode>=</truescoremode>
-        <truescore>1</truescore>
-        <truepenalty></truepenalty>
-        <truenextnode>-1</truenextnode>
-        <trueanswernote>CG-1-T</trueanswernote>
-        <truefeedback format="html">
-          <text>The distance to the actual CG is {@dispdp(dist,2)@} grid units.</text>
-        </truefeedback>
-        <falsescoremode>=</falsescoremode>
-        <falsescore>0</falsescore>
-        <falsepenalty></falsepenalty>
-        <falsenextnode>-1</falsenextnode>
-        <falseanswernote>CG-1-F</falseanswernote>
-        <falsefeedback format="html">
-          <text>The distance to the actual CG is {@dispdp(dist,2)@} grid units. Must be smaller than 0.05.</text>
-        </falsefeedback>
-      </node>
-    </prt>
-    <prt>
-      <name>H</name>
-      <value>1.0000000</value>
-      <autosimplify>1</autosimplify>
-      <feedbackstyle>2</feedbackstyle>
-      <feedbackvariables>
-        <text></text>
-      </feedbackvariables>
-      <node>
-        <name>0</name>
-        <answertest>AlgEquiv</answertest>
-        <sans>S_H</sans>
-        <tans>H</tans>
-        <testoptions></testoptions>
-        <quiet>0</quiet>
-        <truescoremode>=</truescoremode>
-        <truescore>1</truescore>
-        <truepenalty></truepenalty>
-        <truenextnode>-1</truenextnode>
-        <trueanswernote>H-1-T</trueanswernote>
-        <truefeedback format="html">
-          <text></text>
-        </truefeedback>
-        <falsescoremode>=</falsescoremode>
-        <falsescore>0</falsescore>
-        <falsepenalty></falsepenalty>
-        <falsenextnode>-1</falsenextnode>
-        <falseanswernote>H-1-F</falseanswernote>
-        <falsefeedback format="html">
-          <text>{@fb_vars(S_H,H)@}</text>
-        </falsefeedback>
-      </node>
-    </prt>
-    <prt>
-      <name>Ha</name>
-      <value>1.0000000</value>
-      <autosimplify>1</autosimplify>
-      <feedbackstyle>2</feedbackstyle>
-      <feedbackvariables>
-        <text></text>
-      </feedbackvariables>
-      <node>
-        <name>0</name>
-        <answertest>AlgEquiv</answertest>
-        <sans>S_Ha</sans>
-        <tans>Ha</tans>
-        <testoptions></testoptions>
-        <quiet>0</quiet>
-        <truescoremode>=</truescoremode>
-        <truescore>1</truescore>
-        <truepenalty></truepenalty>
-        <truenextnode>-1</truenextnode>
-        <trueanswernote>Ha-1-T</trueanswernote>
-        <truefeedback format="html">
-          <text></text>
-        </truefeedback>
-        <falsescoremode>=</falsescoremode>
-        <falsescore>0</falsescore>
-        <falsepenalty></falsepenalty>
-        <falsenextnode>-1</falsenextnode>
-        <falseanswernote>Ha-1-F</falseanswernote>
-        <falsefeedback format="html">
-          <text>{@fb_vars(S_Ha,Ha)@}</text>
-        </falsefeedback>
-      </node>
-    </prt>
-    <prt>
-      <name>Hnum</name>
-      <value>1.0000000</value>
-      <autosimplify>1</autosimplify>
-      <feedbackstyle>2</feedbackstyle>
-      <feedbackvariables>
-        <text></text>
-      </feedbackvariables>
-      <node>
-        <name>0</name>
-        <answertest>UnitsRelative</answertest>
-        <sans>S_Hnum</sans>
-        <tans>Hnum*cm</tans>
-        <testoptions>0.05</testoptions>
-        <quiet>1</quiet>
-        <truescoremode>=</truescoremode>
-        <truescore>1</truescore>
-        <truepenalty></truepenalty>
-        <truenextnode>-1</truenextnode>
-        <trueanswernote>Hnum-1-T</trueanswernote>
-        <truefeedback format="html">
-          <text></text>
-        </truefeedback>
-        <falsescoremode>=</falsescoremode>
-        <falsescore>0</falsescore>
-        <falsepenalty></falsepenalty>
-        <falsenextnode>-1</falsenextnode>
-        <falseanswernote>Hnum-1-F</falseanswernote>
-        <falsefeedback format="html">
-          <text>{@fb_unit(S_Hnum, Hnum*cm, 0.05)@}</text>
-        </falsefeedback>
-      </node>
-    </prt>
-  </question>
-
-<!-- question: 105398  -->
-  <question type="stack">
-    <name>
-      <text>MK: Meclib workshop P9 Tans</text>
-    </name>
-    <questiontext format="html">
-      <text><![CDATA[<p><strong>Meclib Demo</strong></p>
-<p hidden>[[input:objects]] [[validation:objects]]</p>
-<p hidden>[[input:names]] [[validation:names]] </p>
-<div style="float:right">
-[[jsxgraph width='500px' height='400px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
-var mode  = "STACK";
-const initstring = {#init#};
-const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
-  anchorX:'left', anchorY:'middle'}};
-// End of STACK header
-[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
-[[/jsxgraph]]</div>
-
-<p>Indicate the center of gravity using the blue crosshair.</p>
-<p>[[feedback:CG]]</p>
-
-<p>Give the general formula for the length of the hypotenuse \(c\) of a right-angled triangle with sides \(a\) and \(b\).</p>
-<p>[[input:S_Ha]] [[validation:S_Ha]] [[feedback:Ha]]</p>
-
-<p>What is the exact length of the hypotenuse if the grid width is \(L\)?
-<p>[[input:S_H]] [[validation:S_H]] [[feedback:H]]</p>
-
-<p>What is the length of the hypotenuse if the grid width is \(1\,\rm{cm}\)?
-<p>[[input:S_Hnum]] [[validation:S_Hnum]] [[feedback:Hnum]]</p>]]></text>
-    </questiontext>
-    <generalfeedback format="markdown">
-      <text></text>
-    </generalfeedback>
-    <defaultgrade>1.0000000</defaultgrade>
-    <penalty>0.1000000</penalty>
-    <hidden>0</hidden>
-    <idnumber></idnumber>
-    <stackversion>
-      <text>2023010400</text>
-    </stackversion>
-    <questionvariables>
-      <text><![CDATA[Ha: sqrt(a^2+b^2);
-
-aa:4; bb: 3;
-[aa,bb]: rand([ [1,4], [1,3], [2,4], [2,3], [2,2], [3,3], [3,2], [3,1], [4,2], [4,1] ]);
-
-H: sqrt(aa^2+bb^2)*L;
-Hnum: float(sqrt(aa^2+bb^2));
-
-pB: [0,0]; pC: [aa,0]; pA: [aa,bb];
-
-initdata: [
-  [ "grid", "","", -1,aa+1,-1,bb+1, 40 ],
-  [ "crosshair", "", [0, bb], [0,0], [1,1], [2,2] ],
-  [ "polygon", "", pA, pB, pC ],
-  [ "label", "\\(a\\)", (pB+pC)/2 +[ 0,-0.5] ],
-  [ "label", "\\(b\\)", (pA+pC)/2 +[0.2,0] ],
-  [ "label", "\\(c\\)", (pA+pB)/2 +[-0.5,0.5] ]
-];
-init: stackjson_stringify(initdata);
-ic: 2;
-
 CG: [2/3*aa, 1/3*bb];
-tansdata: initdata;
-tansdata[ic]: [ "crosshair", "", CG, [0,0], [1,1], [2,2] ];
-tans: stackjson_stringify(tansdata);
 
 stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_value_EN.mac");]]></text>
     </questionvariables>
@@ -1802,6 +1250,9 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
     <questionnote>
       <text>{@'a=aa@}, {@'b=bb@}</text>
     </questionnote>
+    <questiondescription format="html">
+      <text></text>
+    </questiondescription>
     <questionsimplify>1</questionsimplify>
     <assumepositive>0</assumepositive>
     <assumereal>0</assumereal>
@@ -1814,6 +1265,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
     <prtincorrect format="markdown">
       <text>Incorrect answer.</text>
     </prtincorrect>
+    <decimals>.</decimals>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -1822,64 +1274,10 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
     <matrixparens>[</matrixparens>
     <variantsselectionseed></variantsselectionseed>
     <input>
-      <name>S_H</name>
-      <type>algebraic</type>
-      <tans>H</tans>
-      <boxsize>15</boxsize>
-      <strictsyntax>1</strictsyntax>
-      <insertstars>3</insertstars>
-      <syntaxhint>Expression</syntaxhint>
-      <syntaxattribute>1</syntaxattribute>
-      <forbidwords></forbidwords>
-      <allowwords></allowwords>
-      <forbidfloat>1</forbidfloat>
-      <requirelowestterms>0</requirelowestterms>
-      <checkanswertype>0</checkanswertype>
-      <mustverify>1</mustverify>
-      <showvalidation>3</showvalidation>
-      <options></options>
-    </input>
-    <input>
-      <name>S_Ha</name>
-      <type>algebraic</type>
-      <tans>Ha</tans>
-      <boxsize>15</boxsize>
-      <strictsyntax>1</strictsyntax>
-      <insertstars>3</insertstars>
-      <syntaxhint>Expression</syntaxhint>
-      <syntaxattribute>1</syntaxattribute>
-      <forbidwords></forbidwords>
-      <allowwords>a,b</allowwords>
-      <forbidfloat>1</forbidfloat>
-      <requirelowestterms>0</requirelowestterms>
-      <checkanswertype>0</checkanswertype>
-      <mustverify>1</mustverify>
-      <showvalidation>3</showvalidation>
-      <options></options>
-    </input>
-    <input>
-      <name>S_Hnum</name>
-      <type>units</type>
-      <tans>Hnum*cm</tans>
-      <boxsize>15</boxsize>
-      <strictsyntax>1</strictsyntax>
-      <insertstars>3</insertstars>
-      <syntaxhint>number with unit</syntaxhint>
-      <syntaxattribute>1</syntaxattribute>
-      <forbidwords>+,-,sqrt</forbidwords>
-      <allowwords></allowwords>
-      <forbidfloat>0</forbidfloat>
-      <requirelowestterms>0</requirelowestterms>
-      <checkanswertype>0</checkanswertype>
-      <mustverify>1</mustverify>
-      <showvalidation>3</showvalidation>
-      <options></options>
-    </input>
-    <input>
       <name>names</name>
       <type>algebraic</type>
       <tans>[]</tans>
-      <boxsize>40</boxsize>
+      <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>0</insertstars>
       <syntaxhint></syntaxhint>
@@ -1909,6 +1307,60 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
       <checkanswertype>0</checkanswertype>
       <mustverify>0</mustverify>
       <showvalidation>0</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>S_H</name>
+      <type>algebraic</type>
+      <tans>H</tans>
+      <boxsize>15</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>expression</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>1</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options>nounits</options>
+    </input>
+    <input>
+      <name>S_Ha</name>
+      <type>algebraic</type>
+      <tans>Ha</tans>
+      <boxsize>15</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>expression</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>1</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options>nounits</options>
+    </input>
+    <input>
+      <name>S_Hnum</name>
+      <type>units</type>
+      <tans>Hnum*cm</tans>
+      <boxsize>15</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>number with unit</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords>+,-,sqrt</forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
       <options></options>
     </input>
     <prt>
@@ -1923,6 +1375,7 @@ dist: sqrt(vec[1]^2+vec[2]^2);</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>NumAbsolute</answertest>
         <sans>dist</sans>
         <tans>0</tans>
@@ -1956,6 +1409,7 @@ dist: sqrt(vec[1]^2+vec[2]^2);</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>S_H</sans>
         <tans>H</tans>
@@ -1989,6 +1443,7 @@ dist: sqrt(vec[1]^2+vec[2]^2);</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>S_Ha</sans>
         <tans>Ha</tans>
@@ -2022,6 +1477,7 @@ dist: sqrt(vec[1]^2+vec[2]^2);</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>UnitsRelative</answertest>
         <sans>S_Hnum</sans>
         <tans>Hnum*cm</tans>
