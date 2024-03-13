@@ -1178,7 +1178,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
     </prt>
   </question>
 
-<!-- question: 1547  -->
+<!-- question: 1550  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P7 Interactive Input</text>
@@ -1241,6 +1241,10 @@ initdata: [
 init: stackjson_stringify(initdata);
 ic: 2;
 CG: [2/3*aa, 1/3*bb];
+
+tansdata: initdata;
+tansdata[ic][3]: CG;
+tans: stackjson_stringify(tansdata);
 
 stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_value_EN.mac");]]></text>
     </questionvariables>
