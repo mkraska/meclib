@@ -330,7 +330,7 @@ class circle {
     this.loads = []
   }
   hasPoint(pt) {return isOn(pt,this.c)} 
-  data(){ let a = this.d.slice(0); a.push(this.state); return a}
+  data(){ return ["circle", this.d[1], XY(this.p1), this.c.Radius(), this.angle/deg2rad, this.state]}
   name(){ return targetName(this) } 
 }
 
