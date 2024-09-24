@@ -42,6 +42,7 @@ JXG.Options.polygon.borders.highlight = false;
 JXG.Options.point.highlight = false;
 // grid control
 JXG.Options.axis.ticks.insertTicks = false;
+JXG.Options.grid.drawZero = true;
 
 
 // Styles
