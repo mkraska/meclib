@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2024 09 24";
+const versionText= "JXG "+JXG.version+" Meclib 2024 10 14";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -1032,20 +1032,20 @@ class grid {
       if (xmin<xmax) {labelopt = {position: 'rt', offset: [-5, 12] } } 
       else {labelopt = {position: 'lft', offset: [-5, 12] }}
       this.xaxis = board.create('axis', [[0, 0], [1,0]], 
-	    {name:toTEX(data[1]), withLabel: true, label: labelopt, layer:0,
+	    {name:toTEX(data[1]), withLabel: true, label: labelopt, layer:3, strokecolor:"black",
         ticks: { label:{layer:3}, generateLabelValue:function(p1,p2) {
 	      return ((p1.usrCoords[1]-p2.usrCoords[1])*fx).toFixed(Math.max(...[0,dpx-1]))}} });}
     if (data[2]) { 
       if (ymin<ymax) {labelopt = {position: 'rt', offset: [10, 0] } } 
       else {labelopt = {position: 'rt', offset: [10, 0] }}
    	  this.yaxis = board.create('axis', [[0, 0], [0,1]], 
-	    {name:toTEX(data[2]), withLabel: true, label: labelopt, layer:0,
+	    {name:toTEX(data[2]), withLabel: true, label: labelopt, layer:3, strokecolor:"black",
         ticks: { label:{layer:3}, generateLabelValue:function(p1,p2) {
 	      return ((p1.usrCoords[2]-p2.usrCoords[2])*fy).toFixed(Math.max(...[0,dpy-1]))}} });    
     } 
     // version info
     this.vs = board.create("text", [xmin + 0.5 * a, ymax - 0.5 * a, versionText], 
-      {strokeColor: "lightgray", fixed:true});
+      {strokeColor: "lightgray", fixed:true, layer:5});
     this.vs.setPositionDirectly(JXG.COORDS_BY_SCREEN, [10,10]);
   }   
   data(){  return this.d }
