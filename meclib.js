@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2024 10 14";
+const versionText= "JXG "+JXG.version+" Meclib 2024 10 24";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -1267,8 +1267,7 @@ class point {
   data() { return this.d }
   name() { return '"'+this.d[1]+'"'}
 }
-// grau gefülltes Polygon mit schwarzem Rand. Z.B. für Scheiben oder Balken
-// Version with hole adapted from https://github.com/Niclas17/meclib 
+// gray filled polygon with black border
 // gray filled polygon with black border
 class polygon{
     constructor(data) {
@@ -1278,57 +1277,36 @@ class polygon{
       // data for name()
       this.loads = [];
       this.d = data.slice(0);
-      // geometric data
-      this.v = data.slice(2);
-      console.log('this.v is here: ' + this.v);
-      //this.vflat = this.v.flat();
-      this.pArr = [];
+      // geometric data, assuming no holes
+      this.v = data.slice(2)
       let hasHole = false;
-      // Check if the polygon has holes
-      if (this.v[0].length > 2) {hasHole = true;}
-      // Create dynamic points based on the number of vertices
-      for (let i = 0; i < this.v.length; i++) {
-      const x = this.v[i][0], y = this.v[i][1];
-      this.pArr.push(board.create('point', [x,y], {size:0, visible:true, fixed:false}));
-      this[`p${i + 1}`] = this.pArr[i]; // Create dynamic point properties
-      } 
-      // Create polygon
+      let pc = this.v // point coordinates
+      let cl =[] // lines to make invisible
+      // Handling polygons with holes
+      if (this.v[0].length > 2) {
+        hasHole = true; 
+        pc = []; 
+        // augment closing points to contours
+        for (let index in this.v) {
+          pc.push(this.v[index])
+          pc[index].push(this.v[index][0])
+          cl.push(pc.flat().length)
+        }
+        // add path back to outer contour
+        for (let i = pc.length-1;i>0; i--) {
+          pc[pc.length-1].push(pc[i][0])
+          cl.push(pc.flat().length)
+        }
+        pc = this.v.flat() 
+      }
+      this.p = board.create('polygon', pc, pstyle);
+	  // make connecting lines invisible
       if (hasHole) {
-      this.clines = [];
-      this.path = this.v.shift();
-      this.path.push(this.path[0]);
-      for (const border of this.v) {
-      this.clines.push(this.path.length - 1);
-      this.path = this.path.concat(border);
-      this.path.push(border[0]);
-      this.clines.push(this.path.length - 1);
+        for (const b of cl) {
+          this.p.borders[b-1].setAttribute({visible:false})
+        }
       }
-      // suppress the connector lines
-      for (const i of this.clines)
-      this.p.borders[i].setAttribute({visible:false});
-      const outerContour = pArr.slice(0, 2); 
-      const innerContours = [];
-      let startIndex = 2;
-      while (startIndex < pArr.length) {
-        const innerContour = pArr.slice(startIndex, startIndex + 2);
-        innerContours.push(innerContour);
-        startIndex += 2;
-      }
-      this.p = board.create('polygon', [outerContour, innerContours], pstyle);
-      // Adjust the visibility of inner borders inside overlapping polygons
-      for (const i of this.clines) {
-      if (this.p.borders[i] && this.p.borders[i].getAttribute('withLabel') === 'false') {this.p.borders[i].setAttribute(invisibleBorderStyle);}}} 
-      else {this.p = board.create('polygon', this.pArr, pstyle);
-      // Adjust the visibility of inner borders inside overlapping polygons
-      for (const border of this.p.borders) {
-      if (border.getAttribute('withLabel') === 'false') {border.setAttribute(invisibleBorderStyle);}}}
-      this.p.setAttribute({fixed:true});
-      this.p.obj = [this.p, this.pArr];
-      this.p.parent = this;
-      const pointgroup = board.create('group', this.pArr);
-      //.setRotationCenter('centroid').setRotationPoints(this.pArr);
-      //this.pArr[3].moveTo([10,4], 2000);		// test random point movement
-      // switching objects
+        
       this.obj = [this.p].concat(this.p.borders);
       // state init
       switch (this.state) {
