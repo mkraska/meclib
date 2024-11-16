@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2024 11 16";
+const versionText= "JXG "+JXG.version+" iMeclib 2024 04 02";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -42,7 +42,6 @@ JXG.Options.polygon.borders.highlight = false;
 JXG.Options.point.highlight = false;
 // grid control
 JXG.Options.axis.ticks.insertTicks = false;
-JXG.Options.grid.drawZero = true;
 
 
 // Styles
@@ -1032,20 +1031,20 @@ class grid {
       if (xmin<xmax) {labelopt = {position: 'rt', offset: [-5, 12] } } 
       else {labelopt = {position: 'lft', offset: [-5, 12] }}
       this.xaxis = board.create('axis', [[0, 0], [1,0]], 
-	    {name:toTEX(data[1]), withLabel: true, label: labelopt, layer:3, strokecolor:"black",
+	    {name:toTEX(data[1]), withLabel: true, label: labelopt, layer:0,
         ticks: { label:{layer:3}, generateLabelValue:function(p1,p2) {
 	      return ((p1.usrCoords[1]-p2.usrCoords[1])*fx).toFixed(Math.max(...[0,dpx-1]))}} });}
     if (data[2]) { 
       if (ymin<ymax) {labelopt = {position: 'rt', offset: [10, 0] } } 
       else {labelopt = {position: 'rt', offset: [10, 0] }}
    	  this.yaxis = board.create('axis', [[0, 0], [0,1]], 
-	    {name:toTEX(data[2]), withLabel: true, label: labelopt, layer:3, strokecolor:"black",
+	    {name:toTEX(data[2]), withLabel: true, label: labelopt, layer:0,
         ticks: { label:{layer:3}, generateLabelValue:function(p1,p2) {
 	      return ((p1.usrCoords[2]-p2.usrCoords[2])*fy).toFixed(Math.max(...[0,dpy-1]))}} });    
     } 
     // version info
     this.vs = board.create("text", [xmin + 0.5 * a, ymax - 0.5 * a, versionText], 
-      {strokeColor: "lightgray", fixed:true, layer:5});
+      {strokeColor: "lightgray", fixed:true});
     this.vs.setPositionDirectly(JXG.COORDS_BY_SCREEN, [10,10]);
   }   
   data(){  return this.d }
@@ -1267,6 +1266,8 @@ class point {
   data() { return this.d }
   name() { return '"'+this.d[1]+'"'}
 }
+// grau gefülltes Polygon mit schwarzem Rand. Z.B. für Scheiben oder Balken
+// Version with hole adapted from https://github.com/Niclas17/meclib 
 // gray filled polygon with black border
 class polygon{
     constructor(data) {
@@ -1276,35 +1277,57 @@ class polygon{
       // data for name()
       this.loads = [];
       this.d = data.slice(0);
-      // geometric data, assuming no holes
-      this.v = data.slice(2)
+      // geometric data
+      this.v = data.slice(2);
+      console.log('this.v is here: ' + this.v);
+      //this.vflat = this.v.flat();
+      this.pArr = [];
       let hasHole = false;
-      let pc = this.v // point coordinates
-      let cl =[] // lines to make invisible
-      // Handling polygons with holes
-      if (this.v[0].length > 2) {
-        hasHole = true; 
-        pc = []; 
-        // augment closing points to contours
-        for (let index in this.v) {
-          pc.push(this.v[index])
-          pc[index].push(this.v[index][0])
-          cl.push(pc.flat().length)
-        }
-        // add path back to outer contour
-        for (let i = pc.length-1;i>0; i--) {
-          pc[pc.length-1].push(pc[i][0])
-          cl.push(pc.flat().length)
-        }
-        pc = this.v.flat() 
-      }
-      this.p = board.create('polygon', pc, pstyle);
+      // Check if the polygon has holes
+      if (this.v[0].length > 2) {hasHole = true;}
+      // Create dynamic points based on the number of vertices
+      for (let i = 0; i < this.v.length; i++) {
+      const x = this.v[i][0], y = this.v[i][1];
+      this.pArr.push(board.create('point', [x,y], {size:0, visible:true, fixed:false}));
+      this[`p${i + 1}`] = this.pArr[i]; // Create dynamic point properties
+      } 
+      // Create polygon
       if (hasHole) {
-        for (const b of cl) {
-          this.p.borders[b-1].setAttribute({visible:false})
-        }
+      this.clines = [];
+      this.path = this.v.shift();
+      this.path.push(this.path[0]);
+      for (const border of this.v) {
+      this.clines.push(this.path.length - 1);
+      this.path = this.path.concat(border);
+      this.path.push(border[0]);
+      this.clines.push(this.path.length - 1);
       }
-        
+      // suppress the connector lines
+      for (const i of this.clines)
+      this.p.borders[i].setAttribute({visible:false});
+      const outerContour = pArr.slice(0, 2); 
+      const innerContours = [];
+      let startIndex = 2;
+      while (startIndex < pArr.length) {
+        const innerContour = pArr.slice(startIndex, startIndex + 2);
+        innerContours.push(innerContour);
+        startIndex += 2;
+      }
+      this.p = board.create('polygon', [outerContour, innerContours], pstyle);
+      // Adjust the visibility of inner borders inside overlapping polygons
+      for (const i of this.clines) {
+      if (this.p.borders[i] && this.p.borders[i].getAttribute('withLabel') === 'false') {this.p.borders[i].setAttribute(invisibleBorderStyle);}}} 
+      else {this.p = board.create('polygon', this.pArr, pstyle);
+      // Adjust the visibility of inner borders inside overlapping polygons
+      for (const border of this.p.borders) {
+      if (border.getAttribute('withLabel') === 'false') {border.setAttribute(invisibleBorderStyle);}}}
+      this.p.setAttribute({fixed:true});
+      this.p.obj = [this.p, this.pArr];
+      this.p.parent = this;
+      const pointgroup = board.create('group', this.pArr);
+      //.setRotationCenter('centroid').setRotationPoints(this.pArr);
+      //this.pArr[3].moveTo([10,4], 2000);		// test random point movement
+      // switching objects
       this.obj = [this.p].concat(this.p.borders);
       // state init
       switch (this.state) {
@@ -1376,75 +1399,162 @@ class rope {
   constructor(data) {
     if (typeof(data[data.length - 1]) == 'string') {this.state = data.pop()} else {this.state = "SHOW"}
     this.d = data;
-    const c1 = data[2];
+    const v = minus(data[4], data[2]);
+    //const dx = data[4][0]-data[2][0];
+    //const dy = data[4][1]-data[2][1];
+    const [le, a0] = polar(v);
+    //const a0 = Math.atan2(dy,dx);
+    //const le = Math.sqrt(dx**2+dy**2);
     const r1 = data[3];
-    const c2 = data[4];
     const r2 = data[5];
+    const a1 = Math.acos((r1-r2)/le);
     // to make it easier to switch between collective visibility of object frames 
     let vis = {visible:false}; // use spread operator ( ...vis ) for elements with multiple attributes, otherwise just use variable itself
-	  this.p1=board.create("point", c1, vis );
-    this.ci1 = board.create("circle",[this.p1,r1], vis)
-    this.p2=board.create("point", c2, vis );
-    this.ci2 =board.create("circle",[this.p2,r2], vis);
-    let num=1;
-    // equal radius
-    if (r1==r2) {
-      this.t1= board.create("segment",[this.p1,this.p2],vis)
-      this.n1= board.create("perpendicular",[this.t1,this.p1],vis)
-      this.i2=board.create("intersection",[this.n1,this.ci1],vis)
-      if (r1<0) {this.i2=board.create("otherintersection",[this.n1,this.ci1,this.i2],vis)}
-      var points = [this.p1, this.p2, this.i2]
-    }
-    // works for abs(r1)>=abs(r2) and all combinations of signs except for r1==r2
-    else if (Math.abs(r1)>=Math.abs(r2)) {
-      let pm = board.create("midpoint", [this.p1,this.p2],{name:'M',...vis})
-      let cm =board.create("circle", [pm,this.p1], vis)
-      let cdif=board.create("circle",[this.p1,r1-r2], vis)
-      let i1=board.create("intersection",[cm,cdif], vis)
-      if (r1>0) {i1=board.create("otherintersection",[cm,cdif,i1], vis)}
-      let n1=board.create("normal",[cdif,i1],vis)
-      let i2=board.create("intersection",[n1,this.ci1],vis) 
-      var points = [i1, this.p2, i2]
-    }
-    // works for abs(r1)<abs(r2) and all combinations of signs
-    else if (Math.abs(r1)<Math.abs(r2)) {
-      if (r2>0) { num=0} 
-      let pm = board.create("midpoint", [this.p1,this.p2], vis)
-      let cm =board.create("circle", [pm,this.p1],vis)
-      let cdif=board.create("circle",[this.p2,r2-r1],vis)
-      let i1=board.create("intersection",[cm,cdif],vis)
-      if (r2<0) {i1=board.create("otherintersection",[cm,cdif,i1],vis)}
-      let n1=board.create("normal",[cdif,i1],vis)
-      let i2=board.create("intersection",[n1,this.ci2],vis) 
-      var points = [i1, this.p1, i2]
-    }
-    // line with label
-    this.l = board.create('parallel', points, {
-      straightFirst: false, straightLast: false,
-      layer: defaultMecLayer, ...normalStyle
-    })
-    this.label = board.create("midpoint",[this.l],
-      {name:data[1],label:{autoposition:true, autoPositionMinDistance:6,anchorX: 'middle',
-        anchorY: 'middle'},showinfobox:false,size:0}) 
-    // target elements for load application
+	  
+    this.p1 = board.create('point', data[2], {name:'p1', visible:false, fixed:false});
+    this.p2 = board.create('point', data[4], {name:'p2', visible:false, fixed:false});
+    this.pm = board.create('midpoint', [this.p1, this.p2], {name:'pm', visible:false});
+    this.c1 = board.create('circle', [this.p1, r1], vis);
+    this.c2 = board.create('circle', [this.p2, r2], vis);
+    this.cm = board.create('circle', [this.pm, this.p1], vis);
+    this.ropeAttr = {name:"", layer: defaultMecLayer, withLabel:true, ...normalStyle, label:{offset:[0,0],autoPosition:true}};
+	
+    if (Math.abs(r1) > Math.abs(r2)) {
+   	  this.c3 = board.create('circle', [this.p1, function() {return r1 - r2}], {strokeWidth:'1px', strokeColor:'red', ...vis});
+   	  this.i1 = board.create('intersection', [this.cm, this.c3], {name:'i1', ...vis});
+   	  this.i2 = board.create('otherintersection', [this.cm, this.c3, this.i1], {name:'i2', ...vis});
+   	  this.l1 = board.create('line', [this.p1, this.i2], vis);
+      this.l2 = board.create('line', [this.p1, this.i1], vis);
+   	  this.i3 = board.create('intersection', [this.c1, this.l1], {name:'i3', ...vis});
+      this.i31 = board.create('otherintersection', [this.c1, this.l1, this.i3], {name:'i31', ...vis});
+      this.i4 = board.create('intersection', [this.c1, this.l2], {name:'i4', ...vis});
+      this.i41 = board.create('otherintersection', [this.c1, this.l2, this.i4], {name:'i41', ...vis});
+      if (r1 < 0) {
+        this.lpl = board.create('parallel', [this.i1,this.p2,this.i41], {color:'purple', ...vis});
+   	    this.lpr = board.create('parallel', [this.i2,this.p2,this.i31], {color:'green', ...vis});
+      } else {
+        this.lpl = board.create('parallel', [this.i1,this.p2,this.i4], {color:'purple', ...vis});
+   	    this.lpr = board.create('parallel', [this.i2,this.p2,this.i3], {color:'green', ...vis});
+      }
+   	  this.i5 = board.create('intersection', [this.c2, this.lpr], {name:'i5', ...vis});
+      this.i6 = board.create('intersection', [this.c2, this.lpl], {name:'i6', ...vis});
+      if (r1 > 0) { 
+        this.l = board.create('segment', [this.i3, this.i5], this.ropeAttr); 
+        this.mp = board.create('midpoint', [this.i3, this.i5], {name:'mp', visible:false});
+            //const alpha = this.l.getAngle()+90*deg2rad;
+            //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i3), XY(this.i5) ) ), rect(11*pxunit, alpha)), {visible:false});
+      } else { 
+        this.l = board.create('segment', [this.i31, this.i5], this.ropeAttr);
+        this.mp = board.create('midpoint', [this.i31, this.i5], {name:'mp', visible:false});
+            //const alpha = this.l.getAngle()+90*deg2rad;
+            //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i31), XY(this.i5) ) ), rect(11*pxunit, alpha)), {visible:false});
+      }      
+    } 
+    else if (Math.abs(r1) < Math.abs(r2)) {
+   	  this.c3 = board.create('circle', [this.p2, function() {return r2 - r1}], {strokeWidth:'1px', strokeColor:'red', ...vis});
+   	  this.i1 = board.create('intersection', [this.cm, this.c3], {name:'i1', ...vis});
+   	  this.i2 = board.create('otherintersection', [this.cm, this.c3, this.i1], {name:'i2', ...vis});
+   	  this.l1 = board.create('line', [this.p2, this.i2], vis);
+   	  this.l2 = board.create('line', [this.p2, this.i1], vis);
+   	  this.i3 = board.create('intersection', [this.c2, this.l1], {name:'i3', ...vis});
+   	  this.i31 = board.create('otherintersection', [this.c2, this.l1, this.i3], {name:'i31', ...vis});
+   	  this.i4 = board.create('intersection', [this.c2, this.l2], {name:'i4', ...vis});
+   	  this.i41 = board.create('otherintersection', [this.c2, this.l2, this.i4], {name:'i41', ...vis});
+   	  if (r2 < 0) {
+   	    this.lpl = board.create('parallel', [this.i1,this.p1,this.i41], {color:'purple', ...vis});
+   	    this.lpr = board.create('parallel', [this.i2,this.p1,this.i31], {color:'green', ...vis});
+   	  } else {
+   	    this.lpl = board.create('parallel', [this.i1,this.p1,this.i4], {color:'purple', ...vis});
+   	    this.lpr = board.create('parallel', [this.i2,this.p1,this.i3], {color:'green', ...vis});
+   	  }
+   	  this.i5 = board.create('intersection', [this.c1, this.lpr], {name:'i5', ...vis});
+      this.i6 = board.create('intersection', [this.c1, this.lpl], {name:'i6', ...vis});
+   	  if (r2 > 0) { 
+        this.l = board.create('segment', [this.i4, this.i6], this.ropeAttr);
+        this.mp = board.create('midpoint', [this.i4, this.i6], {name:'mp', visible:false});
+        const alpha = this.l.getAngle()+90*deg2rad;
+        this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i4), XY(this.i6) ) ), rect(11*pxunit, alpha)), {visible:false});
+      } else { 
+        this.l = board.create('segment', [this.i41, this.i6], this.ropeAttr);
+        this.mp = board.create('midpoint', [this.i41, this.i6], {name:'mp', visible:false});
+        //const alpha = this.l.getAngle()+90*deg2rad;
+        //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i41), XY(this.i6) ) ), rect(11*pxunit, alpha)), {visible:false});
+      }  
+   	} 
+   
+    else if (Math.abs(r1) == Math.abs(r2)) {
+      if ((r1 > 0 && r2 > 0) || (r1 < 0 && r2 < 0)) {
+    	this.l1 = board.create('line', [this.p1, this.p2], vis);
+    	this.perp1 = board.create('perpendicular', [this.l1, this.p1], vis);
+    	this.i1 = board.create('intersection', [this.c1, this.perp1], {name:'i1', ...vis});
+    	this.i2 = board.create('otherintersection', [this.c1, this.perp1, this.i1], {name:'i2', ...vis});
+    	this.perp2 = board.create('perpendicular', [this.l1, this.p2], vis);
+    	this.i3 = board.create('intersection', [this.c2, this.perp2], {name:'i3', ...vis});
+    	this.i4 = board.create('otherintersection', [this.c2, this.perp2, this.i3], {name:'i4', ...vis});
+    	this.l = board.create('segment', [this.i1,this.i3], this.ropeAttr);
+        this.mp = board.create('midpoint', [this.i1, this.i3], {name:'mp', visible:false});
+        //const alpha = this.l.getAngle()+90*deg2rad;
+        //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i1), XY(this.i3) ) ), rect(11*pxunit, alpha)), {visible:false});
+      } else if (r1 == 0 && r2 == 0) {
+    	this.l = board.create('segment', [this.p1, this.p2], this.ropeAttr); 
+        this.mp = board.create('midpoint', [this.p1, this.p2], {name:'mp', visible:false});
+        //const alpha = this.l.getAngle()+90*deg2rad;
+        //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.p1), XY(this.p2) ) ), rect(11*pxunit, alpha)), {visible:false});
+      } else {
+    	this.i1 = board.create('intersection', [this.c1, this.cm], {name:'i1', ...vis});
+    	this.i2 = board.create('otherintersection', [this.c1, this.cm, this.i1], {name:'i2', ...vis});
+    	this.mp1 = board.create('midpoint', [this.i1, this.i2], {name:'mp1', ...vis});
+    	this.c3 = board.create('circle', [this.pm, this.mp1], vis);
+    	this.i3 = board.create('intersection', [this.c1, this.c3], {name:'i3', ...vis});
+    	this.i4 = board.create('otherintersection', [this.c1, this.c3, this.i3], {name:'i4', ...vis});
+    	this.i5 = board.create('intersection', [this.c2, this.c3], {name:'i5', ...vis});
+    	this.i6 = board.create('otherintersection', [this.c2, this.c3, this.i5], {name:'i6', ...vis});
+        if (r1 > 0 && r2 < 0) {
+    	  this.l = board.create('segment', [this.i3,this.i5], this.ropeAttr); 
+          this.mp = board.create('midpoint', [this.i3, this.i5], {name:'mp', visible:false});
+        //const alpha = this.l.getAngle()+90*deg2rad;
+        //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i3), XY(this.i5) ) ), rect(11*pxunit, alpha)), {visible:false});
+    	} else if (r1 < 0 && r2 > 0) {
+    	  this.l = board.create('segment', [this.i4,this.i6], this.ropeAttr); 
+          this.mp = board.create('midpoint', [this.i4, this.i6], {name:'mp', visible:false});
+        //const alpha = this.l.getAngle()+90*deg2rad;
+        //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.i4), XY(this.i6) ) ), rect(11*pxunit, alpha)), {visible:false});
+    	}
+      }
+    } 
+
+		// rope label
+	//	const alpha = this.l.getAngle()+90*deg2rad;
+    //this.lp = board.create('point', plus(  mult( 0.5, plus( XY(this.p1), XY(this.p2) ) ), rect(11*pxunit, alpha)), {visible:false});
+    //const r = Math.sqrt((this.lp.X()-this.mp.X())**2 + (this.lp.Y()-this.mp.Y())**2);
+    this.ppl = board.create('perpendicular', [this.mp, this.l], vis);
+    this.cl = board.create('circle', [this.mp, 11*pxunit], vis);
+    this.int1 = board.create('intersection', [this.ppl, this.cl], {name:data[1], size:0, visible:false});
+    this.int2 = board.create('otherintersection', [this.ppl, this.cl, this.int1], {name:data[1], size:0, visible:true});
+	  
+    const p1 = plus(data[2], rect(r1, a0-a1));
+    const p2 = plus(data[4], rect(r2, a0-a1));
     targets.push(this.l);
+    // snap targets
+    this.p01 = board.create('point', p1, {name:'p01', ...silentPStyle} );
+    this.p02 = board.create('point', p2, {name:'p02', ...silentPStyle} );
     // implement state switching
-    this.obj = [this.l, this.label.label];  
+    this.obj = [this.l, this.int2.label];  
     // state init
     switch (this.state) {
-      case 'show': show(this); makeSwitchable(this.l, this); break;
-      case 'hide': hide(this); makeSwitchable(this.l, this); break;
-      case 'SHOW': SHOW(this); break;
-      case 'HIDE': HIDE(this); break;
+    case 'show': show(this); makeSwitchable(this.l, this); break;
+    case 'hide': hide(this); makeSwitchable(this.l, this); break;
+    case 'SHOW': SHOW(this); break;
+    case 'HIDE': HIDE(this); break;
     } 
     this.loads = []
   }
-  data(){ return [ "rope", this.d[1], XY(this.p1), this.d[3], XY(this.p2),this.d[5], this.state]}
+  data(){ var a = this.d.slice(0); a.push(this.state); return a}
   name(){ return targetName(this) } 
-  hasPoint(pt) {
-    return isOn(pt,this.l) && 
-    JXG.Math.Geometry.distPointLine( [1,pt.X(),pt.Y()], this.l.stdform) < tolPointLine} 
-  }
+  hasPoint(pt) {return isOn(pt,this.l) && 
+    JXG.Math.Geometry.distPointLine(
+      [1,pt.X(),pt.Y()], this.l.stdform) < tolPointLine} 
+}
 
 //rot
 class rot {
