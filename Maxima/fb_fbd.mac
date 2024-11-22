@@ -376,7 +376,7 @@ fb_q(o, n, i, description,q1,q2,le):=block(
 
 /* https://github.com/mkraska/meclib/wiki/fb_bar */
 fb_bar(o, n, i, [opt]):=block(
-    [txt, R, name, testT, test2, opt, L], 
+    [txt, R, name, testT, test2, L], 
 	/* Extract options */
     if length(opt) = 1 then opt: string(opt[1]) else opt: "",
     testT: member("T", charlist(opt)),
