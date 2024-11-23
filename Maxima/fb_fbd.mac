@@ -255,6 +255,7 @@ fb_fix13(o, n, i, description):=block(
     /* everything should be ok here */
     return([sconcat(txt, "Reaktionskraft \\(", n[lf[1]], "\\) und Moment \\(", n[lm[1]], "\\) gefunden."),true])
 );
+
 fb_fix13_names(o, n, i):=block(
     [sname: o[i][2], txt: "", ir, fb_required, ntxt, nok],
     /* make sure that there is at least one reaction */
@@ -270,7 +271,7 @@ fb_fix13_names(o, n, i):=block(
             if (sname # o[ir][2]   ) then (
                  txt: sconcat(txt, "<br>Der Name \\(", n[ir], "\\) passt nicht zum Name des Lagerpunktes."),
                  fb_required: true),
-            [ntxt,nok]: fb_force_hvxy(o, ir),
+            /* [ntxt,nok]: fb_force_hvxy(o, ir), */
             if not nok then (
                 txt: sconcat(txt, "<br>", ntxt), 
                 fb_required: true)
@@ -287,6 +288,8 @@ fb_fix13_names(o, n, i):=block(
     if fb_required then return([txt, false]),
     ["",true]
 );
+/* Alias for consistency */
+fb_fix13_name(%_o, %_n, %_i):= fb_fix13_names(%_o, %_n, %_i);
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-unidirectional-supports */
 fb_unidir(o, n, i, description):=block(
