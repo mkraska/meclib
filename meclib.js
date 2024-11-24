@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2024 11 16";
+const versionText= "JXG "+JXG.version+" Meclib 2024 11 24";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -393,9 +393,16 @@ class crosshair {
     if (data[3]) { this.p.ref = data[3] } else {this.p.ref = [0,0]}
     if (data[4]) { this.p.scale = data[4] } else {this.p.scale = [1,1]}
     if (data[5]) { this.p.dp = data[5] }
+// snapping 
+    if (data[6]) {
+      if (data[6]=="grid") {
+        let snapX = Math.pow(10, -data[5][0]), snapY = Math.pow(10, -data[5][1]);
+        console.log("snap",snapX)
+        this.p.setAttribute({...controlSnapStyle, snapsizeX:snapX,snapsizeY:snapY })}
+    }
     // cross
     const that = this;
-    this.v = board.create('curve', [ [],[] ], { strokeWidth: 1, strokeColor: movableLineColor });
+    this.v = board.create('curve', [ [],[] ], { strokeWidth: 1, strokeColor: movableLineColor , layer:11});
     this.v.updateDataArray = function() {
       this.dataX = [that.p.X() - f * r * pxunit, that.p.X() + f * r * pxunit, NaN, that.p.X(), that.p.X()];
       this.dataY = [that.p.Y(), that.p.Y(), NaN, that.p.Y() - f * r * pxunit, that.p.Y() + f * r * pxunit]
