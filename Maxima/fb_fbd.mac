@@ -482,9 +482,9 @@ fb_name(n,i,lon):=block([name,txt],
 /* https://github.com/mkraska/meclib/wiki/fb_reactions() */
 fb_reactions(%_o, %_f, %_m):=block(
   [%_fnum, %_mnum, %_txt, %_OK],
-  %_fnum: length(sublist_indices (%_o, lambda ([x], x[1]="force" and last(x)="active"))),
+  %_fnum: length(sublist_indices (%_o, lambda ([x], x[1]="force" and last(x)="active" and  not sposition(" ",x[2])))),
   %_mnum: length(sublist_indices (%_o, lambda ([x], x[1]="moment" and last(x)="active"))),
-  if (%_fnum=%_f) and (%_mnum=%_m) then [%_txt, %_OK]: ["&nbsp;Die Zahl der Reaktionen stimmt",true] else (
+  if (%_fnum=%_f) and (%_mnum=%_m) then [%_txt, %_OK]: ["&nbsp;Die Zahl der Reaktionen stimmt.",true] else (
     %_OK: false, %_txt: "", 
     if %_fnum # %_f then %_txt: sconcat(%_txt, "<br>Die Zahl der Reaktionskräfte stimmt nicht."),
     if %_mnum # %_m then %_txt: sconcat(%_txt, "<br>Die Zahl der Reaktionsmomente stimmt nicht.")
