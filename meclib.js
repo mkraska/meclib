@@ -1912,7 +1912,7 @@ function cleanupName(str) {
     st = st.replace(/_/g, '')
     pos = -1}
   if (isNaN(st[0]) == true && st.length>1 && pos===-1) { st = st.substring(0, 1) + "_" + st.substring(1);} // insert an underscore if string is longer than one character
-  else if (isNaN(st[0]) == false && st.length>1 && pos===-1) { st = st.substring(0, 1) + " " + st.substring(1);}
+  //else if (isNaN(st[0]) == false && st.length>1 && pos===-1) { st = st.substring(0, 1) + " " + st.substring(1);}
   // should output have * or just empty space? since toTEX() replaces * with empty spaces
   out = out + st + " "
   });
