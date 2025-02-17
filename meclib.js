@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2024 11 26";
+const versionText= "JXG "+JXG.version+" Meclib 2025 02 17";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -75,6 +75,11 @@ const board = JXG.JSXGraph.initBoard(divid, {
 
 let state;
 let stateInput;
+// get separator settings
+let decsep = document.getElementById(fbd_names).getAttribute("data-stack-input-decimal-separator");
+let listsep = document.getElementById(fbd_names).getAttribute("data-stack-input-list-separator");
+console.log("separators: ", decsep, listsep);
+
 // make infobox optionally relative to a given point (define p.ref to [xref, yref])
 board.infobox.distanceY = 20;
 //board.infobox.setAttribute({highlight:false});
@@ -89,7 +94,7 @@ board.highlightInfobox = function(x, y , el) {
     if (typeof (el.dp) != 'undefined') {dp = el.dp}
     if (typeof (el.infoboxlabel) == 'string') {lbl = el.infoboxlabel}
     this.infobox.setText( 
-        lbl+'('+((parseFloat(x)-ref[0])*scale[0]).toFixed(dp[0]) + ', ' + ((parseFloat(y)-ref[1])*scale[1]).toFixed(dp[1])+ ')')
+        adjustSeparators(lbl+'('+((parseFloat(x)-ref[0])*scale[0]).toFixed(dp[0]) + ', ' + ((parseFloat(y)-ref[1])*scale[1]).toFixed(dp[1])+ ')'))
 };
 
 // angular dimension with a single or double arrow (handles arrow, arrow1 and arrow2)
@@ -1040,15 +1045,28 @@ class grid {
       else {labelopt = {position: 'lft', offset: [-5, 12] }}
       this.xaxis = board.create('axis', [[0, 0], [1,0]], 
 	    {name:toTEX(data[1]), withLabel: true, label: labelopt, layer:3, strokecolor:"black",
-        ticks: { label:{layer:3}, generateLabelValue:function(p1,p2) {
-	      return ((p1.usrCoords[1]-p2.usrCoords[1])*fx).toFixed(Math.max(...[0,dpx-1]))}} });}
+        ticks: { 
+          label:{layer:3}, 
+          generateLabelValue:function(p1,p2) {
+	          return adjustSeparators(
+              ((p1.usrCoords[1]-p2.usrCoords[1])*fx).toFixed(Math.max(...[0,dpx-1])))
+          }
+        } 
+      });
+    }
     if (data[2]) { 
       if (ymin<ymax) {labelopt = {position: 'rt', offset: [10, 0] } } 
       else {labelopt = {position: 'rt', offset: [10, 0] }}
    	  this.yaxis = board.create('axis', [[0, 0], [0,1]], 
 	    {name:toTEX(data[2]), withLabel: true, label: labelopt, layer:3, strokecolor:"black",
-        ticks: { label:{layer:3}, generateLabelValue:function(p1,p2) {
-	      return ((p1.usrCoords[2]-p2.usrCoords[2])*fy).toFixed(Math.max(...[0,dpy-1]))}} });    
+        ticks: { 
+          label:{layer:3}, 
+          generateLabelValue:function(p1,p2) {
+	          return adjustSeparators(
+              ((p1.usrCoords[2]-p2.usrCoords[2])*fy).toFixed(Math.max(...[0,dpy-1])))
+          }
+        } 
+      });    
     } 
     // version info
     this.vs = board.create("text", [xmin + 0.5 * a, ymax - 0.5 * a, versionText], 
@@ -1842,9 +1860,10 @@ function update() {
     dfield.push(m.data());
     if (names != "[") { names = names.concat(",") }
     names = names.concat(m.name()); }
-  // write output
   names = names.concat("]");
-  if (mode == "jsfiddle") {
+  names = adjustSeparators(names);
+  // write output
+    if (mode == "jsfiddle") {
     stateInput.innerHTML = JSON.stringify(dfield);
     document.getElementById(fbd_names).innerHTML = names}
   else {
@@ -1870,6 +1889,14 @@ function mult(f,a) { return [ a[0]*f, a[1]*f ] }
 function plus(a,b) { return [ a[0]+b[0], a[1]+b[1] ] }
 function minus(a,b) { return [ a[0]-b[0], a[1]-b[1] ] }
 function dist(a,b) { return Math.sqrt( (a[0]-b[0])**2 + (a[1]-b[1])**2 ) }
+
+// adjust decimal and list separator to the settings in the names input field of STACK questions
+function adjustSeparators(str) { // adjust separators 
+  let result = str;
+  if (listsep != ",") result = result.replace(/,/g, listsep);
+  if (decsep != ".") result = result.replace(/\./g, decsep);
+  return result
+}
 
 // function for string conversion
 // converts whitespace to stars, avoids empty strings
@@ -1905,18 +1932,21 @@ function cleanupName(str) {
   console.log("here is strList: " + strList)
   
   strList.forEach(function(st) {
-  console.log("here is st: " + st);
-  let pos = st.search("_") 
-  if (st.length>1 && pos>1) { 
+    console.log("here is st: " + st);
+    let pos = st.search("_") 
+    if (st.length>1 && pos>1) { 
     // remove underscores at wrong places
-    st = st.replace(/_/g, '')
-    pos = -1}
-  if (isNaN(st[0]) == true && st.length>1 && pos===-1) { st = st.substring(0, 1) + "_" + st.substring(1);} // insert an underscore if string is longer than one character
-  //else if (isNaN(st[0]) == false && st.length>1 && pos===-1) { st = st.substring(0, 1) + " " + st.substring(1);}
+      st = st.replace(/_/g, ''); pos = -1; console.log("1. " + st)}
+    if (isNaN(st[0]) == true && st.length>1 && pos===-1) { 
+      st = st.substring(0, 1) + "_" + st.substring(1);
+      console.log("2. " + st);} // insert an underscore if string is longer than one character
+    else if (isNaN(st[0]) == false && st.length>1 && pos===-1) { 
+      st = st.substring(0, 1) + " " + st.substring(1);console.log("3. " + st)}
   // should output have * or just empty space? since toTEX() replaces * with empty spaces
   out = out + st + " "
   });
   out = out.slice(0, -1); // renove trailing space
+  console.log("cleanupName result:", out)
   return out
   }
 
