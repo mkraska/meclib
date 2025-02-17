@@ -75,15 +75,22 @@ const board = JXG.JSXGraph.initBoard(divid, {
 
 let state;
 let stateInput;
-let decsep = '.';
-let listsep = ',';
-// get separator settings
+//separator handling
+//in non-interactive mode the defaults are used if decsep is not set in the STACK header
+//in interactive mode, the values are taken from the input attributes.
+var listsep = ',' 
+if (typeof decsep == "undefined") {
+  var decsep = '.';
+  console.log("decsep undefined",decsep);
+} else {
+  console.log("decsep defined",decsep);}
+if (decsep == ',') listsep = ';'
 if (typeof fbd_names != "undefined" && fbd_names) {
   decsep = document.getElementById(fbd_names).getAttribute("data-stack-input-decimal-separator");
   listsep = document.getElementById(fbd_names).getAttribute("data-stack-input-list-separator");
+  console.log("decsep from attribute",decsep);
 }
 console.log("separators: ", decsep, listsep);
-
 
 // make infobox optionally relative to a given point (define p.ref to [xref, yref])
 board.infobox.distanceY = 20;
