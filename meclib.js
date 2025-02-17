@@ -1070,8 +1070,8 @@ class grid {
     } 
     // version info
     this.vs = board.create("text", [xmin + 0.5 * a, ymax - 0.5 * a, versionText], 
-      {strokeColor: "lightgray", fixed:true, layer:5});
-    this.vs.setPositionDirectly(JXG.COORDS_BY_SCREEN, [10,10]);
+      {strokeColor: "lightgray", fixed:true, layer:5, anchorY:'top'});
+    this.vs.setPositionDirectly(JXG.COORDS_BY_SCREEN, [10,5]);
   }   
   data(){  return this.d }
   name(){  return "0" }
