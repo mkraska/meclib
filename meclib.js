@@ -86,9 +86,14 @@ if (typeof decsep == "undefined") {
   console.log("decsep defined",decsep);}
 if (decsep == ',') listsep = ';'
 if (typeof fbd_names != "undefined" && fbd_names) {
-  decsep = document.getElementById(fbd_names).getAttribute("data-stack-input-decimal-separator");
-  listsep = document.getElementById(fbd_names).getAttribute("data-stack-input-list-separator");
-  console.log("decsep from attribute",decsep);
+  // if the attributes are avaliable, set decsep and listsep accordingly.
+  // otherwise don't touch them.
+  let str = document.getElementById(fbd_names).getAttribute("data-stack-input-decimal-separator");
+  if (str)  {
+    decsep = str;
+    console.log("decsep from attribute",decsep); }
+  str = document.getElementById(fbd_names).getAttribute("data-stack-input-list-separator");
+  if (str)  listsep = str;
 }
 console.log("separators: ", decsep, listsep);
 
