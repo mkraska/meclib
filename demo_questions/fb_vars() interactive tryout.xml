@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <quiz>
-<!-- question: 105359  -->
+<!-- question: 108297  -->
   <question type="stack">
     <name>
       <text>fb_vars() interactive tryout</text>
@@ -8,11 +8,12 @@
     <questiontext format="markdown">
       <text><![CDATA[**fb_vars() interactive tryout**
 
-This is a question for interactive tryout of the function [`fb_vars`](https://github.com/mkraska/meclib/wiki/fb_vars). 
+[[lang code="de"]]In dieser Frage können Sie die Funktion [`fb_vars`](https://github.com/mkraska/meclib/wiki/fb_vars) interaktiv ausprobieren.
 
-**Interactive test**
+Geben Sie Werte für `sans`, `tans` und `vars` and `label` vor und lassen Sie dann die Eingabe prüfen.[[/lang]][[lang code="en,other"]]This is a question for interactive tryout of the function [`fb_vars`](https://github.com/mkraska/meclib/wiki/fb_vars).
 
-Here you can try the behaviour of the feedback function. Provide `sans`, `tans` and `vars` and `label`.
+Provide `sans`, `tans` and `vars` and `label` and then check the input.
+[[/lang]] 
 
 <p><code>fb_vars([[input:sans]], [[input:tans]], [[input:vars]], [[input:label]])</code></p> [[validation:sans]] [[validation:tans]] [[validation:vars]] [[validation:label]] 
 
@@ -26,10 +27,11 @@ Here you can try the behaviour of the feedback function. Provide `sans`, `tans` 
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2023010400</text>
+      <text>2025012100</text>
     </stackversion>
     <questionvariables>
       <text><![CDATA[/* history
+2025 03 02 Multilingual version
 2023 04 08 reduced to interactive tryout
 2023 03 14 initial version
 2023 01 14 Automate the comparison by use of Answer tests (requires STACK 4.4.2);
@@ -40,36 +42,19 @@ stack_unit_si_declare(true);
 zero: 0 ; 
 debug:true;
 
-
 stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_value.mac" );
-
-
-
-simp:false; /* to convey argumentes into fb_unit() */
-
-E01: fb_vars(a, a);
-E02: fb_unit(1.1*m, stackunits(1.101, m),0.005);
-E03: fb_unit(1.1*m, stackunits(1.1001, m),0.005);
-E03a: fb_unit((300*kg*m)/s^2, (300*kg*m)/s^2, 0.0);
-E13: fb_unit(1, stackunits(1, m),0.005);
-E14: fb_unit(-1.1*m, stackunits(1.11, m),0.005);
-E15: fb_unit(1.1*m, stackunits(11, m),0.005);
-E16: fb_unit(1.0*m, stackunits(11, m),0.005);
-E17: fb_unit(100*m, stackunits(11, m),0.005);
-E18: fb_unit(0*m, 0,0.005);
-E19: fb_unit(0.1, 0.01,0.005);
-E20: fb_unit(1.0, 11, 0.005);
-E21: fb_unit(100, 11, 0.005);
-E22: fb_unit(1, 1.001, 0.005);
 
 lbl: castext("[[lang code='en, other']]english[[/lang]][[lang code='ru']]русский[[/lang]]");]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
       <text></text>
     </specificfeedback>
-    <questionnote>
+    <questionnote format="moodle_auto_format">
       <text></text>
     </questionnote>
+    <questiondescription format="moodle_auto_format">
+      <text></text>
+    </questiondescription>
     <questionsimplify>1</questionsimplify>
     <assumepositive>0</assumepositive>
     <assumereal>0</assumereal>
@@ -82,6 +67,8 @@ lbl: castext("[[lang code='en, other']]english[[/lang]][[lang code='ru']]рус�
     <prtincorrect format="markdown">
       <text>Incorrect answer.</text>
     </prtincorrect>
+    <decimals>.</decimals>
+    <scientificnotation>*10</scientificnotation>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -171,6 +158,7 @@ lbl: castext("[[lang code='en, other']]english[[/lang]][[lang code='ru']]рус�
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>sans</sans>
         <tans>tans</tans>
