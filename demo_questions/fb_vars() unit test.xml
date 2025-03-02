@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <quiz>
-<!-- question: 106466  -->
+<!-- question: 108303  -->
   <question type="stack">
     <name>
       <text>fb_vars() unit test</text>
@@ -8,7 +8,7 @@
     <questiontext format="markdown">
       <text><![CDATA[**fb_vars() unit test**
 
-This is a unit test question for the function [`fb_vars`](https://github.com/mkraska/meclib/wiki/fb_vars). 
+[[lang code="de"]]Das ist ein automatischer Test für die Funktion [`fb_vars`](https://github.com/mkraska/meclib/wiki/fb_vars). Um das deutsche Feedback zu testen, setzen Sie die Sprache in Moodle auf "Deutsch".[[/lang]][[lang code="en,other"]]This is a unit test question for the function [`fb_vars`](https://github.com/mkraska/meclib/wiki/fb_vars). For a test of the English feedback set user language in Moodle to "English". [[/lang]] 
 
 If the test fails, then the result and the expected result are displayed as below, otherwise just the actual result is displayed.
 
@@ -131,10 +131,12 @@ Deviation within tolerance
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2023121100</text>
+      <text>2025012100</text>
     </stackversion>
     <questionvariables>
       <text><![CDATA[/* history
+2025 03 02 Multilingual version
+2024 02 17 Modify behaviour if tans is nonzero numeric
 2023 04 09 separate unit test version
 2023 03 14 initial version
 2023 01 14 Automate the comparison by use of Answer tests (requires STACK 4.4.2);
@@ -147,7 +149,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
     <specificfeedback format="markdown">
       <text></text>
     </specificfeedback>
-    <questionnote>
+    <questionnote format="moodle_auto_format">
       <text></text>
     </questionnote>
     <questiondescription format="moodle_auto_format">
@@ -166,6 +168,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
       <text>Incorrect answer.</text>
     </prtincorrect>
     <decimals>.</decimals>
+    <scientificnotation>*10</scientificnotation>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -222,8 +225,8 @@ E: ""]]></text>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>t01-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text><![CDATA[<br>E: {#R#}
-R: {#E#}]]></text>
+          <text><![CDATA[<br>E: {#E#}
+R: {#R#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -234,7 +237,7 @@ R: {#E#}]]></text>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_vars(a, 2);
-E: castext("&nbsp;Unerwartete Variable: {@a@}.");]]></text>
+E: castext("[[lang code='de']]&nbsp;Unerwartete Variable [[/lang]][[lang code='en,other']]&nbsp;Unexpected variable [[/lang]]{@a@}.");]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -258,8 +261,8 @@ E: castext("&nbsp;Unerwartete Variable: {@a@}.");]]></text>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>t01a-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text><![CDATA[<br>E: {#R#}
-R: {#E#}]]></text>
+          <text><![CDATA[<br>E: {#E#}
+R: {#R#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -270,7 +273,7 @@ R: {#E#}]]></text>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_vars(a+b, a);
-E: castext("&nbsp;Unerwartete Variable: {@b@}.");]]></text>
+E: castext("[[lang code='de']]&nbsp;Unerwartete Variable [[/lang]][[lang code='en,other']]&nbsp;Unexpected variable [[/lang]]{@b@}.");]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -294,8 +297,8 @@ E: castext("&nbsp;Unerwartete Variable: {@b@}.");]]></text>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>t02-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text><![CDATA[<br>E: {#R#}
-R: {#E#}]]></text>
+          <text><![CDATA[<br>E: {#E#}
+R: {#R#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -306,7 +309,7 @@ R: {#E#}]]></text>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_vars(a+b+omega, a);
-E: castext("&nbsp;Unerwartete Variable: {@b@}, {@omega@}.");]]></text>
+E: castext("[[lang code='de']]&nbsp;Unerwartete Variable [[/lang]][[lang code='en,other']]&nbsp;Unexpected variable [[/lang]]{@b@}, {@omega@}.");]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -330,8 +333,8 @@ E: castext("&nbsp;Unerwartete Variable: {@b@}, {@omega@}.");]]></text>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>t03-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text><![CDATA[<br>E: {#R#}
-R: {#E#}]]></text>
+          <text><![CDATA[<br>E: {#E#}
+R: {#R#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -342,7 +345,7 @@ R: {#E#}]]></text>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_vars(a, a+b+omega);
-E: castext("&nbsp;Fehlende Variable: {@b@}, {@omega@} (<code>{@stack_disp_comma_separate(listify({b,omega}))@}</code>).");]]></text>
+E: castext("[[lang code='de']]&nbsp;Fehlende Variable [[/lang]][[lang code='en,other']]&nbsp;Missing variable [[/lang]]{@b@}, {@omega@} (<code>{@stack_disp_comma_separate(listify({b,omega}))@}</code>).");]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -366,8 +369,8 @@ E: castext("&nbsp;Fehlende Variable: {@b@}, {@omega@} (<code>{@stack_disp_comma_
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>t04-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text><![CDATA[<br>E: {#R#}
-R: {#E#}]]></text>
+          <text><![CDATA[<br>E: {#E#}
+R: {#R#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -378,7 +381,7 @@ R: {#E#}]]></text>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_vars(a+a_12, a+b+omega);
-E: castext("&nbsp;Unerwartete Variable: {@a_12@}.&nbsp;Fehlende Variable: {@b@}, {@omega@} (<code>{@stack_disp_comma_separate(listify({b,omega}))@}</code>).");]]></text>
+E: castext("[[lang code='de']]&nbsp;Unerwartete Variable [[/lang]][[lang code='en,other']]&nbsp;Unexpected variable [[/lang]]{@a_12@}.[[lang code='de']]&nbsp;Fehlende Variable [[/lang]][[lang code='en,other']]&nbsp;Missing variable [[/lang]]{@b@}, {@omega@} (<code>{@stack_disp_comma_separate(listify({b,omega}))@}</code>).");]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -402,8 +405,8 @@ E: castext("&nbsp;Unerwartete Variable: {@a_12@}.&nbsp;Fehlende Variable: {@b@},
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>t05-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text><![CDATA[<br>E: {#R#}
-R: {#E#}]]></text>
+          <text><![CDATA[<br>E: {#E#}
+R: {#R#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -414,7 +417,7 @@ R: {#E#}]]></text>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_vars(a+2*b, a+b, [a,b]);
-E: castext("&nbsp;Pr&uuml;fen Sie den Term mit {@b@}.");]]></text>
+E: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie den Term mit [[/lang]][[lang code='en,other']]&nbsp;Check the term with [[/lang]]{@b@}.");]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -438,8 +441,8 @@ E: castext("&nbsp;Pr&uuml;fen Sie den Term mit {@b@}.");]]></text>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>t06-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text><![CDATA[<br>E: {#R#}
-R: {#E#}]]></text>
+          <text><![CDATA[<br>E: {#E#}
+R: {#R#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -450,7 +453,7 @@ R: {#E#}]]></text>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_vars(a+2*b-4*c, a+b+3*c, [a,b,c]);
-E: E: castext("&nbsp;Pr&uuml;fen Sie die Terme mit {@b@}, {@c@}.");]]></text>
+E: E: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie die Terme mit [[/lang]][[lang code='en,other']]&nbsp;Check the terms with [[/lang]]{@b@}, {@c@}.");]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -474,8 +477,8 @@ E: E: castext("&nbsp;Pr&uuml;fen Sie die Terme mit {@b@}, {@c@}.");]]></text>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>t07-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text><![CDATA[<br>E: {#R#}
-R: {#E#}]]></text>
+          <text><![CDATA[<br>E: {#E#}
+R: {#R#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -510,8 +513,8 @@ E: "";]]></text>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>t08-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text><![CDATA[<br>E: {#R#}
-R: {#E#}]]></text>
+          <text><![CDATA[<br>E: {#E#}
+R: {#R#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -522,7 +525,7 @@ R: {#E#}]]></text>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_vars(a+b, a, [], "Label:");
-E: castext("Label:&nbsp;Unerwartete Variable: {@b@}.");]]></text>
+E: castext("Label:[[lang code='de']]&nbsp;Unerwartete Variable [[/lang]][[lang code='en,other']]&nbsp;Unexpected variable [[/lang]]{@b@}.");]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
@@ -546,8 +549,8 @@ E: castext("Label:&nbsp;Unerwartete Variable: {@b@}.");]]></text>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>t09-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text><![CDATA[<br>E: {#R#}
-R: {#E#}]]></text>
+          <text><![CDATA[<br>E: {#E#}
+R: {#R#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -582,8 +585,8 @@ E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.";]]></text>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>t10-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text><![CDATA[<br>E: {#R#}
-R: {#E#}]]></text>
+          <text><![CDATA[<br>E: {#E#}
+R: {#R#}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -618,8 +621,8 @@ E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.";]]></text>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>t11-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text><![CDATA[<br>E: {#R#}
-R: {#E#}]]></text>
+          <text><![CDATA[<br>E: {#E#}
+R: {#R#}]]></text>
         </falsefeedback>
       </node>
     </prt>
