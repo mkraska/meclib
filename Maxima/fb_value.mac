@@ -78,11 +78,11 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom
   if %_tunit = NULLUNITS then %_tunit:0,  /* display as 0 if not correct */
   /* complain if units don't match */
   if (%_sunit # %_tunit) and (%_sunit # 0) then return(   
-    castext_concat(str_unexpected_base_unit, castext("{@(stack_disp_fractions(\"i\"),%_sunit)@}"  )  )),   
-  if (%_sunit # %_tunit) and (%_sunit = 0) and (%_snum # 0.0) then return(   
-   str_not_dimensionless),   
+    castext_concat(str_unexpected_base_unit, castext("{@(stack_disp_fractions(\"i\"),%_sunit)@}")  ) ),   
+  if (%_sunit # %_tunit) and (%_sunit = 0) and (%_snum # 0.0) then return(str_not_dimensionless),   
   /* if tol=0 just indicate deviation */
-  if (%_tol=0 or %_tol=0.0) and %_tnum # 0.0 then return(sconcat(str_deviation, ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp) , "%")), 
+  if (%_tol=0 or %_tol=0.0) and %_tnum # 0.0 then return( 
+    castext_concat(str_deviation,castext("{@ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp)@}%")) ), 
   /* special feedback if teacher's answer is zero */
   if %_tnum = 0.0  and %_snum  # 0.0 then return(str_value_too_large),
   if %_tnum = 0.0  then return(debug1), 
@@ -91,7 +91,7 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom
   if ev(%_snum/%_tnum, simp) <0 then return(str_sign),
   /* go back if error is less than tolerance */ 
   if ev(abs((%_snum-%_tnum)/%_tnum),simp) < %_tol then (
-    if debug then return(sconcat(str_deviation, ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp) , "% (display because debug=true. Would be empty otherwise.)")) 
+    if debug then return(castext_concat(str_deviation, castext("{@ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp)@}% (display because debug=true. Would be empty otherwise.)"))) 
     else return("") 
   ),
   /* OoM and mantissa error */
