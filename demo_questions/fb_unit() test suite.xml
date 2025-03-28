@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <quiz>
-<!-- question: 105596  -->
+<!-- question: 108354  -->
   <question type="stack">
     <name>
       <text>fb_unit() test suite</text>
@@ -8,7 +8,7 @@
     <questiontext format="markdown">
       <text><![CDATA[**fb_unit() test suite**
 
-This is a unit test question for the function [`fb_unit`](https://github.com/mkraska/meclib/wiki/fb_unit). 
+[[lang code="en,other"]]This is a unit test question for the function [`fb_unit`](https://github.com/mkraska/meclib/wiki/fb_unit).[[/lang]][[lang code="de"]]Das ist eine Testfrage für die Funktion [`fb_unit`](https://github.com/mkraska/meclib/wiki/fb_unit). [[/lang]]
 
 There is nothing to input for you. **Just submit the test** to see the results.
 
@@ -137,10 +137,11 @@ Deviation within tolerance
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2023010400</text>
+      <text>2025030600</text>
     </stackversion>
     <questionvariables>
       <text><![CDATA[/* history
+2025 03 04 multilingual version
 2023 05 08 add T23 (issue #38)
 2023 04 08 split into interactive and pre-defined (this one) tests
 2023 02 07 add test T03a
@@ -175,14 +176,31 @@ E21: fb_unit(100, 11, 0.005);
 E22: fb_unit(1, 1.001, 0.005);
 
 lbl: castext("[[lang code='en, other']]english[[/lang]][[lang code='ru']]русский[[/lang]]");
+
+/* language-specific strings for the feedback trees */
+  str_unexpected_base_unit: castext("[[lang code='de']]&nbsp;Unerwartete Basiseinheit [[/lang]][[lang code='en,other']]&nbsp;Unexpected base unit [[/lang]]");
+  str_not_dimensionless: castext("[[lang code='de']]&nbsp;Der Wert sollte nicht dimensionslos sein.[[/lang]][[lang code='en,other']]&nbsp;The value should not be dimensionless.[[/lang]]");
+  str_deviation: castext("[[lang code='de']]&nbsp;Abweichung: [[/lang]][[lang code='en,other']]&nbsp;Deviation: [[/lang]]");
+  str_value_too_large: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.[[/lang]][[lang code='en,other']]The absolute value is too large.[[/lang]]");
+  str_value_too_small: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.[[/lang]][[lang code='en,other']]The absolute value is too small.[[/lang]]");
+  str_sign: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie das Vorzeichen.[[/lang]][[lang code='en,other']]Check the sign.[[/lang]]");
+  str_mantissa: castext("[[lang code='de']]&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. [[/lang]][[lang code='en,other']]The mantissa is correct but the value is off by at least one order of magnitude. Check your unit conversion.[[/lang]]");
+  str_small_1: castext("[[lang code='de']]&nbsp;Der Betrag ist um mindestens [[/lang]][[lang code='en,other']]&nbsp;The value is too small by at least [[/lang]]");
+  str_small_2: castext("[[lang code='de']]% zu klein.[[/lang]][[lang code='en,other']]%.[[/lang]]");
+  str_large_1: castext("[[lang code='de']]&nbsp;Der Betrag ist um mindestens [[/lang]][[lang code='en,other']]&nbsp;The value is too large by at least [[/lang]]");
+  str_large_2: castext("[[lang code='de']]% zu gro&szlig;.[[/lang]][[lang code='en,other']]%.[[/lang]]");
+
 ]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
       <text></text>
     </specificfeedback>
-    <questionnote>
+    <questionnote format="moodle_auto_format">
       <text></text>
     </questionnote>
+    <questiondescription format="moodle_auto_format">
+      <text></text>
+    </questiondescription>
     <questionsimplify>1</questionsimplify>
     <assumepositive>0</assumepositive>
     <assumereal>0</assumereal>
@@ -195,6 +213,8 @@ lbl: castext("[[lang code='en, other']]english[[/lang]][[lang code='ru']]рус�
     <prtincorrect format="markdown">
       <text>Incorrect answer.</text>
     </prtincorrect>
+    <decimals>.</decimals>
+    <scientificnotation>*10</scientificnotation>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -227,10 +247,12 @@ lbl: castext("[[lang code='en, other']]english[[/lang]][[lang code='ru']]рус�
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit(1.1*m, stackunits(1.11, m),0);
-E: "&nbsp;Abweichung: -0.9%"]]></text>
+E: castext_concat(str_deviation,castext("{@-0.9@}%"));
+]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -262,13 +284,15 @@ E: "&nbsp;Abweichung: -0.9%"]]></text>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit(1.1*m, stackunits(1.101, m),0.005);
-E: "&nbsp;Abweichung: -0.1% (display because debug=true. Would be empty otherwise.)";]]></text>
+E: castext_concat(str_deviation,castext("{@-0.1@}% (display because debug=true. Would be empty otherwise.)"));
+]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
-        <tans>R</tans>
+        <tans>E</tans>
         <testoptions></testoptions>
         <quiet>0</quiet>
         <truescoremode>=</truescoremode>
@@ -297,10 +321,12 @@ E: "&nbsp;Abweichung: -0.1% (display because debug=true. Would be empty otherwis
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit(1.1*m, stackunits(1.1001, m),0.005);
-E: "&nbsp;Abweichung: 0.0% (display because debug=true. Would be empty otherwise.)";]]></text>
+E: castext_concat(str_deviation,castext("{@0.0@}% (display because debug=true. Would be empty otherwise.)"));
+]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -332,10 +358,11 @@ E: "&nbsp;Abweichung: 0.0% (display because debug=true. Would be empty otherwise
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit((300*kg*m)/s^2, (300*kg*m)/s^2, 0.0);
-E: "&nbsp;Abweichung: 0.0%";]]></text>
+E: castext_concat(castext_concat(str_deviation,castext("{@0.0@}")),"%");]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -366,11 +393,13 @@ E: "&nbsp;Abweichung: 0.0%";]]></text>
       <autosimplify>0</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[R: fb_unit(1.1*m, 0*m,0.005);
-E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.";]]></text>
+        <text>R: fb_unit(1.1*m, 0*m,0.005);
+E: str_value_too_large;
+</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -401,11 +430,12 @@ E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.";]]></text>
       <autosimplify>0</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[R: fb_unit(1.1*m, stackunits(0,m),0.005);
-E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.";]]></text>
+        <text>R: fb_unit(1.1*m, stackunits(0,m),0.005);
+E: str_value_too_large;</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -436,11 +466,12 @@ E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.";]]></text>
       <autosimplify>0</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[R: fb_unit(1.1*m, 0*m,0.005);
-E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.";]]></text>
+        <text>R: fb_unit(1.1*m, 0*m,0.005);
+E: str_value_too_large;</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -476,6 +507,7 @@ E: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)";]]></text
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -511,6 +543,7 @@ E: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)";]]></text
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -542,10 +575,13 @@ E: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)";]]></text
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit(0*N, stackunits(zero, m),0.005);
-E: ["%root","&nbsp;Unerwartete Basiseinheit: ",["smlt","\\({\\mathrm{k}\\mathrm{g}\\cdot \\mathrm{m}\\cdot \\mathrm{s}^ {- 2 }}\\)"]];]]></text>
+E: ["%root",str_unexpected_base_unit,["smlt","\\({\\mathrm{k}\\mathrm{g}\\cdot \\mathrm{m}\\cdot \\mathrm{s}^ {- 2 }}\\)"]];
+ 
+ ]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -576,11 +612,12 @@ E: ["%root","&nbsp;Unerwartete Basiseinheit: ",["smlt","\\({\\mathrm{k}\\mathrm{
       <autosimplify>0</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[R: fb_unit(0*m, stackunits(1, m),0.005);
-E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.";]]></text>
+        <text>R: fb_unit(0*m, stackunits(1, m),0.005);
+E: str_value_too_small;</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -611,11 +648,12 @@ E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.";]]></text>
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[R: fb_unit(0, stackunits(1, m),0.005);
-E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.";]]></text>
+        <text>R: fb_unit(0, stackunits(1, m),0.005);
+E: str_value_too_small;</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -646,11 +684,13 @@ E: "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.";]]></text>
       <autosimplify>0</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[R: fb_unit(0*kg, stackunits(1, m),0.005);
-E: ["%root","&nbsp;Unerwartete Basiseinheit: ",["smlt","\\({\\mathrm{k}\\mathrm{g}}\\)"]];]]></text>
+        <text><![CDATA[str_unexpected_base_unit: castext("[[lang code='de']]&nbsp;Unerwartete Basiseinheit [[/lang]][[lang code='en,other']]&nbsp;Unexpected base unit [[/lang]]");
+R: fb_unit(0*kg, stackunits(1, m),0.005);
+E: ["%root",str_unexpected_base_unit,["smlt","\\({\\mathrm{k}\\mathrm{g}}\\)"]];]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -681,11 +721,13 @@ E: ["%root","&nbsp;Unerwartete Basiseinheit: ",["smlt","\\({\\mathrm{k}\\mathrm{
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[R: fb_unit(1, stackunits(1, m),0.005);
-E: "&nbsp;Der Wert sollte nicht dimensionslos sein.";]]></text>
+        <text>R: fb_unit(1, stackunits(1, m),0.005);
+E: str_not_dimensionless;
+</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -716,11 +758,13 @@ E: "&nbsp;Der Wert sollte nicht dimensionslos sein.";]]></text>
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[R: fb_unit(-1.1*m, stackunits(1.11, m),0.005);
-E: "&nbsp;Pr&uuml;fen Sie das Vorzeichen.";]]></text>
+        <text>R: fb_unit(-1.1*m, stackunits(1.11, m),0.005);
+E: str_sign;
+  </text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -751,11 +795,13 @@ E: "&nbsp;Pr&uuml;fen Sie das Vorzeichen.";]]></text>
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[R: fb_unit(1.1*m, stackunits(11, m),0.005);
-E: "&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. "]]></text>
+        <text>R: fb_unit(1.1*m, stackunits(11, m),0.005);
+E: str_mantissa;
+  </text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -786,11 +832,12 @@ E: "&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine G
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[R: fb_unit(1.0*m, stackunits(11, m),0.005);
-E: "&nbsp;Der Betrag ist um mindestens 90% zu klein.";]]></text>
+        <text>R: fb_unit(1.0*m, stackunits(11, m),0.005);
+E: sconcat(str_small_1, 90 , str_small_2);</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -821,11 +868,12 @@ E: "&nbsp;Der Betrag ist um mindestens 90% zu klein.";]]></text>
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[R: fb_unit(100*m, stackunits(11, m),0.005);
-E: "&nbsp;Der Betrag ist um mindestens 800% zu gro&szlig;."]]></text>
+        <text>R: fb_unit(100*m, stackunits(11, m),0.005);
+E: sconcat(str_large_1, 800 , str_large_2);</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -857,10 +905,12 @@ E: "&nbsp;Der Betrag ist um mindestens 800% zu gro&szlig;."]]></text>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit(0*m, 0,0.005);
-E: ["%root","&nbsp;Unerwartete Basiseinheit: ",["smlt","\\({\\mathrm{m}}\\)"]];]]></text>
+E: ["%root",str_unexpected_base_unit,["smlt","\\({\\mathrm{m}}\\)"]];
+]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -891,11 +941,12 @@ E: ["%root","&nbsp;Unerwartete Basiseinheit: ",["smlt","\\({\\mathrm{m}}\\)"]];]
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[R: fb_unit(0.1, 0.01,0.005);
-E: "&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. ";]]></text>
+        <text>R: fb_unit(0.1, 0.01,0.005);
+E: str_mantissa;</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -926,11 +977,12 @@ E: "&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine G
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[R: fb_unit(1.0, 11, 0.005);
-E: "&nbsp;Der Betrag ist um mindestens 90% zu klein.";]]></text>
+        <text>R: fb_unit(1.0, 11, 0.005);
+E: sconcat(str_small_1, 90 , str_small_2);</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -961,11 +1013,12 @@ E: "&nbsp;Der Betrag ist um mindestens 90% zu klein.";]]></text>
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[R: fb_unit(100, 11, 0.005);
-E: "&nbsp;Der Betrag ist um mindestens 800% zu gro&szlig;.";]]></text>
+        <text>R: fb_unit(100, 11, 0.005);
+E: sconcat(str_large_1, 800 , str_large_2);</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -997,10 +1050,12 @@ E: "&nbsp;Der Betrag ist um mindestens 800% zu gro&szlig;.";]]></text>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text><![CDATA[R: fb_unit(1, 1.001, 0.005);
-E: "&nbsp;Abweichung: -0.1% (display because debug=true. Would be empty otherwise.)";]]></text>
+E: castext_concat(str_deviation,castext("{@-0.1@}% (display because debug=true. Would be empty otherwise.)"));
+]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
@@ -1031,11 +1086,12 @@ E: "&nbsp;Abweichung: -0.1% (display because debug=true. Would be empty otherwis
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[R: fb_unit(-3.17, 3.17, 0.05);
-E: E: "&nbsp;Pr&uuml;fen Sie das Vorzeichen.";]]></text>
+        <text>R: fb_unit(-3.17, 3.17, 0.05);
+E: str_sign;</text>
       </feedbackvariables>
       <node>
         <name>0</name>
+        <description></description>
         <answertest>AlgEquiv</answertest>
         <sans>R</sans>
         <tans>E</tans>
