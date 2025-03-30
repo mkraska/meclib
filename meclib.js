@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2025 02 17";
+const versionText= "JXG "+JXG.version+" Meclib 2025 03 30";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -43,6 +43,7 @@ JXG.Options.point.highlight = false;
 // grid control
 JXG.Options.axis.ticks.insertTicks = false;
 JXG.Options.grid.drawZero = true;
+JXG.Options.grid.majorStep = 1; // required in JSXGraph 1.10.1 to suppress minor grid lines
 
 
 // Styles
