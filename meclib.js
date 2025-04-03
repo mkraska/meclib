@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2025 03 30";
+const versionText= "JXG "+JXG.version+" Meclib 2025 04 03";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -893,7 +893,10 @@ class force {
     this.p2.dp = [dpx+1,dpy+1];
     this.p2.ref = function() { return XY(this.start) };
     this.p2.infoboxlabel = "Vektor ";
-    if (this.state == "silent") {this.p2.setAttribute({showInfobox:false})}
+	// suppress infobox for both ends if state = "silent"
+    if (this.state == "silent") {
+      this.p1.setAttribute({showInfobox:false});
+	  this.p2.setAttribute({showInfobox:false})}
     // dash
     let d = 0; if (this.state == "dotted") d=2  
     this.vec = board.create('arrow', [this.p1, this.p2], {
