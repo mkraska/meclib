@@ -3,7 +3,7 @@
 <!-- question: 0  -->
   <question type="category">
     <category>
-      <text>top/Standard für MO</text>
+      <text>$course$/top/Standard für MO</text>
     </category>
     <info format="moodle_auto_format">
       <text></text>
@@ -14,7 +14,7 @@
 <!-- question: 0  -->
   <question type="category">
     <category>
-      <text>top/Standard für MO/Meclib tutorial</text>
+      <text>$course$/top/Standard für MO/Meclib tutorial</text>
     </category>
     <info format="moodle_auto_format">
       <text></text>
@@ -22,7 +22,7 @@
     <idnumber></idnumber>
   </question>
 
-<!-- question: 1529  -->
+<!-- question: 44492  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P1 Minimum version</text>
@@ -46,7 +46,7 @@
     <specificfeedback format="markdown">
       <text></text>
     </specificfeedback>
-    <questionnote>
+    <questionnote format="html">
       <text></text>
     </questionnote>
     <questiondescription format="html">
@@ -65,6 +65,7 @@
       <text>Incorrect answer.</text>
     </prtincorrect>
     <decimals>.</decimals>
+    <scientificnotation>*10</scientificnotation>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -126,7 +127,7 @@
     </prt>
   </question>
 
-<!-- question: 1532  -->
+<!-- question: 44493  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P1b Extended version</text>
@@ -153,7 +154,7 @@
     <specificfeedback format="markdown">
       <text></text>
     </specificfeedback>
-    <questionnote>
+    <questionnote format="html">
       <text></text>
     </questionnote>
     <questiondescription format="html">
@@ -172,6 +173,7 @@
       <text>Incorrect answer.</text>
     </prtincorrect>
     <decimals>.</decimals>
+    <scientificnotation>*10</scientificnotation>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -233,7 +235,7 @@
     </prt>
   </question>
 
-<!-- question: 1535  -->
+<!-- question: 44505  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P2 Meclib image</text>
@@ -241,15 +243,17 @@
     <questiontext format="html">
       <text><![CDATA[<p>Give the general formula for the length of the hypotenuse \(c\) of a right-angled triangle with sides \(a\) and \(b\).</p>
 
+[[lang code="de"]] [[/lang]][[lang code="other"]] [[/lang]]
 <div style="float:right">
 [[jsxgraph width='250px' height='250px' ]] 
-var mode  = "STACK";
-var stateRef;
-const initstring = {#init#};
+var mode  = "STACK";  // as opposed to "jsfiddle" which is used in the test environment
+var stateRef;         // is empty in the non-interactive case
+const initstring = {#init#}; // injection of the list of objects
+var decsep = {#stackfltsep#};  // injection of the decimal separator setting
 const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
   anchorX:'left', anchorY:'middle'}};
 // End of STACK header
-[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/imeclib.js" /]]
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
 [[/jsxgraph]]</div>
 
 <p>[[input:S_Ha]] [[validation:S_Ha]] [[feedback:Ha]]</p>]]></text>
@@ -262,7 +266,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2024012900</text>
+      <text>2025040100</text>
     </stackversion>
     <questionvariables>
       <text><![CDATA[Ha: sqrt(a^2+b^2);
@@ -277,14 +281,12 @@ initdata: [
   [ "label", "\\(b\\)", (pA+pC)/2 +[0.2,0] ],
   [ "label", "\\(c\\)", (pA+pB)/2 +[-0.4,0.4] ]
 ];
-init: stackjson_stringify(initdata);
-
-]]></text>
+init: stackjson_stringify(initdata);]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
       <text></text>
     </specificfeedback>
-    <questionnote>
+    <questionnote format="html">
       <text></text>
     </questionnote>
     <questiondescription format="html">
@@ -303,6 +305,7 @@ init: stackjson_stringify(initdata);
       <text>Incorrect answer.</text>
     </prtincorrect>
     <decimals>.</decimals>
+    <scientificnotation>*10</scientificnotation>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -364,7 +367,7 @@ init: stackjson_stringify(initdata);
     </prt>
   </question>
 
-<!-- question: 1536  -->
+<!-- question: 44506  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P3 Randomization</text>
@@ -372,16 +375,19 @@ init: stackjson_stringify(initdata);
     <questiontext format="html">
       <text><![CDATA[<p>Give the general formula for the length of the hypotenuse \(c\) of a right-angled triangle with sides \(a\) and \(b\).</p>
 
+[[lang code="de"]] [[/lang]][[lang code="other"]] [[/lang]]
 <div style="float:right">
 [[jsxgraph width='250px' height='250px' ]] 
-var mode  = "STACK";
-var stateRef;
-const initstring = {#init#};
+var mode  = "STACK";  // as opposed to "jsfiddle" which is used in the test environment
+var stateRef;         // is empty in the non-interactive case
+const initstring = {#init#}; // injection of the list of objects
+var decsep = {#stackfltsep#};  // injection of the decimal separator setting
 const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
   anchorX:'left', anchorY:'middle'}};
 // End of STACK header
-[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/imeclib.js" /]]
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
 [[/jsxgraph]]</div>
+
 
 <p>[[input:S_Ha]] [[validation:S_Ha]] [[feedback:Ha]]</p>]]></text>
     </questiontext>
@@ -393,7 +399,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2024012900</text>
+      <text>2025040100</text>
     </stackversion>
     <questionvariables>
       <text><![CDATA[Ha: sqrt(a^2+b^2);
@@ -410,13 +416,12 @@ initdata: [
   [ "label", "\\(b\\)", (pA+pC)/2 +[0.2,0] ],
   [ "label", "\\(c\\)", (pA+pB)/2 +[-0.4,0.4] ]
 ];
-init: stackjson_stringify(initdata);
-]]></text>
+init: stackjson_stringify(initdata);]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
       <text></text>
     </specificfeedback>
-    <questionnote>
+    <questionnote format="html">
       <text>{@'a=aa@}, {@'b=bb@}</text>
     </questionnote>
     <questiondescription format="html">
@@ -435,6 +440,7 @@ init: stackjson_stringify(initdata);
       <text>Incorrect answer.</text>
     </prtincorrect>
     <decimals>.</decimals>
+    <scientificnotation>*10</scientificnotation>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -496,7 +502,7 @@ init: stackjson_stringify(initdata);
     </prt>
   </question>
 
-<!-- question: 1538  -->
+<!-- question: 44507  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P4 Input 2</text>
@@ -504,16 +510,19 @@ init: stackjson_stringify(initdata);
     <questiontext format="html">
       <text><![CDATA[<p>Give the general formula for the length of the hypotenuse \(c\) of a right-angled triangle with sides \(a\) and \(b\).</p>
 
+[[lang code="de"]] [[/lang]][[lang code="other"]] [[/lang]]
 <div style="float:right">
 [[jsxgraph width='250px' height='250px' ]] 
-var mode  = "STACK";
-var stateRef;
-const initstring = {#init#};
+var mode  = "STACK";  // as opposed to "jsfiddle" which is used in the test environment
+var stateRef;         // is empty in the non-interactive case
+const initstring = {#init#}; // injection of the list of objects
+var decsep = {#stackfltsep#};  // injection of the decimal separator setting
 const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
   anchorX:'left', anchorY:'middle'}};
 // End of STACK header
-[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/imeclib.js" /]]
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
 [[/jsxgraph]]</div>
+
 
 <p>[[input:S_Ha]] [[validation:S_Ha]] [[feedback:Ha]]</p>
 
@@ -528,7 +537,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2024012900</text>
+      <text>2025040100</text>
     </stackversion>
     <questionvariables>
       <text><![CDATA[Ha: sqrt(a^2+b^2);
@@ -548,13 +557,12 @@ initdata: [
   [ "label", "\\(b\\)", (pA+pC)/2 +[0.2,0] ],
   [ "label", "\\(c\\)", (pA+pB)/2 +[-0.4,0.4] ]
 ];
-init: stackjson_stringify(initdata);
-]]></text>
+init: stackjson_stringify(initdata);]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
       <text></text>
     </specificfeedback>
-    <questionnote>
+    <questionnote format="html">
       <text>{@'a=aa@}, {@'b=bb@}</text>
     </questionnote>
     <questiondescription format="html">
@@ -573,6 +581,7 @@ init: stackjson_stringify(initdata);
       <text>Incorrect answer.</text>
     </prtincorrect>
     <decimals>.</decimals>
+    <scientificnotation>*10</scientificnotation>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -686,7 +695,7 @@ init: stackjson_stringify(initdata);
     </prt>
   </question>
 
-<!-- question: 1540  -->
+<!-- question: 44508  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P5 Input 3</text>
@@ -694,15 +703,17 @@ init: stackjson_stringify(initdata);
     <questiontext format="html">
       <text><![CDATA[<p>Give the general formula for the length of the hypotenuse \(c\) of a right-angled triangle with sides \(a\) and \(b\).</p>
 
+[[lang code="de"]] [[/lang]][[lang code="other"]] [[/lang]]
 <div style="float:right">
 [[jsxgraph width='250px' height='250px' ]] 
-var mode  = "STACK";
-var stateRef;
-const initstring = {#init#};
+var mode  = "STACK";  // as opposed to "jsfiddle" which is used in the test environment
+var stateRef;         // is empty in the non-interactive case
+const initstring = {#init#}; // injection of the list of objects
+var decsep = {#stackfltsep#};  // injection of the decimal separator setting
 const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
   anchorX:'left', anchorY:'middle'}};
 // End of STACK header
-[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/imeclib.js" /]]
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
 [[/jsxgraph]]</div>
 
 <p>[[input:S_Ha]] [[validation:S_Ha]] [[feedback:Ha]]</p>
@@ -721,7 +732,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2024012900</text>
+      <text>2025040100</text>
     </stackversion>
     <questionvariables>
       <text><![CDATA[Ha: sqrt(a^2+b^2);
@@ -741,14 +752,12 @@ initdata: [
   [ "label", "\\(b\\)", (pA+pC)/2 +[0.2,0] ],
   [ "label", "\\(c\\)", (pA+pB)/2 +[-0.4,0.4] ]
 ];
-init: stackjson_stringify(initdata);
-
-]]></text>
+init: stackjson_stringify(initdata);]]></text>
     </questionvariables>
     <specificfeedback format="markdown">
       <text></text>
     </specificfeedback>
-    <questionnote>
+    <questionnote format="html">
       <text>{@'a=aa@}, {@'b=bb@}</text>
     </questionnote>
     <questiondescription format="html">
@@ -767,6 +776,7 @@ init: stackjson_stringify(initdata);
       <text>Incorrect answer.</text>
     </prtincorrect>
     <decimals>.</decimals>
+    <scientificnotation>*10</scientificnotation>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -932,7 +942,7 @@ init: stackjson_stringify(initdata);
     </prt>
   </question>
 
-<!-- question: 1543  -->
+<!-- question: 44509  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P6 Feedback on unit input</text>
@@ -940,16 +950,19 @@ init: stackjson_stringify(initdata);
     <questiontext format="html">
       <text><![CDATA[<p>Give the general formula for the length of the hypotenuse \(c\) of a right-angled triangle with sides \(a\) and \(b\).</p>
 
+[[lang code="de"]] [[/lang]][[lang code="other"]] [[/lang]]
 <div style="float:right">
 [[jsxgraph width='250px' height='250px' ]] 
-var mode  = "STACK";
-var stateRef;
-const initstring = {#init#};
+var mode  = "STACK";  // as opposed to "jsfiddle" which is used in the test environment
+var stateRef;         // is empty in the non-interactive case
+const initstring = {#init#}; // injection of the list of objects
+var decsep = {#stackfltsep#};  // injection of the decimal separator setting
 const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
   anchorX:'left', anchorY:'middle'}};
 // End of STACK header
-[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/imeclib.js" /]]
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
 [[/jsxgraph]]</div>
+
 
 <p>[[input:S_Ha]] [[validation:S_Ha]] [[feedback:Ha]]</p>
 
@@ -967,7 +980,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2024012900</text>
+      <text>2025040100</text>
     </stackversion>
     <questionvariables>
       <text><![CDATA[Ha: sqrt(a^2+b^2);
@@ -994,7 +1007,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
     <specificfeedback format="markdown">
       <text></text>
     </specificfeedback>
-    <questionnote>
+    <questionnote format="html">
       <text>{@'a=aa@}, {@'b=bb@}</text>
     </questionnote>
     <questiondescription format="html">
@@ -1013,6 +1026,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
       <text>Incorrect answer.</text>
     </prtincorrect>
     <decimals>.</decimals>
+    <scientificnotation>*10</scientificnotation>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -1178,7 +1192,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
     </prt>
   </question>
 
-<!-- question: 1550  -->
+<!-- question: 44513  -->
   <question type="stack">
     <name>
       <text>MK: Meclib workshop P7 Interactive Input</text>
@@ -1195,7 +1209,7 @@ const initstring = {#init#};
 const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
   anchorX:'left', anchorY:'middle'}};
 // End of STACK header
-[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/imeclib.js" /]]
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
 [[/jsxgraph]]</div>
 
 <p>[[input:S_Ha]] [[validation:S_Ha]] [[feedback:Ha]]</p>
@@ -1217,7 +1231,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
     <hidden>0</hidden>
     <idnumber></idnumber>
     <stackversion>
-      <text>2024012900</text>
+      <text>2025040100</text>
     </stackversion>
     <questionvariables>
       <text><![CDATA[Ha: sqrt(a^2+b^2);
@@ -1251,7 +1265,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
     <specificfeedback format="markdown">
       <text></text>
     </specificfeedback>
-    <questionnote>
+    <questionnote format="html">
       <text>{@'a=aa@}, {@'b=bb@}</text>
     </questionnote>
     <questiondescription format="html">
@@ -1269,7 +1283,8 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_v
     <prtincorrect format="markdown">
       <text>Incorrect answer.</text>
     </prtincorrect>
-    <decimals>.</decimals>
+    <decimals>,</decimals>
+    <scientificnotation>*10</scientificnotation>
     <multiplicationsign>dot</multiplicationsign>
     <sqrtsign>1</sqrtsign>
     <complexno>i</complexno>
@@ -1399,7 +1414,7 @@ dist: sqrt(vec[1]^2+vec[2]^2);</text>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>CG-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text>The distance to the actual CG is {@dispdp(dist,2)@} grid units. Must be smaller than 0.05.</text>
+          <text>The distance to the actual CG is {@dispdp(dist,2)@} grid units. Must be smaller than {@0.05@}.</text>
         </falsefeedback>
       </node>
     </prt>
