@@ -1,21 +1,39 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-Overview */
-/* 2022 08 04                           */
+/* 2025 05 13                          */
 
 /* https://github.com/mkraska/meclib/wiki/Values-and-Slope-of-Splines */
-fb_spline(%_sans,%_tans,%_x1,%_x2, %_f):=block( [simp,%_s1,%_s2, %_ftol, %_dtol, %_OK, %_txt], 
+fb_spline(%_sans,%_tans,%_x1,%_x2, %_f):=block( [simp,%_s1,%_s2, %_ftol, %_dtol, %_OK, %_txt,
+  str_value_at: castext("<br>[[lang code='de']]Der Wert bei [[/lang]][[lang code='en,other']]The value at  [[/lang]]"), 
+  str_slope_at: castext("<br>[[lang code='de']]Der Anstieg bei [[/lang]][[lang code='en,other']]The slope at  [[/lang]]"),
+  str_is_not_correct: castext(" [[lang code='de']]stimmt nicht.[[/lang]][[lang code='en,other']]is not correct.[[/lang]]"),
+  str_between: castext(" [[lang code='de']]zwischen[[/lang]][[lang code='en,other']]between[[/lang]] "),
+  str_and: castext(" [[lang code='de']]und[[/lang]][[lang code='en,other']]and[[/lang]] ")
+  ],
   simp:true, 
   %_OK: true,
   %_ftol: 0.02,
   %_dtol: 0.02,
-  %_s1: string(%_x1),
-  %_s2: string(%_x2),
-  %_txt: sconcat( " zwischen \\(",  %_s1, "\\) und \\(",  %_s2, "\\)"),
+  %_txt: castext_concat( str_between, castext("{@%_x1@}")),
+  %_txt: castext_concat( %_txt, str_and),
+  %_txt: castext_concat( %_txt, castext("{@%_x2@}")),
   if abs(at(%_sans,x=%_x1/%_f) - at(%_tans,x=%_x1/%_f)) > %_ftol then 
-        ( %_OK: false, %_txt: sconcat(%_txt, "<br>Der Wert bei \\(", %_s1, "\\) stimmt nicht.")), 
+        ( %_OK: false, 
+          %_txt: castext_concat(%_txt, str_value_at),
+          %_txt: castext_concat(%_txt, castext("{@%_x1@}")),
+          %_txt: castext_concat(%_txt, str_is_not_correct) ),
   if abs(at(%_sans,x=%_x2/%_f) - at(%_tans,x=%_x2/%_f)) > %_ftol then 
-        ( %_OK: false, %_txt: sconcat(%_txt, "<br>Der Wert bei \\(", %_s2, "\\) stimmt nicht.")),
+        ( %_OK: false, 
+          %_txt: castext_concat(%_txt, str_value_at),
+          %_txt: castext_concat(%_txt, castext("{@%_x2@}")),
+          %_txt: castext_concat(%_txt, str_is_not_correct) ),
   if abs(at(diff(%_sans,x),x=%_x1/%_f) - at(diff(%_tans,x),x=%_x1/%_f)) > %_dtol then 
-        ( %_OK: false, %_txt: sconcat(%_txt, "<br>Der Anstieg bei \\(", %_s1, "\\) stimmt nicht.")), 
+        ( %_OK: false, 
+          %_txt: castext_concat(%_txt, str_slope_at),
+          %_txt: castext_concat(%_txt, castext("{@%_x1@}")),
+          %_txt: castext_concat(%_txt, str_is_not_correct) ), 
   if abs(at(diff(%_sans,x),x=%_x2/%_f) - at(diff(%_tans,x),x=%_x2/%_f)) > %_dtol then 
-        ( %_OK: false, %_txt: sconcat(%_txt, "<br>Der Anstieg bei \\(", %_s2, "\\) stimmt nicht.")), 
+        ( %_OK: false, 
+          %_txt: castext_concat(%_txt, str_slope_at),
+          %_txt: castext_concat(%_txt, castext("{@%_x2@}")),
+          %_txt: castext_concat(%_txt, str_is_not_correct) ), 
   [%_txt,%_OK]);
