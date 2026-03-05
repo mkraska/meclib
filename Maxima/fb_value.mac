@@ -5,43 +5,44 @@ fb_value_version: "2025 03 04, 23:50";
 fb_strip_list(_list_of_things):= castext("[[define _first='true'/]][[foreach _thing='_list_of_things']][[if test='not _first']], [[else]][[define _first='false'/]][[/if]]{@_thing@}[[/foreach]]"); 
 /* fb_strip_list function proposed by Matti Harjula 2022 04 10 */
 
-fb_vars(%_sans,%_tans, [%_opt] ) := block([%_vars, %_label,%_tansvar,%_sansvar,%_extras, %_missing, simp, %_txt, %_L],
+fb_vars(%_sans,%_tans, [%_opt] ) := block(
+  [%_vars, %_label,%_tansvar,%_sansvar,%_extras, %_missing, simp, %_txt, %_L,
     str_unexpected_variable: castext("[[lang code='de']]&nbsp;Unerwartete Variable [[/lang]][[lang code='en,other']]&nbsp;Unexpected variable [[/lang]]"),
     str_missing_variable: castext("[[lang code='de']]&nbsp;Fehlende Variable [[/lang]][[lang code='en,other']]&nbsp;Missing variable [[/lang]]"),
     str_check_term: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie den Term mit [[/lang]][[lang code='en,other']]&nbsp;Check the term with [[/lang]]"),
-    str_check_terms: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie die Terme mit [[/lang]][[lang code='en,other']]&nbsp;Check the terms with [[/lang]]"),
-
-    simp: true, /* Extract vars with simp:true does mean that "x/x+y" -> [y] */
-    if length(%_opt)>0 then %_vars: %_opt[1] else %_vars: [], 
-    if length(%_opt)>1 then %_label: %_opt[2] else %_label: "",
-    %_txt: %_label,
-    %_sansvar: setify(listofvars(%_sans)),
-    %_tansvar: setify(listofvars(%_tans)),
-    /* Say nothing if tans is free of vars and is zero) */
-    if (emptyp(%_tansvar) and %_tans=0) then return(""),
-    /* Check for spurious (extra) vars */
-    %_extras: setdifference(%_sansvar, %_tansvar),
-    if length(%_extras) > 0 then (
-      %_txt: castext_concat(%_txt, str_unexpected_variable),
-      %_txt: castext_concat(%_txt, fb_strip_list(listify(%_extras)) ),
-      %_txt: castext_concat(%_txt, "."  ) ),
-    /* Check for missing vars */
-    %_missing: setdifference(%_tansvar, %_sansvar),
-    if length(%_missing) > 0 then  (
-      %_txt: castext_concat(%_txt, str_missing_variable ),
-      %_txt: castext_concat(%_txt, fb_strip_list(listify(%_missing)) ),
-      %_txt: castext_concat(%_txt,  castext(" (<code>{@stack_disp_comma_separate(listify(%_missing))@}</code>)." ))),
-    if %_txt # %_label then return(%_txt),
-    /* if set of vars is ok, then check for the terms with vars from given list (%_vars). */ 
-    %_L: sublist (%_vars, lambda ([x], diff(%_sans-%_tans, x)#0)),
-    if length(%_L)=0 then return(""),
-    if length(%_L)=1 then (
-      %_txt: castext_concat( %_txt, str_check_term ),
-      return( castext_concat (%_txt, castext("{@%_L[1]@}.") ) )
-    ),
-    %_txt: castext_concat( %_txt, str_check_terms ), 
-    %_txt: castext_concat( %_txt, fb_strip_list(%_L) ), 
-    castext_concat(%_txt, "." ) 
+    str_check_terms: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie die Terme mit [[/lang]][[lang code='en,other']]&nbsp;Check the terms with [[/lang]]")
+  ],
+  simp: true, /* Extract vars with simp:true does mean that "x/x+y" -> [y] */
+  if length(%_opt)>0 then %_vars: %_opt[1] else %_vars: [], 
+  if length(%_opt)>1 then %_label: %_opt[2] else %_label: "",
+  %_txt: %_label,
+  %_sansvar: setify(listofvars(%_sans)),
+  %_tansvar: setify(listofvars(%_tans)),
+  /* Say nothing if tans is free of vars and is zero) */
+  if (emptyp(%_tansvar) and %_tans=0) then return(""),
+  /* Check for spurious (extra) vars */
+  %_extras: setdifference(%_sansvar, %_tansvar),
+  if length(%_extras) > 0 then (
+    %_txt: castext_concat(%_txt, str_unexpected_variable),
+    %_txt: castext_concat(%_txt, fb_strip_list(listify(%_extras)) ),
+    %_txt: castext_concat(%_txt, "."  ) ),
+  /* Check for missing vars */
+  %_missing: setdifference(%_tansvar, %_sansvar),
+  if length(%_missing) > 0 then  (
+    %_txt: castext_concat(%_txt, str_missing_variable ),
+    %_txt: castext_concat(%_txt, fb_strip_list(listify(%_missing)) ),
+    %_txt: castext_concat(%_txt,  castext(" (<code>{@stack_disp_comma_separate(listify(%_missing))@}</code>)." ))),
+  if %_txt # %_label then return(%_txt),
+  /* if set of vars is ok, then check for the terms with vars from given list (%_vars). */ 
+  %_L: sublist (%_vars, lambda ([x], diff(%_sans-%_tans, x)#0)),
+  if length(%_L)=0 then return(""),
+  if length(%_L)=1 then (
+    %_txt: castext_concat( %_txt, str_check_term ),
+    return( castext_concat (%_txt, castext("{@%_L[1]@}.") ) )
+  ),
+  %_txt: castext_concat( %_txt, str_check_terms ), 
+  %_txt: castext_concat( %_txt, fb_strip_list(%_L) ), 
+  castext_concat(%_txt, "." ) 
 );	
 /* this should return true if the check passes, false otherwise */
 fb_varsOK(%_sans,%_tans, [%_opt] ):= block([%_res],
@@ -52,7 +53,7 @@ fb_varsOK(%_sans,%_tans, [%_opt] ):= block([%_res],
 
 
 /* https://github.com/mkraska/meclib/wiki/fb_unit */
-fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom, %_mnt, %_d, %_d0, simp, debug1],
+fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom, %_mnt, %_d, %_d0, simp, debug1,
   str_unexpected_base_unit: castext("[[lang code='de']]&nbsp;Unerwartete Basiseinheit [[/lang]][[lang code='en,other']]&nbsp;Unexpected base unit [[/lang]]"),
   str_not_dimensionless: castext("[[lang code='de']]&nbsp;Der Wert sollte nicht dimensionslos sein.[[/lang]][[lang code='en,other']]&nbsp;The value should not be dimensionless.[[/lang]]"),
   str_deviation: castext("[[lang code='de']]&nbsp;Abweichung: [[/lang]][[lang code='en,other']]&nbsp;Deviation: [[/lang]]"),
@@ -63,7 +64,8 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom
   str_small_1: castext("[[lang code='de']]&nbsp;Der Betrag ist um mindestens [[/lang]][[lang code='en,other']]&nbsp;The value is too small by at least [[/lang]]"),
   str_small_2: castext("[[lang code='de']]% zu klein.[[/lang]][[lang code='en,other']]%.[[/lang]]"),
   str_large_1: castext("[[lang code='de']]&nbsp;Der Betrag ist um mindestens [[/lang]][[lang code='en,other']]&nbsp;The value is too large by at least [[/lang]]"),
-  str_large_2: castext("[[lang code='de']]% zu gro&szlig;.[[/lang]][[lang code='en,other']]%.[[/lang]]"),
+  str_large_2: castext("[[lang code='de']]% zu gro&szlig;.[[/lang]][[lang code='en,other']]%.[[/lang]]")
+  ],
  simp:true,
   /* Debug strings */
   if debug then debug1: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)" else debug1:"",
