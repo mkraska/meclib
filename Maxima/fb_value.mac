@@ -125,3 +125,7 @@ fb_numberOK(%_snum, %_tnum, %_tol):=stringp(fb_number(%_snum, %_tnum, %_tol));
 /* https://github.com/mkraska/meclib/wiki/fb_dim */
 fb_dim(%_res, %_vars, %_dims):=rat(subst(map("=", %_vars, map("*", %_vars, %_dims)),%_res)/%_res);
 
+/* https://github.com/mkraska/meclib/wiki/Multilingual-questions#multilingual-syntax-hints */
+meclib_h_number: castext("[[lang code='de']]Zahl[[/lang]][[lang code='en,other']]number[[/lang]]");
+meclib_h_unit: castext("[[lang code='de']]Zahl mit Einheit[[/lang]][[lang code='en,other']]number with unit[[/lang]]");
+meclib_h_alg: castext("[[lang code='de']]Ausdruck[[/lang]][[lang code='en,other']]expression[[/lang]]");
