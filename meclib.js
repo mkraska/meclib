@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2025 04 03";
+const versionText= "JXG "+JXG.version+" Meclib 2026 04 08";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -948,7 +948,7 @@ class forceGen {
     // HTML trick because input.set() doesn't work in the callback
     const fid = divid+"_fname"; // unique ID for html object even if multiple widgets on a page
     let t = board.create('text', [ data[2][0], data[2][1], 
-      '<input type="text" id='+fid+' value="'+data[1]+'" size="1">'], {fixed: true});
+      '<input type="text" id='+fid+' value="'+data[1]+'" size="3">'], {fixed: true});
     // ref point for checking drag distance
     const ref1 = board.create('point', plus(data[2], [0,dy]), {visible:false});
     const ref2 = board.create('point', plus(data[2], [dx,dy]), {visible:false});
@@ -1237,7 +1237,7 @@ class momentGen {
     // HTML trick because input.set() doesn't work in the callback
     const mid = divid+'m_name';
     let t = board.create('text', [ data[2][0], data[2][1], 
-      '<input type="text" id='+mid+' value="'+data[1]+'" size="1">'], {fixed: true});
+      '<input type="text" id='+mid+' value="'+data[1]+'" size="3">'], {fixed: true});
     // ref point for checking drag distance and for position reset
     const ref1 = board.create('point', plus(data[2], [dx,dy]), {visible:false});
     const ref2 = board.create('point', plus(data[2], [0,dy1]), {visible:false});
