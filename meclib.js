@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2026 04 08";
+const versionText= "JXG "+JXG.version+" Meclib 2026 04 09";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -2125,13 +2125,13 @@ for (const el of element) {
       }
 } 
 
-// https://stackoverflow.com/questions/6832596/how-to-compare-software-version-number-using-js-only-number
+// compares version numbers. Returns true if newVer is newer than oldVer.
 function isNewerVersion (oldVer, newVer) {
 	const oldParts = oldVer.split('.')	
 	const newParts = newVer.split('.')
 	for (let i = 0; i < newParts.length; i++) {
-		const a = newParts[i] // parse int
-		const b = oldParts[i] // parse int
+		const a = Number(newParts[i]) // parse int
+		const b = Number(oldParts[i]) // parse int
 		if (a > b) return true
 		if (a < b) return false
 	}
