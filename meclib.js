@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2026 04 09";
+const versionText= "JXG "+JXG.version+" Meclib 2026 09 22";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -40,6 +40,13 @@ JXG.Options.line.highlight = false;
 JXG.Options.polygon.highlight = false;
 JXG.Options.polygon.borders.highlight = false;
 JXG.Options.point.highlight = false;
+// Fix for a JSXGraph 1.12.1 and 1.12.2 regression: evalVisProp('showinfobox') on a point that is
+// an endpoint of a line/segment/arrow recurses into that line via the inherits/descendants
+// mechanism and returns undefined instead of 'inherit', which silently suppresses the
+// infobox. Forcing a concrete boolean default sidesteps the buggy 'inherit' resolution;
+// explicit per-point showInfobox:false overrides elsewhere in this file still take precedence.
+// Must be set before initBoard(), which copies JXG.Options at board-creation time.
+JXG.Options.point.showInfobox = true;
 // grid control
 JXG.Options.axis.ticks.insertTicks = false;
 JXG.Options.grid.drawZero = true;
