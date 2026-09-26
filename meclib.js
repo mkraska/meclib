@@ -436,6 +436,15 @@ class contact {
   data() { let a = this.d.slice(0); a.push(this.state); return a }
   name() { return targetName(this) }
   hasPoint(pt) { return isOn(pt, this.p1) }
+  // called once per update() cycle, before loads/targets are matched: derives this.state from
+  // the referenced object's own state (deactivated either interactively as "hide" or fixed as
+  // "HIDE" both count) and syncs the gray normal/tangent snap-cross visibility accordingly.
+  sync() {
+    let j = resolveRef(this.ref);
+    this.state = (j >= 0 && j < objects.length && String(objects[j].state).toLowerCase() == 'hide') ? 'hide' : 'show';
+    this.ln.setAttribute({visible: this.vis && this.state == 'hide'});
+    this.lt.setAttribute({visible: this.vis && this.state == 'hide'});
+  }
 }
 
 // crosshair for reading off co-ordinates from graphs
@@ -1900,16 +1909,10 @@ function update() {
   const load = [ "force", "moment"];
   const target = ["bar", "beam", "circle", "fix1", "fix12", "fix123", "fix13", "rope",
     "dashpot", "springc", "springt", "wall", "polygon", "q", "contact"];
-  // "contact" has no author-set state: it derives "hide"/"show" from the object it references,
-  // and the gray normal/tangent cross is only shown once that reference is actually deactivated.
+  // give objects with derived state (e.g. "contact") a chance to refresh themselves
+  // before loads/targets are matched
   for (let i = 0; i < objects.length; i++) {
-    if (objects[i].data()[0] == "contact") {
-      let c = objects[i];
-      let j = resolveRef(c.ref);
-      c.state = (j >= 0 && j < objects.length && objects[j].state == 'hide') ? 'hide' : 'show';
-      c.ln.setAttribute({visible: c.vis && c.state == 'hide'});
-      c.lt.setAttribute({visible: c.vis && c.state == 'hide'});
-    }
+    if (typeof objects[i].sync === 'function') { objects[i].sync() }
   }
   let loadlist = [], targetlist = [];
   for (let i = 0; i < objects.length; i++) {
