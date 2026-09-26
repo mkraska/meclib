@@ -401,6 +401,43 @@ class circle2p {
   name(){ return "[["+this.data()[3].toString() + "],[" + this.data()[4].toString() + "]]" } 
 }
 
+// frictionless/frictional contact point, cuts away a referenced environment object
+// [ "contact", "name", [x,y], [dx,dy], targetRef, lineLength(optional), visible(optional) ]
+// status ("hide"/"show") is derived at update() time from the referenced object's own state,
+// not set by the author.
+class contact {
+  constructor(data) {
+    this.d = data.slice(0);
+    this.ref = data[4];                 // name (string) or 1-based index (number), like Maxima
+    this.len = data.length > 5 && data[5] ? data[5] : 1;
+    this.vis = data.length > 6 ? !!data[6] : true;
+    this.state = "show";                // placeholder, synced from the reference in update()
+    const [x, y] = data[2];
+    const [dx, dy] = data[3];
+    const nrm = Math.sqrt(dx * dx + dy * dy);
+    const nx = dx / nrm, ny = dy / nrm;      // unit normal
+    const tx = -ny, ty = nx;                 // unit tangent
+    this.p1  = board.create('point', [x, y], {visible: false, fixed: true});
+    this.pn1 = board.create('point', [x - this.len / 2 * nx, y - this.len / 2 * ny], {visible: false, fixed: true});
+    this.pn2 = board.create('point', [x + this.len / 2 * nx, y + this.len / 2 * ny], {visible: false, fixed: true});
+    this.ln  = board.create('segment', [this.pn1, this.pn2], {strokeColor: 'gray', strokeWidth: 1, visible: false});
+    this.pt1 = board.create('point', [x - this.len / 2 * tx, y - this.len / 2 * ty], {visible: false, fixed: true});
+    this.pt2 = board.create('point', [x + this.len / 2 * tx, y + this.len / 2 * ty], {visible: false, fixed: true});
+    this.lt  = board.create('segment', [this.pt1, this.pt2], {strokeColor: 'gray', strokeWidth: 1, visible: false});
+    // register both as attractor targets, so force control points snap onto them
+    targets.push(this.ln);
+    targets.push(this.lt);
+    if (data[1].trim() !== "") {
+      this.label = board.create('point', [x, y], {name: toTEX(data[1]), ...centeredLabelStyle});
+    }
+    this.obj = [this.ln, this.lt];
+    this.loads = [];
+  }
+  data() { let a = this.d.slice(0); a.push(this.state); return a }
+  name() { return targetName(this) }
+  hasPoint(pt) { return isOn(pt, this.p1) }
+}
+
 // crosshair for reading off co-ordinates from graphs
 // [ "crosshair", "", [x0, y0], [xref, yref], [xscale, yscale], [dpx, dpy] ]
 class crosshair {
@@ -1817,6 +1854,7 @@ function init() {
       case "beam":	objects.push(new beam(m)); break;
       case "circle":	objects.push(new circle(m)); break;
       case "circle2p":	objects.push(new circle2p(m)); break;
+      case "contact":	objects.push(new contact(m)); break;
       case "crosshair":	objects.push(new crosshair(m)); break;
       case "dashpot":	objects.push(new dashpot(m)); break;
       case "dim": 	objects.push(new dim(m)); break;
@@ -1861,7 +1899,18 @@ function update() {
   // get list of loads and targets 
   const load = [ "force", "moment"];
   const target = ["bar", "beam", "circle", "fix1", "fix12", "fix123", "fix13", "rope",
-    "dashpot", "springc", "springt", "wall", "polygon", "q"];
+    "dashpot", "springc", "springt", "wall", "polygon", "q", "contact"];
+  // "contact" has no author-set state: it derives "hide"/"show" from the object it references,
+  // and the gray normal/tangent cross is only shown once that reference is actually deactivated.
+  for (let i = 0; i < objects.length; i++) {
+    if (objects[i].data()[0] == "contact") {
+      let c = objects[i];
+      let j = resolveRef(c.ref);
+      c.state = (j >= 0 && j < objects.length && objects[j].state == 'hide') ? 'hide' : 'show';
+      c.ln.setAttribute({visible: c.vis && c.state == 'hide'});
+      c.lt.setAttribute({visible: c.vis && c.state == 'hide'});
+    }
+  }
   let loadlist = [], targetlist = [];
   for (let i = 0; i < objects.length; i++) {
     if (load.includes( objects[i].data()[0] )) { loadlist.push(i)}
@@ -1979,8 +2028,13 @@ function cleanupName(str) {
   }
 
 // functions for proximity check (Allfred Wassermann, 2022-12-13)
-function isOn(pt, po) {return pt.isOn(po, tolPointLine) }	
-function targetName(obj) {if (obj.loads[0]) {return '['+obj.loads+']'} else {return '"'+obj.state+'"' } } 
+function isOn(pt, po) {return pt.isOn(po, tolPointLine) }
+function targetName(obj) {if (obj.loads[0]) {return '['+obj.loads+']'} else {return '"'+obj.state+'"' } }
+// resolve a "contact" targetRef (name string or 1-based index) to an index into "objects"
+function resolveRef(ref) {
+  if (typeof ref === 'number') { return ref - 1; }
+  return objects.findIndex(o => o.data()[1] === ref);
+}
 // functions for splines
 function hermite(x1,dx,y1,dy,d1,d2) {
   if (!isNaN(d1) && !isNaN(d2)) {
