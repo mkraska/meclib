@@ -532,11 +532,13 @@ fb_reactions(%_o, %_f, %_m):=block(
 );
 
 /* https://github.com/mkraska/meclib/wiki/fb_system() */
-fb_system(%_names, %_sys, %_env, %_hint):=block( 
-  [%_i, %_fb: ["&nbsp;Die Systemgrenzen stimmen. ", true], 
+/* %_names[%_i] is either a state string ("show"/"hide"/"SHOW"/"HIDE") or, once loads have been
+   matched to the object, a list of load indices - stringp() guards sdowncase() against the latter. */
+fb_system(%_names, %_sys, %_env, %_hint):=block(
+  [%_i, %_fb: ["&nbsp;Die Systemgrenzen stimmen. ", true],
         %_fbfalse: [sconcat("&nbsp;Die Systemgrenzen stimmen nicht. ", %_hint), false ] ],
-  for %_i in %_sys do if (%_names[%_i]  # "show") then %_fb: %_fbfalse,
-  for %_i in %_env do if (%_names[%_i]  = "show") then %_fb: %_fbfalse,
+  for %_i in %_sys do if (not stringp(%_names[%_i]) or sdowncase(%_names[%_i]) # "show") then %_fb: %_fbfalse,
+  for %_i in %_env do if (stringp(%_names[%_i]) and sdowncase(%_names[%_i]) = "show") then %_fb: %_fbfalse,
   return(%_fb)
 );
 
