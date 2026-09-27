@@ -117,7 +117,31 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom
 /* this should return true if the check passes, false otherwise */
 fb_unitOK(%_sans, %_tans, %_tol):=stringp(fb_unit(%_sans, %_tans, %_tol));
 
-/* https://github.com/mkraska/meclib/wiki/fb_number */  
+/* https://github.com/mkraska/meclib/wiki/fb_coeffs */
+/* Numeric coefficient comparison for symbolic expressions whose coefficients are floating-point
+   numbers (so fb_vars' own symbolic term check, and AlgEquiv, are not suitable). First checks
+   the variable set with fb_vars(), then compares the coefficient of each variable in %_tans
+   numerically with fb_unit(), appending its (percentage-deviation) feedback per mismatching
+   variable. Returns [text, boolean] like fb_fix1/fb_contact/fb_unidir.
+   Does not currently handle a bare constant term (a part of the expression not multiplying
+   any variable) - left out for now, see wiki. */
+fb_coeffs(%_sans, %_tans, %_tol, %_description):=block(
+  [%_txt: %_description, %_vcheck, %_vars, %_v, %_cs, %_ct, %_cres, simp: true],
+  %_vcheck: fb_vars(%_sans, %_tans),
+  if %_vcheck # "" then return([castext_concat(%_txt, %_vcheck), false]),
+  %_vars: listofvars(%_tans),
+  for %_v in %_vars do (
+    %_cs: coeff(%_sans, %_v),
+    %_ct: coeff(%_tans, %_v),
+    %_cres: fb_unit(%_cs, %_ct, %_tol),
+    if %_cres # "" then
+      %_txt: castext_concat(%_txt, castext_concat(castext(sconcat("&nbsp;Der Koeffizient bei ", string(%_v), ": ")), %_cres))
+  ),
+  if %_txt # %_description then return([%_txt, false]),
+  return([castext_concat(%_txt, "&nbsp;Die Gleichung stimmt."), true])
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_number */
 fb_number(%_sans, %_tans, %_tol) := fb_unit(%_sans, %_tans, %_tol);
 /* this should return true if the check passes, false otherwise */
 fb_numberOK(%_snum, %_tnum, %_tol):=stringp(fb_number(%_snum, %_tnum, %_tol));
