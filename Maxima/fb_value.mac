@@ -2,14 +2,21 @@
 fb_value_version: "2026 03 05, 23:00";
 
 /* https://github.com/mkraska/meclib/wiki/deg2rad */
-/* Substitutes any use of the "deg" or "°" degree markers in expr with their numeric value
-   (pi/180), for use right before a numeric comparison (fb_coeffs, fb_unit, etc.) - never bind
-   deg or ° globally in questionvariables, or every other display of them (questiontext, tans,
+/* Substitutes any use of the "deg" or degree-sign (U+00B0) markers in expr with their numeric
+   value (pi/180), for use right before a numeric comparison (fb_coeffs, fb_unit, etc.) - never
+   bind either globally in questionvariables, or every other display of them (questiontext, tans,
    generalfeedback, and the student's own input-validation echo) loses its nice degree-symbol
    rendering and shows a raw decimal instead. Both tokens are left untouched everywhere except
    inside this call, e.g. fb_coeffs(deg2rad(S_GG1), GG1, tol, ""). A no-op if neither is present
-   in expr. */
-deg2rad(expr):= subst([deg=%pi/180, °=%pi/180], expr);
+   in expr.
+   The degree sign itself is built via unicode(176)/parse_string() rather than written as a raw
+   literal character here - a literal non-ASCII byte in this file makes stack_include() fail with
+   "Lexer side error" (STACK fetches this file over HTTP and feeds it to a Maxima reader that does
+   not appear to tolerate raw UTF-8 outside of castext/HTML-entity content), so keep this whole
+   file plain ASCII, same as the existing feedback strings already do via &auml;/&uuml;/etc. */
+deg2rad(expr):= block([%_degsign: parse_string(unicode(176))],
+  subst([deg=%pi/180, %_degsign=%pi/180], expr)
+);
 
 /* https://github.com/mkraska/meclib/wiki/fb_vars */
 fb_strip_list(_list_of_things):= castext("[[define _first='true'/]][[foreach _thing='_list_of_things']][[if test='not _first']], [[else]][[define _first='false'/]][[/if]]{@_thing@}[[/foreach]]"); 
