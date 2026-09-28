@@ -95,7 +95,13 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
 [[include src="https://raw.githubusercontent.com/mkraska/meclib/dev2026/meclib.js" /]]
 [[/jsxgraph]]</div>
 
-Rechts sehen Sie einen möglichen richtigen Freischnitt.]]></text>
+Rechts sehen Sie einen möglichen richtigen Freischnitt mit einer günstigen Wahl der
+Koordinatenrichtungen (jeweils senkrecht zu einer der beiden Kontaktkräfte). Die
+zugehörigen Gleichgewichtsbedingungen lauten:
+
+\(GG_1:\quad {@GG1_disp@} = 0\)
+
+\(GG_2:\quad {@GG2_disp@} = 0\)]]></text>
     </generalfeedback>
     <defaultgrade>1</defaultgrade>
     <penalty>0</penalty>
@@ -153,8 +159,8 @@ initdata: [
   ["contact", "", PA, [uBx, uBy], "gabel", 3],
   ["contact", "", PB, [uAx, uAy], "gabel", 3],
   ["forceGen", "F", [PAo[1]-1, 3*r]],
-  ["dir", "1", V, 0, 10, 1.5*r, true],
-  ["dir", "2", V, 90, 10, 1.5*r, true]
+  ["dir", "1", V, 0, 10, 1.5*r, "active"],
+  ["dir", "2", V, 90, 10, 1.5*r, "active"]
 ];
 init: stackjson_stringify(initdata);
 
@@ -179,10 +185,13 @@ refdata: [
   ["contact", "", PA, [uBx, uBy], "gabel", 3 ],
   ["contact", "", PB, [uAx, uAy], "gabel", 3 ],
   ["forceGen", "F_1", [PAo[1]-1, 3*r]],
+  /* dir1/dir2 bleiben an derselben Position wie in initdata (Index 15/16, siehe i_dir1/i_dir2
+     unten), die geloesten Kraefte kommen wie bei einem echten Freischnitt erst danach dazu.
+     Winkel auf die guenstige ("gedrehte") Richtung senkrecht zu B bzw. A gelegt. */
+  ["dir", "1", V, 90+alpha, 10, 1.5*r],
+  ["dir", "2", V, alpha, 10, 1.5*r],
   ["force", "A", PA-[uBx,uBy], PA, 10, "active"],
-  ["force", "B", PB-[uAx,uAy], PB, 10, "active"],
-  ["dir", "1", V, 0, 10, 1.5*r],
-  ["dir", "2", V, 90, 10, 1.5*r]
+  ["force", "B", PB-[uAx,uAy], PB, 10, "active"]
 ];
 ref: stackjson_stringify(refdata);
 
@@ -201,29 +210,39 @@ gfbdata: [
   ["angle", "\\alpha", PBi, PBi+[0,2], 0.9*r, alpha],
   ["contact", "", PA, [uBx, uBy], "gabel", 3 ],
   ["contact", "", PB, [uAx, uAy], "gabel", 3 ],
+  ["dir", "1", V, 90+alpha, 10, 1.5*r],
+  ["dir", "2", V, alpha, 10, 1.5*r],
   ["force", "A", PA-[uBx,uBy], PA, 10, "locked"],
-  ["force", "B", PB-[uAx,uAy], PB, 10, "locked"],
-  ["dir", "1", V, 0, 10, 1.5*r],
-  ["dir", "2", V, 90, 10, 1.5*r]
+  ["force", "B", PB-[uAx,uAy], PB, 10, "locked"]
 ];
 gfb: stackjson_stringify(gfbdata);
 
 stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/fb_value.mac" );
 stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/fb_fbd.mac" );
 
-/* --- statische (Kompilierzeit-)Referenz fuer die tans der Eingaben S_GG1/S_GG2 ---
+/* --- statische (Kompilierzeit-)Musterloesung fuer die tans der Eingaben S_GG1/S_GG2 ---
    Muss NACH den obigen stack_include-Aufrufen stehen, weil sum_dir() erst dadurch
-   definiert wird. Nur fuer die Eingabe-Typpruefung/Musterloesungsanzeige - die
-   eigentliche Bewertung verwendet unten in den PRTs GG1/GG2 die tatsaechlich vom
-   Anwender gewaehlten Richtungen (obj[i_dir1]/obj[i_dir2]) aus dem eingereichten
-   Freischnitt. */
-refobj_forces: [
-  ["force", "A", PA-[uBx,uBy], PA, 10, "active"],
-  ["force", "B", PB-[uAx,uAy], PB, 10, "active"]
-];
-refnames_forces: [A, B];
-GG1_tans: sum_dir(refobj_forces, refnames_forces, [1,0]);
-GG2_tans: sum_dir(refobj_forces, refnames_forces, [0,1]);
+   definiert wird. Diese "tans"-Musterloesung dient dem Aufgabentest (Vorschau/"richtige
+   Antwort ausfuellen"). Die eigentliche Bewertung der eingegebenen Gleichungen verwendet
+   unten in den PRTs GG1/GG2 die DYNAMISCHE Musterloesung, die aus dem tatsaechlich vom
+   Anwender eingereichten Freischnitt (objects/names, Richtungen obj[i_dir1]/obj[i_dir2])
+   berechnet wird - die beiden sind bewusst unabhaengig voneinander.
+   sum_dir() ignoriert ohnehin alles, was keine "force" ist, daher kann hier direkt die
+   komplette Referenzliste durchgereicht werden, statt eine eigene Teilliste zu bauen. */
+refobj: stackjson_parse(ref);
+refnames: makelist(0, i, 1, length(refobj));
+refnames[10]: mg;   /* Gewichtskraft, in jedem Freischnitt vorhanden */
+refnames[17]: A;    /* Kontaktkraft A */
+refnames[18]: B;    /* Kontaktkraft B */
+GG1_tans: sum_dir(refobj, refnames, direction(refobj[i_dir1]));
+GG2_tans: sum_dir(refobj, refnames, direction(refobj[i_dir2]));
+
+/* Rein fuer die Anzeige im allgemeinen Feedback: dieselbe (fuer jedes alpha
+   allgemeingueltige) Loesung, aber mit "deg" nur zur Gradnotation in der Ausgabe
+   (z.B. "cos(20 deg)" -> "cos(20°)") - deg wird dabei nie ausgewertet, nur getippt,
+   und diese Variablen werden nirgends zur Bewertung herangezogen. */
+GG1_disp: A - mg*cos(alpha*deg);
+GG2_disp: B - mg*sin(alpha*deg);
 
 ]]></text>
     </questionvariables>
