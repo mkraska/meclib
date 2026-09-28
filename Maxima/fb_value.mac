@@ -11,7 +11,7 @@ fb_value_version: "2026 03 05, 23:00";
    Deliberately does NOT also handle the literal degree-sign character (U+00B0) here: this file is
    fetched by stack_include() over HTTP and loaded by a Maxima reader that fails with "Lexer side
    error" on a raw non-ASCII byte, and the only workaround found (building the symbol at runtime
-   via unicode()/parse_string()) fails too, since parse_string is on STACK's forbidden-function
+   via unicode()/parse _string()) fails too, since parse_string is on STACK's forbidden-function
    list ("Verbotene Funktion: parse_string"). A literal degree-sign character typed directly into
    a question's own questionvariables (not fetched via stack_include) does not hit either problem,
    so a question that wants to accept that character as input can add its own local substitution
