@@ -1,191 +1,635 @@
-/* https://github.com/mkraska/meclib/wiki/Feedback-Overview */ 
-fb_value_version: "2026 03 05, 23:00";
+/* https://github.com/mkraska/meclib/wiki/Feedback-for-Free-Body-Diagrams */
+/* 2024 11 25                          */
 
-/* https://github.com/mkraska/meclib/wiki/deg2rad */
-/* Substitutes any use of the "deg" marker in expr with its numeric value (pi/180), for use right
-   before a numeric comparison (fb_coeffs, fb_unit, etc.) - never bind deg globally in
-   questionvariables, or every other display of it (questiontext, tans, generalfeedback, and the
-   student's own input-validation echo) loses its nice degree-symbol rendering and shows a raw
-   decimal instead. deg itself is left untouched everywhere except inside this call, e.g.
-   fb_coeffs(deg2rad(S_GG1), GG1, tol, ""). A no-op if deg is not present in expr.
-   Deliberately does NOT also handle the literal degree-sign character (U+00B0) here: this file is
-   fetched by stack_include() over HTTP and loaded by a Maxima reader that fails with "Lexer side
-   error" on a raw non-ASCII byte, and the only workaround found (building the symbol at runtime
-   via unicode()/parse_string()) fails too, since parse_string is on STACK's forbidden-function
-   list ("Verbotene Funktion: parse_string"). A literal degree-sign character typed directly into
-   a question's own questionvariables (not fetched via stack_include) does not hit either problem,
-   so a question that wants to accept that character as input can add its own local substitution
-   before calling deg2rad(), substituting the degree-sign character for deg first, then wrapping
-   the result in deg2rad() as usual: fb_coeffs(deg2rad(subst(<degree-sign>=deg, S_GG1)), GG1, tol, "") */
-deg2rad(expr):= subst(deg=%pi/180, expr);
-
-/* https://github.com/mkraska/meclib/wiki/fb_vars */
-fb_strip_list(_list_of_things):= castext("[[define _first='true'/]][[foreach _thing='_list_of_things']][[if test='not _first']], [[else]][[define _first='false'/]][[/if]]{@_thing@}[[/foreach]]"); 
-/* fb_strip_list function proposed by Matti Harjula 2022 04 10 */
-
-fb_vars(%_sans,%_tans, [%_opt] ) := block(
-  [%_vars, %_label, %_tol, %_tansvar,%_sansvar,%_extras, %_missing, simp, %_txt, %_L,
-    str_unexpected_variable: castext("[[lang code='de']]&nbsp;Unerwartete Variable [[/lang]][[lang code='en,other']]&nbsp;Unexpected variable [[/lang]]"),
-    str_missing_variable: castext("[[lang code='de']]&nbsp;Fehlende Variable [[/lang]][[lang code='en,other']]&nbsp;Missing variable [[/lang]]"),
-    str_check_term: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie den Term mit [[/lang]][[lang code='en,other']]&nbsp;Check the term with [[/lang]]"),
-    str_check_terms: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie die Terme mit [[/lang]][[lang code='en,other']]&nbsp;Check the terms with [[/lang]]")
-  ],
-  simp: true, /* Extract vars with simp:true does mean that "x/x+y" -> [y] */
-  if length(%_opt)>0 then %_vars: %_opt[1] else %_vars: [],
-  if length(%_opt)>1 then %_label: %_opt[2] else %_label: "",
-  if length(%_opt)>2 then %_tol: %_opt[3] else %_tol: 0,
-  %_txt: %_label,
-  %_sansvar: setify(listofvars(%_sans)),
-  %_tansvar: setify(listofvars(%_tans)),
-  /* With a positive tolerance, ignore variables whose (linear) coefficient does not exceed it
-     in absolute value - protects against spurious extra/missing-variable complaints caused by
-     pure floating-point noise (e.g. a coefficient that should be exactly zero coming out as
-     1e-13 instead). Only meaningful for a variable that appears linearly; one that only appears
-     nonlinearly should be passed to fb_vars/fb_coeffs as its own sub-expression instead (e.g.
-     a^2, sin(alpha)), see wiki. */
-  /* float() forces a numeric comparison even when %_sans/%_tans still contain an exact
-     (non-floated) irrational subexpression, e.g. cos(%pi/18) from an angle given in exact
-     degrees - without it, abs(...) > %_tol can fail to resolve to true/false at all. */
-  if %_tol > 0 then (
-    %_sansvar: subset(%_sansvar, lambda([%_v], is(abs(float(coeff(%_sans, %_v, 1))) > %_tol))),
-    %_tansvar: subset(%_tansvar, lambda([%_v], is(abs(float(coeff(%_tans, %_v, 1))) > %_tol)))
-  ),
-  /* Say nothing if tans is free of vars and is zero) */
-  if (emptyp(%_tansvar) and %_tans=0) then return(""),
-  /* Check for spurious (extra) vars */
-  %_extras: setdifference(%_sansvar, %_tansvar),
-  if length(%_extras) > 0 then (
-    %_txt: castext_concat(%_txt, str_unexpected_variable),
-    %_txt: castext_concat(%_txt, fb_strip_list(listify(%_extras)) ),
-    %_txt: castext_concat(%_txt, "."  ) ),
-  /* Check for missing vars */
-  %_missing: setdifference(%_tansvar, %_sansvar),
-  if length(%_missing) > 0 then  (
-    %_txt: castext_concat(%_txt, str_missing_variable ),
-    %_txt: castext_concat(%_txt, fb_strip_list(listify(%_missing)) ),
-    %_txt: castext_concat(%_txt,  castext(" (<code>{@stack_disp_comma_separate(listify(%_missing))@}</code>)." ))),
-  if %_txt # %_label then return(%_txt),
-  /* if set of vars is ok, then check for the terms with vars from given list (%_vars). */ 
-  %_L: sublist (%_vars, lambda ([x], diff(%_sans-%_tans, x)#0)),
-  if length(%_L)=0 then return(""),
-  if length(%_L)=1 then (
-    %_txt: castext_concat( %_txt, str_check_term ),
-    return( castext_concat (%_txt, castext("{@%_L[1]@}.") ) )
-  ),
-  %_txt: castext_concat( %_txt, str_check_terms ), 
-  %_txt: castext_concat( %_txt, fb_strip_list(%_L) ), 
-  castext_concat(%_txt, "." ) 
-);	
-/* this should return true if the check passes, false otherwise */
-fb_varsOK(%_sans,%_tans, [%_opt] ):= block([%_res],
-  if length(%_opt)=0 then %_res: fb_vars(%_sans,%_tans ),
-  if length(%_opt)=1 then %_res: fb_vars(%_sans,%_tans, %_opt[1] ),
-  if length(%_opt)=2 then %_res: fb_vars(%_sans,%_tans, %_opt[1], %_opt[2] ),
-  stringp(%_res));
-
-
-/* https://github.com/mkraska/meclib/wiki/fb_unit */
-fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom, %_mnt, %_d, %_d0, simp, debug1,
-  str_unexpected_base_unit: castext("[[lang code='de']]&nbsp;Unerwartete Basiseinheit [[/lang]][[lang code='en,other']]&nbsp;Unexpected base unit [[/lang]]"),
-  str_not_dimensionless: castext("[[lang code='de']]&nbsp;Der Wert sollte nicht dimensionslos sein.[[/lang]][[lang code='en,other']]&nbsp;The value should not be dimensionless.[[/lang]]"),
-  str_deviation: castext("[[lang code='de']]&nbsp;Abweichung: [[/lang]][[lang code='en,other']]&nbsp;Deviation: [[/lang]]"),
-  str_value_too_large: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.[[/lang]][[lang code='en,other']]The absolute value is too large.[[/lang]]"),
-  str_value_too_small: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.[[/lang]][[lang code='en,other']]The absolute value is too small.[[/lang]]"),
-  str_sign: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie das Vorzeichen.[[/lang]][[lang code='en,other']]Check the sign.[[/lang]]"),
-  str_mantissa: castext("[[lang code='de']]&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. [[/lang]][[lang code='en,other']]The mantissa is correct but the value is off by at least one order of magnitude. Check your unit conversion.[[/lang]]"),
-  str_small_1: castext("[[lang code='de']]&nbsp;Der Betrag ist um mindestens [[/lang]][[lang code='en,other']]&nbsp;The value is too small by at least [[/lang]]"),
-  str_small_2: castext("[[lang code='de']]% zu klein.[[/lang]][[lang code='en,other']]%.[[/lang]]"),
-  str_large_1: castext("[[lang code='de']]&nbsp;Der Betrag ist um mindestens [[/lang]][[lang code='en,other']]&nbsp;The value is too large by at least [[/lang]]"),
-  str_large_2: castext("[[lang code='de']]% zu gro&szlig;.[[/lang]][[lang code='en,other']]%.[[/lang]]")
-  ],
- simp:true,
-  /* Debug strings */
-  if debug then debug1: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)" else debug1:"",
-  /* extract numbers and units */
-  %_snum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_sans)))),
-  if %_snum = NULLNUM then %_snum:1.0, 
-  %_tnum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_tans)))),
-  if %_tnum = NULLNUM then %_tnum:1.0, 
-  %_sunit: stack_units_units(stack_unit_si_to_si_base(%_sans)),
-  if %_sunit = NULLUNITS then %_sunit:0,  /* display as 0 if not correct */
-  %_tunit: stack_units_units(stack_unit_si_to_si_base(%_tans)),
-  if %_tunit = NULLUNITS then %_tunit:0,  /* display as 0 if not correct */
-  /* complain if units don't match */
-  if (%_sunit # %_tunit) and (%_sunit # 0) then return(   
-    castext_concat(str_unexpected_base_unit, castext("{@(stack_disp_fractions(\"i\"),%_sunit)@}")  ) ),   
-  if (%_sunit # %_tunit) and (%_sunit = 0) and (%_snum # 0.0) then return(str_not_dimensionless),   
-  /* if tol=0 just indicate deviation */
-  if (%_tol=0 or %_tol=0.0) and %_tnum # 0.0 then return( 
-    castext_concat(str_deviation,castext("{@ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp)@}%")) ), 
-  /* special feedback if teacher's answer is zero */
-  if %_tnum = 0.0  and %_snum  # 0.0 then return(str_value_too_large),
-  if %_tnum = 0.0  then return(debug1), 
-  if %_snum = 0.0 then return(str_value_too_small),
-  /* check of the sign */
-  if ev(%_snum/%_tnum, simp) <0 then return(str_sign),
-  /* go back if error is less than tolerance */ 
-  if ev(abs((%_snum-%_tnum)/%_tnum),simp) < %_tol then (
-    if debug then return(castext_concat(str_deviation, castext("{@ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp)@}% (display because debug=true. Would be empty otherwise.)"))) 
-    else return("") 
-  ),
-  /* OoM and mantissa error */
-  %_oom: ev(log(abs(%_snum/%_tnum))/log(10.0), simp),
-  %_mnt: ev(10.0^( %_oom - round(%_oom)),simp),
-  /* Mantissa check */
-  if ev(abs(1.0-%_mnt), simp) <%_tol and ev(abs(%_oom), simp)>0.1 then 
-    return(str_mantissa) 
-  /* general hint on precision */
-  else(
-    %_d0: ev(abs((1.0-abs(%_snum)/abs(%_tnum)))*100.0, simp),  /* % Abweichung */
-    %_oom: ev(10.0^round(log(%_d0)/log(10.)-0.5), simp),
-    %_d: ev(round(floor(%_d0/%_oom))*%_oom, simp),
-    if %_d>=1 then %_d: ev(round(%_d),simp),
-    if ev(abs(%_snum)<abs(%_tnum), simp) then        
-        return(sconcat(str_small_1, %_d , str_small_2)) else
-        return(sconcat(str_large_1, %_d , str_large_2))
- ), 
-[%_snum,%_tnum, %_oom, %_d, %_mnt, %_d0] );
-
-/* this should return true if the check passes, false otherwise */
-fb_unitOK(%_sans, %_tans, %_tol):=stringp(fb_unit(%_sans, %_tans, %_tol));
-
-/* https://github.com/mkraska/meclib/wiki/fb_coeffs */
-/* Numeric coefficient comparison for symbolic expressions whose coefficients are floating-point
-   numbers (so fb_vars' own symbolic term check, and AlgEquiv, are not suitable). First checks
-   the variable set with fb_vars(), then compares the coefficient of each variable in %_tans
-   numerically with fb_unit(), appending its (percentage-deviation) feedback per mismatching
-   variable. Returns [text, boolean] like fb_fix1/fb_contact/fb_unidir.
-   Does not currently handle a bare constant term (a part of the expression not multiplying
-   any variable) - left out for now, see wiki. */
-fb_coeffs(%_sans, %_tans, %_tol, %_description):=block(
-  [%_txt: %_description, %_vcheck, %_vars, %_v, %_cs, %_ct, %_cres, simp: true],
-  %_vcheck: fb_vars(%_sans, %_tans, [], "", %_tol),
-  if %_vcheck # "" then return([castext_concat(%_txt, %_vcheck), false]),
-  %_vars: listofvars(%_tans),
-  /* Same tolerance as fb_vars just used for the variable-set check: skip a variable here too
-     if its coefficient in %_tans does not exceed the tolerance - it isn't really "in" the
-     equation, just floating-point noise, so it should not be coefficient-compared either. */
-  if %_tol > 0 then %_vars: sublist(%_vars, lambda([%_v], is(abs(float(coeff(%_tans, %_v, 1))) > %_tol))),
-  for %_v in %_vars do (
-    %_cs: coeff(%_sans, %_v),
-    %_ct: coeff(%_tans, %_v),
-    %_cres: fb_unit(%_cs, %_ct, %_tol),
-    if %_cres # "" then
-      %_txt: castext_concat(%_txt, castext_concat(castext(sconcat("&nbsp;Der Koeffizient bei ", string(%_v), ": ")), %_cres))
-  ),
-  if %_txt # %_description then return([%_txt, false]),
-  return([castext_concat(%_txt, "&nbsp;Die Gleichung stimmt."), true])
+/* https://github.com/mkraska/meclib/wiki/direction%28%29 */
+direction(o):=block([%_v, a0, le, r1, r2, a1],
+  if member(o[1], ["bar", "force", "dashpot", "springt", "springc"]) then return(o[4]-o[3]),
+  if member(o[1], ["fix1"]) then return([-sin(o[4]*%pi/180), cos(o[4]*%pi/180)]),
+  if member(o[1], ["fix13", "dir"]) then return([cos(o[4]*%pi/180), sin(o[4]*%pi/180)]),
+  if member(o[1], ["contact"]) then return(o[4]),
+  if member(o[1], ["q"]) then (
+    %_v: o[5]-o[4], le: cabs(%_v[1]+%i*%_v[2]), a0: carg(%_v[1]+%i*%_v[2]),
+    return([cos(a0+o[8]*pi/180), sin(a0+o[8]*pi/180)]) 
+    ),
+  if member(o[1], ["rope"]) then (
+    /* same math as in meclib */
+    %_v: o[5]-o[3], le: cabs(%_v[1]+%i*%_v[2]), a0: carg(%_v[1]+%i*%_v[2]),
+    r1: o[4], r2: o[6], a1: acos((r1-r2)/le),
+    return(float(%_v+[(r2-r1)*cos(a0-a1), (r2-r1)*sin(a0-a1)]))
+    )
 );
 
-/* https://github.com/mkraska/meclib/wiki/fb_number */
-fb_number(%_sans, %_tans, %_tol) := fb_unit(%_sans, %_tans, %_tol);
-/* this should return true if the check passes, false otherwise */
-fb_numberOK(%_snum, %_tnum, %_tol):=stringp(fb_number(%_snum, %_tnum, %_tol));
+/* https://github.com/mkraska/meclib/wiki/angle%28%29 */
+angle(a,b):= block([da,db],
+    da: direction(a), db: direction(b),
+    if listp(da) and listp(db) then 
+        return(-carg(da[1]+%i*da[2])+carg(db[1]+%i*db[2]) ) 
+);
 
-/* https://github.com/mkraska/meclib/wiki/fb_dim */
-fb_dim(%_res, %_vars, %_dims):=rat(subst(map("=", %_vars, map("*", %_vars, %_dims)),%_res)/%_res);
+/* https://github.com/mkraska/meclib/wiki/moment_of_force%28%29 */
+moment_of_force(p, f, fname, rname):=block([vf,vr],
+   vf: (f[4]-f[3]),
+   vf: vf/sqrt(vf[1]^2+vf[2]^2)*fname,
+   vr: (f[3]-p)*rname,
+   vr[1]*vf[2]-vr[2]*vf[1]
+);
 
-/* https://github.com/mkraska/meclib/wiki/Multilingual-questions#multilingual-syntax-hints */
-meclib_h_number: castext("[[lang code='de']]Zahl[[/lang]][[lang code='en,other']]number[[/lang]]");
-meclib_h_unit: castext("[[lang code='de']]Zahl mit Einheit[[/lang]][[lang code='en,other']]number with unit[[/lang]]");
-meclib_h_alg: castext("[[lang code='de']]Ausdruck[[/lang]][[lang code='en,other']]expression[[/lang]]");
+/* https://github.com/mkraska/meclib/wiki/Sums-of-Forces-and-Moments */
+unitvec(l):=block( [v] , v:round((l[4]-l[3])*10),ratexpand(v/sqrt(v[1]^2+v[2]^2)));
+msign(l):=block( [v1,v2] , v1:l[4]-l[3],v2:l[5]-l[3],round(signum(v1[1]*v2[2]-v1[2]*v2[1])));
+moment(p, f, fname, rname):=block([vf,vr],
+   vf: unitvec(f)*fname,
+   vr: round((f[3]-p)*10)/10*rname,
+   vr[1]*vf[2]-vr[2]*vf[1]);
+sum_xyM(o,n,p,lu):=block([f: 0,m: 0],
+  for i:1 thru length(o)  do (
+    if (o[i][1]="force") then f: f+n[i]*unitvec(o[i]),
+    if (o[i][1]="force") then m: m+moment(p, o[i], n[i],lu),
+    if (o[i][1]="moment") then m: m+n[i]*msign(o[i])
+  ),
+  [f[1],f[2],m]
+);
+
+/* https://github.com/mkraska/meclib/wiki/sum_dir%28%29 */
+/* Simple single-direction variant of sum_xyM: sums the scalar projections of all matched
+   "force" loads in o/n onto a single given direction vector d (e.g. from direction() on a
+   "dir" object). Intended for central/concurrent force systems, where only force equilibrium
+   in self-chosen directions is needed and no moment term applies.
+   Unlike sum_xyM (which uses unitvec()'s 0.1-grid rounding - appropriate for a hand-dragged
+   force arrow, whose own JSXGraph point already snaps to the grid), the force direction here
+   is normalized exactly, without that extra rounding step: it is redundant with the JSXGraph
+   grid snap, and for a force at a fixed, exactly-known geometric position (as with a "dir"-based
+   equilibrium direction) it would introduce its own small, spurious deviation from an otherwise
+   exact perpendicularity. */
+sum_dir(o,n,d):=block([f: 0, v, u],
+  for i:1 thru length(o) do (
+    if (o[i][1]="force") then (
+      v: o[i][4]-o[i][3],
+      u: v/sqrt(v[1]^2+v[2]^2),
+      f: f+n[i]*(u[1]*d[1]+u[2]*d[2])
+    )
+  ),
+  f
+);
+
+/* https://github.com/mkraska/meclib/wiki/parallelp%28%29 */
+parallelp(a,b):= block([da,db],
+    da: direction(a), db: direction(b),
+    if listp(da) and listp(db) then
+        return(is (abs(da[1]*db[2]-da[2]*db[1])<0.05) )
+);
+
+/* https://github.com/mkraska/meclib/wiki/perpendicularp%28%29 */
+perpendicularp(a,b):= block([da,db],
+    da: direction(a), db: direction(b),
+    if listp(da) and listp(db) then
+        return(is (abs(da[1]*db[1]+da[2]*db[2])<0.05) )
+);
+
+/* https://github.com/mkraska/meclib/wiki/contributor%28%29 */
+/* Purely formative helper for a direction-choice PRT (no grading effect of its own): lists the
+   names of every "force" object in o (regardless of state - an external force, a recognized
+   reaction, or a reaction the student placed somewhere a "contact" doesn't recognize) that will
+   actually contribute a non-negligible term when summed along the direction of the "dir" object
+   at index i_dir, i.e. when o is later passed to sum_dir(o, n, direction(o[i_dir])).
+   Deliberately does NOT reuse perpendicularp(), which compares the RAW (non-normalized)
+   direction() vectors - for a "force" object that vector is o[4]-o[3], whose length depends on
+   how long the student happened to drag the arrow, so a fixed threshold on that raw dot product
+   is not meaningfully comparable across forces of different length. Instead this recomputes the
+   same normalized projection coefficient sum_dir itself would use (unit force vector dotted with
+   the direction), and compares its absolute value against tol directly - so tol is on the same
+   footing as the coefficient tolerance already used in fb_coeffs.
+   Returns the list of names (n[i]) of the contributing forces, ready for fb_strip_list(); an
+   empty list means every force present is (numerically) perpendicular to this direction. */
+contributor(o, n, i_dir, tol):= block([d: direction(o[i_dir]), v, u, result: []],
+  for i: 1 thru length(o) do (
+    if o[i][1] = "force" then (
+      v: o[i][4]-o[i][3],
+      u: v/sqrt(v[1]^2+v[2]^2),
+      if abs(u[1]*d[1]+u[2]*d[2]) > tol then result: cons(n[i], result)
+    )
+  ),
+  reverse(result)
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_dir */
+/* Purely formative feedback for a direction-choice PRT, wrapping contributor() into the same
+   [text, flag] result shape as fb_fix1/fb_contact/fb_coeffs/etc. so it can be dropped into a PRT
+   node the same way. flag is always true - this feedback has no grading effect of its own, so
+   the calling PRT should always take its true-branch regardless of what is found.
+   %_desc is the phrase naming the direction, inserted as-is at the end of the sentence, e.g.
+   "in 1-Richtung" (so this stays reusable in other questions/languages without hardcoding the
+   direction's own name or numbering here). */
+fb_dir(%_o, %_n, %_i_dir, %_tol, %_desc):= block([%_contrib],
+  %_contrib: contributor(%_o, %_n, %_i_dir, %_tol),
+  if %_contrib = [] then
+    [castext_concat(castext_concat("Keine Kraft hat Anteile ", %_desc), "."), true]
+  elseif length(%_contrib) = 1 then
+    [castext_concat(castext_concat(fb_strip_list(%_contrib), " hat Anteile "), castext_concat(%_desc, ".")), true]
+  else
+    [castext_concat(castext_concat(fb_strip_list(%_contrib), " haben Anteile "), castext_concat(%_desc, ".")), true]
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_force_hvxy */
+fb_force_hvxy(o,i):=block([dir, name, nl, base, idx],
+    name: o[i][2], nl: split(name,"_"),
+    /* base name single character? */
+    if slength(first(nl)) > 1 
+    then return([sconcat("\\(", name, "\\): Physikalische Gr&ouml;&szlig;en immer nur mit einem Buchstabe und eventuell Index schreiben, z.B. <code>F_1</code>." ),false]),
+    /* is there an index? */
+    if length(nl) # 2 
+    then return([sconcat("\\(", name, "\\) sollte einen Richtungsindex (x, y, h, v) haben."),false]),
+    /* are name and index just a single character? */
+    idx: last(nl),
+    if slength(idx) > 1 
+    then return([sconcat("\\(", name, "\\): Ein Buchstabe sollte für den Index reichen." ),false]),
+    /* is the index known? */
+    if not member(sdowncase(idx), ["h","v","x","y"]) 
+    then return([sconcat("\\(", name, "\\): Der Richtungsindex sollte h, v, x oder y sein"),false]),
+    /* check directions */
+    dir: direction(o[i]),
+    if (sdowncase(idx)="h" and abs(dir[2]) > 0.01) then
+    return([sconcat("\\(", name, "\\) m&uuml;sste eine horizontale Kraft bezeichnen."),false]),   
+    if (sdowncase(idx)="v" and abs(dir[1]) > 0.01) then
+    return([sconcat("\\(", name, "\\) m&uuml;sste eine vertikale Kraft bezeichnen."),false]),         
+    if (sdowncase(idx)="x" and (abs(dir[2]) > 0.01 or dir[1] <0) ) then
+    return([sconcat("\\(", name, "\\) m&uuml;sste eine Kraft in positive x-Richtung (nach rechts) bezeichnen."),false]),         
+    if (sdowncase(idx)="y" and (abs(dir[1]) > 0.01 or dir[2] <0) ) then
+    return([sconcat("\\(", name, "\\) m&uuml;sste eine Kraft in positive y-Richtung (nach oben) bezeichnen."),false]),  
+    /* Name is ok */
+    return(["",true])
+);
+
+/* https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix1%22 */
+fb_fix1(%_o, %_n, %_i, %_description):=block(
+    [%_txt: sconcat("<br>",%_description), %_R],
+    /* Is object i a fixed support */
+    if ( %_o[%_i][1] # "fix1" ) then return ([sconcat(%_txt, "object ", string(%_i), " is not a fixed support (fix1)"), false]),
+    /* Is object i de-activated */ 
+    if ( %_o[%_i][length(%_o[%_i])] # "hide") then return ([sconcat(%_txt, " ist nicht deaktiviert."), false]),
+    /* Any reactions found at i? */
+    if not listp(%_n[%_i]) or %_n[%_i]=[] then return([sconcat(%_txt, "Keine Reaktion gefunden."), false]),
+    /* Exactly 1 reaction found? */
+    if (length(%_n[%_i]) > 1) then return( [sconcat(%_txt, "Mehr als eine Reaktion gefunden."), false]),
+    /* Is the reaction a force? */
+    if ( %_o[%_n[%_i][1]][1] # "force" ) then return ([sconcat(%_txt, "Die Reaktion muss eine Kraft sein."),false]),
+    /* Now ready for examination of the reaction */
+    %_R: %_o[%_n[%_i][1]], 
+    /* Is the force normal to the support? */
+    if not parallelp(%_R, %_o[%_i]) then return ([sconcat(%_txt, "Die Reaktion \\(", %_R[2], "\\) hat nicht die richtige Richtung."),false]),
+    /* everything should be ok here */
+    return([sconcat(%_txt, "Reaktion \\(", %_R[2], "\\) gefunden."),true])   
+);
+
+fb_fix1_name(%_o, %_n, %_i):=block(
+    [%_R], 
+    if not listp(%_n[%_i]) then return(["",false]),
+    %_R: %_o[%_n[%_i][1]], 
+    /* name checking */
+    if slength(%_R[2]) # 1 then return(["<br>Ein einzelner Buchstabe sollte f&uuml;r die Bezeichnung der Kraft ausreichen.",false]),
+    if %_R[2] # %_o[%_i][2] then return(["<br>Der Name der Reaktionskraft sollte zum Namen des Lagerpunkts passen.", false]),
+    /* everything should be ok here */
+    return(["",true])   
+);
+
+/* https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix12%22 */
+fb_fix12(o, n, i, description):=block(
+    [L1, L2, R1, R2], txt: sconcat("<br>",description),
+     /* Is object i an fixed support? */
+    if not member(o[i][1], ["fix12"]) 
+    then return ([sconcat(txt, "object ", string(i), " (", o[i][1], ") is not a fixed support."), false]),
+    /* Is object i de-activated */ 
+    if ( last(o[i]) # "hide") then return ([sconcat(txt, " ist nicht deaktiviert."), false]),
+    /* Any reactions found at i? */
+    if not listp(n[i]) or n[i]=[] then return([sconcat(txt, "Keine Reaktion gefunden."), false]),
+    /* Exactly 2 reaction found? */
+    if (length(n[i]) > 2) then return( [sconcat(txt, "Mehr als 2 Reaktionen gefunden."), false]),
+    /* Is the reaction a force? */
+    if (length(n[i]) < 2) then return( [sconcat(txt, "Weniger als 2 Reaktionen gefunden."), false]),
+    R1: o[n[i][1]], R2: o[n[i][2]], 
+    /* Is the reaction a force? */
+    if ( o[n[i][1]][1] # "force" )  
+    then return ([sconcat(txt, "Die Reaktion \\(", R1[2], "\\) muss eine Kraft sein."),false]),
+    if ( o[n[i][2]][1] # "force" ) 
+    then return ([sconcat(txt, "Die Reaktion \\(", R2[2], "\\) muss eine Kraft sein."),false]),
+    /* Equal names? */
+    if (R1[2] = R2[2]) then return ([sconcat(txt, "Die Reaktionen müssen verschiedene Namen haben."),false]),
+    /* Are the reactions non-parallel? */
+    if parallelp(R1, R2) then return ([sconcat(txt, "Die Reaktionen \\(", R1[2], ",", R2[2], "\\) sind parallel."),false]),
+    /* everything should be ok here */
+    return([sconcat(txt, "Reaktionen \\(", R1[2], ",", R2[2], "\\) gefunden. "),true])  
+);
+fb_fix12_name(o, n, i):=block(
+    [dir, idx, nl, L, R, txt: "", flag:false],
+    /* do the non-name checks to avoid runtime-errors */
+    if not member(o[i][1], ["fix12"]) then return (["", false]),
+    /* Is object i de-activated */ 
+    if ( last(o[i]) # "hide") then return (["", false]),
+    /* Any reactions found at i? */
+    if not listp(n[i]) or n[i]=[] then return(["", false]),
+    /* Exactly 2 reaction found? */
+    if (length(n[i]) > 2) then return( ["", false]),  
+    for ir in n[i] do (      /* loop over the reactions */
+       R: o[ir],
+       /* Is the reaction a force? */
+       if ( R[1] # "force" ) then return,
+       /* Extract name parts */
+       nl: split(R[2],"_"),
+       /* base name single character? */    
+       if slength(nl[1]) > 1 then (flag:true,
+          txt: sconcat(txt, "<br>\\(", R[2], 
+            "\\): Physikalische Gr&ouml;&szlig;en immer nur mit einem Buchstabe und eventuell Index schreiben, z.B. <code>F_1</code>." ),
+             return(return)),
+       /* force name matches support name?*/
+       if is(nl[1] # o[i][2]) then (flag:true, 
+            txt: sconcat(txt, "<br>Der Name \\(", R[2], "\\) passt nicht zum Name des Lagerpunkts.")),
+       /* is there an index? */
+       if length(nl) # 2 then (flag: true,
+         txt:sconcat(txt, "<br>\\(", R[2], "\\) sollte einen Richtungsindex (x, y, h, v) haben.")),
+       /* is  index just a single character? */
+       idx: last(nl),
+       if slength(idx) > 1 then (flag:true,
+        txt: sconcat(txt,"<br>\\(", R[2], "\\): Ein Buchstabe sollte für den Index reichen." )),
+       /* is the index known? */
+       if not member(sdowncase(idx), ["h","v","x","y"]) then (flag:true,
+            txt: sconcat(txt, "<br>\\(", R[2], "\\): Der Richtungsindex sollte h, v, x oder y sein")),
+       /* check directions */
+       dir: direction(R),
+       if (sdowncase(idx)="h" and abs(dir[2]) > 0.01) then (flag:true,
+            txt: sconcat(txt, "<br>\\(", R[2], "\\) m&uuml;sste eine horizontale Kraft bezeichnen.")),   
+       if (sdowncase(idx)="v" and abs(dir[1]) > 0.01) then (flag:true,
+            txt: sconcat(txt, "<br>\\(", R[2], "\\) m&uuml;sste eine vertikale Kraft bezeichnen.")),         
+       if (sdowncase(idx)="x" and (abs(dir[2]) > 0.01 or dir[1] <0) ) then (flag:true,
+            txt: sconcat(txt, "<br>\\(", R[2], "\\) m&uuml;sste eine Kraft in positive x-Richtung (nach rechts) bezeichnen.")),         
+       if (sdowncase(idx)="y" and (abs(dir[1]) > 0.01 or dir[2] <0) ) then(flag:true,
+            txt: sconcat(txt, "<br>\\(", R[2], "\\) m&uuml;sste eine Kraft in positive y-Richtung (nach oben) bezeichnen."))
+    ),
+ if flag then return([txt,false]),
+   ["",true]
+);
+
+/* https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix123%22 */
+fb_fix123(o, n, i, description):=block(
+    [sname: o[i][2], txt: sconcat("<br>",description), lf, lm],
+    /* Is object i a built-in support? */
+    if not member(o[i][1], ["fix123"]) 
+    then return ([sconcat(txt, "object ", string(i), "(",o[i][1],") is not a built-in support."), false]),
+    /* Is object i de-activated */ 
+    if ( last(o[i]) # "hide") then return ([sconcat(txt, " ist nicht deaktiviert."), false]),
+    /* Any reactions found at i? */
+    if not listp(n[i]) or n[i]=[] then return([sconcat(txt, "Keine Reaktion gefunden."), false]),
+    /* Too few reactions found? */
+    if (length(n[i]) <3) then return( [sconcat(txt, "Weniger als drei Reaktionen gefunden."), false]),
+    /* Too many reactions found? */
+    if (length(n[i]) >3) then return( [sconcat(txt, "Mehr als drei Reaktionen gefunden."), false]),
+    /* 2 forces and 1 moment?*/
+    lf: sublist(n[i], lambda ([x], o[x][1]="force")),
+    lm: sublist(n[i], lambda ([x], o[x][1]="moment")),
+    if ( length(lf) # 2 or length(lm) #1) then return ([sconcat(txt, "Kräfte: ",  length(lf), ", Momente: ", length(lm), " gefunden"),false]),
+    /* Forces not parallel? */
+    if (parallelp( o[lf[1]], o[lf[2]] ) ) then return([sconcat(txt, "Die Reaktionen \\(", n[lf[1]], "\\) und \\(", n[lf[2]], "\\) sind parallel."), false]),
+    /* everything should be ok here */
+    return([sconcat(txt, "Reaktionskräfte \\(", n[lf[1]], ",", n[lf[2]], "\\) und Moment \\(", n[lm[1]], "\\) gefunden."),true])
+);
+fb_fix123_name(o, n, i):=block(
+    [sname: o[i][2], txt: "", ir, fb_required, ntxt, nok],
+    /* make sure that there is at least one reaction */
+    if not listp(n[i]) or n[i]=[] then return(["", false]),
+    /*iterate over reactions*/
+    fb_required: false,
+    for ir in n[i] do (
+        /* feedback for forces */
+        if o[ir][1]="force" then (
+            if (sname # first(charlist( o[ir][2] ))  ) then (
+                 txt: sconcat(txt, "<br>Der Name \\(", n[ir], "\\) passt nicht zum Name des Lagerpunktes."),
+                 fb_required: true),
+            [ntxt,nok]: fb_force_hvxy(o, ir),
+            if not nok then (
+                txt: sconcat(txt, "<br>", ntxt), 
+                fb_required: true)
+         ),
+		/* Feedback for moments */
+        if o[ir][1]="moment" then (
+            if (sname # last(charlist( o[ir][2] ))  ) then (
+                txt: sconcat(txt, "<br>Der Name \\(", n[ir], "\\) passt nicht zum Name des Lagerpunktes."), 
+                fb_required: true),
+            if (first(charlist( o[ir][2] )) # "M" ) then (
+                txt: sconcat(txt, "<br>Der Name \\(", n[ir], "\\) passt nicht zu einem Moment."),
+                fb_required: true)
+        )
+    ),
+    if fb_required then return([txt, false]),
+    ["",true]
+);
+
+/* https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix13%22 */
+fb_fix13(o, n, i, description):=block(
+    [sname: o[i][2], txt: sconcat("<br>",description), lf, lm],
+    /* Is object a frictionless support? */
+    if not member(o[i][1], ["fix13"]) 
+    then return ([sconcat(txt, "object ", string(i), "(",o[i][1],") is not a frictionless support."), false]),
+    /* Is object i de-activated */ 
+    if ( last(o[i]) # "hide") then return ([sconcat(txt, " ist nicht deaktiviert."), false]),
+    /* Any reactions found at i? */
+    if not listp(n[i]) or n[i]=[] then return([sconcat(txt, "Keine Reaktion gefunden."), false]),
+    /* Too few reactions found? */
+    if (length(n[i]) <2) then return( [sconcat(txt, "Weniger als zwei Reaktionen gefunden."), false]),
+    /* Too many reactions found? */
+    if (length(n[i]) >2) then return( [sconcat(txt, "Mehr als zwei Reaktionen gefunden."), false]),
+    /* 1 force and 1 moment?*/
+    lf: sublist(n[i], lambda ([x], o[x][1]="force")),
+    lm: sublist(n[i], lambda ([x], o[x][1]="moment")),
+    if ( length(lf) # 1 or length(lm) #1) then return ([sconcat(txt, "Kräfte: ",  length(lf), ", Momente: ", length(lm), " gefunden"),false]),
+    /* Forces in correct direction? */
+    if (not parallelp( o[i], o[lf[1]] ) ) then return([sconcat(txt, "Die Reaktion \\(", n[lf[1]], "\\) hat nicht die richtige Richtung."), false]),
+    /* everything should be ok here */
+    return([sconcat(txt, "Reaktionskraft \\(", n[lf[1]], "\\) und Moment \\(", n[lm[1]], "\\) gefunden."),true])
+);
+
+fb_fix13_names(o, n, i):=block(
+    [sname: o[i][2], txt: "", ir, fb_required, ntxt, nok],
+    /* make sure that there is at least one reaction */
+    if not listp(n[i]) or n[i]=[] then return(["", false]),
+    /*iterate over reactions*/
+    fb_required: false,
+    for ir in n[i] do (
+        /* feedback for forces */
+        if o[ir][1]="force" then (
+             if slength(o[ir][2]) # 1 then (
+                  txt: sconcat( txt, "<br> \\(", n[ir], "\\) Ein einzelner Buchstabe sollte f&uuml;r die Bezeichnung der Kraft ausreichen"),
+                  fb_required: true),
+            if (sname # o[ir][2]   ) then (
+                 txt: sconcat(txt, "<br>Der Name \\(", n[ir], "\\) passt nicht zum Name des Lagerpunktes."),
+                 fb_required: true),
+            /* [ntxt,nok]: fb_force_hvxy(o, ir), */
+            if not nok then (
+                txt: sconcat(txt, "<br>", ntxt), 
+                fb_required: true)
+         ),
+        if o[ir][1]="moment" then (
+            if (sname # last(charlist( o[ir][2] ))  ) then (
+                txt: sconcat(txt, "<br>Der Name \\(", n[ir], "\\) passt nicht zum Name des Lagerpunktes."), 
+                fb_required: true),
+            if (first(charlist( o[ir][2] )) # "M" ) then (
+                txt: sconcat(txt, "<br>Der Name \\(", n[ir], "\\) passt nicht zu einem Moment."),
+                fb_required: true)
+        )
+    ),
+    if fb_required then return([txt, false]),
+    ["",true]
+);
+/* Alias for consistency */
+fb_fix13_name(%_o, %_n, %_i):= fb_fix13_names(%_o, %_n, %_i);
+
+/* https://github.com/mkraska/meclib/wiki/Feedback-for-unidirectional-supports */
+fb_unidir(o, n, i, description):=block(
+    [txt, R], txt: description,
+    /* Is object i an unidirectional support? */
+    if not member(o[i][1], ["bar", "dashpot", "springt", "springc", "fix1", "rope"]) 
+    then return ([sconcat(txt, "object ", string(i), " (",o[i][1],") is not an unidirectional support."), false]),
+    /* Is object i de-activated */ 
+    if ( last(o[i]) # "hide") then return ([sconcat(txt, "Nicht deaktiviert."), false]),
+    /* Any reactions found at i? */
+    if not listp(n[i]) or n[i]=[] then return([sconcat(txt, "Keine Reaktion gefunden."), false]),
+    /* Exactly 1 reaction found? */
+    if (length(n[i]) > 1) then return( [sconcat(txt, "Mehr als eine Reaktion gefunden."), false]),
+    /* Is the reaction a force? */
+    if ( o[n[i][1]][1] # "force" ) then return ([sconcat(txt, "Die Reaktion muss eine Kraft sein."),false]),
+    R: o[n[i][1]], 
+    /* Is the force normal to the support? */
+    if not parallelp(R, o[i]) then return ([castext_concat(txt, castext("Die Reaktion \\({@n[n[i][1]]@}\\) hat nicht die richtige Richtung.") ),false]),
+    /* everything should be ok here */
+    return([castext_concat(txt, castext("Reaktion \\({@n[n[i][1]]@}\\) gefunden.") ),true])
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_resolve_ref */
+/* Resolves a "contact" targetRef (name string or 1-based index) to an index into o. */
+/* Returns false if the reference cannot be resolved unambiguously. */
+fb_resolve_ref(%_o, %_ref):=block([%_idx],
+  if integerp(%_ref) then return(%_ref),
+  %_idx: sublist_indices(%_o, lambda([%_x], %_x[2] = %_ref)),
+  if length(%_idx) # 1 then return(false),
+  first(%_idx)
+);
+
+/* https://github.com/mkraska/meclib/wiki/Feedback-for-"contact" */
+fb_contact(%_o, %_n, %_i, %_description):=block(
+    [%_txt: %_description, %_ref, %_j, %_R, %_refname],
+    /* Is object i a contact? */
+    if ( %_o[%_i][1] # "contact" ) then return ([sconcat(%_txt, "object ", string(%_i), " is not a contact."), false]),
+    /* Resolve the referenced (cut-away) object */
+    %_ref: %_o[%_i][5],
+    %_j: fb_resolve_ref(%_o, %_ref),
+    if %_j = false then return ([sconcat(%_txt, "Referenziertes Objekt '", string(%_ref), "' nicht gefunden oder mehrdeutig."), false]),
+    /* Is the referenced object de-activated? */
+    if ( last(%_o[%_j]) # "hide") then (
+      %_refname: %_o[%_j][2],
+      if %_refname = "" then return ([sconcat(%_txt, "Umgebung bei ", string(%_ref), " nicht deaktiviert."), false])
+                        else return ([sconcat(%_txt, "'", %_refname, "' ist nicht deaktiviert."), false])
+    ),
+    /* Any reactions found at i? */
+    if not listp(%_n[%_i]) or %_n[%_i]=[] then return([sconcat(%_txt, "Keine Reaktion gefunden."), false]),
+    /* Exactly 1 reaction found? */
+    if (length(%_n[%_i]) > 1) then return( [sconcat(%_txt, "Mehr als eine Reaktion gefunden."), false]),
+    /* Is the reaction a force? */
+    if ( %_o[%_n[%_i][1]][1] # "force" ) then return ([sconcat(%_txt, "Die Reaktion muss eine Kraft sein."),false]),
+    %_R: %_o[%_n[%_i][1]],
+    /* Is the force normal to the contact? */
+    if not parallelp(%_R, %_o[%_i]) then return ([castext_concat(%_txt, castext("Die Reaktion \\({@%_n[%_n[%_i][1]]@}\\) hat nicht die richtige Richtung.") ),false]),
+    /* everything should be ok here */
+    return([castext_concat(%_txt, castext("Reaktion \\({@%_n[%_n[%_i][1]]@}\\) gefunden.") ),true])
+);
+
+/* https://github.com/mkraska/meclib/wiki/Feedback-for-line-loads */
+fb_q(o, n, i, description,q1,q2,le):=block(
+    [varcheck, txt: description, %_v, ir, ir1, ir2, %_R, mag, a0, xref, Rref, lm],
+    /* Is object a line load? */
+    if not member(o[i][1], ["q"]) 
+       then return ([sconcat(txt, "object ", string(i), " (",o[i][1],") is not a line load."), false]),
+    /* Resultant force */
+    %_v: o[i][5]-o[i][4],
+    mag: (cabs(%_v[1]+%i*%_v[2]))*le*(q1+q2)/2, a0: carg(%_v[1]+%i*%_v[2]),
+    xref: (o[i][4]*(2/3*q1+q2/3)+o[i][5]*(q1/3+2/3*q2))/(q1+q2), 
+    Rref: [ "force", mag, xref, xref+[-sin(a0+o[i][8]*pi/180), -cos(a0+o[i][8]*pi/180)] ],
+    /* Is object i de-activated */ 
+    if ( last(o[i]) # "hide") then return ([sconcat(txt, "ist nicht deaktiviert."), false]),
+    /* Any reactions found at i? */
+    if not listp(n[i]) or n[i]=[] then return([sconcat(txt, "Keine Resultierende gefunden."), false]),
+    /* forces only?*/
+    lm: sublist(n[i], lambda ([x], o[x][1]="moment")),
+    if ( length(lm) # 0 ) then (
+        for ir in lm do txt: castext_concat(txt, castext("{@n[ir]@}") ),
+        return ([castext_concat(txt, " ist keine Kraft." ),false])
+    ),
+    if (length(n[i]) =1) then (     /* just one reaction */
+      /* correct direction? */
+      ir: n[i][1],
+      if abs(angle(Rref, o[ir]))>0.01 then 
+        return([castext_concat(txt, castext("Die Resultierende {@n[ir]@} hat nicht die richtige Richtung.") ) ,false]),
+      /* correct set of variables in the expression */
+      varcheck: fb_vars(n[ir], mag, []),
+      if varcheck # "" then return( [
+	  castext_concat( castext_concat( txt, castext("Die Resultierende {@n[ir]@} hat nicht den richtigen Betrag. ") ), varcheck),
+          false]),
+      /* correct value (comparison requires consistent set of variables) */
+      if (mag-n[ir])/mag>0.01 then 
+         return([castext_concat(txt, castext("Die Resultierende {@n[ir]@} hat nicht den richtigen Betrag.") ) ,false]),
+      /* correct position? */
+      if abs(moment_of_force(xref, o[ir], 1, 1) ) > 0.01 then  
+        return([castext_concat(txt, castext("Die Resultierende {@n[ir]@} geht nicht durch den Schwerpunkt.") ) ,false])
+    ) else ( /* two resultants, should be a trapezoidal load */
+      /* just two resultants? */
+      if (length(n[i]) >2) then (
+        %_R: fb_strip_list(makelist(n[n[i][ir]], ir, 1, length(n[i]) ) ),
+        return([lreduce(castext_concat, [txt, "Höchstens zwei Resultierende sind sinnvoll. Gefunden wurden mehr:<br>", %_R ] ), false])
+      ),
+      if q1 = q2 then return([sconcat(txt, "Bei konstanter Streckenlast sollte eine Resultierende ausreichen.") ,false]),
+      if q1*q2 =0 then return([sconcat(txt, "Bei einer Dreiecks-Streckenlast sollte eine Resultierende ausreichen.") ,false]),
+      /* correct direction? */
+      ir1: n[i][1], ir2: n[i][2],
+      if abs(angle(Rref, o[ir1]))>0.01 then 
+        return([castext_concat(txt, castext("Die Resultierende {@n[ir1]@} hat nicht die richtige Richtung.") ) ,false]),
+      if abs(angle(Rref, o[ir2]))>0.01 then 
+        return([castext_concat(txt, castext("Die Resultierende {@n[ir2]@} hat nicht die richtige Richtung.") ) ,false]),
+      /* correct value */
+      varcheck: fb_vars(n[ir1], mag, []),
+      if varcheck # "" then return([ castext_concat( castext_concat( txt, castext("Die Resultierende {@n[ir1]@} kann nicht stimmen. ") ), varcheck) ,false]),
+      varcheck: fb_vars(n[ir2], mag, []),
+      if varcheck # "" then return([ castext_concat( castext_concat( txt, castext("Die Resultierende {@n[ir2]@} kann nicht stimmen. ") ), varcheck) ,false]),
+      if (mag-n[ir1]-n[ir2])/mag>0.01 then 
+         return([castext_concat(txt, castext("Die Summe der Resultierenden {@n[ir1]+n[ir2]@} hat nicht den richtigen Wert. ") ) ,false]),
+      /* correct position? */
+      if abs((moment_of_force(xref, o[ir1], n[ir1], 1) + moment_of_force(xref, o[ir2], n[ir2], 1))/mag ) > 0.01 then  
+        return( [castext_concat(txt, castext("Pr&uuml;fen Sie die Lage der Resultierenden. Der gemeinsame Schwerpunkt entspricht nicht der Streckenlast. <br>{@n[ir1]@}, {@n[ir2]@}") ) ,false])
+    ),
+   [sconcat(txt, "Resultierende OK") ,true]
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_bar */
+fb_bar(o, n, i, [opt]):=block(
+    [txt, R, name, testT, test2, L], 
+	/* Extract options */
+    if length(opt) = 1 then opt: string(opt[1]) else opt: "",
+    testT: member("T", charlist(opt)),
+    test2: member("2", charlist(opt)),
+    /* Is object i a bar? */
+    if o[i][1]  # "bar" then return ([sconcat("object ", string(i), " (",o[i][1],") is not a bar."), false]),
+    /* Has the object a name? The name is used later to identify associated reactions. */
+    name: o[i][2],
+    if name = "" then return ([ sconcat("object #", string(i), " has no name."), false]),
+    txt: sconcat("Stab ", name, ": "),
+    /* Is object i de-activated */ 
+    if ( last(o[i]) # "hide") then return ([sconcat(txt, "Nicht deaktiviert."), false]),
+    /* Extract forces with matching name*/
+    if listp(n[i]) then L: sublist (n[i], lambda ([x], o[x][1]="force" and split(o[x][2],"_")[2] = name )) else L: [],
+    /* Check number of forces */
+    if L = [] then return ([ sconcat(txt, "Keine Stabkraft mit passendem Namen (mit Index ", name, ") gefunden.") , false]),
+    /* Single force required */    
+    if not test2 then (
+      R: o[L[1]],
+      /* force parallel to bar? */
+      if not parallelp(R, o[i]) then return ([castext_concat(txt, castext("{@n[L[1]]@} ist nicht parallel zum Stab.") ),false]),
+      /* eventually complaining about wrong direction */
+      if testT and (abs(angle(R, o[i])) > 0.1) then return ([castext_concat(txt, castext("{@n[L[1]]@} ist nicht als Zugkraft definiert.") ), false] ),
+      return ([castext_concat(txt, castext("{@n[L[1]]@} OK.") ), true] ) 
+    )
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_bar_name */
+fb_bar_name(%_o, %_n, %_i):=block(
+  [%_str,%_R,%_nl,%_OK,%_var, %_bl],
+  /* are the values consistent? */
+  if length(%_n) # length(%_o) then return(sconcat("length(o)= ",length(%_o), " length(n)=", length(%_n))),
+  if length(%_n) < %_i then return(sconcat("length(n)= ",length(%_n), " <", %_i)),
+  /* is the object a bar */
+  if not member(%_o[%_i][1], ["bar"]) then return ([sconcat("object ", %_i, " is not of type 'bar'"), false]),
+  /* Is object i de-activated */ 
+  if debug then %_str: sconcat("object ", %_i, " is not deactivated (debug message)" ) else %_str: "",
+  if ( last(%_o[%_i]) # "hide") then return ([%_str, false]),
+  /* Any reactions found at i? */
+  if debug then %_str: sconcat("no reaction found at object ", %_i, " (debug message)" ) else %_str: "",
+  if not listp(%_n[%_i]) or %_n[%_i]=[] then return([%_str, false]),
+  /* Exactly 1 reaction found? */
+  if debug then %_str: sconcat("more than one reaction found ", %_n[%_i], " (debug message)" ) else %_str: "",
+  if (length(%_n[%_i]) > 1) then return( [%_str, false]),  
+  /* now we know it is a single reaction */ 
+  %_R: %_o[%_n[%_i][1]],
+  %_var: %_n[%_n[%_i][1]],
+  /* Is the reaction a force? */
+  if debug then %_str: sconcat("Reaction ", %_R[2], " is not a force (debug message)" ) else	 %_str: "",
+  if %_R[1] # "force" then return( [%_str, false]), 
+  /* now we have a valid reaction, the remainder is about naming */
+  %_str: "",
+  %_OK: true,
+  /* Extract name parts */
+  %_nl: split(%_R[2],"_"),
+  /* base name single character? */    
+  if slength(%_nl[1]) > 1 then [ %_str, %_OK ]: 
+    [ castext( "<br>{@%_var@}: Physikalische Gr&ouml;&szlig;en immer nur mit einem Buchstabe und eventuell Index schreiben, z.B. <code>F_1</code>." 
+        ), false ],    
+  /* base name a sensible character? (F-Kraft, N-Normalkraft, S-Stabkraft)  */ 
+  if not member(charlist(%_nl[1])[1], ["F", "N", "S" ])  then [ %_str, %_OK ]: 
+    [ castext_concat( %_str, castext("<br>{@%_var@}: Sinnvolle Namen für eine Stabkraft sind \\(F\\) (Kraft), \\(N\\) (Normalkraft) oder \\(S\\) (Stabkraft)") ), false ],   
+  /* label of the bar */
+  %_bl: %_o[%_i][2], 
+  if %_bl # "" then (
+    /* the label is not empty */
+    if length(%_nl) = 2 then /* the reaction should have an index */
+      if %_bl # %_nl[2] then /* the index and the label don't match */
+        [ %_str, %_OK ]: 
+    [ castext_concat( %_str, castext("<br>Der Index {@%_nl[2]@} passt nicht zum Stabname {@%_bl@}.")), false ]
+  ), 
+      
+  [%_str, %_OK]
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_name */
+fb_name(n,i,lon):=block([name,txt],
+  name: none,
+  if listp(n[i]) and  not emptyp(n[i]) then name: n[n[i][1]] else return(["", false]),
+  if member(name,lon) then return( ["",true]) else 
+    return([castext("\\({@name@} \\) ist kein passender Name für die Lagerreaktion."), false]) 
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_reactions() */
+fb_reactions(%_o, %_f, %_m):=block(
+  [%_fnum, %_mnum, %_txt, %_OK],
+  %_fnum: length(sublist_indices (%_o, lambda ([x], x[1]="force" and last(x)="active" and  not sposition(" ",x[2])))),
+  %_mnum: length(sublist_indices (%_o, lambda ([x], x[1]="moment" and last(x)="active"))),
+  if (%_fnum=%_f) and (%_mnum=%_m) then [%_txt, %_OK]: ["&nbsp;Die Zahl der Reaktionen stimmt.",true] else (
+    %_OK: false, %_txt: "", 
+    if %_fnum # %_f then %_txt: sconcat(%_txt, "<br>Die Zahl der Reaktionskräfte stimmt nicht."),
+    if %_mnum # %_m then %_txt: sconcat(%_txt, "<br>Die Zahl der Reaktionsmomente stimmt nicht.")
+  ),
+  [%_txt,%_OK]  
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_system() */
+/* %_names[%_i] is either a state string ("show"/"hide"/"SHOW"/"HIDE") or, once loads have been
+   matched to the object, a list of load indices - stringp() guards sdowncase() against the latter. */
+fb_system(%_names, %_sys, %_env, %_hint):=block(
+  [%_i, %_fb: ["&nbsp;Die Systemgrenzen stimmen. ", true],
+        %_fbfalse: [sconcat("&nbsp;Die Systemgrenzen stimmen nicht. ", %_hint), false ] ],
+  for %_i in %_sys do if (not stringp(%_names[%_i]) or sdowncase(%_names[%_i]) # "show") then %_fb: %_fbfalse,
+  for %_i in %_env do if (stringp(%_names[%_i]) and sdowncase(%_names[%_i]) = "show") then %_fb: %_fbfalse,
+  return(%_fb)
+);
+
+/* https://github.com/mkraska/meclib/wiki/MatchByParallel%28%29 */
+matchByParallel(o,n):=block([res, llist],res: [],
+    /* for all objects */
+    for i:1 thru length(o) do (
+        /* if names entry is not a list, copy it to result */
+        if (not listp(n[i])) then res: endcons(n[i], res) else (
+            /* either a nondirectional item or parallel to the force */
+            llist: sublist(n[i], 
+                lambda([x], 
+                    member(o[i][1], [ "fix12, fix123", "circle"]) or
+                    parallelp(o[i], o[x] )
+                )
+            ),
+            res: endcons(llist, res)
+        )
+    ),
+    return(res)
+);
