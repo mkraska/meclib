@@ -86,6 +86,50 @@ perpendicularp(a,b):= block([da,db],
         return(is (abs(da[1]*db[1]+da[2]*db[2])<0.05) )
 );
 
+/* https://github.com/mkraska/meclib/wiki/contributor%28%29 */
+/* Purely formative helper for a direction-choice PRT (no grading effect of its own): lists the
+   names of every "force" object in o (regardless of state - an external force, a recognized
+   reaction, or a reaction the student placed somewhere a "contact" doesn't recognize) that will
+   actually contribute a non-negligible term when summed along the direction of the "dir" object
+   at index i_dir, i.e. when o is later passed to sum_dir(o, n, direction(o[i_dir])).
+   Deliberately does NOT reuse perpendicularp(), which compares the RAW (non-normalized)
+   direction() vectors - for a "force" object that vector is o[4]-o[3], whose length depends on
+   how long the student happened to drag the arrow, so a fixed threshold on that raw dot product
+   is not meaningfully comparable across forces of different length. Instead this recomputes the
+   same normalized projection coefficient sum_dir itself would use (unit force vector dotted with
+   the direction), and compares its absolute value against tol directly - so tol is on the same
+   footing as the coefficient tolerance already used in fb_coeffs.
+   Returns the list of names (n[i]) of the contributing forces, ready for fb_strip_list(); an
+   empty list means every force present is (numerically) perpendicular to this direction. */
+contributor(o, n, i_dir, tol):= block([d: direction(o[i_dir]), v, u, result: []],
+  for i: 1 thru length(o) do (
+    if o[i][1] = "force" then (
+      v: o[i][4]-o[i][3],
+      u: v/sqrt(v[1]^2+v[2]^2),
+      if abs(u[1]*d[1]+u[2]*d[2]) > tol then result: cons(n[i], result)
+    )
+  ),
+  reverse(result)
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_dir */
+/* Purely formative feedback for a direction-choice PRT, wrapping contributor() into the same
+   [text, flag] result shape as fb_fix1/fb_contact/fb_coeffs/etc. so it can be dropped into a PRT
+   node the same way. flag is always true - this feedback has no grading effect of its own, so
+   the calling PRT should always take its true-branch regardless of what is found.
+   %_desc is the phrase naming the direction, inserted as-is at the end of the sentence, e.g.
+   "in 1-Richtung" (so this stays reusable in other questions/languages without hardcoding the
+   direction's own name or numbering here). */
+fb_dir(%_o, %_n, %_i_dir, %_tol, %_desc):= block([%_contrib],
+  %_contrib: contributor(%_o, %_n, %_i_dir, %_tol),
+  if %_contrib = [] then
+    [castext_concat(castext_concat("Keine Kraft hat Anteile ", %_desc), "."), true]
+  elseif length(%_contrib) = 1 then
+    [castext_concat(castext_concat(fb_strip_list(%_contrib), " hat Anteile "), castext_concat(%_desc, ".")), true]
+  else
+    [castext_concat(castext_concat(fb_strip_list(%_contrib), " haben Anteile "), castext_concat(%_desc, ".")), true]
+);
+
 /* https://github.com/mkraska/meclib/wiki/fb_force_hvxy */
 fb_force_hvxy(o,i):=block([dir, name, nl, base, idx],
     name: o[i][2], nl: split(name,"_"),
