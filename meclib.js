@@ -662,15 +662,16 @@ class dim {
 // ["dir", "name", [x1,y1], angle]
 // ["dir", "name", [x1,y1], angle, offset]
 // ["dir", "name", [x1,y1], angle, offset, length]
-// ["dir", "name", [x1,y1], angle, offset, length, interactive]
-// interactive (optional, falsy by default): if truthy, the tip point (p2) becomes movable
-// (base p1 stays fixed) so the student can drag out a direction; data() then writes the live
-// angle back into data[3] so it can be read via direction() on the Maxima side.
+// ["dir", "name", [x1,y1], angle, offset, length, "active"]
+// state (optional 7th element, 6th index; same convention as force/moment's state string):
+// if "active", the tip point (p2) becomes movable (base p1 stays fixed) so the student can
+// drag out a direction; data() then writes the live angle back into data[3] so it can be
+// read via direction() on the Maxima side. Not meant to be toggled after creation.
 class dir {
  constructor(data) {
    this.label = data[1];
    this.d = data.slice(0); //make a copy
-   this.interactive = !!data[6];
+   this.interactive = (data[6] === "active");
    let le = 24*pxunit;
    this.dist = data[4] || 10;
    data[5] && (le = data[5]);
@@ -688,7 +689,10 @@ class dir {
      this.p2.on("up", update);
      this.p2.angleRef = () => XY(this.p1); // show the angle from horizontal in the infobox while dragging
    }
-   this.vec = board.create('arrow', [this.p1, this.p2], {lastArrow: { type: 1, size: 6 }, ...thinStyle });
+   // touchLastPoint: the arrow head stops at the edge of p2's circle instead of running through
+   // its center, so the (draggable, layer-11) control point doesn't visually cover the arrowhead
+   // - same fix already used for this purpose on the "force" arrow.
+   this.vec = board.create('arrow', [this.p1, this.p2], {touchLastPoint: true, lastArrow: { type: 1, size: 6 }, ...thinStyle });
  }
  data() {
    if (this.interactive) {
