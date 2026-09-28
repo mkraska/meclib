@@ -54,10 +54,20 @@ sum_xyM(o,n,p,lu):=block([f: 0,m: 0],
 /* Simple single-direction variant of sum_xyM: sums the scalar projections of all matched
    "force" loads in o/n onto a single given direction vector d (e.g. from direction() on a
    "dir" object). Intended for central/concurrent force systems, where only force equilibrium
-   in self-chosen directions is needed and no moment term applies. */
-sum_dir(o,n,d):=block([f: 0, u],
+   in self-chosen directions is needed and no moment term applies.
+   Unlike sum_xyM (which uses unitvec()'s 0.1-grid rounding - appropriate for a hand-dragged
+   force arrow, whose own JSXGraph point already snaps to the grid), the force direction here
+   is normalized exactly, without that extra rounding step: it is redundant with the JSXGraph
+   grid snap, and for a force at a fixed, exactly-known geometric position (as with a "dir"-based
+   equilibrium direction) it would introduce its own small, spurious deviation from an otherwise
+   exact perpendicularity. */
+sum_dir(o,n,d):=block([f: 0, v, u],
   for i:1 thru length(o) do (
-    if (o[i][1]="force") then (u: unitvec(o[i]), f: f+n[i]*(u[1]*d[1]+u[2]*d[2]))
+    if (o[i][1]="force") then (
+      v: o[i][4]-o[i][3],
+      u: v/sqrt(v[1]^2+v[2]^2),
+      f: f+n[i]*(u[1]*d[1]+u[2]*d[2])
+    )
   ),
   f
 );
