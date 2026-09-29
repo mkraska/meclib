@@ -1,0 +1,746 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+<!-- question: 108557  -->
+  <question type="stack">
+    <name>
+      <text>TM1 02 02 Krangabel mit Rolle (meclib, interaktiv)</text>
+    </name>
+    <questiontext format="markdown">
+      <text><![CDATA[**TM1 02 02**[[lang code="de"]] [[/lang]][[lang code="other"]] [[/lang]]
+
+<p>[[input:objects]] [[validation:objects]]</p>
+<p>[[input:names]] [[validation:names]]</p>
+<div style="float:right">
+[[jsxgraph width='450px' height='350px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
+var mode  = "STACK";
+const initstring = {#init#};
+var decsep = {#stackfltsep#};
+const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
+  anchorX:'left', anchorY:'middle'}};
+// End of STACK header
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/dev2026/meclib.js"/]]
+[[/jsxgraph]]</div>
+
+<p>Eine Rolle mit dem Durchmesser \(D\),  der Länge \(\ell\) und der Dichte \(\rho\)  stützt sich auf eine um den Winkel \(\alpha\) geneigte rechtwinklige Krangabel ab. Zu bestimmen sind die Kontaktkräfte bei \(A\) und \(B\) (als Druckkraft positiv zählen). Gehen Sie von reibungsfreiem Kontakt aus.</p>
+
+Schneiden Sie die Rolle frei, also ersetzen Sie die Wirkung der Krangabel durch Reaktionskräfte.
+
+[[lang code="de"]]
+<details><summary><strong>Bedienungshinweise</strong></summary>
+<ul>
+ <li>Objekte (de-)aktivieren: Doppelklick
+ <li>Kraft/Moment
+ <ul>
+   <li>erzeugen: Name (oder Ausdruck für Wert) eintragen und grauen Pfeil auf die Skizze ziehen
+  <li>löschen: Doppelklicken
+  <li>Name ändern: Löschen und neu erzeugen. Sorry, etwas unbequem :(
+  <li>Position und Richtung ändern: Rote Kontrollpunkte ziehen
+ </ul>
+<li> Resultierende von Streckenlasten: Mindestens ein Kontrollpunkt muss auf der Streckenlast liegen
+<li> Reaktionskräfte: Anfangs- oder Endpunkt müssen auf dem Lagerpunkt oder Kontaktpunkt liegen
+<li> Reaktionsmomente: Mittelpunkt muss auf dem Lager liegen
+<li> Richtung für die Gleichgewichtsbedingung wählen: Roten Pfeil an der Spitze ziehen
+</ul>
+</details>
+[[/lang]]
+[[lang code="other"]]
+<details><summary><strong>Hints for interactive input</strong></summary>
+<ul>
+<li>Activate/de-activate objects: double click
+<li>Force/moment
+  <ul>
+  <li>Create: Enter name (or expression indicating the value) in the text field and then drag the gray arrow onto the sketch.
+  <li>Delete: Double click on the arrow
+  <li>Change name: Delete and create new with correct name. Sorry, somewhat inconvenient :(
+  <li>Change position and direction: Drag red control points
+  </ul>
+<li>Resultants of line loads: At least one control point is on the line load area
+<li>Force reactions: Either of the two control points must be on the support or contact point
+<li>Moment reactions: Center point must coincide with the support point.
+<li>Choose a direction for an equilibrium condition: Drag the red arrow tip
+</ul>
+</details>
+
+[[/lang]]
+
+
+[[feedback:fbd]]
+
+<p>Hinweis: Stellen Sie nun die Gleichgewichtsbedingungen auf. Bei geeigneter Wahl der Koordinatenrichtungen erhalten Sie zwei Gleichungen mit jeweils nur einer Unbekannten.</p>
+<p>Wählen Sie oben in der Skizze zwei Richtungen (rote Pfeile an der inneren Ecke der Gabel) und stellen Sie für jede Richtung das Kräftegleichgewicht auf. Verwenden Sie dabei dieselben Namen, die Sie im Freischnitt für die Reaktionskräfte vergeben haben.</p>
+<p>Gleichgewicht in Richtung 1: [[input:S_GG1]] [[validation:S_GG1]] \(=0\) [[feedback:GG1]]</p>
+<p>Gleichgewicht in Richtung 2: [[input:S_GG2]] [[validation:S_GG2]] \(=0\) [[feedback:GG2]]</p>
+<p>Gegeben:</p>
+<p>\(D = {@Dm*100@} \, \mathrm{cm}\)<br />\(\ell = {@Laenge@} \,\mathrm{m}\)<br />\(\alpha = {@alpha@}^\circ\)<br />\(\rho = {@rho/1000@} \,\mathrm{g/cm^3}\)<br />\(g=10 \,\mathrm{m/s^2}\)</p>
+<p>Zunächst bestimmen Sie aus den gegebenen Größen das Gewicht der Rolle:</p>
+<p>\(G= \) [[input:S_FG]] [[validation:S_FG]] [[feedback:FG]]</p>
+<p>Bestimmen Sie nun die Auflagerkräfte:</p>
+<p>\(A =\) [[input:S_FA]] [[validation:S_FA]] [[feedback:FA]]</p>
+<p>\(B =\) [[input:S_FB]] [[validation:S_FB]] [[feedback:FB]]</p>
+<p>Zahlenwerte bitte auf 5% genau.</p>]]></text>
+<!-- HINWEIS: Der ursprüngliche <file name="Auflager.png" .../>-Block (Base64) wurde hier bewusst
+     NICHT neu eingefügt - beim Abtippen über den Chat kann sich ein so langer Base64-Blob leicht
+     unbemerkt verfälschen. Bitte diesen Block unverändert aus deiner Originaldatei wieder einsetzen;
+     er wird im questiontext ohnehin nirgends per <img> referenziert. -->
+    </questiontext>
+    <generalfeedback format="markdown">
+      <text><![CDATA[<div style="float:right">
+[[jsxgraph width='250px' height='250px' ]]
+var mode  = "STACK";
+var stateRef;
+const initstring = {#ref#};
+const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
+  anchorX:'left', anchorY:'middle'}};
+// End of STACK header
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/dev2026/meclib.js" /]]
+[[/jsxgraph]]</div>
+
+Rechts sehen Sie einen möglichen richtigen Freischnitt mit einer günstigen Wahl der
+Koordinatenrichtungen (jeweils senkrecht zu einer der beiden Kontaktkräfte). Die
+zugehörigen Gleichgewichtsbedingungen lauten:
+
+\(GG_1:\quad {@GG1_disp@} = 0\)
+
+\(GG_2:\quad {@GG2_disp@} = 0\)]]></text>
+    </generalfeedback>
+    <defaultgrade>1</defaultgrade>
+    <penalty>0</penalty>
+    <hidden>0</hidden>
+    <idnumber></idnumber>
+    <stackversion>
+      <text>2026080600</text>
+    </stackversion>
+    <questionvariables>
+      <text><![CDATA[stack_unit_si_declare(true);
+Laenge:  rand_with_step(1.5,2.5,0.5);
+Dm:  rand_with_step(80,120,10)/100;
+alpha: rand_with_step(10,40,10);
+rho: rand_with_step(1,1.3,0.1)*1000;
+ge: 10;
+
+FG: pi/4*Dm^2*Laenge*rho*ge;
+FA: FG*cos(alpha*pi/180);
+FB: FG*sin(alpha*pi/180);
+
+/* Kurzkennzeichnung der Variante fuer die Fragenuebersicht/questionnote:
+   randomisierte Vorgaben plus die daraus folgenden Loesungen. */
+ta1: sconcat("alpha=",alpha,"; D=",Dm,"m; l=",Laenge,"m; rho=",rho,"kg/m^3; ",
+             "G=",dispsf(FG,3),"N; A=",dispsf(FA,3),"N; B=",dispsf(FB,3),"N");
+
+/* --- meclib-Skizze der Krangabel mit Kontaktpunkten --- */
+r: 2;                 /* Rollenradius in Gittereinheiten -- */
+
+uAx: cos(alpha*pi/180); uAy: sin(alpha*pi/180);
+uBx: -sin(alpha*pi/180); uBy: cos(alpha*pi/180);
+V:  [0,0];
+C:  [r*(uAx+uBx), r*(uAy+uBy)];
+PA: [r*uAx, r*uAy];
+PB: [r*uBx, r*uBy];
+armlen: 2*r;
+th: 0.3*r;
+PAo: [armlen*uAx - th*uBx, armlen*uAy - th*uBy];
+PAi: [armlen*uAx, armlen*uAy];
+PBi: [armlen*uBx, armlen*uBy];
+PBo: [armlen*uBx - th*uAx, armlen*uBy - th*uAy];
+Vo:  [-th*(uAx+uBx), -th*(uAy+uBy)];
+
+initdata: [
+  ["grid", "", "", PBo[1]-1.0, PAo[1]+1.0, Vo[2]-1.0, 3.5*r, 40],
+  ["polygon", "gabel", PAo, PAi, V, PBi, PBo, Vo, "show"],
+  ["circle", "", C, r, 0, "SHOW"],
+  ["line", "black", [C[1]-(r+0.2), C[1]+(r+0.2)], [C[2], C[2]], "-."],
+  ["line", "black", [C[1], C[1]], [C[2]-(r+0.2), C[2]+(r+0.2)], "-."],
+  ["dim", "D", [C[1]-r, C[2]], [C[1]+r, C[2]], r+0.5],
+  ["point", "A", PA],
+  ["point", "B", PB],
+  ["point", "S", C],
+  ["force", "mg", C, [C[1], C[2]-1.5], 10, "locked"],
+  ["angle", "\\alpha", PBi, PBi+[0,2], 0.9*r, alpha],
+  ["contact", "", PA, [uBx, uBy], "gabel", 3],
+  ["contact", "", PB, [uAx, uAy], "gabel", 3],
+  ["forceGen", "F", [PAo[1]-1, 3*r]],
+  ["dir", "1", V, 0, 10, 1.5*r, "active"],
+  ["dir", "2", V, 90, 10, 1.5*r, "active"]
+];
+init: stackjson_stringify(initdata);
+
+i_A: 12; i_B: 13;
+i_circle: 3; i_gabel: 2;
+i_dir1: 15; i_dir2: 16;
+sys: [i_circle]; env: [i_gabel];
+
+/* --- Referenzlösung für die interaktiven Inputs "objects"/"names" --- */
+refdata: [
+  ["grid", "", "", PBo[1]-1.0, PAo[1]+1.0, Vo[2]-1.0, 3.5*r, 40],
+  ["polygon", "gabel", PAo, PAi, V, PBi, PBo, Vo, "hide"],
+  ["circle", "", C, r, 0, "SHOW"],
+  ["line", "black", [C[1]-(r+0.2), C[1]+(r+0.2)], [C[2], C[2]], "-."],
+  ["line", "black", [C[1], C[1]], [C[2]-(r+0.2), C[2]+(r+0.2)], "-."],
+  ["dim", "D", [C[1]-r, C[2]], [C[1]+r, C[2]], r+0.5],
+  ["point", "A", PA],
+  ["point", "B", PB],
+  ["point", "S", C],
+  ["force", "mg", C, [C[1], C[2]-1.5], 10, "locked"],
+  ["angle", "\\alpha", PBi, PBi+[0,2], 0.9*r, alpha],
+  ["contact", "", PA, [uBx, uBy], "gabel", 3 ],
+  ["contact", "", PB, [uAx, uAy], "gabel", 3 ],
+  ["forceGen", "F_1", [PAo[1]-1, 3*r]],
+  /* dir1/dir2 bleiben an derselben Position wie in initdata (Index 15/16, siehe i_dir1/i_dir2
+     unten), die geloesten Kraefte kommen wie bei einem echten Freischnitt erst danach dazu.
+     Winkel auf die guenstige ("gedrehte") Richtung senkrecht zu B bzw. A gelegt. */
+  ["dir", "1", V, 90+alpha, 10, 1.5*r],
+  ["dir", "2", V, alpha, 10, 1.5*r],
+  ["force", "A", PA-[uBx,uBy], PA, 10, "active"],
+  ["force", "B", PB-[uAx,uAy], PB, 10, "active"]
+];
+ref: stackjson_stringify(refdata);
+
+/* --- (non-interactive) sketch for general feedback ---*/
+gfbdata: [
+  ["grid", "", "", PBo[1]-1.0, PAo[1]+1.0, Vo[2]-1.0, 3.5*r, 40],
+  ["polygon", "gabel", PAo, PAi, V, PBi, PBo, Vo, "HIDE"],
+  ["circle", "", C, r, 0, "SHOW"],
+  ["line", "black", [C[1]-(r+0.2), C[1]+(r+0.2)], [C[2], C[2]], "-."],
+  ["line", "black", [C[1], C[1]], [C[2]-(r+0.2), C[2]+(r+0.2)], "-."],
+  ["dim", "D", [C[1]-r, C[2]], [C[1]+r, C[2]], r+0.5],
+  ["point", "A", PA],
+  ["point", "B", PB],
+  ["point", "S", C],
+  ["force", "mg", C, [C[1], C[2]-1.5], 10, "locked"],
+  ["angle", "\\alpha", PBi, PBi+[0,2], 0.9*r, alpha],
+  ["contact", "", PA, [uBx, uBy], "gabel", 3 ],
+  ["contact", "", PB, [uAx, uAy], "gabel", 3 ],
+  ["dir", "1", V, 90+alpha, 10, 1.5*r],
+  ["dir", "2", V, alpha, 10, 1.5*r],
+  ["force", "A", PA-[uBx,uBy], PA, 10, "locked"],
+  ["force", "B", PB-[uAx,uAy], PB, 10, "locked"]
+];
+gfb: stackjson_stringify(gfbdata);
+
+stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/fb_value.mac" );
+stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/fb_fbd.mac" );
+
+/* --- statische (Kompilierzeit-)Musterloesung fuer die tans der Eingaben S_GG1/S_GG2 ---
+   Muss NACH den obigen stack_include-Aufrufen stehen, weil sum_dir() erst dadurch
+   definiert wird. Diese "tans"-Musterloesung dient dem Aufgabentest (Vorschau/"richtige
+   Antwort ausfuellen"). Die eigentliche Bewertung der eingegebenen Gleichungen verwendet
+   unten in den PRTs GG1/GG2 die DYNAMISCHE Musterloesung, die aus dem tatsaechlich vom
+   Anwender eingereichten Freischnitt (objects/names, Richtungen obj[i_dir1]/obj[i_dir2])
+   berechnet wird - die beiden sind bewusst unabhaengig voneinander.
+   sum_dir() ignoriert ohnehin alles, was keine "force" ist, daher kann hier direkt die
+   komplette Referenzliste durchgereicht werden, statt eine eigene Teilliste zu bauen. */
+refobj: stackjson_parse(ref);
+refnames: makelist(0, i, 1, length(refobj));
+refnames[10]: mg;   /* Gewichtskraft, in jedem Freischnitt vorhanden */
+refnames[17]: A;    /* Kontaktkraft A */
+refnames[18]: B;    /* Kontaktkraft B */
+GG1_tans: sum_dir(refobj, refnames, direction(refobj[i_dir1]));
+GG2_tans: sum_dir(refobj, refnames, direction(refobj[i_dir2]));
+
+/* Rein fuer die Anzeige im allgemeinen Feedback: dieselbe (fuer jedes alpha
+   allgemeingueltige) Loesung, aber mit "deg" nur zur Gradnotation in der Ausgabe
+   (z.B. "cos(20 deg)" -> "cos(20°)") - deg wird dabei nie ausgewertet, nur getippt,
+   und diese Variablen werden nirgends zur Bewertung herangezogen. */
+GG1_disp: A - mg*cos(alpha*deg);
+GG2_disp: B - mg*sin(alpha*deg);
+
+]]></text>
+    </questionvariables>
+    <specificfeedback format="moodle_auto_format">
+      <text></text>
+    </specificfeedback>
+    <questionnote format="html">
+      <text>{@ta1@}</text>
+    </questionnote>
+    <questiondescription format="html">
+      <text></text>
+    </questiondescription>
+    <questionsimplify>1</questionsimplify>
+    <assumepositive>0</assumepositive>
+    <assumereal>0</assumereal>
+    <prtcorrect format="html">
+      <text>Richtige Antwort, gut gemacht!</text>
+    </prtcorrect>
+    <prtpartiallycorrect format="html">
+      <text>Ihre Antwort ist teilweise korrekt.</text>
+    </prtpartiallycorrect>
+    <prtincorrect format="html">
+      <text>Falsche Antwort.</text>
+    </prtincorrect>
+    <decimals>.</decimals>
+    <scientificnotation>*10</scientificnotation>
+    <multiplicationsign>dot</multiplicationsign>
+    <sqrtsign>1</sqrtsign>
+    <complexno>i</complexno>
+    <inversetrig>cos-1</inversetrig>
+    <logicsymbol>lang</logicsymbol>
+    <matrixparens>[</matrixparens>
+    <isbroken>0</isbroken>
+    <variantsselectionseed></variantsselectionseed>
+    <input>
+      <name>S_FA</name>
+      <type>units</type>
+      <tans>dispsf(FA,3)*N</tans>
+      <boxsize>8</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>Zahl mit Einheit</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords>sin, cos</forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>S_FB</name>
+      <type>units</type>
+      <tans>dispsf(FB,3)*N</tans>
+      <boxsize>8</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>Zahl mit Einheit</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>S_FG</name>
+      <type>units</type>
+      <tans>dispsf(FG,3)*N</tans>
+      <boxsize>8</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>Zahl mit Einheit</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords>sin, cos</forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>S_GG1</name>
+      <type>algebraic</type>
+      <tans>GG1_tans</tans>
+      <boxsize>15</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>Ausdruck</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>1</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>S_GG2</name>
+      <type>algebraic</type>
+      <tans>GG2_tans</tans>
+      <boxsize>15</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>Ausdruck</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>1</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>names</name>
+      <type>algebraic</type>
+      <tans>[]</tans>
+      <boxsize>15</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint></syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>1</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>0</mustverify>
+      <showvalidation>0</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>objects</name>
+      <type>string</type>
+      <tans>ref</tans>
+      <boxsize>15</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint></syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>1</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>0</mustverify>
+      <showvalidation>0</showvalidation>
+      <options></options>
+    </input>
+    <prt>
+      <name>FA</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description></description>
+        <answertest>UnitsRelative</answertest>
+        <sans>S_FA</sans>
+        <tans>FA*N</tans>
+        <testoptions>0.05</testoptions>
+        <quiet>1</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>FA-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@fb_unit(S_FA, FA*N, 0)@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>FA-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text>{@fb_unit(S_FA, FA*N, 0.05)@}</text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>FB</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description></description>
+        <answertest>UnitsRelative</answertest>
+        <sans>S_FB</sans>
+        <tans>FB*N</tans>
+        <testoptions>0.05</testoptions>
+        <quiet>1</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>FB-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@fb_unit(S_FB, FB*N, 0)@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>FB-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text>{@fb_unit(S_FB, FB*N, 0.05)@}</text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>fbd</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects);
+[textA, okA]: fb_contact(obj, names, 12, "Kontakt A: ");
+[textB, okB]: fb_contact(obj, names, 13, "Kontakt B: ");
+[textSys, okSys]: fb_system(names, sys, env, " Die Rolle gehört zum System, die Gabel gehört zur Umgebung." );
+[textR, okR]: fb_reactions(obj, 2, 0);]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>okA</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>0.25</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>1</truenextnode>
+        <trueanswernote>fbd-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>{@textA@}]]></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>1</falsenextnode>
+        <falseanswernote>fbd-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>{@textA@}]]></text>
+        </falsefeedback>
+      </node>
+      <node>
+        <name>1</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>okB</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>+</truescoremode>
+        <truescore>0.25</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>2</truenextnode>
+        <trueanswernote>fbd-2-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>{@textB@}]]></text>
+        </truefeedback>
+        <falsescoremode>-</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>2</falsenextnode>
+        <falseanswernote>fbd-2-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>{@textB@}]]></text>
+        </falsefeedback>
+      </node>
+      <node>
+        <name>2</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>okSys</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>+</truescoremode>
+        <truescore>0.25</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>3</truenextnode>
+        <trueanswernote>fbd-3-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>{@textSys@}]]></text>
+        </truefeedback>
+        <falsescoremode>-</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>3</falsenextnode>
+        <falseanswernote>fbd-3-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>{@textSys@}]]></text>
+        </falsefeedback>
+      </node>
+      <node>
+        <name>3</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>okR</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>+</truescoremode>
+        <truescore>0.25</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>fbd-4-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>{@textR@}]]></text>
+        </truefeedback>
+        <falsescoremode>-</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>fbd-4-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>{@textR@}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>GG1</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects);
+d1: direction(obj[i_dir1]);
+GG1: sum_dir(obj, names, d1);
+perp1A: perpendicularp(obj[i_dir1], obj[i_A]);
+perp1B: perpendicularp(obj[i_dir1], obj[i_B]);
+hint1: if perp1A then "&nbsp;Diese Richtung ist senkrecht zur Reaktion bei A. Damit vereinfacht sich die Gleichgewichtsbedingung."
+  elseif perp1B then "&nbsp;Diese Richtung ist senkrecht zur Reaktion bei B. Damit vereinfacht sich die Gleichgewichtsbedingung."
+  else "&nbsp;Die Richtungswahl bewirkt, dass beide unbekannte Kräfte in der Gleichung vorkommen.";
+[textGG1, okGG1]: fb_coeffs(S_GG1, GG1, 0.05, "");]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>okGG1</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>1</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>GG1-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>{@hint1@}{@textGG1@}]]></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>GG1-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>{@hint1@}{@textGG1@}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>GG2</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects);
+d2: direction(obj[i_dir2]);
+GG2: sum_dir(obj, names, d2);
+perp2A: perpendicularp(obj[i_dir2], obj[i_A]);
+perp2B: perpendicularp(obj[i_dir2], obj[i_B]);
+hint2: if perp2A then "&nbsp;Diese Richtung ist senkrecht zur Reaktion bei A. Damit vereinfacht sich die Gleichgewichtsbedingung."
+  elseif perp2B then "&nbsp;Diese Richtung ist senkrecht zur Reaktion bei B. Damit vereinfacht sich die Gleichgewichtsbedingung."
+  else "&nbsp;Die Richtungswahl bewirkt, dass beide unbekannte Kräfte in der Gleichung vorkommen.";
+[textGG2, okGG2]: fb_coeffs(S_GG2, GG2, 0.05, "");]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>okGG2</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>1</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>GG2-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>{@hint2@}{@textGG2@}]]></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>GG2-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>{@hint2@}{@textGG2@}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>FG</name>
+      <value>1.0000000</value>
+      <autosimplify>0</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description></description>
+        <answertest>UnitsRelative</answertest>
+        <sans>S_FG</sans>
+        <tans>FG*N</tans>
+        <testoptions>0.05</testoptions>
+        <quiet>1</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>FG-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@fb_unit(S_FG, FG*N, 0)@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>1</falsenextnode>
+        <falseanswernote>FG-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text>{@fb_unit(S_FG, FG*N, 0.05)@}</text>
+        </falsefeedback>
+      </node>
+      <node>
+        <name>1</name>
+        <description></description>
+        <answertest>UnitsRelative</answertest>
+        <sans>S_FG</sans>
+        <tans>FG/ge*kg</tans>
+        <testoptions>0.05</testoptions>
+        <quiet>1</quiet>
+        <truescoremode>+</truescoremode>
+        <truescore>0</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>FG-2-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>Das ist die Masse, gefragt ist das Gewicht.]]></text>
+        </truefeedback>
+        <falsescoremode>-</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>FG-2-F</falseanswernote>
+        <falsefeedback format="html">
+          <text></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <qtest>
+      <testcase>1</testcase>
+      <description></description>
+    </qtest>
+    <qtest>
+      <testcase>2</testcase>
+      <description></description>
+    </qtest>
+    <hint format="html">
+      <text><![CDATA[<p>Hinweis 1</p>]]></text>
+    </hint>
+    <hint format="html">
+      <text><![CDATA[<p>Hinweis 2</p>]]></text>
+    </hint>
+  </question>
+
+</quiz>

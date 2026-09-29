@@ -113,12 +113,20 @@ board.highlightInfobox = function(x, y , el) {
     let scale = [xscale,yscale];
     let dp = [dpx,dpy];
     let lbl = '';
-    if (typeof (el.ref) == 'function') {ref = el.ref()} 
+    if (typeof (el.ref) == 'function') {ref = el.ref()}
     else if (typeof(el.ref) != 'undefined') {ref = el.ref}
     if (typeof (el.scale) != 'undefined') {scale = el.scale}
     if (typeof (el.dp) != 'undefined') {dp = el.dp}
     if (typeof (el.infoboxlabel) == 'string') {lbl = el.infoboxlabel}
-    this.infobox.setText( 
+    // angleRef (point or function returning a point): show the angle from horizontal, measured
+    // at that reference point, instead of coordinates - used e.g. by the interactive "dir" tip.
+    if (typeof (el.angleRef) != 'undefined') {
+      const rp = (typeof el.angleRef == 'function') ? el.angleRef() : el.angleRef;
+      const ang = Math.atan2(parseFloat(y)-rp[1], parseFloat(x)-rp[0]) * rad2deg;
+      this.infobox.setText(adjustSeparators(lbl + ang.toFixed(dp[0]) + '°'));
+      return;
+    }
+    this.infobox.setText(
         adjustSeparators(lbl+'('+((parseFloat(x)-ref[0])*scale[0]).toFixed(dp[0]) + ', ' + ((parseFloat(y)-ref[1])*scale[1]).toFixed(dp[1])+ ')'))
 };
 
@@ -654,10 +662,16 @@ class dim {
 // ["dir", "name", [x1,y1], angle]
 // ["dir", "name", [x1,y1], angle, offset]
 // ["dir", "name", [x1,y1], angle, offset, length]
+// ["dir", "name", [x1,y1], angle, offset, length, "active"]
+// state (optional 7th element, 6th index; same convention as force/moment's state string):
+// if "active", the tip point (p2) becomes movable (base p1 stays fixed) so the student can
+// drag out a direction; data() then writes the live angle back into data[3] so it can be
+// read via direction() on the Maxima side. Not meant to be toggled after creation.
 class dir {
  constructor(data) {
    this.label = data[1];
-   this.d = data;
+   this.d = data.slice(0); //make a copy
+   this.interactive = (data[6] === "active");
    let le = 24*pxunit;
    this.dist = data[4] || 10;
    data[5] && (le = data[5]);
@@ -666,11 +680,26 @@ class dir {
    const off = data[3];
    const v = rect( le, data[3]*deg2rad );
    const pAttr = {fixed:true, size: 0, showInfobox:false, label:{offset:[0,this.dist], autoPosition:true}};
+   const pAttrTip = {label:{offset:[0,this.dist], autoPosition:true}, attractors:targets, ...controlSnapStyle};
    this.p1 = board.create('point', data[2], {name: this.name1, ...pAttr});
-   this.p2 = board.create('point', plus(data[2], v), {name: this.name2, ...pAttr});
-   this.vec = board.create('arrow', [this.p1, this.p2], {lastArrow: { type: 1, size: 6 }, ...thinStyle });
+   this.p2 = this.interactive
+     ? board.create('point', plus(data[2], v), {name: this.name2, ...pAttrTip})
+     : board.create('point', plus(data[2], v), {name: this.name2, ...pAttr});
+   if (this.interactive) {
+     this.p2.on("up", update);
+     this.p2.angleRef = () => XY(this.p1); // show the angle from horizontal in the infobox while dragging
+   }
+   // touchLastPoint: the arrow head stops at the edge of p2's circle instead of running through
+   // its center, so the (draggable, layer-11) control point doesn't visually cover the arrowhead
+   // - same fix already used for this purpose on the "force" arrow.
+   this.vec = board.create('arrow', [this.p1, this.p2], {touchLastPoint: true, lastArrow: { type: 1, size: 6 }, ...thinStyle });
  }
- data() { return this.d } 
+ data() {
+   if (this.interactive) {
+     this.d[3] = Math.atan2(this.p2.Y()-this.p1.Y(), this.p2.X()-this.p1.X()) * rad2deg;
+   }
+   return this.d;
+ }
  name() { return '"'+this.d[1]+'"' }
 }
 

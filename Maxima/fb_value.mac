@@ -1,23 +1,55 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-Overview */ 
 fb_value_version: "2026 03 05, 23:00";
 
+/* https://github.com/mkraska/meclib/wiki/deg2rad */
+/* Substitutes any use of the "deg" marker in expr with its numeric value (pi/180), for use right
+   before a numeric comparison (fb_coeffs, fb_unit, etc.) - never bind deg globally in
+   questionvariables, or every other display of it (questiontext, tans, generalfeedback, and the
+   student's own input-validation echo) loses its nice degree-symbol rendering and shows a raw
+   decimal instead. deg itself is left untouched everywhere except inside this call, e.g.
+   fb_coeffs(deg2rad(S_GG1), GG1, tol, ""). A no-op if deg is not present in expr.
+   Deliberately does NOT also handle the literal degree-sign character (U+00B0) here: this file is
+   fetched by stack_include() over HTTP and loaded by a Maxima reader that fails with "Lexer side
+   error" on a raw non-ASCII byte, and the only workaround found (building the symbol at runtime
+   via unicode()/parse_string()) fails too, since parse_string is on STACK's forbidden-function
+   list ("Verbotene Funktion: parse_string"). A literal degree-sign character typed directly into
+   a question's own questionvariables (not fetched via stack_include) does not hit either problem,
+   so a question that wants to accept that character as input can add its own local substitution
+   before calling deg2rad(), substituting the degree-sign character for deg first, then wrapping
+   the result in deg2rad() as usual: fb_coeffs(deg2rad(subst(<degree-sign>=deg, S_GG1)), GG1, tol, "") */
+deg2rad(expr):= subst(deg=%pi/180, expr);
+
 /* https://github.com/mkraska/meclib/wiki/fb_vars */
 fb_strip_list(_list_of_things):= castext("[[define _first='true'/]][[foreach _thing='_list_of_things']][[if test='not _first']], [[else]][[define _first='false'/]][[/if]]{@_thing@}[[/foreach]]"); 
 /* fb_strip_list function proposed by Matti Harjula 2022 04 10 */
 
 fb_vars(%_sans,%_tans, [%_opt] ) := block(
-  [%_vars, %_label,%_tansvar,%_sansvar,%_extras, %_missing, simp, %_txt, %_L,
+  [%_vars, %_label, %_tol, %_tansvar,%_sansvar,%_extras, %_missing, simp, %_txt, %_L,
     str_unexpected_variable: castext("[[lang code='de']]&nbsp;Unerwartete Variable [[/lang]][[lang code='en,other']]&nbsp;Unexpected variable [[/lang]]"),
     str_missing_variable: castext("[[lang code='de']]&nbsp;Fehlende Variable [[/lang]][[lang code='en,other']]&nbsp;Missing variable [[/lang]]"),
     str_check_term: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie den Term mit [[/lang]][[lang code='en,other']]&nbsp;Check the term with [[/lang]]"),
     str_check_terms: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie die Terme mit [[/lang]][[lang code='en,other']]&nbsp;Check the terms with [[/lang]]")
   ],
   simp: true, /* Extract vars with simp:true does mean that "x/x+y" -> [y] */
-  if length(%_opt)>0 then %_vars: %_opt[1] else %_vars: [], 
+  if length(%_opt)>0 then %_vars: %_opt[1] else %_vars: [],
   if length(%_opt)>1 then %_label: %_opt[2] else %_label: "",
+  if length(%_opt)>2 then %_tol: %_opt[3] else %_tol: 0,
   %_txt: %_label,
   %_sansvar: setify(listofvars(%_sans)),
   %_tansvar: setify(listofvars(%_tans)),
+  /* With a positive tolerance, ignore variables whose (linear) coefficient does not exceed it
+     in absolute value - protects against spurious extra/missing-variable complaints caused by
+     pure floating-point noise (e.g. a coefficient that should be exactly zero coming out as
+     1e-13 instead). Only meaningful for a variable that appears linearly; one that only appears
+     nonlinearly should be passed to fb_vars/fb_coeffs as its own sub-expression instead (e.g.
+     a^2, sin(alpha)), see wiki. */
+  /* float() forces a numeric comparison even when %_sans/%_tans still contain an exact
+     (non-floated) irrational subexpression, e.g. cos(%pi/18) from an angle given in exact
+     degrees - without it, abs(...) > %_tol can fail to resolve to true/false at all. */
+  if %_tol > 0 then (
+    %_sansvar: subset(%_sansvar, lambda([%_v], is(abs(float(coeff(%_sans, %_v, 1))) > %_tol))),
+    %_tansvar: subset(%_tansvar, lambda([%_v], is(abs(float(coeff(%_tans, %_v, 1))) > %_tol)))
+  ),
   /* Say nothing if tans is free of vars and is zero) */
   if (emptyp(%_tansvar) and %_tans=0) then return(""),
   /* Check for spurious (extra) vars */
@@ -117,7 +149,35 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom
 /* this should return true if the check passes, false otherwise */
 fb_unitOK(%_sans, %_tans, %_tol):=stringp(fb_unit(%_sans, %_tans, %_tol));
 
-/* https://github.com/mkraska/meclib/wiki/fb_number */  
+/* https://github.com/mkraska/meclib/wiki/fb_coeffs */
+/* Numeric coefficient comparison for symbolic expressions whose coefficients are floating-point
+   numbers (so fb_vars' own symbolic term check, and AlgEquiv, are not suitable). First checks
+   the variable set with fb_vars(), then compares the coefficient of each variable in %_tans
+   numerically with fb_unit(), appending its (percentage-deviation) feedback per mismatching
+   variable. Returns [text, boolean] like fb_fix1/fb_contact/fb_unidir.
+   Does not currently handle a bare constant term (a part of the expression not multiplying
+   any variable) - left out for now, see wiki. */
+fb_coeffs(%_sans, %_tans, %_tol, %_description):=block(
+  [%_txt: %_description, %_vcheck, %_vars, %_v, %_cs, %_ct, %_cres, simp: true],
+  %_vcheck: fb_vars(%_sans, %_tans, [], "", %_tol),
+  if %_vcheck # "" then return([castext_concat(%_txt, %_vcheck), false]),
+  %_vars: listofvars(%_tans),
+  /* Same tolerance as fb_vars just used for the variable-set check: skip a variable here too
+     if its coefficient in %_tans does not exceed the tolerance - it isn't really "in" the
+     equation, just floating-point noise, so it should not be coefficient-compared either. */
+  if %_tol > 0 then %_vars: sublist(%_vars, lambda([%_v], is(abs(float(coeff(%_tans, %_v, 1))) > %_tol))),
+  for %_v in %_vars do (
+    %_cs: coeff(%_sans, %_v),
+    %_ct: coeff(%_tans, %_v),
+    %_cres: fb_unit(%_cs, %_ct, %_tol),
+    if %_cres # "" then
+      %_txt: castext_concat(%_txt, castext_concat(castext(sconcat("&nbsp;Der Koeffizient bei ", string(%_v), ": ")), %_cres))
+  ),
+  if %_txt # %_description then return([%_txt, false]),
+  return([castext_concat(%_txt, "&nbsp;Die Gleichung stimmt."), true])
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_number */
 fb_number(%_sans, %_tans, %_tol) := fb_unit(%_sans, %_tans, %_tol);
 /* this should return true if the check passes, false otherwise */
 fb_numberOK(%_snum, %_tnum, %_tol):=stringp(fb_number(%_snum, %_tnum, %_tol));
