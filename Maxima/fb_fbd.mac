@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-Free-Body-Diagrams */
-/* 2024 11 25                          */
+/* 2026 09 29 */
 
 /* https://github.com/mkraska/meclib/wiki/direction%28%29 */
 direction(o):=block([%_v, a0, le, r1, r2, a1],
@@ -425,7 +425,7 @@ fb_contact(%_o, %_n, %_i, %_description):=block(
     if ( last(%_o[%_j]) # "hide") then (
       %_refname: %_o[%_j][2],
       if %_refname = "" then return ([sconcat(%_txt, "Umgebung bei ", string(%_ref), " nicht deaktiviert."), false])
-                        else return ([sconcat(%_txt, "'", %_refname, "' ist nicht deaktiviert."), false])
+                        else return ([sconcat(%_txt, %_refname, " ist nicht deaktiviert."), false])
     ),
     /* Any reactions found at i? */
     if not listp(%_n[%_i]) or %_n[%_i]=[] then return([sconcat(%_txt, "Keine Reaktion gefunden."), false]),
