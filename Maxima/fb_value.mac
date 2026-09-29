@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-Overview */ 
-fb_value_version: "2026 03 05, 23:00";
+fb_value_version: "2026 09 30";
 
 /* https://github.com/mkraska/meclib/wiki/deg2rad */
 /* Substitutes any use of the "deg" marker in expr with its numeric value (pi/180), for use right
@@ -81,6 +81,7 @@ fb_varsOK(%_sans,%_tans, [%_opt] ):= block([%_res],
   if length(%_opt)=0 then %_res: fb_vars(%_sans,%_tans ),
   if length(%_opt)=1 then %_res: fb_vars(%_sans,%_tans, %_opt[1] ),
   if length(%_opt)=2 then %_res: fb_vars(%_sans,%_tans, %_opt[1], %_opt[2] ),
+  if length(%_opt)=3 then %_res: fb_vars(%_sans,%_tans, %_opt[1], %_opt[2], %_opt[3] ),
   stringp(%_res));
 
 
