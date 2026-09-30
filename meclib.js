@@ -147,7 +147,6 @@ class angle {
    this.l1 = board.create('segment', [this.p1, this.p3], {withlabel:false, ...thinStyle});
    // second line
    const a0 = this.l1.getAngle();
-   console.log('here is a0:' + a0);
    const le = this.l1.L();
    const a1 = a0+data[5]*deg2rad;
    this.ln = board.create('line', [this.p1, plus(XY(this.p1), rect(le,a1))], {withlabel:false, ...thinStyle, straightFirst:true, visible:false});	
@@ -2022,16 +2021,7 @@ function toSTACK(str) {
   return st
 }
 
-// toSTACK() test
-//let input = "";
-//let input = "q_0*3a";
-//let input = "3a q_0";
-let input = "a3 q_0";
-//let input = "q_0 3a";
-let result = toSTACK(input);
-console.log(result);
-
-function toTEX(str) { 
+function toTEX(str) {
   if (str.search("_") != -1) { 
     str = str.replaceAll(/_([0-9a-z]+)/ig, '_{\$1}'); // subscript brackets
   }
@@ -2041,27 +2031,22 @@ function toTEX(str) {
 // If there is more than one character before the end or before the first subscript, then the name is modified.
 // https://jsfiddle.net/0pzeu68g/1/
 function cleanupName(str) {
-  console.log('original string input is here: ' + str);
   let strList = str.split(/\s+|\*/);
   let out =""
-  console.log("here is strList: " + strList)
-  
+
   strList.forEach(function(st) {
-    console.log("here is st: " + st);
-    let pos = st.search("_") 
-    if (st.length>1 && pos>1) { 
+    let pos = st.search("_")
+    if (st.length>1 && pos>1) {
     // remove underscores at wrong places
-      st = st.replace(/_/g, ''); pos = -1; console.log("1. " + st)}
-    if (isNaN(st[0]) == true && st.length>1 && pos===-1) { 
-      st = st.substring(0, 1) + "_" + st.substring(1);
-      console.log("2. " + st);} // insert an underscore if string is longer than one character
-    else if (isNaN(st[0]) == false && st.length>1 && pos===-1) { 
-      st = st.substring(0, 1) + " " + st.substring(1);console.log("3. " + st)}
+      st = st.replace(/_/g, ''); pos = -1;}
+    if (isNaN(st[0]) == true && st.length>1 && pos===-1) {
+      st = st.substring(0, 1) + "_" + st.substring(1);} // insert an underscore if string is longer than one character
+    else if (isNaN(st[0]) == false && st.length>1 && pos===-1) {
+      st = st.substring(0, 1) + " " + st.substring(1);}
   // should output have * or just empty space? since toTEX() replaces * with empty spaces
   out = out + st + " "
   });
   out = out.slice(0, -1); // renove trailing space
-  console.log("cleanupName result:", out)
   return out
   }
 
