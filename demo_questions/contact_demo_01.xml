@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <quiz>
-<!-- question: 108557  -->
+<!-- question: 2458773  -->
   <question type="stack">
     <name>
       <text>TM1 02 02 Krangabel mit Rolle (meclib, interaktiv)</text>
@@ -39,7 +39,6 @@ Schneiden Sie die Rolle frei, also ersetzen Sie die Wirkung der Krangabel durch 
 <li> Resultierende von Streckenlasten: Mindestens ein Kontrollpunkt muss auf der Streckenlast liegen
 <li> Reaktionskräfte: Anfangs- oder Endpunkt müssen auf dem Lagerpunkt oder Kontaktpunkt liegen
 <li> Reaktionsmomente: Mittelpunkt muss auf dem Lager liegen
-<li> Richtung für die Gleichgewichtsbedingung wählen: Roten Pfeil an der Spitze ziehen
 </ul>
 </details>
 [[/lang]]
@@ -57,7 +56,6 @@ Schneiden Sie die Rolle frei, also ersetzen Sie die Wirkung der Krangabel durch 
 <li>Resultants of line loads: At least one control point is on the line load area
 <li>Force reactions: Either of the two control points must be on the support or contact point
 <li>Moment reactions: Center point must coincide with the support point.
-<li>Choose a direction for an equilibrium condition: Drag the red arrow tip
 </ul>
 </details>
 
@@ -66,29 +64,28 @@ Schneiden Sie die Rolle frei, also ersetzen Sie die Wirkung der Krangabel durch 
 
 [[feedback:fbd]]
 
-<p>Hinweis: Stellen Sie nun die Gleichgewichtsbedingungen auf. Bei geeigneter Wahl der Koordinatenrichtungen erhalten Sie zwei Gleichungen mit jeweils nur einer Unbekannten.</p>
-<p>Wählen Sie oben in der Skizze zwei Richtungen (rote Pfeile an der inneren Ecke der Gabel) und stellen Sie für jede Richtung das Kräftegleichgewicht auf. Verwenden Sie dabei dieselben Namen, die Sie im Freischnitt für die Reaktionskräfte vergeben haben.</p>
+Wählen Sie die Richtungen, für die Sie die Gleichgewichtsbedingungen aufstellen wollen. Bewegen Sie dafür die roten Kontrollpunkte der Pfeile 1 und 2. Bei geeigneter Wahl der Koordinatenrichtungen erhalten Sie zwei Gleichungen mit jeweils nur einer unbekannten Lagerreaktion.
+
+[[feedback:dir]]
+
+Stellen Sie für jede Richtung das Kräftegleichgewicht auf. Verwenden Sie dabei dieselben Namen, die Sie im Freischnitt für die Reaktionskräfte vergeben haben.</p>
 <p>Gleichgewicht in Richtung 1: [[input:S_GG1]] [[validation:S_GG1]] \(=0\) [[feedback:GG1]]</p>
 <p>Gleichgewicht in Richtung 2: [[input:S_GG2]] [[validation:S_GG2]] \(=0\) [[feedback:GG2]]</p>
 <p>Gegeben:</p>
 <p>\(D = {@Dm*100@} \, \mathrm{cm}\)<br />\(\ell = {@Laenge@} \,\mathrm{m}\)<br />\(\alpha = {@alpha@}^\circ\)<br />\(\rho = {@rho/1000@} \,\mathrm{g/cm^3}\)<br />\(g=10 \,\mathrm{m/s^2}\)</p>
 <p>Zunächst bestimmen Sie aus den gegebenen Größen das Gewicht der Rolle:</p>
-<p>\(G= \) [[input:S_FG]] [[validation:S_FG]] [[feedback:FG]]</p>
+<p>\(G= \) [[input:S_FG]] \(\mathrm{N}\) [[validation:S_FG]] [[feedback:FG]]</p>
 <p>Bestimmen Sie nun die Auflagerkräfte:</p>
-<p>\(A =\) [[input:S_FA]] [[validation:S_FA]] [[feedback:FA]]</p>
-<p>\(B =\) [[input:S_FB]] [[validation:S_FB]] [[feedback:FB]]</p>
+<p>[[feedback:FA_label]] [[input:S_FA]] [[validation:S_FA]] [[feedback:FA]]</p>
+<p>[[feedback:FB_label]] [[input:S_FB]] [[validation:S_FB]] [[feedback:FB]]</p>
 <p>Zahlenwerte bitte auf 5% genau.</p>]]></text>
-<!-- HINWEIS: Der ursprüngliche <file name="Auflager.png" .../>-Block (Base64) wurde hier bewusst
-     NICHT neu eingefügt - beim Abtippen über den Chat kann sich ein so langer Base64-Blob leicht
-     unbemerkt verfälschen. Bitte diesen Block unverändert aus deiner Originaldatei wieder einsetzen;
-     er wird im questiontext ohnehin nirgends per <img> referenziert. -->
     </questiontext>
     <generalfeedback format="markdown">
       <text><![CDATA[<div style="float:right">
 [[jsxgraph width='250px' height='250px' ]]
 var mode  = "STACK";
 var stateRef;
-const initstring = {#ref#};
+const initstring = {#gfb#};
 const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
   anchorX:'left', anchorY:'middle'}};
 // End of STACK header
@@ -99,9 +96,9 @@ Rechts sehen Sie einen möglichen richtigen Freischnitt mit einer günstigen Wah
 Koordinatenrichtungen (jeweils senkrecht zu einer der beiden Kontaktkräfte). Die
 zugehörigen Gleichgewichtsbedingungen lauten:
 
-\(GG_1:\quad {@GG1_disp@} = 0\)
+\\\(GG_1:\quad {@(make_multsgn("onum"), GG1_disp)@} = 0\\\)
 
-\(GG_2:\quad {@GG2_disp@} = 0\)]]></text>
+\\\(GG_2:\quad {@(make_multsgn("onum"), GG2_disp)@} = 0\\\)]]></text>
     </generalfeedback>
     <defaultgrade>1</defaultgrade>
     <penalty>0</penalty>
@@ -111,16 +108,17 @@ zugehörigen Gleichgewichtsbedingungen lauten:
       <text>2026080600</text>
     </stackversion>
     <questionvariables>
-      <text><![CDATA[stack_unit_si_declare(true);
-Laenge:  rand_with_step(1.5,2.5,0.5);
-Dm:  rand_with_step(80,120,10)/100;
-alpha: rand_with_step(10,40,10);
-rho: rand_with_step(1,1.3,0.1)*1000;
-ge: 10;
+      <text><![CDATA[Laenge:  rand_with_step(1.5,2.5,0.5); /* m */
+Dm:  rand_with_step(80,120,10)/100;   /* cm */
+alpha: rand_with_step(10,40,10);      /* ° */
+rho: rand_with_step(1,1.3,0.1)*1000;  /* kg/dm³ */
+ge: 10;                               /* m/s² */
 
-FG: pi/4*Dm^2*Laenge*rho*ge;
+FG: pi/4*(Dm/100)^2*Laenge*1000*rho*ge;  /* N */
 FA: FG*cos(alpha*pi/180);
 FB: FG*sin(alpha*pi/180);
+
+texput(deg, "\\mathrm{{}^{o}}");
 
 /* Kurzkennzeichnung der Variante fuer die Fragenuebersicht/questionnote:
    randomisierte Vorgaben plus die daraus folgenden Loesungen. */
@@ -146,7 +144,7 @@ Vo:  [-th*(uAx+uBx), -th*(uAy+uBy)];
 
 initdata: [
   ["grid", "", "", PBo[1]-1.0, PAo[1]+1.0, Vo[2]-1.0, 3.5*r, 40],
-  ["polygon", "gabel", PAo, PAi, V, PBi, PBo, Vo, "show"],
+  ["polygon", "Die Gabel", PAo, PAi, V, PBi, PBo, Vo, "show"],
   ["circle", "", C, r, 0, "SHOW"],
   ["line", "black", [C[1]-(r+0.2), C[1]+(r+0.2)], [C[2], C[2]], "-."],
   ["line", "black", [C[1], C[1]], [C[2]-(r+0.2), C[2]+(r+0.2)], "-."],
@@ -154,10 +152,10 @@ initdata: [
   ["point", "A", PA],
   ["point", "B", PB],
   ["point", "S", C],
-  ["force", "mg", C, [C[1], C[2]-1.5], 10, "locked"],
+  ["force", "G", C, [C[1], C[2]-1.5], 10, "locked"],
   ["angle", "\\alpha", PBi, PBi+[0,2], 0.9*r, alpha],
-  ["contact", "", PA, [uBx, uBy], "gabel", 3],
-  ["contact", "", PB, [uAx, uAy], "gabel", 3],
+  ["contact", "", PA, [uBx, uBy], "Die Gabel", 3],
+  ["contact", "", PB, [uAx, uAy], "Die Gabel", 3],
   ["forceGen", "F", [PAo[1]-1, 3*r]],
   ["dir", "1", V, 0, 10, 1.5*r, "active"],
   ["dir", "2", V, 90, 10, 1.5*r, "active"]
@@ -172,7 +170,7 @@ sys: [i_circle]; env: [i_gabel];
 /* --- Referenzlösung für die interaktiven Inputs "objects"/"names" --- */
 refdata: [
   ["grid", "", "", PBo[1]-1.0, PAo[1]+1.0, Vo[2]-1.0, 3.5*r, 40],
-  ["polygon", "gabel", PAo, PAi, V, PBi, PBo, Vo, "hide"],
+  ["polygon", "Die Gabel", PAo, PAi, V, PBi, PBo, Vo, "hide"],
   ["circle", "", C, r, 0, "SHOW"],
   ["line", "black", [C[1]-(r+0.2), C[1]+(r+0.2)], [C[2], C[2]], "-."],
   ["line", "black", [C[1], C[1]], [C[2]-(r+0.2), C[2]+(r+0.2)], "-."],
@@ -180,25 +178,36 @@ refdata: [
   ["point", "A", PA],
   ["point", "B", PB],
   ["point", "S", C],
-  ["force", "mg", C, [C[1], C[2]-1.5], 10, "locked"],
+  ["force", "G", C, [C[1], C[2]-1.5], 10, "locked"],
   ["angle", "\\alpha", PBi, PBi+[0,2], 0.9*r, alpha],
-  ["contact", "", PA, [uBx, uBy], "gabel", 3 ],
-  ["contact", "", PB, [uAx, uAy], "gabel", 3 ],
+  ["contact", "", PA, [uBx, uBy], "Die Gabel", 3 ],
+  ["contact", "", PB, [uAx, uAy], "Die Gabel", 3 ],
   ["forceGen", "F_1", [PAo[1]-1, 3*r]],
   /* dir1/dir2 bleiben an derselben Position wie in initdata (Index 15/16, siehe i_dir1/i_dir2
      unten), die geloesten Kraefte kommen wie bei einem echten Freischnitt erst danach dazu.
      Winkel auf die guenstige ("gedrehte") Richtung senkrecht zu B bzw. A gelegt. */
-  ["dir", "1", V, 90+alpha, 10, 1.5*r],
-  ["dir", "2", V, alpha, 10, 1.5*r],
+  ["dir", "1", V, 90+alpha, 10, 1.5*r, "active"],
+  ["dir", "2", V, alpha, 10, 1.5*r, "active"],
   ["force", "A", PA-[uBx,uBy], PA, 10, "active"],
   ["force", "B", PB-[uAx,uAy], PB, 10, "active"]
 ];
 ref: stackjson_stringify(refdata);
 
+/* --- Static reference equations of equilibrium for question preview */
+GG1_tans: A-cos(alpha*deg)*G;
+GG2_tans: B-sin(alpha*deg)*G;
+
+/* Rein fuer die Anzeige im allgemeinen Feedback: dieselbe (fuer jedes alpha
+   allgemeingueltige) Loesung, aber mit "deg" nur zur Gradnotation in der Ausgabe
+   (z.B. "cos(20 deg)" -> "cos(20°)") - deg wird dabei nie ausgewertet, nur getippt,
+   und diese Variablen werden nirgends zur Bewertung herangezogen. */
+GG1_disp: A - G*cos(alpha*deg);
+GG2_disp: B - G*sin(alpha*deg);
+
 /* --- (non-interactive) sketch for general feedback ---*/
 gfbdata: [
   ["grid", "", "", PBo[1]-1.0, PAo[1]+1.0, Vo[2]-1.0, 3.5*r, 40],
-  ["polygon", "gabel", PAo, PAi, V, PBi, PBo, Vo, "HIDE"],
+  ["polygon", "Die Gabel", PAo, PAi, V, PBi, PBo, Vo, "HIDE"],
   ["circle", "", C, r, 0, "SHOW"],
   ["line", "black", [C[1]-(r+0.2), C[1]+(r+0.2)], [C[2], C[2]], "-."],
   ["line", "black", [C[1], C[1]], [C[2]-(r+0.2), C[2]+(r+0.2)], "-."],
@@ -206,10 +215,10 @@ gfbdata: [
   ["point", "A", PA],
   ["point", "B", PB],
   ["point", "S", C],
-  ["force", "mg", C, [C[1], C[2]-1.5], 10, "locked"],
+  ["force", "G", C, [C[1], C[2]-1.5], 10, "locked"],
   ["angle", "\\alpha", PBi, PBi+[0,2], 0.9*r, alpha],
-  ["contact", "", PA, [uBx, uBy], "gabel", 3 ],
-  ["contact", "", PB, [uAx, uAy], "gabel", 3 ],
+  ["contact", "", PA, [uBx, uBy], "Die Gabel", 3 ],
+  ["contact", "", PB, [uAx, uAy], "Die Gabel", 3 ],
   ["dir", "1", V, 90+alpha, 10, 1.5*r],
   ["dir", "2", V, alpha, 10, 1.5*r],
   ["force", "A", PA-[uBx,uBy], PA, 10, "locked"],
@@ -217,33 +226,9 @@ gfbdata: [
 ];
 gfb: stackjson_stringify(gfbdata);
 
+
 stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/fb_value.mac" );
 stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/fb_fbd.mac" );
-
-/* --- statische (Kompilierzeit-)Musterloesung fuer die tans der Eingaben S_GG1/S_GG2 ---
-   Muss NACH den obigen stack_include-Aufrufen stehen, weil sum_dir() erst dadurch
-   definiert wird. Diese "tans"-Musterloesung dient dem Aufgabentest (Vorschau/"richtige
-   Antwort ausfuellen"). Die eigentliche Bewertung der eingegebenen Gleichungen verwendet
-   unten in den PRTs GG1/GG2 die DYNAMISCHE Musterloesung, die aus dem tatsaechlich vom
-   Anwender eingereichten Freischnitt (objects/names, Richtungen obj[i_dir1]/obj[i_dir2])
-   berechnet wird - die beiden sind bewusst unabhaengig voneinander.
-   sum_dir() ignoriert ohnehin alles, was keine "force" ist, daher kann hier direkt die
-   komplette Referenzliste durchgereicht werden, statt eine eigene Teilliste zu bauen. */
-refobj: stackjson_parse(ref);
-refnames: makelist(0, i, 1, length(refobj));
-refnames[10]: mg;   /* Gewichtskraft, in jedem Freischnitt vorhanden */
-refnames[17]: A;    /* Kontaktkraft A */
-refnames[18]: B;    /* Kontaktkraft B */
-GG1_tans: sum_dir(refobj, refnames, direction(refobj[i_dir1]));
-GG2_tans: sum_dir(refobj, refnames, direction(refobj[i_dir2]));
-
-/* Rein fuer die Anzeige im allgemeinen Feedback: dieselbe (fuer jedes alpha
-   allgemeingueltige) Loesung, aber mit "deg" nur zur Gradnotation in der Ausgabe
-   (z.B. "cos(20 deg)" -> "cos(20°)") - deg wird dabei nie ausgewertet, nur getippt,
-   und diese Variablen werden nirgends zur Bewertung herangezogen. */
-GG1_disp: A - mg*cos(alpha*deg);
-GG2_disp: B - mg*sin(alpha*deg);
-
 ]]></text>
     </questionvariables>
     <specificfeedback format="moodle_auto_format">
@@ -253,7 +238,13 @@ GG2_disp: B - mg*sin(alpha*deg);
       <text>{@ta1@}</text>
     </questionnote>
     <questiondescription format="html">
-      <text></text>
+      <text>Todo:
+
+Kräfteeingabe dynamisieren mit Anzeige der Variablennamen via formatives feedback - erledigt (FA_label/FB_label).
+
+Feedback zu dir zusammengefasst und Parallelität ausgeschlossen - erledigt (PRT "dir").
+
+Dir Infobox auf volle Grad runden oder Ursache der Ungenauigkeit ermitteln - noch offen.</text>
     </questiondescription>
     <questionsimplify>1</questionsimplify>
     <assumepositive>0</assumepositive>
@@ -277,6 +268,42 @@ GG2_disp: B - mg*sin(alpha*deg);
     <matrixparens>[</matrixparens>
     <isbroken>0</isbroken>
     <variantsselectionseed></variantsselectionseed>
+    <input>
+      <name>names</name>
+      <type>algebraic</type>
+      <tans>[]</tans>
+      <boxsize>15</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint></syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>1</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>0</mustverify>
+      <showvalidation>0</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>objects</name>
+      <type>string</type>
+      <tans>ref</tans>
+      <boxsize>15</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint></syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>1</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>0</mustverify>
+      <showvalidation>0</showvalidation>
+      <options></options>
+    </input>
     <input>
       <name>S_FA</name>
       <type>units</type>
@@ -367,42 +394,111 @@ GG2_disp: B - mg*sin(alpha*deg);
       <showvalidation>3</showvalidation>
       <options></options>
     </input>
-    <input>
-      <name>names</name>
-      <type>algebraic</type>
-      <tans>[]</tans>
-      <boxsize>15</boxsize>
-      <strictsyntax>1</strictsyntax>
-      <insertstars>0</insertstars>
-      <syntaxhint></syntaxhint>
-      <syntaxattribute>0</syntaxattribute>
-      <forbidwords></forbidwords>
-      <allowwords></allowwords>
-      <forbidfloat>1</forbidfloat>
-      <requirelowestterms>0</requirelowestterms>
-      <checkanswertype>0</checkanswertype>
-      <mustverify>0</mustverify>
-      <showvalidation>0</showvalidation>
-      <options></options>
-    </input>
-    <input>
-      <name>objects</name>
-      <type>string</type>
-      <tans>ref</tans>
-      <boxsize>15</boxsize>
-      <strictsyntax>1</strictsyntax>
-      <insertstars>0</insertstars>
-      <syntaxhint></syntaxhint>
-      <syntaxattribute>0</syntaxattribute>
-      <forbidwords></forbidwords>
-      <allowwords></allowwords>
-      <forbidfloat>1</forbidfloat>
-      <requirelowestterms>0</requirelowestterms>
-      <checkanswertype>0</checkanswertype>
-      <mustverify>0</mustverify>
-      <showvalidation>0</showvalidation>
-      <options></options>
-    </input>
+    <prt>
+      <name>dir</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>0</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects);
+[text, ok]: fb_dir(obj, names, [[i_dir1, "in 1-Richtung"], [i_dir2, "in 2-Richtung"]], 0.005);]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>ok</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>dir-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text>{@text@}</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>dir-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text>{@text@}</text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>FA_label</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>0</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects);
+nameA: fb_reaction_name(obj, names, i_A, "A");]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>true</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>1</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>0</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>FA_label-1-T</trueanswernote>
+        <truefeedback format="markdown">
+          <text>\({@nameA@} = \)</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>FA_label-1-F</falseanswernote>
+        <falsefeedback format="markdown">
+          <text>\({@nameA@} = \)</text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>FB_label</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>0</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects);
+nameB: fb_reaction_name(obj, names, i_B, "B");]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>true</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>1</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>0</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>FB_label-1-T</trueanswernote>
+        <truefeedback format="markdown">
+          <text>\({@nameB@} = \)</text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>FB_label-1-F</falseanswernote>
+        <falsefeedback format="markdown">
+          <text>\({@nameB@} = \)</text>
+        </falsefeedback>
+      </node>
+    </prt>
     <prt>
       <name>FA</name>
       <value>1.0000000</value>
@@ -585,90 +681,6 @@ GG2_disp: B - mg*sin(alpha*deg);
       </node>
     </prt>
     <prt>
-      <name>GG1</name>
-      <value>1.0000000</value>
-      <autosimplify>1</autosimplify>
-      <feedbackstyle>2</feedbackstyle>
-      <feedbackvariables>
-        <text><![CDATA[obj: stackjson_parse(objects);
-d1: direction(obj[i_dir1]);
-GG1: sum_dir(obj, names, d1);
-perp1A: perpendicularp(obj[i_dir1], obj[i_A]);
-perp1B: perpendicularp(obj[i_dir1], obj[i_B]);
-hint1: if perp1A then "&nbsp;Diese Richtung ist senkrecht zur Reaktion bei A. Damit vereinfacht sich die Gleichgewichtsbedingung."
-  elseif perp1B then "&nbsp;Diese Richtung ist senkrecht zur Reaktion bei B. Damit vereinfacht sich die Gleichgewichtsbedingung."
-  else "&nbsp;Die Richtungswahl bewirkt, dass beide unbekannte Kräfte in der Gleichung vorkommen.";
-[textGG1, okGG1]: fb_coeffs(S_GG1, GG1, 0.05, "");]]></text>
-      </feedbackvariables>
-      <node>
-        <name>0</name>
-        <description></description>
-        <answertest>AlgEquiv</answertest>
-        <sans>okGG1</sans>
-        <tans>true</tans>
-        <testoptions></testoptions>
-        <quiet>1</quiet>
-        <truescoremode>=</truescoremode>
-        <truescore>1</truescore>
-        <truepenalty></truepenalty>
-        <truenextnode>-1</truenextnode>
-        <trueanswernote>GG1-1-T</trueanswernote>
-        <truefeedback format="html">
-          <text><![CDATA[<br>{@hint1@}{@textGG1@}]]></text>
-        </truefeedback>
-        <falsescoremode>=</falsescoremode>
-        <falsescore>0</falsescore>
-        <falsepenalty></falsepenalty>
-        <falsenextnode>-1</falsenextnode>
-        <falseanswernote>GG1-1-F</falseanswernote>
-        <falsefeedback format="html">
-          <text><![CDATA[<br>{@hint1@}{@textGG1@}]]></text>
-        </falsefeedback>
-      </node>
-    </prt>
-    <prt>
-      <name>GG2</name>
-      <value>1.0000000</value>
-      <autosimplify>1</autosimplify>
-      <feedbackstyle>2</feedbackstyle>
-      <feedbackvariables>
-        <text><![CDATA[obj: stackjson_parse(objects);
-d2: direction(obj[i_dir2]);
-GG2: sum_dir(obj, names, d2);
-perp2A: perpendicularp(obj[i_dir2], obj[i_A]);
-perp2B: perpendicularp(obj[i_dir2], obj[i_B]);
-hint2: if perp2A then "&nbsp;Diese Richtung ist senkrecht zur Reaktion bei A. Damit vereinfacht sich die Gleichgewichtsbedingung."
-  elseif perp2B then "&nbsp;Diese Richtung ist senkrecht zur Reaktion bei B. Damit vereinfacht sich die Gleichgewichtsbedingung."
-  else "&nbsp;Die Richtungswahl bewirkt, dass beide unbekannte Kräfte in der Gleichung vorkommen.";
-[textGG2, okGG2]: fb_coeffs(S_GG2, GG2, 0.05, "");]]></text>
-      </feedbackvariables>
-      <node>
-        <name>0</name>
-        <description></description>
-        <answertest>AlgEquiv</answertest>
-        <sans>okGG2</sans>
-        <tans>true</tans>
-        <testoptions></testoptions>
-        <quiet>1</quiet>
-        <truescoremode>=</truescoremode>
-        <truescore>1</truescore>
-        <truepenalty></truepenalty>
-        <truenextnode>-1</truenextnode>
-        <trueanswernote>GG2-1-T</trueanswernote>
-        <truefeedback format="html">
-          <text><![CDATA[<br>{@hint2@}{@textGG2@}]]></text>
-        </truefeedback>
-        <falsescoremode>=</falsescoremode>
-        <falsescore>0</falsescore>
-        <falsepenalty></falsepenalty>
-        <falsenextnode>-1</falsenextnode>
-        <falseanswernote>GG2-1-F</falseanswernote>
-        <falsefeedback format="html">
-          <text><![CDATA[<br>{@hint2@}{@textGG2@}]]></text>
-        </falsefeedback>
-      </node>
-    </prt>
-    <prt>
       <name>FG</name>
       <value>1.0000000</value>
       <autosimplify>0</autosimplify>
@@ -724,6 +736,81 @@ hint2: if perp2A then "&nbsp;Diese Richtung ist senkrecht zur Reaktion bei A. Da
         <falseanswernote>FG-2-F</falseanswernote>
         <falsefeedback format="html">
           <text></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>GG1</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects);
+d1: direction(obj[i_dir1]);
+GG1: sum_dir(obj, names, d1);
+[textGG1, okGG1]: fb_coeffs(deg2rad(S_GG1), GG1, 0.05, "");
+]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>okGG1</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>1</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>GG1-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>{@textGG1@}]]></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>GG1-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>{@textGG1@}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>GG2</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects);
+d2: direction(obj[i_dir2]);
+GG2: sum_dir(obj, names, d2);
+[textGG2, okGG2]: fb_coeffs(deg2rad(S_GG2), GG2, 0.05, "");]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>okGG2</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>1</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>GG2-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>{@textGG2@}]]></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>GG2-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>{@textGG2@}]]></text>
         </falsefeedback>
       </node>
     </prt>
