@@ -113,21 +113,39 @@ contributor(o, n, i_dir, tol):= block([d: direction(o[i_dir]), v, u, result: []]
 );
 
 /* https://github.com/mkraska/meclib/wiki/fb_dir */
-/* Purely formative feedback for a direction-choice PRT, wrapping contributor() into the same
-   [text, flag] result shape as fb_fix1/fb_contact/fb_coeffs/etc. so it can be dropped into a PRT
-   node the same way. flag is always true - this feedback has no grading effect of its own, so
-   the calling PRT should always take its true-branch regardless of what is found.
-   %_desc is the phrase naming the direction, inserted as-is at the end of the sentence, e.g.
+/* Feedback for one or two direction-choice PRTs, combining contributor()'s formative listing for
+   each direction with, when two directions are given, a check that they aren't parallel: if they
+   are, the resulting equilibrium equations would be linearly dependent - that is a genuine
+   mistake, not just a suboptimal-but-valid choice, so the returned flag is false in that case and
+   the calling PRT should apply a real grading consequence. The per-direction contributor listing
+   is still appended afterwards regardless of the parallelity outcome, since it remains useful
+   either way.
+   %_dirs: a list of [i_dir, desc] pairs, length 1 (purely formative, flag always true - same
+   behavior as the previous single-direction fb_dir()) or 2 (adds the parallelity check).
+   %_desc is the phrase naming the direction, inserted as-is at the end of its sentence, e.g.
    "in 1-Richtung" (so this stays reusable in other questions/languages without hardcoding the
-   direction's own name or numbering here). */
-fb_dir(%_o, %_n, %_i_dir, %_tol, %_desc):= block([%_contrib],
-  %_contrib: contributor(%_o, %_n, %_i_dir, %_tol),
-  if %_contrib = [] then
-    [castext_concat(castext_concat("Keine Kraft hat Anteile ", %_desc), "."), true]
-  elseif length(%_contrib) = 1 then
-    [castext_concat(castext_concat(fb_strip_list(%_contrib), " hat Anteile "), castext_concat(%_desc, ".")), true]
-  else
-    [castext_concat(castext_concat(fb_strip_list(%_contrib), " haben Anteile "), castext_concat(%_desc, ".")), true]
+   direction's own name or numbering here).
+   Returns [text, flag], to be dropped into a PRT node the same way as fb_fix1/fb_contact/etc. */
+fb_dir(%_o, %_n, %_dirs, %_tol):= block([%_ok: true, %_parts: [], %_contrib, %_i, %_desc, %_sentence, %_text, %_k],
+  if length(%_dirs) = 2 and parallelp(%_o[%_dirs[1][1]], %_o[%_dirs[2][1]]) then (
+    %_ok: false,
+    %_parts: cons("Die gewählten Richtungen sind parallel. Damit liefern die beiden Gleichgewichtsbedingungen keine voneinander unabhängigen Gleichungen.", %_parts)
+  ),
+  for %_pair in %_dirs do (
+    %_i: %_pair[1], %_desc: %_pair[2],
+    %_contrib: contributor(%_o, %_n, %_i, %_tol),
+    %_sentence: if %_contrib = [] then
+        castext_concat("Keine Kraft hat Anteile ", castext_concat(%_desc, "."))
+      elseif length(%_contrib) = 1 then
+        castext_concat(castext_concat(fb_strip_list(%_contrib), " hat Anteile "), castext_concat(%_desc, "."))
+      else
+        castext_concat(castext_concat(fb_strip_list(%_contrib), " haben Anteile "), castext_concat(%_desc, ".")),
+    %_parts: cons(%_sentence, %_parts)
+  ),
+  %_parts: reverse(%_parts),
+  %_text: %_parts[1],
+  for %_k: 2 thru length(%_parts) do %_text: castext_concat(%_text, castext_concat("<br>", %_parts[%_k])),
+  [%_text, %_ok]
 );
 
 /* https://github.com/mkraska/meclib/wiki/fb_force_hvxy */
@@ -438,6 +456,20 @@ fb_contact(%_o, %_n, %_i, %_description):=block(
     if not parallelp(%_R, %_o[%_i]) then return ([castext_concat(%_txt, castext("Die Reaktion \\({@%_n[%_n[%_i][1]]@}\\) hat nicht die richtige Richtung.") ),false]),
     /* everything should be ok here */
     return([castext_concat(%_txt, castext("Reaktion \\({@%_n[%_n[%_i][1]]@}\\) gefunden.") ),true])
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_reaction_name */
+/* Returns the name the student assigned to the single reaction force currently matched at
+   contact/support index i, or %_default if none, more than one, or a non-force object is found
+   there. Unlike fb_contact()/fb_unidir(), this never reports an error and has no [text, flag]
+   shape - it is meant purely for a cosmetic dynamic label (e.g. showing the student's own name
+   next to a numeric input field), falling back silently to a static placeholder name whenever
+   the reaction can't yet be resolved unambiguously; use fb_contact()/fb_unidir() on the same
+   index for the actual correctness check. */
+fb_reaction_name(%_o, %_n, %_i, %_default):= block([],
+  if not listp(%_n[%_i]) or length(%_n[%_i]) # 1 then return(%_default),
+  if %_o[%_n[%_i][1]][1] # "force" then return(%_default),
+  %_n[%_n[%_i][1]]
 );
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-line-loads */
