@@ -159,7 +159,10 @@ fb_unitOK(%_sans, %_tans, %_tol):=stringp(fb_unit(%_sans, %_tans, %_tol));
    Does not currently handle a bare constant term (a part of the expression not multiplying
    any variable) - left out for now, see wiki. */
 fb_coeffs(%_sans, %_tans, %_tol, %_description):=block(
-  [%_txt: %_description, %_vcheck, %_vars, %_v, %_cs, %_ct, %_cres, simp: true],
+  [%_txt: %_description, %_vcheck, %_vars, %_v, %_cs, %_ct, %_cres, simp: true,
+    str_coeff_at: castext("[[lang code='de']]&nbsp;Koeffizient bei [[/lang]][[lang code='en,other']]&nbsp;Coefficient of [[/lang]]"),
+    str_equation_ok: castext("[[lang code='de']]&nbsp;Die Gleichung stimmt.[[/lang]][[lang code='en,other']]&nbsp;The equation is correct.[[/lang]]")
+  ],
   %_vcheck: fb_vars(%_sans, %_tans, [], "", %_tol),
   if %_vcheck # "" then return([castext_concat(%_txt, %_vcheck), false]),
   %_vars: listofvars(%_tans),
@@ -171,11 +174,18 @@ fb_coeffs(%_sans, %_tans, %_tol, %_description):=block(
     %_cs: coeff(%_sans, %_v),
     %_ct: coeff(%_tans, %_v),
     %_cres: fb_unit(%_cs, %_ct, %_tol),
+    /* The variable name must be interpolated via a literal {@...@} placeholder inside a
+       castext() call written directly here in the source (as fb_fbd.mac does throughout,
+       e.g. castext("{@n[L[1]]@} ...")) - NOT built at runtime with sconcat() and then
+       wrapped in castext(), which is what produced the literal "castext(...)" text bug
+       (castext()'s [[lang]]/{@..@} handling only happens for a string literal the loader
+       sees at load time; a runtime-built string never gets that treatment, so castext()
+       is left as a plain, undefined function call that Maxima can't reduce). */
     if %_cres # "" then
-      %_txt: castext_concat(%_txt, castext_concat(castext(sconcat("&nbsp;Der Koeffizient bei ", string(%_v), ": ")), %_cres))
+      %_txt: castext_concat(%_txt, castext_concat(castext_concat(str_coeff_at, castext("{@string(%_v)@}: ")), %_cres))
   ),
   if %_txt # %_description then return([%_txt, false]),
-  return([castext_concat(%_txt, "&nbsp;Die Gleichung stimmt."), true])
+  return([castext_concat(%_txt, str_equation_ok), true])
 );
 
 /* https://github.com/mkraska/meclib/wiki/fb_number */
