@@ -122,7 +122,13 @@ board.highlightInfobox = function(x, y , el) {
     // at that reference point, instead of coordinates - used e.g. by the interactive "dir" tip.
     if (typeof (el.angleRef) != 'undefined') {
       const rp = (typeof el.angleRef == 'function') ? el.angleRef() : el.angleRef;
-      const ang = Math.atan2(parseFloat(y)-rp[1], parseFloat(x)-rp[0]) * rad2deg;
+      // Use el's own full-precision coordinates, not the x,y parameters JSXGraph passes
+      // in here - those have already been rounded for coordinate display (autoDigits /
+      // infoboxdigits) before reaching this function, which is why sliding smoothly along
+      // an already-glued line could still show the angle jittering between e.g. 130.0°
+      // and 130.1°. Matching dir.data()'s calculation (which uses this.p2.X()/Y() directly)
+      // keeps the infobox and the submitted answer from ever disagreeing.
+      const ang = Math.atan2(el.Y()-rp[1], el.X()-rp[0]) * rad2deg;
       this.infobox.setText(adjustSeparators(lbl + ang.toFixed(dp[0]) + '°'));
       return;
     }
