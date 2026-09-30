@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-Free-Body-Diagrams */
-/* 2026 09 29 */
+/* 2026 09 30 */
 
 /* https://github.com/mkraska/meclib/wiki/direction%28%29 */
 direction(o):=block([%_v, a0, le, r1, r2, a1],
@@ -625,13 +625,14 @@ fb_name(n,i,lon):=block([name,txt],
 
 /* https://github.com/mkraska/meclib/wiki/fb_reactions() */
 fb_reactions(%_o, %_f, %_m):=block(
-  [%_fnum, %_mnum, %_txt, %_OK],
+  [%_fnum, %_mnum, %_txt, %_OK, %_msgs],
   %_fnum: length(sublist_indices (%_o, lambda ([x], x[1]="force" and last(x)="active" and  not sposition(" ",x[2])))),
   %_mnum: length(sublist_indices (%_o, lambda ([x], x[1]="moment" and last(x)="active"))),
   if (%_fnum=%_f) and (%_mnum=%_m) then [%_txt, %_OK]: ["&nbsp;Die Zahl der Reaktionen stimmt.",true] else (
-    %_OK: false, %_txt: "", 
-    if %_fnum # %_f then %_txt: sconcat(%_txt, "<br>Die Zahl der Reaktionskräfte stimmt nicht."),
-    if %_mnum # %_m then %_txt: sconcat(%_txt, "<br>Die Zahl der Reaktionsmomente stimmt nicht.")
+    %_OK: false, %_msgs: [],
+    if %_fnum # %_f then %_msgs: endcons("Die Zahl der Reaktionskräfte stimmt nicht.", %_msgs),
+    if %_mnum # %_m then %_msgs: endcons("Die Zahl der Reaktionsmomente stimmt nicht.", %_msgs),
+    %_txt: simplode(%_msgs, "<br>")
   ),
   [%_txt,%_OK]  
 );
@@ -640,8 +641,8 @@ fb_reactions(%_o, %_f, %_m):=block(
 /* %_names[%_i] is either a state string ("show"/"hide"/"SHOW"/"HIDE") or, once loads have been
    matched to the object, a list of load indices - stringp() guards sdowncase() against the latter. */
 fb_system(%_names, %_sys, %_env, %_hint):=block(
-  [%_i, %_fb: ["&nbsp;Die Systemgrenzen stimmen. ", true],
-        %_fbfalse: [sconcat("&nbsp;Die Systemgrenzen stimmen nicht. ", %_hint), false ] ],
+  [%_i, %_fb: ["Die Systemgrenzen stimmen. ", true],
+        %_fbfalse: [sconcat("Die Systemgrenzen stimmen nicht. ", %_hint), false ] ],
   for %_i in %_sys do if (not stringp(%_names[%_i]) or sdowncase(%_names[%_i]) # "show") then %_fb: %_fbfalse,
   for %_i in %_env do if (stringp(%_names[%_i]) and sdowncase(%_names[%_i]) = "show") then %_fb: %_fbfalse,
   return(%_fb)
