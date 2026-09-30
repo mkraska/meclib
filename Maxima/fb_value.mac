@@ -102,19 +102,56 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom
  simp:true,
   /* Debug strings */
   if debug then debug1: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)" else debug1:"",
-  /* extract numbers and units */
-  %_snum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_sans)))),
-  if %_snum = NULLNUM then %_snum:1.0, 
-  %_tnum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_tans)))),
-  if %_tnum = NULLNUM then %_tnum:1.0, 
-  %_sunit: stack_units_units(stack_unit_si_to_si_base(%_sans)),
-  if %_sunit = NULLUNITS then %_sunit:0,  /* display as 0 if not correct */
-  %_tunit: stack_units_units(stack_unit_si_to_si_base(%_tans)),
-  if %_tunit = NULLUNITS then %_tunit:0,  /* display as 0 if not correct */
-  /* complain if units don't match */
-  if (%_sunit # %_tunit) and (%_sunit # 0) then return(   
-    castext_concat(str_unexpected_base_unit, castext("{@(stack_disp_fractions(\"i\"),%_sunit)@}")  ) ),   
-  if (%_sunit # %_tunit) and (%_sunit = 0) and (%_snum # 0.0) then return(str_not_dimensionless),   
+  /* Only touch the units system if some question variable has already turned it on itself
+     (via stack_unit_si_declare(true)) - member('units, features) is the same check STACK's
+     own stackunits.mac uses internally (listofunits, stackunits_make, ...) to decide whether
+     to lazily auto-activate units. Calling stack_unit_si_to_si_base()/stackunits_make() is
+     what triggers that lazy activation - it fires the FIRST time ANY unit-touching function
+     runs in the whole render, globally and permanently for every other PRT and the general
+     feedback in the same render, declaring a large table of single/double-letter symbols
+     (m, A, F, ...) as units and giving them upright \mathrm{...} rendering everywhere they
+     appear from then on - including as perfectly ordinary variable names that happen to
+     collide with an SI unit letter (e.g. a reaction force named A). fb_coeffs() calls this
+     function once per coefficient it checks, so without this guard, merely using fb_coeffs()
+     (e.g. for an equilibrium-equation PRT) was enough to silently turn units on question-wide,
+     even though coefficients never carry units. With the guard, fb_unit()/fb_coeffs()/
+     fb_number() never activate units on their own - a question that genuinely wants unit
+     support (e.g. comparing a plain student number against a teacher answer like FG*N) must
+     call stack_unit_si_declare(true) itself, explicitly, so the side effect is opt-in and
+     happens exactly where the question author expects it. */
+  if member('units, features) then (
+    /* extract numbers and units */
+    %_snum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_sans)))),
+    if %_snum = NULLNUM then %_snum:1.0,
+    %_tnum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_tans)))),
+    if %_tnum = NULLNUM then %_tnum:1.0,
+    %_sunit: stack_units_units(stack_unit_si_to_si_base(%_sans)),
+    if %_sunit = NULLUNITS then %_sunit:0,  /* display as 0 if not correct */
+    %_tunit: stack_units_units(stack_unit_si_to_si_base(%_tans)),
+    if %_tunit = NULLUNITS then %_tunit:0,  /* display as 0 if not correct */
+    /* complain if units don't match */
+    if (%_sunit # %_tunit) and (%_sunit # 0) then return(
+      castext_concat(str_unexpected_base_unit, castext("{@(stack_disp_fractions(\"i\"),%_sunit)@}")  ) ),
+    if (%_sunit # %_tunit) and (%_sunit = 0) and (%_snum # 0.0) then return(str_not_dimensionless)
+  ) else (
+    /* units never activated by the question - treat both sides as plain numbers, exactly
+       like fb_number was always meant to behave. */
+    %_snum: float(%_sans),
+    %_tnum: float(%_tans),
+    /* A non-numeric result here (units still off) means something is misconfigured - a
+       reference expression that never fully evaluated, a forgotten deg2rad(), a name
+       mismatch reaching this far - not a normal student mistake to render feedback for.
+       Fail loudly instead of letting the sign/tolerance logic below misbehave silently or
+       crash with a cryptic error. Plain, unlocalized text, like dispdp()'s own guard above -
+       a thrown error() is rendered outside the normal CASText feedback pipeline, so [[lang]]
+       tags would not be processed here anyway. */
+    if not real_numberp(%_snum) then
+      error(sconcat("fb_unit: sans is not a real number (and the units feature is not declared): ", string(%_sans))),
+    if not real_numberp(%_tnum) then
+      error(sconcat("fb_unit: tans is not a real number (and the units feature is not declared): ", string(%_tans))),
+    %_sunit: 0,
+    %_tunit: 0
+  ),
   /* if tol=0 just indicate deviation */
   if (%_tol=0 or %_tol=0.0) and %_tnum # 0.0 then return( 
     castext_concat(str_deviation,castext("{@ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp)@}%")) ), 
