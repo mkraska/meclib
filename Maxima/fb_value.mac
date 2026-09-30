@@ -142,13 +142,14 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom
        reference expression that never fully evaluated, a forgotten deg2rad(), a name
        mismatch reaching this far - not a normal student mistake to render feedback for.
        Fail loudly instead of letting the sign/tolerance logic below misbehave silently or
-       crash with a cryptic error. Plain, unlocalized text, like dispdp()'s own guard above -
-       a thrown error() is rendered outside the normal CASText feedback pipeline, so [[lang]]
-       tags would not be processed here anyway. */
+       crash with a cryptic error. error() is on STACK's forbidden-function list and cannot
+       be called from a stack_include()'d file like this one (same restriction documented
+       above for parse_string), so this returns plain, unlocalized diagnostic text through
+       the normal feedback path instead - [[lang]] tags would not be processed here anyway. */
     if not real_numberp(%_snum) then
-      error(sconcat("fb_unit: sans is not a real number (and the units feature is not declared): ", string(%_sans))),
+      return(sconcat("fb_unit: sans is not a real number (and the units feature is not declared): ", string(%_sans))),
     if not real_numberp(%_tnum) then
-      error(sconcat("fb_unit: tans is not a real number (and the units feature is not declared): ", string(%_tans))),
+      return(sconcat("fb_unit: tans is not a real number (and the units feature is not declared): ", string(%_tans))),
     %_sunit: 0,
     %_tunit: 0
   ),
