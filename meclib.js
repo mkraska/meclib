@@ -452,9 +452,12 @@ class contact {
   // called once per update() cycle, before loads/targets are matched: derives this.state from
   // the referenced object's own state (deactivated either interactively as "hide" or fixed as
   // "HIDE" both count) and syncs the gray normal/tangent snap-cross visibility accordingly.
+  // For an array ref (several environment objects cut away by one contact, e.g. two wall
+  // segments meeting at a corner), ALL of them must be hidden.
   sync() {
     let j = resolveRef(this.ref);
-    this.state = (j >= 0 && j < objects.length && String(objects[j].state).toLowerCase() == 'hide') ? 'hide' : 'show';
+    const isHidden = (idx) => idx >= 0 && idx < objects.length && String(objects[idx].state).toLowerCase() == 'hide';
+    this.state = (Array.isArray(j) ? j.every(isHidden) : isHidden(j)) ? 'hide' : 'show';
     this.ln.setAttribute({visible: this.vis && this.state == 'hide'});
     this.lt.setAttribute({visible: this.vis && this.state == 'hide'});
   }
@@ -2053,8 +2056,11 @@ function cleanupName(str) {
 // functions for proximity check (Allfred Wassermann, 2022-12-13)
 function isOn(pt, po) {return pt.isOn(po, tolPointLine) }
 function targetName(obj) {if (obj.loads[0]) {return '['+obj.loads+']'} else {return '"'+obj.state+'"' } }
-// resolve a "contact" targetRef (name string or 1-based index) to an index into "objects"
+// resolve a "contact" targetRef (name string, 1-based index, or an array of either - for a
+// contact that cuts away several environment objects at once) to an index into "objects",
+// or an array of indices for an array ref. A name that isn't found resolves to -1.
 function resolveRef(ref) {
+  if (Array.isArray(ref)) { return ref.map(resolveRef); }
   if (typeof ref === 'number') { return ref - 1; }
   return objects.findIndex(o => o.data()[1] === ref);
 }

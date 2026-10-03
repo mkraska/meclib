@@ -421,10 +421,17 @@ fb_unidir(o, n, i, description):=block(
 );
 
 /* https://github.com/mkraska/meclib/wiki/fb_resolve_ref */
-/* Resolves a "contact" targetRef (name string or 1-based index) to an index into o. */
-/* Returns false if the reference cannot be resolved unambiguously. */
+/* Resolves a "contact" targetRef to an index into o. %_ref may be a name string, a 1-based
+   index, or a LIST of either (for a contact that cuts away several environment objects at
+   once, e.g. two wall segments meeting at a corner) - in the list case every element must
+   resolve, and the result is the list of their indices, in the same order. */
+/* Returns false if any reference cannot be resolved unambiguously. */
 fb_resolve_ref(%_o, %_ref):=block([%_idx],
   if integerp(%_ref) then return(%_ref),
+  if listp(%_ref) then (
+    %_idx: map(lambda([%_r], fb_resolve_ref(%_o, %_r)), %_ref),
+    return(if member(false, %_idx) then false else %_idx)
+  ),
   %_idx: sublist_indices(%_o, lambda([%_x], %_x[2] = %_ref)),
   if length(%_idx) # 1 then return(false),
   first(%_idx)
@@ -432,18 +439,21 @@ fb_resolve_ref(%_o, %_ref):=block([%_idx],
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-"contact" */
 fb_contact(%_o, %_n, %_i, %_description):=block(
-    [%_txt: %_description, %_ref, %_j, %_R, %_refname],
+    [%_txt: %_description, %_ref, %_j, %_jlist, %_pending, %_names, %_R],
     /* Is object i a contact? */
     if ( %_o[%_i][1] # "contact" ) then return ([sconcat(%_txt, "object ", string(%_i), " is not a contact."), false]),
-    /* Resolve the referenced (cut-away) object */
+    /* Resolve the referenced (cut-away) object(s) - targetRef may be a single name/index or a
+       list of several (see fb_resolve_ref) */
     %_ref: %_o[%_i][5],
     %_j: fb_resolve_ref(%_o, %_ref),
     if %_j = false then return ([sconcat(%_txt, "Referenziertes Objekt '", string(%_ref), "' nicht gefunden oder mehrdeutig."), false]),
-    /* Is the referenced object de-activated? */
-    if ( last(%_o[%_j]) # "hide") then (
-      %_refname: %_o[%_j][2],
-      if %_refname = "" then return ([sconcat(%_txt, "Umgebung bei ", string(%_ref), " nicht deaktiviert."), false])
-                        else return ([sconcat(%_txt, %_refname, " ist nicht deaktiviert."), false])
+    %_jlist: if listp(%_j) then %_j else [%_j],
+    /* Are ALL referenced objects de-activated? */
+    %_pending: sublist(%_jlist, lambda([%_k], last(%_o[%_k]) # "hide")),
+    if %_pending # [] then (
+      %_names: map(lambda([%_k], if %_o[%_k][2] = "" then "Umgebung" else %_o[%_k][2]), %_pending),
+      return ([sconcat(%_txt, simplode(%_names, " und "),
+        if length(%_pending) = 1 then " ist nicht deaktiviert." else " sind nicht deaktiviert."), false])
     ),
     /* Any reactions found at i? */
     if not listp(%_n[%_i]) or %_n[%_i]=[] then return([sconcat(%_txt, "Keine Reaktion gefunden."), false]),
