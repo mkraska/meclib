@@ -656,12 +656,15 @@ fb_reactions(%_o, %_f, %_m):=block(
      %_point  - a point the force's line of action must pass through
      %_dir    - the expected direction, either a number (angle in degrees, standard math
                 convention: 0 = +x axis, 90 = +y axis) or a direction vector [dx, dy]
-     %_toldeg - direction tolerance in degrees
+     %_toldeg  - direction tolerance in degrees
+     %_toldist - tolerance for the line of action's distance from %_point, in the same length
+                 units as the sketch (a bare number - no unit tag for now; could later become a
+                 [tol, "mm"]-style list if a question ever needs one, but not needed yet)
      %_description - text prefix for the feedback, as elsewhere
-   On a direction mismatch, the actual deviation is reported as a rounded degree value, the
+   On a direction or distance mismatch, the actual deviation is reported as a rounded value, the
    same way fb_unit() reports a numeric deviation as a rounded percentage. */
-fb_force(%_o, %_name, %_point, %_dir, %_toldeg, %_description):=block(
-  [%_txt: %_description, %_names, %_idx, %_i, %_dref, %_devDeg, %_mn],
+fb_force(%_o, %_name, %_point, %_dir, %_toldeg, %_toldist, %_description):=block(
+  [%_txt: %_description, %_names, %_idx, %_i, %_dref, %_devDeg, %_devDist, %_mn],
   %_names: if listp(%_name) then %_name else [%_name],
   %_idx: sublist_indices(%_o, lambda([%_x], %_x[1]="force" and member(%_x[2],%_names) and last(%_x)="active")),
   if length(%_idx) = 0 then return([sconcat(%_txt, "Keine Kraft ", simplode(%_names," oder "), " gefunden."), false]),
@@ -679,9 +682,12 @@ fb_force(%_o, %_name, %_point, %_dir, %_toldeg, %_description):=block(
   %_devDeg: ev(round(angle(%_dref, %_o[%_i])*180/%pi*10)/10.0, simp),
   if abs(%_devDeg) > %_toldeg then
     return([castext_concat(%_txt, castext("\\({@%_mn@}\\) hat nicht die richtige Richtung. Richtungsabweichung: {@%_devDeg@}°.")), false]),
-  /* correct line of action (through %_point)? */
-  if abs(moment_of_force(%_point, %_o[%_i], 1, 1)) > 0.01 then
-    return([castext_concat(%_txt, castext("\\({@%_mn@}\\) geht nicht durch den vorgegebenen Punkt.")), false]),
+  /* correct line of action (through %_point)? moment_of_force() with a force magnitude of 1 is
+     exactly the signed perpendicular distance from %_point to the line of action, so it can be
+     rounded and reported directly, the same way as %_devDeg above. */
+  %_devDist: ev(round(moment_of_force(%_point, %_o[%_i], 1, 1)*10)/10.0, simp),
+  if abs(%_devDist) > %_toldist then
+    return([castext_concat(%_txt, castext("Die Wirkungslinie von \\({@%_mn@}\\) geht am richtigen Angriffspunkt vorbei. Abstand: {@%_devDist@}.")), false]),
   [castext_concat(%_txt, castext("\\({@%_mn@}\\) gefunden.")), true]
 );
 
