@@ -664,11 +664,17 @@ fb_reactions(%_o, %_f, %_m):=block(
    On a direction or distance mismatch, the actual deviation is reported as a rounded value, the
    same way fb_unit() reports a numeric deviation as a rounded percentage. */
 fb_force(%_o, %_name, %_point, %_dir, %_toldeg, %_toldist, %_description):=block(
-  [%_txt: %_description, %_names, %_idx, %_i, %_dref, %_devDeg, %_devDist, %_mn],
+  [%_txt: %_description, %_names, %_namestex, %_idx, %_i, %_dref, %_devDeg, %_devDist, %_mn],
   %_names: if listp(%_name) then %_name else [%_name],
+  /* %_names holds variable names (e.g. "G", "F_G") - these must render as LaTeX math, like %_mn
+     further down, not as plain text (which loses the subscript and looks inconsistent). Build the
+     "\(G\) oder \(F_G\)"-style text as its own value, then splice it into a literal castext()
+     template via {@...@} - the castext() call itself still needs a literal string constant (see
+     the comment below), only the VALUE substituted into the placeholder may be computed. */
+  %_namestex: simplode(map(lambda([%_x], sconcat("\\(", %_x, "\\)")), %_names), " oder "),
   %_idx: sublist_indices(%_o, lambda([%_x], %_x[1]="force" and member(%_x[2],%_names) and last(%_x)="active")),
-  if length(%_idx) = 0 then return([sconcat(%_txt, "Keine Kraft ", simplode(%_names," oder "), " gefunden."), false]),
-  if length(%_idx) > 1 then return([sconcat(%_txt, "Mehr als eine Kraft ", simplode(%_names," oder "), " gefunden."), false]),
+  if length(%_idx) = 0 then return([castext_concat(%_txt, castext("Keine Kraft {@%_namestex@} gefunden.")), false]),
+  if length(%_idx) > 1 then return([castext_concat(%_txt, castext("Mehr als eine Kraft {@%_namestex@} gefunden.")), false]),
   %_i: first(%_idx),
   %_mn: %_o[%_i][2],
   %_dref: if listp(%_dir) then ["force", 1, [0,0], %_dir]
