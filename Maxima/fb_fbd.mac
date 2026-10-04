@@ -644,7 +644,40 @@ fb_reactions(%_o, %_f, %_m):=block(
     if %_mnum # %_m then %_msgs: endcons("Die Zahl der Reaktionsmomente stimmt nicht.", %_msgs),
     %_txt: simplode(%_msgs, "<br>")
   ),
-  [%_txt,%_OK]  
+  [%_txt,%_OK]
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_force() */
+/* General-purpose feedback check for a single active force that is not tied to any particular
+   contact/support index (use fb_contact()/fb_bar() for those instead) - e.g. a weight force or
+   a resultant the student places freely via forceGen:
+     %_name   - the expected object name, as a string, or a list of strings if several names
+                would be equally acceptable (e.g. "G" or "F_G")
+     %_point  - a point the force's line of action must pass through
+     %_dir    - the expected direction, either a number (angle in degrees, standard math
+                convention: 0 = +x axis, 90 = +y axis) or a direction vector [dx, dy]
+     %_toldeg - direction tolerance in degrees
+     %_description - text prefix for the feedback, as elsewhere
+   On a direction mismatch, the actual deviation is reported as a rounded degree value, the
+   same way fb_unit() reports a numeric deviation as a rounded percentage. */
+fb_force(%_o, %_name, %_point, %_dir, %_toldeg, %_description):=block(
+  [%_txt: %_description, %_names, %_idx, %_i, %_dref, %_devDeg, %_mn],
+  %_names: if listp(%_name) then %_name else [%_name],
+  %_idx: sublist_indices(%_o, lambda([%_x], %_x[1]="force" and member(%_x[2],%_names) and last(%_x)="active")),
+  if length(%_idx) = 0 then return([sconcat(%_txt, "Keine Kraft ", simplode(%_names," oder "), " gefunden."), false]),
+  if length(%_idx) > 1 then return([sconcat(%_txt, "Mehr als eine Kraft ", simplode(%_names," oder "), " gefunden."), false]),
+  %_i: first(%_idx),
+  %_mn: %_o[%_i][2],
+  %_dref: if listp(%_dir) then ["force", 1, [0,0], %_dir]
+          else ["force", 1, [0,0], [cos(%_dir*%pi/180), sin(%_dir*%pi/180)]],
+  /* correct direction? report the deviation itself, rounded, rather than just pass/fail */
+  %_devDeg: ev(round(angle(%_dref, %_o[%_i])*180/%pi*10)/10.0, simp),
+  if abs(%_devDeg) > %_toldeg then
+    return([castext_concat(%_txt, castext(sconcat("\\(", %_mn, "\\) hat nicht die richtige Richtung. Richtungsabweichung: {@%_devDeg@}°."))), false]),
+  /* correct line of action (through %_point)? */
+  if abs(moment_of_force(%_point, %_o[%_i], 1, 1)) > 0.01 then
+    return([castext_concat(%_txt, castext(sconcat("\\(", %_mn, "\\) geht nicht durch den vorgegebenen Punkt."))), false]),
+  [castext_concat(%_txt, castext(sconcat("\\(", %_mn, "\\) gefunden."))), true]
 );
 
 /* https://github.com/mkraska/meclib/wiki/fb_system() */
