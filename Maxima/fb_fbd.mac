@@ -670,14 +670,19 @@ fb_force(%_o, %_name, %_point, %_dir, %_toldeg, %_description):=block(
   %_mn: %_o[%_i][2],
   %_dref: if listp(%_dir) then ["force", 1, [0,0], %_dir]
           else ["force", 1, [0,0], [cos(%_dir*%pi/180), sin(%_dir*%pi/180)]],
-  /* correct direction? report the deviation itself, rounded, rather than just pass/fail */
+  /* correct direction? report the deviation itself, rounded, rather than just pass/fail.
+     castext() is recognized by STACK's compiler at the SOURCE-CODE level - it needs a literal
+     string constant with {@...@} placeholders, not a string built at runtime (e.g. via
+     sconcat()). Passing it a dynamically-built string silently fails (the unevaluated
+     castext(...) call leaks into the feedback text as literal text) - same class of bug as
+     elsewhere in this file; always use the castext("...{@var@}...") form, like fb_contact(). */
   %_devDeg: ev(round(angle(%_dref, %_o[%_i])*180/%pi*10)/10.0, simp),
   if abs(%_devDeg) > %_toldeg then
-    return([castext_concat(%_txt, castext(sconcat("\\(", %_mn, "\\) hat nicht die richtige Richtung. Richtungsabweichung: {@%_devDeg@}°."))), false]),
+    return([castext_concat(%_txt, castext("\\({@%_mn@}\\) hat nicht die richtige Richtung. Richtungsabweichung: {@%_devDeg@}°.")), false]),
   /* correct line of action (through %_point)? */
   if abs(moment_of_force(%_point, %_o[%_i], 1, 1)) > 0.01 then
-    return([castext_concat(%_txt, castext(sconcat("\\(", %_mn, "\\) geht nicht durch den vorgegebenen Punkt."))), false]),
-  [castext_concat(%_txt, castext(sconcat("\\(", %_mn, "\\) gefunden."))), true]
+    return([castext_concat(%_txt, castext("\\({@%_mn@}\\) geht nicht durch den vorgegebenen Punkt.")), false]),
+  [castext_concat(%_txt, castext("\\({@%_mn@}\\) gefunden.")), true]
 );
 
 /* https://github.com/mkraska/meclib/wiki/fb_system() */
