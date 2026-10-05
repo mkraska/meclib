@@ -1,0 +1,593 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+<!-- question: 2458869  -->
+  <question type="stack">
+    <name>
+      <text>TM1 02 07 Walze über Stufe (meclib, interaktiv)</text>
+    </name>
+    <questiontext format="markdown">
+      <text><![CDATA[**TM1 02 07**[[lang code="de"]] [[/lang]][[lang code="other"]] [[/lang]]
+
+<p hidden>[[input:objects]] [[validation:objects]]</p>
+<p hidden>[[input:names]] [[validation:names]]</p>
+<div style="float:right">
+[[jsxgraph width='360px' height='300px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
+var mode  = "STACK";
+const initstring = {#init#};
+var decsep = {#stackfltsep#};
+const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
+  anchorX:'left', anchorY:'middle'}};
+// End of STACK header
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/dev2026/meclib.js"/]]
+[[/jsxgraph]]</div>
+
+<p>Eine glatte Walze (Gewicht \(G\), Radius \(r\)) soll über eine Stufe (Höhe \(h\)) gezogen werden. Dazu wird am Mittelpunkt eine Kraft \(F\) unter dem Winkel \(\varphi\) angesetzt (die in der Skizze eingezeichnete Lage von \(F\) und \(\varphi\) ist nur beispielhaft).</p>
+
+<p>Schneiden Sie die Walze frei, also ersetzen Sie die Wirkung von Boden und Stufe durch Reaktionskräfte. Vergessen Sie auch die Gewichtskraft nicht.</p>
+
+[[lang code="de"]]
+<details><summary><strong>Bedienungshinweise</strong></summary>
+<ul>
+ <li>Objekte (de-)aktivieren: Doppelklick
+ <li>Kraft
+ <ul>
+   <li>erzeugen: Name eintragen und grauen Pfeil auf die Skizze ziehen
+  <li>löschen: Doppelklicken
+  <li>Position und Richtung ändern: Rote Kontrollpunkte ziehen
+ </ul>
+<li> Reaktionskräfte: Anfangs- oder Endpunkt müssen auf dem Kontaktpunkt liegen
+</ul>
+</details>
+[[/lang]]
+[[lang code="other"]]
+<details><summary><strong>Hints for interactive input</strong></summary>
+<ul>
+<li>Activate/de-activate objects: double click
+<li>Force
+  <ul>
+  <li>Create: Enter a name in the text field and then drag the gray arrow onto the sketch.
+  <li>Delete: Double click on the arrow
+  <li>Change position and direction: Drag red control points
+  </ul>
+<li>Force reactions: Either of the two control points must be on the contact point
+</ul>
+</details>
+[[/lang]]
+
+[[feedback:fbd]]
+
+<p>Gegeben: \(h = {@h@}\), \(r = {@r@}\) (Längeneinheiten).</p>
+
+**Gleichgewichtsbedingungen:** Geben Sie zunächst \(\sin\alpha\) und \(\cos\alpha\) an (der Winkel \(\alpha\) ist in der Skizze oben eingezeichnet).
+
+<p>\(\sin\alpha = \) [[input:S_sinalpha]] [[validation:S_sinalpha]] [[feedback:alpha]]</p>
+<p>\(\cos\alpha = \) [[input:S_cosalpha]] [[validation:S_cosalpha]]</p>
+
+Stellen Sie nun die Kräftegleichgewichte in \(x\)- und \(y\)-Richtung auf. Verwenden Sie dabei dieselben Kraftnamen wie in Ihrem Freischnitt sowie \(\alpha\) und \(\varphi\) für die eingezeichneten Winkel, z.B. <code>sin(alpha)</code>.
+
+<p>\(\Sigma F_x:\quad\) [[input:S_GGx]] [[validation:S_GGx]] \(=0\) [[feedback:GGx]]</p>
+<p>\(\Sigma F_y:\quad\) [[input:S_GGy]] [[validation:S_GGy]] \(=0\) [[feedback:GGy]]</p>]]></text>
+    </questiontext>
+    <generalfeedback format="markdown">
+      <text><![CDATA[<div style="float:right">
+[[jsxgraph width='360px' height='300px' ]]
+var mode  = "STACK";
+var stateRef;
+const initstring = {#ref#};
+const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
+  anchorX:'left', anchorY:'middle'}};
+// End of STACK header
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/dev2026/meclib.js" /]]
+[[/jsxgraph]]</div>
+
+Rechts sehen Sie einen möglichen richtigen Freischnitt: Boden und Stufe sind deaktiviert
+(weggeschnitten) und durch die Reaktionskräfte \(N_A\) (senkrecht zum Boden) und \(N_B\)
+(radial, da reibungsfreier Punktkontakt an der Stufenkante) ersetzt; dazu kommt die
+Gewichtskraft \(G\).]]></text>
+    </generalfeedback>
+    <defaultgrade>1</defaultgrade>
+    <penalty>0</penalty>
+    <hidden>0</hidden>
+    <idnumber></idnumber>
+    <stackversion>
+      <text>2026080600</text>
+    </stackversion>
+    <questionvariables>
+      <text><![CDATA[/* --- Angaben fuer die Aufgabenstellung (weiterhin randomisiert, bewusst UNABHAENGIG von der
+   festen Skizzen-Geometrie unten: fuer das Freischnittueben ist nicht wesentlich, dass die
+   angegebenen Zahlenwerte exakt zur Skizze passen) --- */
+r: 2;
+h: rand_with_step(0.5, 1.5, 0.25);
+alphaDeg: float(acos((r-h)/r)*180/%pi);
+ta1: sconcat("h=",h,"; r=",r,"; alpha=",dispsf(alphaDeg,4),"°");
+
+/* sin(alpha)/cos(alpha) als Referenz fuer die vorgeschaltete numerische Abfrage (PRT "alpha")
+   sowie fuer die Anzeige des Inputs selbst - alpha ist hier die Zahl alphaDeg, nicht zu
+   verwechseln mit dem GLEICHNAMIGEN freien Symbol "alpha", das weiter unten in den
+   Gleichgewichtsbedingungen rein symbolisch verwendet wird. */
+sinalpha_ref: float(sin(alphaDeg*%pi/180));
+cosalpha_ref: float(cos(alphaDeg*%pi/180));
+
+/* --- Skizzen-Geometrie: FEST, nicht randomisiert. rS (Rollenradius fuer die Anzeige) und hS
+   (Stufenhoehe, eine Gittereinheit) sind die einzigen frei gewaehlten Werte; alles andere wird
+   daraus berechnet, insbesondere xOS aus der Tangentialbedingung
+   xOS^2 + (rS-hS)^2 = rS^2 (Walze tangiert sowohl Boden als auch Stufenkante B). Fuer rS=2.5,
+   hS=1 ergibt das zufaellig xOS=-2 (exakt auf dem 0.1-Gitter), sodass die Gewichtskraft G beim
+   Ziehen per gewoehnlichem Gitter-Snap praezise angetragen werden kann; bei anderer Wahl von rS
+   waere das nicht mehr garantiert. --- */
+rS: 2.5;
+hS: 1;
+xOS: -sqrt(hS*(2*rS-hS));
+alphaS: float(acos((rS-hS)/rS)*180/%pi);
+phiDeg: 20; /* rein illustrativer Neigungswinkel der Kraft in der Skizze */
+Flen: rS+1.5;
+Ftip: float([xOS+Flen*cos(phiDeg*%pi/180), rS+Flen*sin(phiDeg*%pi/180)]);
+xO_center: [xOS, rS];
+
+/* Blickfeld: knapp 1 Gittereinheit Rand um den tatsaechlichen Bildinhalt; pix immer 40 */
+xmin: floor(min(xOS-rS,xOS)-1);
+xmax: ceiling(max(Ftip[1],0)+1);
+ymin: -2;
+ymax: ceiling(max(Ftip[2],2*rS)+1);
+pix: 40;
+
+/* Richtung der Reaktion bei B: radial von der Stufenkante B zum Walzenmittelpunkt O */
+dO: float(-[xOS, rS-hS]);
+dOu: dO/sqrt(dO[1]^2+dO[2]^2);
+
+/* Position des forceGen-Widgets: im unteren Rand, rechts, immer frei von der Skizze */
+fgx: xmax-1.5;
+fgy: ymax-0.9;
+
+/* --- interaktive Ausgangsskizze --- */
+initdata: [
+  ["grid", "","", xmin,xmax,ymin,ymax, pix, [1,1], [0,0]],
+  ["wall","Boden",[0,0],[xmin,0], 45, "show"],
+  ["wall","Stufe links",[0,0],[0,hS], -45, "show"],
+  ["wall","Stufe oben",[xmax,hS],[0,hS], 45, "show"],
+  ["circle","r",xO_center, rS, -135],
+  ["point","A",[xOS,0]],
+  ["point","B",[0,hS]],
+  ["line","black",[xOS-(rS+0.2),xOS+(rS+0.2)],[rS,rS],"-."],
+  ["line","black",[xOS,xOS],[-0.2,2*rS+0.2],"-."],
+  ["angle","\\alpha",[xOS,rS],[xOS,0],0.5,alphaS],
+  ["angle","\\varphi",[xOS,rS],[xOS+1,rS],0.9,phiDeg],
+  ["dim","h",[2,0],[2,hS],0],
+  ["force","F",[xOS,rS],Ftip,10,""],
+  ["contact","",[xOS,0],[0,-1],"Boden", 3],
+  ["contact","",[0,hS],dO,["Stufe links","Stufe oben"],3],
+  ["forceGen","F",[fgx,fgy]]
+];
+init: stackjson_stringify(initdata);
+
+i_contactA: 14;
+i_contactB: 15;
+
+
+/* --- refdata/gfbdata werden aus initdata ABGELEITET (Objekte angehaengt/veraendert), damit
+   Anpassungen an der Geometrie nur an EINER Stelle (initdata) gemacht werden muessen --- */
+refdata: copylist(initdata);
+refdata: endcons( ["force","G", xO_center, [xOS,rS-1.5], 10, "active"], refdata);
+refdata: endcons( ["force","N_A", float([xOS,0]-[0,1.5]), [xOS,0], 10, "active"] , refdata);
+refdata: endcons( ["force","N_B", float([0,hS]-dOu*1.5), [0,hS], 10, "active"] , refdata);
+refdata[2][6]: "hide";
+refdata[3][6]: "hide";
+refdata[4][6]: "hide";
+ref: stackjson_stringify(refdata);
+
+gfbdata: copylist(refdata);
+gfb: stackjson_stringify(gfbdata);
+
+stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/fb_value.mac" );
+stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/fb_fbd.mac" );]]></text>
+    </questionvariables>
+    <specificfeedback format="moodle_auto_format">
+      <text></text>
+    </specificfeedback>
+    <questionnote format="html">
+      <text>{@ta1@}</text>
+    </questionnote>
+    <questiondescription format="html">
+      <text></text>
+    </questiondescription>
+    <questionsimplify>1</questionsimplify>
+    <assumepositive>0</assumepositive>
+    <assumereal>0</assumereal>
+    <prtcorrect format="html">
+      <text>Richtige Antwort, gut gemacht!</text>
+    </prtcorrect>
+    <prtpartiallycorrect format="html">
+      <text>Ihre Antwort ist teilweise korrekt.</text>
+    </prtpartiallycorrect>
+    <prtincorrect format="html">
+      <text>Falsche Antwort.</text>
+    </prtincorrect>
+    <decimals>.</decimals>
+    <scientificnotation>*10</scientificnotation>
+    <multiplicationsign>dot</multiplicationsign>
+    <sqrtsign>1</sqrtsign>
+    <complexno>i</complexno>
+    <inversetrig>cos-1</inversetrig>
+    <logicsymbol>lang</logicsymbol>
+    <matrixparens>[</matrixparens>
+    <isbroken>0</isbroken>
+    <variantsselectionseed></variantsselectionseed>
+    <input>
+      <name>names</name>
+      <type>algebraic</type>
+      <tans>[]</tans>
+      <boxsize>15</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint></syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>1</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>0</mustverify>
+      <showvalidation>0</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>objects</name>
+      <type>string</type>
+      <tans>ref</tans>
+      <boxsize>15</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint></syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>1</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>0</mustverify>
+      <showvalidation>0</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>S_sinalpha</name>
+      <type>numerical</type>
+      <tans>dispdp(sinalpha_ref,3)</tans>
+      <boxsize>8</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint>Zahl</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords>sin, cos</forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>S_cosalpha</name>
+      <type>numerical</type>
+      <tans>dispdp(cosalpha_ref,3)</tans>
+      <boxsize>8</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint>Zahl</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords>sin, cos</forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>S_GGx</name>
+      <type>algebraic</type>
+      <tans>0</tans>
+      <boxsize>15</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>Ausdruck</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>1</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>S_GGy</name>
+      <type>algebraic</type>
+      <tans>0</tans>
+      <boxsize>15</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>3</insertstars>
+      <syntaxhint>Ausdruck</syntaxhint>
+      <syntaxattribute>1</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>1</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>1</mustverify>
+      <showvalidation>3</showvalidation>
+      <options></options>
+    </input>
+    <prt>
+      <name>fbd</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects);
+[textA, okA]: fb_contact(obj, names, i_contactA, "Kontakt A: ");
+[textB, okB]: fb_contact(obj, names, i_contactB, "Kontakt B: ");
+[textG, okG]: fb_force(obj, "G", xO_center, -90, 2, 0.01, "Gewichtskraft: ");
+S_numforce: length(sublist_indices (obj, lambda ([x], x[1]="force")));
+numforce: length(sublist_indices (refdata, lambda ([x], x[1]="force")));]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>okA</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>0.25</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>1</truenextnode>
+        <trueanswernote>fbd-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>{@textA@}]]></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>1</falsenextnode>
+        <falseanswernote>fbd-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>{@textA@}]]></text>
+        </falsefeedback>
+      </node>
+      <node>
+        <name>1</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>okB</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>+</truescoremode>
+        <truescore>0.25</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>2</truenextnode>
+        <trueanswernote>fbd-2-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>{@textB@}]]></text>
+        </truefeedback>
+        <falsescoremode>-</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>2</falsenextnode>
+        <falseanswernote>fbd-2-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>{@textB@}]]></text>
+        </falsefeedback>
+      </node>
+      <node>
+        <name>2</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>okG</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>+</truescoremode>
+        <truescore>0.25</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>3</truenextnode>
+        <trueanswernote>fbd-3-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>{@textG@}]]></text>
+        </truefeedback>
+        <falsescoremode>-</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>3</falsenextnode>
+        <falseanswernote>fbd-3-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>{@textG@}]]></text>
+        </falsefeedback>
+      </node>
+      <node>
+        <name>3</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>S_numforce</sans>
+        <tans>numforce</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>+</truescoremode>
+        <truescore>0.25</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>fbd-4-T</trueanswernote>
+        <truefeedback format="html">
+          <text></text>
+        </truefeedback>
+        <falsescoremode>-</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>fbd-4-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>Die Gesamtzahl der Kräfte stimmt nicht.]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>alpha</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description></description>
+        <answertest>NumAbsolute</answertest>
+        <sans>S_sinalpha</sans>
+        <tans>sinalpha_ref</tans>
+        <testoptions>0.01</testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>0.5</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>1</truenextnode>
+        <trueanswernote>alpha-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>\(\sin\alpha\) ist richtig.]]></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>1</falsenextnode>
+        <falseanswernote>alpha-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>\(\sin\alpha\) stimmt noch nicht.]]></text>
+        </falsefeedback>
+      </node>
+      <node>
+        <name>1</name>
+        <description></description>
+        <answertest>NumAbsolute</answertest>
+        <sans>S_cosalpha</sans>
+        <tans>cosalpha_ref</tans>
+        <testoptions>0.01</testoptions>
+        <quiet>0</quiet>
+        <truescoremode>+</truescoremode>
+        <truescore>0.5</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>alpha-2-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>\(\cos\alpha\) ist richtig.]]></text>
+        </truefeedback>
+        <falsescoremode>-</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>alpha-2-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>\(\cos\alpha\) stimmt noch nicht.]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>GGx</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects);
+nameA: fb_reaction_name(obj, names, i_contactA, false);
+nameB: fb_reaction_name(obj, names, i_contactB, false);
+if nameA = false or nameB = false then (
+  textGGx: "Vervollständigen Sie zuerst den Freischnitt (Reaktionen bei A und B).",
+  okGGx: false
+) else (
+  GGx_ref: F*cos(phi) - nameB*sin(alpha),
+  textGGx: fb_vars(S_GGx, GGx_ref, [F, nameB]),
+  okGGx: is(textGGx = "")
+);]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>okGGx</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>GGx-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>Die Gleichung stimmt.]]></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>GGx-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>{@textGGx@}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <prt>
+      <name>GGy</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: stackjson_parse(objects);
+nameA: fb_reaction_name(obj, names, i_contactA, false);
+nameB: fb_reaction_name(obj, names, i_contactB, false);
+if nameA = false or nameB = false then (
+  textGGy: "Vervollständigen Sie zuerst den Freischnitt (Reaktionen bei A und B).",
+  okGGy: false
+) else (
+  GGy_ref: F*sin(phi) + nameA + nameB*cos(alpha) - G,
+  textGGy: fb_vars(S_GGy, GGy_ref, [F, nameA, nameB, G]),
+  okGGy: is(textGGy = "")
+);]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description></description>
+        <answertest>AlgEquiv</answertest>
+        <sans>okGGy</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>0</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>1</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>GGy-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<br>Die Gleichung stimmt.]]></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>GGy-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<br>{@textGGy@}]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <qtest>
+      <testcase>1</testcase>
+      <description></description>
+    </qtest>
+    <hint format="html">
+      <text><![CDATA[<p>Hinweis 1</p>]]></text>
+    </hint>
+  </question>
+
+</quiz>
