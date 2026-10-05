@@ -438,8 +438,18 @@ fb_resolve_ref(%_o, %_ref):=block([%_idx],
 );
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-"contact" */
+/* Direction convention for a "contact" object's stored direction o[4]: it points OUTWARD from
+   the free body, away from the support/environment (e.g. straight down into the floor for a
+   body resting on the ground, or radially outward from a circle's center through the contact
+   point) - NOT into the body. A frictionless point contact can only push, never pull, so a
+   correctly entered reaction (pointing from the support INTO the body, i.e. opposite o[4]) must
+   have a NEGATIVE scalar product with o[4]; zero or positive means the student entered a
+   tension/pulling force, which is physically impossible for this kind of contact and is now
+   flagged below. (Existing "contact" sketches authored before this convention was fixed may
+   have o[4] pointing the other way - into the body - and need their direction negated to keep
+   passing this check; see the wiki TODO for fb_contact()/"contact".) */
 fb_contact(%_o, %_n, %_i, %_description):=block(
-    [%_txt: %_description, %_ref, %_j, %_jlist, %_pending, %_names, %_R],
+    [%_txt: %_description, %_ref, %_j, %_jlist, %_pending, %_names, %_R, %_mn, %_dR, %_dC],
     /* Is object i a contact? */
     if ( %_o[%_i][1] # "contact" ) then return ([sconcat(%_txt, "object ", string(%_i), " is not a contact."), false]),
     /* Resolve the referenced (cut-away) object(s) - targetRef may be a single name/index or a
@@ -462,10 +472,15 @@ fb_contact(%_o, %_n, %_i, %_description):=block(
     /* Is the reaction a force? */
     if ( %_o[%_n[%_i][1]][1] # "force" ) then return ([sconcat(%_txt, "Die Reaktion muss eine Kraft sein."),false]),
     %_R: %_o[%_n[%_i][1]],
+    %_mn: %_n[%_n[%_i][1]],
     /* Is the force normal to the contact? */
-    if not parallelp(%_R, %_o[%_i]) then return ([castext_concat(%_txt, castext("Die Reaktion \\({@%_n[%_n[%_i][1]]@}\\) hat nicht die richtige Richtung.") ),false]),
+    if not parallelp(%_R, %_o[%_i]) then return ([castext_concat(%_txt, castext("Die Reaktion \\({@%_mn@}\\) hat nicht die richtige Richtung.") ),false]),
+    /* Does it push (compression), not pull (tension)? See the convention note above. */
+    %_dR: direction(%_R), %_dC: direction(%_o[%_i]),
+    if is(%_dR[1]*%_dC[1] + %_dR[2]*%_dC[2] >= 0) then
+      return ([castext_concat(%_txt, castext("Die Reaktion \\({@%_mn@}\\) muss eine Druckkraft sein.") ),false]),
     /* everything should be ok here */
-    return([castext_concat(%_txt, castext("Reaktion \\({@%_n[%_n[%_i][1]]@}\\) gefunden.") ),true])
+    return([castext_concat(%_txt, castext("Reaktion \\({@%_mn@}\\) gefunden.") ),true])
 );
 
 /* https://github.com/mkraska/meclib/wiki/fb_reaction_name */
