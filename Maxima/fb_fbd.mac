@@ -641,10 +641,15 @@ fb_bar_name(%_o, %_n, %_i):=block(
 );
 
 /* https://github.com/mkraska/meclib/wiki/fb_name */
-fb_name(n,i,lon,[opt]):=block([name,txt,%_namestex,%_show],
+fb_name(n,i,lon,[opt]):=block([name,txt,%_namestex,%_show,%_lonstr],
   name: none,
   if listp(n[i]) and  not emptyp(n[i]) then name: n[n[i][1]] else return(["", false]),
-  if member(name,lon) then return( ["",true]),
+  /* the resolved name from the live `names` array may be a CAS symbol (algebraic input) or a
+     string, and lon may be written either way too (e.g. ["N_A","A"] or [N_A,A]) - normalize
+     both sides to plain strings before comparing, since a symbol and a string of the same
+     spelling are never equal to Maxima's member(). */
+  %_lonstr: map(lambda([%_x], if stringp(%_x) then %_x else string(%_x)), lon),
+  if member(if stringp(name) then name else string(name), %_lonstr) then return( ["",true]),
   %_show: if opt=[] then true else opt[1],
   if not %_show then return([castext("\\({@name@} \\) ist kein passender Name."), false]),
   %_namestex: if length(lon)=1 then sconcat("\\(",lon[1],"\\)")
@@ -676,14 +681,20 @@ fb_reactions(%_o, %_f, %_m):=block(
      %_dir    - the expected direction, either a number (angle in degrees, standard math
                 convention: 0 = +x axis, 90 = +y axis) or a direction vector [dx, dy]
      %_toldeg  - direction tolerance in degrees
-     %_toldist - tolerance for the line of action's distance from %_point, in the same length
-                 units as the sketch (a bare number - no unit tag for now; could later become a
-                 [tol, "mm"]-style list if a question ever needs one, but not needed yet)
+     %_toldist - tolerance for the line of action's distance from %_point, either a bare number
+                 (compared directly against the sketch's own coordinate units, as the deviation
+                 from moment_of_force() naturally comes out) or a [tol, "unit"] list (e.g.
+                 [0.01,"mm"]) - in that case the sketch-unit deviation is converted using the
+                 grid object's [fx,fy] scaling factor (see the "grid" wiki page; object 1 must
+                 be the grid, and fx must equal fy - any geometry sketch must be scaled equally
+                 in x and y, so a mismatch is reported as a question-authoring/developer error,
+                 not student feedback) and the deviation is reported together with that unit
      %_description - text prefix for the feedback, as elsewhere
    On a direction or distance mismatch, the actual deviation is reported as a rounded value, the
    same way fb_unit() reports a numeric deviation as a rounded percentage. */
 fb_force(%_o, %_name, %_point, %_dir, %_toldeg, %_toldist, %_description):=block(
-  [%_txt: %_description, %_names, %_namestex, %_idx, %_i, %_dref, %_devDeg, %_devDist, %_mn],
+  [%_txt: %_description, %_names, %_namestex, %_idx, %_i, %_dref, %_devDeg, %_devDist, %_mn,
+   %_toldistval, %_tolunit, %_fx, %_fy],
   %_names: if listp(%_name) then %_name else [%_name],
   /* %_names holds variable names (e.g. "G", "F_G") - these must render as LaTeX math, like %_mn
      further down, not as plain text (which loses the subscript and looks inconsistent). Build the
@@ -711,8 +722,20 @@ fb_force(%_o, %_name, %_point, %_dir, %_toldeg, %_toldist, %_description):=block
      exactly the signed perpendicular distance from %_point to the line of action, so it can be
      rounded and reported directly, the same way as %_devDeg above. */
   %_devDist: ev(round(moment_of_force(%_point, %_o[%_i], 1, 1)*10)/10.0, simp),
-  if abs(%_devDist) > %_toldist then
-    return([castext_concat(%_txt, castext("Die Wirkungslinie von \\({@%_mn@}\\) geht am richtigen Angriffspunkt vorbei. Abstand: {@%_devDist@}.")), false]),
+  if listp(%_toldist) then (
+    if %_o[1][1] # "grid" then
+      return([sconcat("fb_force(): object 1 is not a \"grid\" - cannot determine the scaling factor for a unit-tagged toldist."), false]),
+    [%_fx, %_fy]: %_o[1][9],
+    if %_fx # %_fy then
+      return([sconcat("fb_force(): grid scaling factors fx (", string(%_fx), ") and fy (", string(%_fy), ") differ - a unit-tagged toldist requires equal x/y scaling."), false]),
+    %_toldistval: %_toldist[1], %_tolunit: %_toldist[2],
+    %_devDist: ev(round(%_devDist*%_fx*10)/10.0, simp),
+    if abs(%_devDist) > %_toldistval then
+      return([castext_concat(%_txt, castext("Die Wirkungslinie von \\({@%_mn@}\\) geht am richtigen Angriffspunkt vorbei. Abstand: {@%_devDist@} {@%_tolunit@}.")), false])
+  ) else (
+    if abs(%_devDist) > %_toldist then
+      return([castext_concat(%_txt, castext("Die Wirkungslinie von \\({@%_mn@}\\) geht am richtigen Angriffspunkt vorbei. Abstand: {@%_devDist@}.")), false])
+  ),
   [castext_concat(%_txt, castext("\\({@%_mn@}\\) gefunden.")), true]
 );
 
