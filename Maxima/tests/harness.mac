@@ -1,0 +1,165 @@
+/* ============================================================================
+   Offline test harness for meclib's free-body-diagram feedback functions
+   (../fb_fbd.mac).
+
+   This stubs out the two STACK/CASText primitives fb_fbd.mac calls -
+   castext() and castext_concat() - and adds a small, faithful
+   reimplementation of STACK's own [[lang code='...']] selection rule
+   (see https://docs.stack-assessment.org/en/Authoring/Languages/), so a
+   test case can check the EXACT text a student would see in either
+   language, not just whether the function returned true/false. That is
+   the point of this suite: catching missing/spurious spaces, commas,
+   periods, or line breaks in the rendered feedback before they ever
+   reach Moodle.
+
+   Naming follows the test convention used by STACK's own Maxima library
+   (s_test_fails/s_test_success, see
+   stack/maxima/maximasrccompiled_tests.mac in maths/moodle-qtype_stack),
+   so this stays recognisable to anyone familiar with that convention.
+   The single entry point here, fb_check(), differs from STACK's own
+   s_exec_test() in one way: on failure it prints the exact mismatched
+   field (flag / de text / en text) with a got/expected diff, since a
+   bare pass/fail is not enough to spot a one-character formatting glitch.
+   ============================================================================ */
+
+/* ---- stubs for the two CAS-side primitives fb_fbd.mac calls ----
+   castext() is stubbed UNCONDITIONALLY: it is never part of STACK's
+   redistributable stack/maxima library - STACK's PHP compiler generates a
+   per-question definition for it - so there is no "real" one to load here
+   regardless of whether run_tests.mac found a copy of that library under
+   ../../config/stack/<version>/maxima/.
+
+   castext_concat() IS part of that real library (stack/maxima/stackstrings.mac,
+   loaded transitively by stackmaxima.mac). If run_tests.mac already loaded
+   it, meclib_real_stack_loaded is true and the real definition - which does
+   genuine castext2-internal-structure merging, not just sconcat() - is
+   already in place, so keep it. Otherwise fall back to the plain-identity
+   stand-in below: every already-i18n-converted function in fb_fbd.mac
+   builds its castext() calls from fully static string literals (no {@...@}
+   placeholders) and only ever plain-concatenates dynamic values via
+   sconcat()/castext_concat() at the point of use (the "split-parts"
+   architecture), so this stub is structurally faithful for them either way -
+   it just isn't exercised when the real one is available. */
+if not(?boundp('meclib_real_stack_loaded)) then meclib_real_stack_loaded: false$
+
+castext(s) := s$
+if meclib_real_stack_loaded = false then (
+  castext_concat(a, b) := sconcat(a, b)
+)$
+
+/* ---- STACK's [[lang code='...']] selection rule, reimplemented ----
+   Walks s left to right. Outside any [[lang]]...[[/lang]] block, text
+   passes through unchanged (e.g. plain HTML markup, object names).
+
+   Every translatable fragment in this codebase is written as exactly
+   two ADJACENT blocks - one for 'de', one for the 'en,other' fallback -
+   with no plain text between them. The selection has to be done across
+   that pair at once, not block-by-block: picking "the first block
+   whose code list contains `lang`, OR contains 'other'" independently
+   per block would wrongly also keep the 'en,other' fallback block even
+   when the preceding 'de' block already matched.
+
+   Two DIFFERENT fragments can also sit directly adjacent to each other
+   with no plain text in between (e.g. two hoisted str_* variables
+   concatenated back to back) - so grouping has to stop at exactly 2
+   blocks per decision, never swallow a longer run of adjacent blocks,
+   or two separate fragments get merged into one and only one survives. */
+fb_test_split_csv(s) := block([parts: [], start: 1, p, len: slength(s)],
+  for p: 1 thru len do
+    if charat(s, p) = "," then (parts: endcons(substring(s, start, p), parts), start: p + 1),
+  parts: endcons(substring(s, start, len + 1), parts),
+  parts
+)$
+
+/* Parses one [[lang code='...']]...[[/lang]] block starting exactly at
+   position `start`. Returns [codes, body, nextpos]. */
+fb_test_parse_lang_block(s, start) := block(
+  [tagend, codestart, codeend, codes, bodyend, body],
+  tagend: ssearch("]]", s, start),
+  codestart: ssearch("'", s, start) + 1,
+  codeend: ssearch("'", s, codestart),
+  codes: fb_test_split_csv(substring(s, codestart, codeend)),
+  bodyend: ssearch("[[/lang]]", s, tagend),
+  body: substring(s, tagend + 2, bodyend),
+  [codes, body, bodyend + slength("[[/lang]]")]
+)$
+
+/* True if s starting at `pos` begins with the literal text `prefix`. */
+fb_test_starts_with(s, pos, prefix) := block([plen: slength(prefix)],
+  if pos + plen - 1 > slength(s) then false else substring(s, pos, pos + plen) = prefix
+)$
+
+resolve_lang(s, lang) := block(
+  [out: "", pos: 1, len: slength(s), tagstart, cur, parsed,
+   group_codes, group_bodies, chosen, found, i],
+  if not stringp(s) then return(s),
+  while pos <= len do (
+    tagstart: ssearch("[[lang", s, pos),
+    if tagstart = false then (
+      out: sconcat(out, substring(s, pos, len + 1)),
+      pos: len + 1
+    ) else (
+      out: sconcat(out, substring(s, pos, tagstart)),
+      /* collect exactly one pair of adjacent [[lang]] blocks (see note
+         above on why this must not swallow more than 2) */
+      group_codes: [], group_bodies: [],
+      cur: tagstart,
+      parsed: fb_test_parse_lang_block(s, cur),
+      group_codes: endcons(parsed[1], group_codes),
+      group_bodies: endcons(parsed[2], group_bodies),
+      cur: parsed[3],
+      if fb_test_starts_with(s, cur, "[[lang") then (
+        parsed: fb_test_parse_lang_block(s, cur),
+        group_codes: endcons(parsed[1], group_codes),
+        group_bodies: endcons(parsed[2], group_bodies),
+        cur: parsed[3]
+      ),
+      /* choose: exact match first, "other" fallback otherwise */
+      chosen: "", found: false,
+      for i: 1 thru length(group_codes) do
+        if not found and member(lang, group_codes[i]) then (chosen: group_bodies[i], found: true),
+      if not found then
+        for i: 1 thru length(group_codes) do
+          if not found and member("other", group_codes[i]) then (chosen: group_bodies[i], found: true),
+      out: sconcat(out, chosen),
+      pos: cur
+    )
+  ),
+  out
+)$
+
+/* ---- tiny test runner ---- */
+s_test_fails: 0$
+s_test_success: 0$
+
+/* fb_check(result, expected_ok, expected_de, expected_en, label)
+   result: the raw [text, flag] a feedback function returned.
+   Renders `text` for "de" and for "en" via resolve_lang() and compares
+   each, plus the flag, against the expected values with EXACT string
+   equality (deliberately strict - a missing space or period is a
+   failure here, not something to eyeball away). Prints a precise diff
+   per mismatched field and updates the pass/fail counters. Returns
+   true/false so a test file can also assert on it directly if useful. */
+fb_check(result, expected_ok, expected_de, expected_en, label) := block(
+  [text: result[1], ok: result[2], de, en, pass: true],
+  de: resolve_lang(text, "de"),
+  en: resolve_lang(text, "en"),
+  if ok # expected_ok then (
+    pass: false,
+    print(sconcat("FAIL [", label, "] flag: got ", string(ok), ", expected ", string(expected_ok)))
+  ),
+  if de # expected_de then (
+    pass: false,
+    print(sconcat("FAIL [", label, "] de:   got <<", de, ">>")),
+    print(sconcat("              expected <<", expected_de, ">>"))
+  ),
+  if en # expected_en then (
+    pass: false,
+    print(sconcat("FAIL [", label, "] en:   got <<", en, ">>")),
+    print(sconcat("              expected <<", expected_en, ">>"))
+  ),
+  if pass then s_test_success: s_test_success + 1 else s_test_fails: s_test_fails + 1,
+  pass
+)$
+
+s_test_summary() := print(sconcat(string(s_test_success), " passed, ", string(s_test_fails), " failed"))$

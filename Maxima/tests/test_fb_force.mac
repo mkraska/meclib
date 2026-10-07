@@ -1,0 +1,75 @@
+/* ============================================================================
+   Tests for fb_force() - general-purpose check for a single active force
+   not tied to a support/contact index (direction + line-of-action-through-
+   a-point check, with an optional unit-tagged distance tolerance).
+   Grid object layout, per the wiki: ["grid",xlabel,ylabel,xmin,xmax,ymin,
+   ymax,pix,[fx,fy],[dpx,dpy]] - fb_force() only reads [1]="grid" and the
+   [fx,fy] pair at index 9.
+   ============================================================================ */
+
+grid: ["grid","","",-6,6,-3,3,40,[1,1],[0,0]];
+
+/* ---- ok / found ---- */
+o_ok: [grid, ["force","G",[0,0],[1,0],"active"]];
+fb_check(fb_force(o_ok, "G", [0,0], 0, 2, 0.5, "pre: "), true,
+  "pre: \\(G\\) gefunden.",
+  "pre: \\(G\\) found.",
+  "fb_force ok");
+
+/* ---- not found, single expected name ---- */
+o_other: [grid, ["force","H",[0,0],[1,0],"active"]];
+fb_check(fb_force(o_other, "G", [0,0], 0, 2, 0.5, "pre: "), false,
+  "pre: Keine Kraft \\(G\\) gefunden.",
+  "pre: No force \\(G\\) found.",
+  "fb_force not found (single name)");
+
+/* ---- not found, list of acceptable names (checks the "oder"/"or" join) ---- */
+fb_check(fb_force(o_other, ["G","F_G"], [0,0], 0, 2, 0.5, "pre: "), false,
+  "pre: Keine Kraft \\(G\\) oder \\(F_G\\) gefunden.",
+  "pre: No force \\(G\\) or \\(F_G\\) found.",
+  "fb_force not found (name list)");
+
+/* ---- ambiguous: two active forces with the same acceptable name ---- */
+o_amb: [grid, ["force","G",[0,0],[1,0],"active"], ["force","G",[1,1],[1,0],"active"]];
+fb_check(fb_force(o_amb, "G", [0,0], 0, 2, 0.5, "pre: "), false,
+  "pre: Mehr als eine Kraft \\(G\\) gefunden.",
+  "pre: More than one force \\(G\\) found.",
+  "fb_force ambiguous");
+
+/* ---- wrong direction (90 degrees off; the actual deviation is reported) ---- */
+o_wrongdir: [grid, ["force","G",[0,0],[0,1],"active"]];
+fb_check(fb_force(o_wrongdir, "G", [0,0], 0, 2, 0.5, "pre: "), false,
+  "pre: \\(G\\) hat nicht die richtige Richtung. Richtungsabweichung: 90.0°.",
+  "pre: \\(G\\) does not have the correct direction. Direction deviation: 90.0°.",
+  "fb_force wrong direction");
+
+/* ---- wrong line of action, plain (unitless) tolerance ----
+   Force at [0,0] with direction [1,0] passes through [0,0], not [0,2];
+   the perpendicular distance from [0,2] to that line is 2.0. */
+fb_check(fb_force(o_ok, "G", [0,2], 0, 2, 0.5, "pre: "), false,
+  "pre: Die Wirkungslinie von \\(G\\) geht am richtigen Angriffspunkt vorbei. Abstand: 2.0.",
+  "pre: The line of action of \\(G\\) misses the correct point of application. Distance: 2.0.",
+  "fb_force wrong line (no unit)");
+
+/* ---- wrong line of action, unit-tagged tolerance (grid-scaled, fx=fy=1
+   here so the reported distance is unchanged, just with a unit attached) ---- */
+fb_check(fb_force(o_ok, "G", [0,2], 0, 2, [0.1,"mm"], "pre: "), false,
+  "pre: Die Wirkungslinie von \\(G\\) geht am richtigen Angriffspunkt vorbei. Abstand: 2.0 mm.",
+  "pre: The line of action of \\(G\\) misses the correct point of application. Distance: 2.0 mm.",
+  "fb_force wrong line (unit)");
+
+/* ---- dev diagnostics: unit-tagged toldist needs object 1 to be the
+   "grid", and its fx/fy scaling factors to be equal. Same text in both
+   languages, by convention (developer-facing, never translated). ---- */
+o_notgrid: [["force","G",[0,0],[1,0],"active"]];
+fb_check(fb_force(o_notgrid, "G", [0,0], 0, 2, [0.1,"mm"], "pre: "), false,
+  "fb_force(): object 1 is not a \"grid\" - cannot determine the scaling factor for a unit-tagged toldist.",
+  "fb_force(): object 1 is not a \"grid\" - cannot determine the scaling factor for a unit-tagged toldist.",
+  "fb_force dev: object 1 not a grid");
+
+gridbad: ["grid","","",-6,6,-3,3,40,[1,2],[0,0]];
+o_badgrid: [gridbad, ["force","G",[0,0],[1,0],"active"]];
+fb_check(fb_force(o_badgrid, "G", [0,0], 0, 2, [0.1,"mm"], "pre: "), false,
+  "fb_force(): grid scaling factors fx (1) and fy (2) differ - a unit-tagged toldist requires equal x/y scaling.",
+  "fb_force(): grid scaling factors fx (1) and fy (2) differ - a unit-tagged toldist requires equal x/y scaling.",
+  "fb_force dev: fx/fy mismatch");
