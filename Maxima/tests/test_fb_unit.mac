@@ -1,0 +1,110 @@
+/* ============================================================================
+   Tests for fb_unit(%_sans, %_tans, %_tol). Covers the PLAIN-NUMBER path only
+   (member('units, features) = false, i.e. a question that never called
+   stack_unit_si_declare(true)) - the path every question gets by default, and
+   the only one meclib_h_number/fb_number questions are meant to use.
+
+   The units-feature path (comparing values carrying stackunits(...), e.g.
+   demo_questions/"fb_vars() unit test.xml"'s t10-t18) is NOT covered here:
+   standing up STACK's real unit system outside a full question render needs
+   more than load(stackmaxima.mac) (stack_unit_si_declare() errored on an
+   unboundp table lookup when tried standalone in this harness) - logged as a
+   known gap rather than worked around.
+
+   t19-t22 below are ported as-is from that same demo XML (they happen to use
+   plain numbers already, no *m/stackunits() involved) and are exact ground
+   truth, not re-derived by hand. The rest (zero handling, sign, tol=0,
+   in-tolerance/debug) are derived from reading fb_value.mac and confirmed by
+   running against the real Maxima/STACK library.
+
+   fb_unit() returns a bare castext2 STRING like fb_vars() - fb_check_str(),
+   not fb_check(). ============================================================================ */
+
+/* ---- non-numeric guard (units feature not declared) ----
+   real_numberp() turns out to be a STACK-library function, not a bare-Maxima
+   one (confirmed: even real_numberp(5) is left as an unevaluated noun form
+   without stackmaxima.mac loaded) - so without the real library, fb_unit()'s
+   "if not real_numberp(...) then return(...)" condition never resolves to
+   true or false at all. Maxima's bare "if cond then X" (no "else") with an
+   unresolved cond does not error, it just silently continues to the NEXT
+   block statement - so every later check in fb_unit() falls through the
+   same way, all the way to its final (otherwise dead) list expression,
+   which is not a string and breaks resolve_lang(). In real deployment this
+   is harmless (fb_fbd.mac is always stack_include()'d inside a real STACK
+   render, so real_numberp() is always defined there) - it only means this
+   specific guard cannot be exercised offline without the real library, so
+   these two cases are gated accordingly rather than run unconditionally. */
+if meclib_real_stack_loaded then (
+  fb_check_str(fb_unit(x, 5, 0.01),
+    "fb_unit: sans is not a real number (and the units feature is not declared): x",
+    "fb_unit: sans is not a real number (and the units feature is not declared): x",
+    "fb_unit: sans not a real number"),
+
+  fb_check_str(fb_unit(5, y, 0.01),
+    "fb_unit: tans is not a real number (and the units feature is not declared): y",
+    "fb_unit: tans is not a real number (and the units feature is not declared): y",
+    "fb_unit: tans not a real number")
+)$
+
+/* ---- tans = 0 special-cased ahead of the sign/tolerance checks ---- */
+fb_check_str(fb_unit(5, 0, 0.01),
+  "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.",
+  "&nbsp;The absolute value is too large.",
+  "fb_unit: tans=0, sans<>0 -> too large");
+
+/* tans=0 AND sans=0: returns debug1, "" unless debug is true */
+fb_check_str(fb_unit(0, 0, 0.01), "", "", "fb_unit: tans=0 and sans=0, debug false -> silent");
+
+block([debug: true],
+  fb_check_str(fb_unit(0, 0, 0.01),
+    "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)",
+    "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)",
+    "fb_unit: tans=0 and sans=0, debug true -> diagnostic")
+)$
+
+/* ---- sans = 0, tans <> 0 ---- */
+fb_check_str(fb_unit(0, 5, 0.01),
+  "&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.",
+  "&nbsp;The absolute value is too small.",
+  "fb_unit: sans=0, tans<>0 -> too small");
+
+/* ---- sign check (plain-number equivalent of the demo's t14, which used *m) ---- */
+fb_check_str(fb_unit(-1.1, 1.11, 0.005),
+  "&nbsp;Pr&uuml;fen Sie das Vorzeichen.",
+  "&nbsp;Check the sign.",
+  "fb_unit: wrong sign");
+
+/* ---- %_tol = 0: always just report the deviation, never compare against a
+   tolerance band ---- */
+fb_check_str(fb_unit(1.05, 1, 0),
+  "&nbsp;Abweichung: 5.0%",
+  "&nbsp;Deviation: 5.0%",
+  "fb_unit: tol=0 reports plain deviation");
+
+/* ---- within tolerance ---- */
+fb_check_str(fb_unit(1, 1.001, 0.005), "", "", "fb_unit: within tolerance, debug false -> silent");
+
+block([debug: true],
+  fb_check_str(fb_unit(1, 1.001, 0.005),
+    "&nbsp;Abweichung: -0.1% (display because debug=true. Would be empty otherwise.)",
+    "&nbsp;Deviation: -0.1% (display because debug=true. Would be empty otherwise.)",
+    "fb_unit: within tolerance, debug true -> deviation shown")
+)$
+
+/* ---- mantissa correct, order of magnitude off (ground truth: demo XML t19) ---- */
+fb_check_str(fb_unit(0.1, 0.01, 0.005),
+  "&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. ",
+  "&nbsp;The mantissa is correct but the value is off by at least one order of magnitude. Check your unit conversion.",
+  "fb_unit: mantissa ok, order of magnitude off (demo t19)");
+
+/* ---- general hint: too small (ground truth: demo XML t20) ---- */
+fb_check_str(fb_unit(1.0, 11, 0.005),
+  "&nbsp;Der Betrag ist um mindestens 90% zu klein.",
+  "&nbsp;The value is too small by at least 90%.",
+  "fb_unit: too small by at least 90% (demo t20)");
+
+/* ---- general hint: too large (ground truth: demo XML t21) ---- */
+fb_check_str(fb_unit(100, 11, 0.005),
+  "&nbsp;Der Betrag ist um mindestens 800% zu gro&szlig;.",
+  "&nbsp;The value is too large by at least 800%.",
+  "fb_unit: too large by at least 800% (demo t21)");

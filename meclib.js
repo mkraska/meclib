@@ -122,7 +122,13 @@ board.highlightInfobox = function(x, y , el) {
     // at that reference point, instead of coordinates - used e.g. by the interactive "dir" tip.
     if (typeof (el.angleRef) != 'undefined') {
       const rp = (typeof el.angleRef == 'function') ? el.angleRef() : el.angleRef;
-      const ang = Math.atan2(parseFloat(y)-rp[1], parseFloat(x)-rp[0]) * rad2deg;
+      // Use el's own full-precision coordinates, not the x,y parameters JSXGraph passes
+      // in here - those have already been rounded for coordinate display (autoDigits /
+      // infoboxdigits) before reaching this function, which is why sliding smoothly along
+      // an already-glued line could still show the angle jittering between e.g. 130.0°
+      // and 130.1°. Matching dir.data()'s calculation (which uses this.p2.X()/Y() directly)
+      // keeps the infobox and the submitted answer from ever disagreeing.
+      const ang = Math.atan2(el.Y()-rp[1], el.X()-rp[0]) * rad2deg;
       this.infobox.setText(adjustSeparators(lbl + ang.toFixed(dp[0]) + '°'));
       return;
     }
@@ -141,7 +147,6 @@ class angle {
    this.l1 = board.create('segment', [this.p1, this.p3], {withlabel:false, ...thinStyle});
    // second line
    const a0 = this.l1.getAngle();
-   console.log('here is a0:' + a0);
    const le = this.l1.L();
    const a1 = a0+data[5]*deg2rad;
    this.ln = board.create('line', [this.p1, plus(XY(this.p1), rect(le,a1))], {withlabel:false, ...thinStyle, straightFirst:true, visible:false});	
@@ -447,9 +452,12 @@ class contact {
   // called once per update() cycle, before loads/targets are matched: derives this.state from
   // the referenced object's own state (deactivated either interactively as "hide" or fixed as
   // "HIDE" both count) and syncs the gray normal/tangent snap-cross visibility accordingly.
+  // For an array ref (several environment objects cut away by one contact, e.g. two wall
+  // segments meeting at a corner), ALL of them must be hidden.
   sync() {
     let j = resolveRef(this.ref);
-    this.state = (j >= 0 && j < objects.length && String(objects[j].state).toLowerCase() == 'hide') ? 'hide' : 'show';
+    const isHidden = (idx) => idx >= 0 && idx < objects.length && String(objects[idx].state).toLowerCase() == 'hide';
+    this.state = (Array.isArray(j) ? j.every(isHidden) : isHidden(j)) ? 'hide' : 'show';
     this.ln.setAttribute({visible: this.vis && this.state == 'hide'});
     this.lt.setAttribute({visible: this.vis && this.state == 'hide'});
   }
@@ -2016,16 +2024,7 @@ function toSTACK(str) {
   return st
 }
 
-// toSTACK() test
-//let input = "";
-//let input = "q_0*3a";
-//let input = "3a q_0";
-let input = "a3 q_0";
-//let input = "q_0 3a";
-let result = toSTACK(input);
-console.log(result);
-
-function toTEX(str) { 
+function toTEX(str) {
   if (str.search("_") != -1) { 
     str = str.replaceAll(/_([0-9a-z]+)/ig, '_{\$1}'); // subscript brackets
   }
@@ -2035,35 +2034,33 @@ function toTEX(str) {
 // If there is more than one character before the end or before the first subscript, then the name is modified.
 // https://jsfiddle.net/0pzeu68g/1/
 function cleanupName(str) {
-  console.log('original string input is here: ' + str);
   let strList = str.split(/\s+|\*/);
   let out =""
-  console.log("here is strList: " + strList)
-  
+
   strList.forEach(function(st) {
-    console.log("here is st: " + st);
-    let pos = st.search("_") 
-    if (st.length>1 && pos>1) { 
+    let pos = st.search("_")
+    if (st.length>1 && pos>1) {
     // remove underscores at wrong places
-      st = st.replace(/_/g, ''); pos = -1; console.log("1. " + st)}
-    if (isNaN(st[0]) == true && st.length>1 && pos===-1) { 
-      st = st.substring(0, 1) + "_" + st.substring(1);
-      console.log("2. " + st);} // insert an underscore if string is longer than one character
-    else if (isNaN(st[0]) == false && st.length>1 && pos===-1) { 
-      st = st.substring(0, 1) + " " + st.substring(1);console.log("3. " + st)}
+      st = st.replace(/_/g, ''); pos = -1;}
+    if (isNaN(st[0]) == true && st.length>1 && pos===-1) {
+      st = st.substring(0, 1) + "_" + st.substring(1);} // insert an underscore if string is longer than one character
+    else if (isNaN(st[0]) == false && st.length>1 && pos===-1) {
+      st = st.substring(0, 1) + " " + st.substring(1);}
   // should output have * or just empty space? since toTEX() replaces * with empty spaces
   out = out + st + " "
   });
   out = out.slice(0, -1); // renove trailing space
-  console.log("cleanupName result:", out)
   return out
   }
 
 // functions for proximity check (Allfred Wassermann, 2022-12-13)
 function isOn(pt, po) {return pt.isOn(po, tolPointLine) }
 function targetName(obj) {if (obj.loads[0]) {return '['+obj.loads+']'} else {return '"'+obj.state+'"' } }
-// resolve a "contact" targetRef (name string or 1-based index) to an index into "objects"
+// resolve a "contact" targetRef (name string, 1-based index, or an array of either - for a
+// contact that cuts away several environment objects at once) to an index into "objects",
+// or an array of indices for an array ref. A name that isn't found resolves to -1.
 function resolveRef(ref) {
+  if (Array.isArray(ref)) { return ref.map(resolveRef); }
   if (typeof ref === 'number') { return ref - 1; }
   return objects.findIndex(o => o.data()[1] === ref);
 }

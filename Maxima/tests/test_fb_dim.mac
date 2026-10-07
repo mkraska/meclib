@@ -1,0 +1,35 @@
+/* ============================================================================
+   Tests for fb_dim(%_res, %_vars, %_dims) - dimensional-homogeneity check.
+   Substitutes each var with var*dim and divides the result by its original
+   value: for a dimensionally consistent expression every additive term
+   scales by the same combined dimension factor, so the variables cancel out
+   of the ratio entirely, leaving a pure dimension-factor value; for an
+   inconsistent expression they don't cancel, and the ratio still depends on
+   the variables.
+
+   No demo_questions XML covers this one; these are synthetic cases using
+   abstract dimension symbols (dimL, dimT - deliberately not "m"/"s", to stay
+   clear of any collision with STACK's own SI unit symbols if the units
+   feature is ever activated elsewhere), derived from reading fb_dim()'s
+   one-line definition and confirmed by running it.
+   ============================================================================ */
+
+/* ---- homogeneous: a*b and c carry the same combined dimension (dimL*dimT) ----
+   every additive term scales the same way, so the variables cancel and only
+   the common dimension factor remains. */
+fb_check_val(fb_dim(a*b+c, [a,b,c], [dimL,dimT,dimL*dimT]), dimL*dimT,
+  "fb_dim: homogeneous expression reduces to a pure dimension factor");
+
+/* ---- inhomogeneous: c's dimension (dimL) does not match a*b's (dimL*dimT) ----
+   the variables do NOT cancel out of the ratio - confirmed here by checking
+   that the result still depends on the variables (listofvars is nonempty),
+   rather than committing to its exact algebraic form. */
+block([%_r: fb_dim(a*b+c, [a,b,c], [dimL,dimT,dimL])],
+  fb_check_val(if listofvars(%_r) = [] then 1 else 0, 0,
+    "fb_dim: inhomogeneous expression leaves variables in the ratio")
+)$
+
+/* ---- single-term expression: trivially homogeneous, confirms the plain
+   product-of-dimensions case (no addition involved) ---- */
+fb_check_val(fb_dim(a*b, [a,b], [dimL,dimT]), dimL*dimT,
+  "fb_dim: single-term expression");

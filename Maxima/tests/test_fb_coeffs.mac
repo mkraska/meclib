@@ -1,0 +1,52 @@
+/* ============================================================================
+   Tests for fb_coeffs(%_sans, %_tans, %_tol, %_description). Numeric
+   coefficient-by-coefficient comparison: first delegates the variable-SET
+   check to fb_vars(), then compares each variable's coefficient numerically
+   via fb_unit(), appending its deviation feedback per mismatching variable.
+   Returns [text, flag] like fb_fbd.mac's own feedback functions, so these
+   use fb_check(), not fb_check_str().
+
+   No demo_questions XML covers this one specifically, so these are my own
+   cases, derived from reading fb_value.mac and confirmed against the real
+   Maxima/STACK library, not hand-derived guesses.
+
+   SPACING CONVENTION (decided 07.10.): fb_coeffs() keeps fb_value.mac's
+   inline "&nbsp;" style (no <br>), like fb_vars()/fb_unit(). The
+   description is inserted verbatim, so it should NOT end in a space - a
+   description like "AB: " yields a double gap ("AB: &nbsp;..."), which is
+   documented as-is in the cases below; "AB:" gives the intended single gap
+   (see the last case). The gap between "Koeffizient bei b:" and fb_unit()'s
+   own message is supplied by fb_unit()'s leading "&nbsp;" alone.
+   ============================================================================ */
+
+/* ---- all coefficients match ---- */
+fb_check(fb_coeffs(2.0*a+3.0*b, 2.0*a+3.0*b, 0.01, "AB: "), true,
+  "AB: &nbsp;Die Gleichung stimmt.",
+  "AB: &nbsp;The equation is correct.",
+  "fb_coeffs: all coefficients match");
+
+/* ---- variable-set mismatch delegates to fb_vars() ---- */
+fb_check(fb_coeffs(2.0*a, 2.0*a+3.0*b, 0.01, "AB: "), false,
+  "AB: &nbsp;Fehlende Variable b (<code>b</code>).",
+  "AB: &nbsp;Missing variable b (<code>b</code>).",
+  "fb_coeffs: variable-set mismatch (missing)");
+
+/* ---- one coefficient numerically wrong (b: 5.0 vs 3.0) ---- */
+fb_check(fb_coeffs(2.0*a+5.0*b, 2.0*a+3.0*b, 0.01, "AB: "), false,
+  "AB: &nbsp;Koeffizient bei b:&nbsp;Der Betrag ist um mindestens 60% zu gro&szlig;.",
+  "AB: &nbsp;Coefficient of b:&nbsp;The value is too large by at least 60%.",
+  "fb_coeffs: one coefficient wrong");
+
+/* ---- tolerance filters out a spurious near-zero coefficient on the sans side,
+   same as fb_vars() - the variable isn't even in tans, so it never reaches the
+   per-coefficient loop either ---- */
+fb_check(fb_coeffs(2.0*a+1e-13*b, 2.0*a, 1e-6, "CD: "), true,
+  "CD: &nbsp;Die Gleichung stimmt.",
+  "CD: &nbsp;The equation is correct.",
+  "fb_coeffs: tolerance filters spurious coefficient");
+
+/* ---- recommended form: description without trailing space ---- */
+fb_check(fb_coeffs(2.0*a+3.0*b, 2.0*a+3.0*b, 0.01, "AB:"), true,
+  "AB:&nbsp;Die Gleichung stimmt.",
+  "AB:&nbsp;The equation is correct.",
+  "fb_coeffs: description without trailing space");

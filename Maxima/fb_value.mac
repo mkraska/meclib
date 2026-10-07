@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-Overview */ 
-fb_value_version: "2026 03 05, 23:00";
+fb_value_version: "2026 10 07";
 
 /* https://github.com/mkraska/meclib/wiki/deg2rad */
 /* Substitutes any use of the "deg" marker in expr with its numeric value (pi/180), for use right
@@ -81,6 +81,7 @@ fb_varsOK(%_sans,%_tans, [%_opt] ):= block([%_res],
   if length(%_opt)=0 then %_res: fb_vars(%_sans,%_tans ),
   if length(%_opt)=1 then %_res: fb_vars(%_sans,%_tans, %_opt[1] ),
   if length(%_opt)=2 then %_res: fb_vars(%_sans,%_tans, %_opt[1], %_opt[2] ),
+  if length(%_opt)=3 then %_res: fb_vars(%_sans,%_tans, %_opt[1], %_opt[2], %_opt[3] ),
   stringp(%_res));
 
 
@@ -89,10 +90,10 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom
   str_unexpected_base_unit: castext("[[lang code='de']]&nbsp;Unerwartete Basiseinheit [[/lang]][[lang code='en,other']]&nbsp;Unexpected base unit [[/lang]]"),
   str_not_dimensionless: castext("[[lang code='de']]&nbsp;Der Wert sollte nicht dimensionslos sein.[[/lang]][[lang code='en,other']]&nbsp;The value should not be dimensionless.[[/lang]]"),
   str_deviation: castext("[[lang code='de']]&nbsp;Abweichung: [[/lang]][[lang code='en,other']]&nbsp;Deviation: [[/lang]]"),
-  str_value_too_large: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.[[/lang]][[lang code='en,other']]The absolute value is too large.[[/lang]]"),
-  str_value_too_small: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.[[/lang]][[lang code='en,other']]The absolute value is too small.[[/lang]]"),
-  str_sign: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie das Vorzeichen.[[/lang]][[lang code='en,other']]Check the sign.[[/lang]]"),
-  str_mantissa: castext("[[lang code='de']]&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. [[/lang]][[lang code='en,other']]The mantissa is correct but the value is off by at least one order of magnitude. Check your unit conversion.[[/lang]]"),
+  str_value_too_large: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.[[/lang]][[lang code='en,other']]&nbsp;The absolute value is too large.[[/lang]]"),
+  str_value_too_small: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.[[/lang]][[lang code='en,other']]&nbsp;The absolute value is too small.[[/lang]]"),
+  str_sign: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie das Vorzeichen.[[/lang]][[lang code='en,other']]&nbsp;Check the sign.[[/lang]]"),
+  str_mantissa: castext("[[lang code='de']]&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. [[/lang]][[lang code='en,other']]&nbsp;The mantissa is correct but the value is off by at least one order of magnitude. Check your unit conversion.[[/lang]]"),
   str_small_1: castext("[[lang code='de']]&nbsp;Der Betrag ist um mindestens [[/lang]][[lang code='en,other']]&nbsp;The value is too small by at least [[/lang]]"),
   str_small_2: castext("[[lang code='de']]% zu klein.[[/lang]][[lang code='en,other']]%.[[/lang]]"),
   str_large_1: castext("[[lang code='de']]&nbsp;Der Betrag ist um mindestens [[/lang]][[lang code='en,other']]&nbsp;The value is too large by at least [[/lang]]"),
@@ -101,19 +102,57 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom
  simp:true,
   /* Debug strings */
   if debug then debug1: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)" else debug1:"",
-  /* extract numbers and units */
-  %_snum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_sans)))),
-  if %_snum = NULLNUM then %_snum:1.0, 
-  %_tnum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_tans)))),
-  if %_tnum = NULLNUM then %_tnum:1.0, 
-  %_sunit: stack_units_units(stack_unit_si_to_si_base(%_sans)),
-  if %_sunit = NULLUNITS then %_sunit:0,  /* display as 0 if not correct */
-  %_tunit: stack_units_units(stack_unit_si_to_si_base(%_tans)),
-  if %_tunit = NULLUNITS then %_tunit:0,  /* display as 0 if not correct */
-  /* complain if units don't match */
-  if (%_sunit # %_tunit) and (%_sunit # 0) then return(   
-    castext_concat(str_unexpected_base_unit, castext("{@(stack_disp_fractions(\"i\"),%_sunit)@}")  ) ),   
-  if (%_sunit # %_tunit) and (%_sunit = 0) and (%_snum # 0.0) then return(str_not_dimensionless),   
+  /* Only touch the units system if some question variable has already turned it on itself
+     (via stack_unit_si_declare(true)) - member('units, features) is the same check STACK's
+     own stackunits.mac uses internally (listofunits, stackunits_make, ...) to decide whether
+     to lazily auto-activate units. Calling stack_unit_si_to_si_base()/stackunits_make() is
+     what triggers that lazy activation - it fires the FIRST time ANY unit-touching function
+     runs in the whole render, globally and permanently for every other PRT and the general
+     feedback in the same render, declaring a large table of single/double-letter symbols
+     (m, A, F, ...) as units and giving them upright \mathrm{...} rendering everywhere they
+     appear from then on - including as perfectly ordinary variable names that happen to
+     collide with an SI unit letter (e.g. a reaction force named A). fb_coeffs() calls this
+     function once per coefficient it checks, so without this guard, merely using fb_coeffs()
+     (e.g. for an equilibrium-equation PRT) was enough to silently turn units on question-wide,
+     even though coefficients never carry units. With the guard, fb_unit()/fb_coeffs()/
+     fb_number() never activate units on their own - a question that genuinely wants unit
+     support (e.g. comparing a plain student number against a teacher answer like FG*N) must
+     call stack_unit_si_declare(true) itself, explicitly, so the side effect is opt-in and
+     happens exactly where the question author expects it. */
+  if member('units, features) then (
+    /* extract numbers and units */
+    %_snum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_sans)))),
+    if %_snum = NULLNUM then %_snum:1.0,
+    %_tnum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_tans)))),
+    if %_tnum = NULLNUM then %_tnum:1.0,
+    %_sunit: stack_units_units(stack_unit_si_to_si_base(%_sans)),
+    if %_sunit = NULLUNITS then %_sunit:0,  /* display as 0 if not correct */
+    %_tunit: stack_units_units(stack_unit_si_to_si_base(%_tans)),
+    if %_tunit = NULLUNITS then %_tunit:0,  /* display as 0 if not correct */
+    /* complain if units don't match */
+    if (%_sunit # %_tunit) and (%_sunit # 0) then return(
+      castext_concat(str_unexpected_base_unit, castext("{@(stack_disp_fractions(\"i\"),%_sunit)@}")  ) ),
+    if (%_sunit # %_tunit) and (%_sunit = 0) and (%_snum # 0.0) then return(str_not_dimensionless)
+  ) else (
+    /* units never activated by the question - treat both sides as plain numbers, exactly
+       like fb_number was always meant to behave. */
+    %_snum: float(%_sans),
+    %_tnum: float(%_tans),
+    /* A non-numeric result here (units still off) means something is misconfigured - a
+       reference expression that never fully evaluated, a forgotten deg2rad(), a name
+       mismatch reaching this far - not a normal student mistake to render feedback for.
+       Fail loudly instead of letting the sign/tolerance logic below misbehave silently or
+       crash with a cryptic error. error() is on STACK's forbidden-function list and cannot
+       be called from a stack_include()'d file like this one (same restriction documented
+       above for parse_string), so this returns plain, unlocalized diagnostic text through
+       the normal feedback path instead - [[lang]] tags would not be processed here anyway. */
+    if not real_numberp(%_snum) then
+      return(sconcat("fb_unit: sans is not a real number (and the units feature is not declared): ", string(%_sans))),
+    if not real_numberp(%_tnum) then
+      return(sconcat("fb_unit: tans is not a real number (and the units feature is not declared): ", string(%_tans))),
+    %_sunit: 0,
+    %_tunit: 0
+  ),
   /* if tol=0 just indicate deviation */
   if (%_tol=0 or %_tol=0.0) and %_tnum # 0.0 then return( 
     castext_concat(str_deviation,castext("{@ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp)@}%")) ), 
@@ -158,7 +197,10 @@ fb_unitOK(%_sans, %_tans, %_tol):=stringp(fb_unit(%_sans, %_tans, %_tol));
    Does not currently handle a bare constant term (a part of the expression not multiplying
    any variable) - left out for now, see wiki. */
 fb_coeffs(%_sans, %_tans, %_tol, %_description):=block(
-  [%_txt: %_description, %_vcheck, %_vars, %_v, %_cs, %_ct, %_cres, simp: true],
+  [%_txt: %_description, %_vcheck, %_vars, %_v, %_cs, %_ct, %_cres, simp: true,
+    str_coeff_at: castext("[[lang code='de']]&nbsp;Koeffizient bei [[/lang]][[lang code='en,other']]&nbsp;Coefficient of [[/lang]]"),
+    str_equation_ok: castext("[[lang code='de']]&nbsp;Die Gleichung stimmt.[[/lang]][[lang code='en,other']]&nbsp;The equation is correct.[[/lang]]")
+  ],
   %_vcheck: fb_vars(%_sans, %_tans, [], "", %_tol),
   if %_vcheck # "" then return([castext_concat(%_txt, %_vcheck), false]),
   %_vars: listofvars(%_tans),
@@ -170,11 +212,18 @@ fb_coeffs(%_sans, %_tans, %_tol, %_description):=block(
     %_cs: coeff(%_sans, %_v),
     %_ct: coeff(%_tans, %_v),
     %_cres: fb_unit(%_cs, %_ct, %_tol),
+    /* The variable name must be interpolated via a literal {@...@} placeholder inside a
+       castext() call written directly here in the source (as fb_fbd.mac does throughout,
+       e.g. castext("{@n[L[1]]@} ...")) - NOT built at runtime with sconcat() and then
+       wrapped in castext(), which is what produced the literal "castext(...)" text bug
+       (castext()'s [[lang]]/{@..@} handling only happens for a string literal the loader
+       sees at load time; a runtime-built string never gets that treatment, so castext()
+       is left as a plain, undefined function call that Maxima can't reduce). */
     if %_cres # "" then
-      %_txt: castext_concat(%_txt, castext_concat(castext(sconcat("&nbsp;Der Koeffizient bei ", string(%_v), ": ")), %_cres))
+      %_txt: castext_concat(%_txt, castext_concat(castext_concat(str_coeff_at, castext("{@string(%_v)@}:")), %_cres))
   ),
   if %_txt # %_description then return([%_txt, false]),
-  return([castext_concat(%_txt, "&nbsp;Die Gleichung stimmt."), true])
+  return([castext_concat(%_txt, str_equation_ok), true])
 );
 
 /* https://github.com/mkraska/meclib/wiki/fb_number */

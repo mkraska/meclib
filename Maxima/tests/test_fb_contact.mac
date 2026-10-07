@@ -1,0 +1,117 @@
+/* ============================================================================
+   Tests for fb_contact() (and the fb_resolve_ref() helper it uses).
+   See ../fb_fbd.mac for the function itself and the "contact" object's
+   field layout: [1]="contact", [2]=name, [3]=point, [4]=dir (outward from
+   the body, away from the support - see the convention comment at
+   fb_contact()), [5]=targetRef (name, 1-based index, or a list of
+   either), [last]=state.
+   ============================================================================ */
+
+/* ---- ok / found ----
+   One wall (index 2, deactivated, named "Boden") cut away by the contact
+   (index 1); the reaction force N_A (index 3) points straight up, i.e.
+   opposite the contact's outward direction [0,-1] - correct (compressive). */
+o_ok: [["contact","",[0,0],[0,-1],2,"hide"],
+       ["wall","Boden",[0,0],[1,0],45,"hide"],
+       ["force","N_A",[0,0],[0,1],"active"]];
+n_ok: [[3], 2, "N_A"];
+fb_check(fb_contact(o_ok, n_ok, 1, "Kontakt A: "), true,
+  "Kontakt A: Reaktion \\(N_A\\) gefunden.",
+  "Kontakt A: Reaction \\(N_A\\) found.",
+  "fb_contact ok");
+
+/* ---- wrong direction (reaction not parallel to the contact normal) ---- */
+o_wrongdir: [["contact","",[0,0],[0,-1],2,"hide"],
+             ["wall","Boden",[0,0],[1,0],45,"hide"],
+             ["force","N_A",[0,0],[1,0],"active"]];
+fb_check(fb_contact(o_wrongdir, n_ok, 1, "Kontakt A: "), false,
+  "Kontakt A: Die Reaktion \\(N_A\\) hat nicht die richtige Richtung.",
+  "Kontakt A: Reaction \\(N_A\\) does not have the correct direction.",
+  "fb_contact wrong direction");
+
+/* ---- wrong sign (tension instead of compression) ----
+   Reaction points the SAME way as the contact's outward direction
+   [0,-1] - parallel, but pulling, not pushing. */
+o_tension: [["contact","",[0,0],[0,-1],2,"hide"],
+            ["wall","Boden",[0,0],[1,0],45,"hide"],
+            ["force","N_A",[0,0],[0,-1],"active"]];
+fb_check(fb_contact(o_tension, n_ok, 1, "Kontakt A: "), false,
+  "Kontakt A: Die Reaktion \\(N_A\\) muss eine Druckkraft sein.",
+  "Kontakt A: Reaction \\(N_A\\) must be a compressive force.",
+  "fb_contact tension");
+
+/* ---- no reaction found ---- */
+n_none: [[], 2, "N_A"];
+fb_check(fb_contact(o_ok, n_none, 1, "Kontakt A: "), false,
+  "Kontakt A: Keine Reaktion gefunden.",
+  "Kontakt A: No reaction found.",
+  "fb_contact no reaction");
+
+/* ---- more than one reaction found ---- */
+o_twor: [["contact","",[0,0],[0,-1],2,"hide"],
+         ["wall","Boden",[0,0],[1,0],45,"hide"],
+         ["force","N_A",[0,0],[0,1],"active"],
+         ["force","N_B",[0,0],[0,1],"active"]];
+n_twor: [[3,4], 2, "N_A", "N_B"];
+fb_check(fb_contact(o_twor, n_twor, 1, "Kontakt A: "), false,
+  "Kontakt A: Mehr als eine Reaktion gefunden.",
+  "Kontakt A: More than one reaction found.",
+  "fb_contact more than one reaction");
+
+/* ---- reaction is not a force ---- */
+o_notforce: [["contact","",[0,0],[0,-1],2,"hide"],
+             ["wall","Boden",[0,0],[1,0],45,"hide"],
+             ["moment","M_A",[0,0],"active"]];
+n_notforce: [[3], 2, "M_A"];
+fb_check(fb_contact(o_notforce, n_notforce, 1, "Kontakt A: "), false,
+  "Kontakt A: Die Reaktion muss eine Kraft sein.",
+  "Kontakt A: The reaction must be a force.",
+  "fb_contact reaction not a force");
+
+/* ---- referenced object not deactivated, single, named ---- */
+o_pending_named: [["contact","",[0,0],[0,-1],2,"hide"],
+                   ["wall","Boden",[0,0],[1,0],45,"show"],
+                   ["force","N_A",[0,0],[0,1],"active"]];
+fb_check(fb_contact(o_pending_named, n_ok, 1, "Kontakt A: "), false,
+  "Kontakt A: Boden ist nicht deaktiviert.",
+  "Kontakt A: Boden is not deactivated.",
+  "fb_contact not deactivated (named)");
+
+/* ---- referenced object not deactivated, single, unnamed (falls back
+   to "Umgebung"/"environment") ---- */
+o_pending_unnamed: [["contact","",[0,0],[0,-1],2,"hide"],
+                     ["wall","",[0,0],[1,0],45,"show"],
+                     ["force","N_A",[0,0],[0,1],"active"]];
+fb_check(fb_contact(o_pending_unnamed, n_ok, 1, "Kontakt A: "), false,
+  "Kontakt A: Umgebung ist nicht deaktiviert.",
+  "Kontakt A: environment is not deactivated.",
+  "fb_contact not deactivated (unnamed)");
+
+/* ---- two referenced objects, both not deactivated (plural message) ---- */
+o_pending_plural: [["contact","",[0,0],[0,-1],[2,3],"hide"],
+                    ["wall","Boden",[0,0],[1,0],45,"show"],
+                    ["wall","Wand",[1,0],[0,1],0,"show"],
+                    ["force","N_A",[0,0],[0,1],"active"]];
+n_plural: [[4], 2, 3, "N_A"];
+fb_check(fb_contact(o_pending_plural, n_plural, 1, "Kontakt A: "), false,
+  "Kontakt A: Boden und Wand sind nicht deaktiviert.",
+  "Kontakt A: Boden and Wand are not deactivated.",
+  "fb_contact not deactivated (plural)");
+
+/* ---- dev diagnostics: object i is not a "contact" (same text both
+   languages - developer-facing messages are English/unwrapped by
+   convention, never translated) ---- */
+o_notcontact: [["wall","Boden",[0,0],[1,0],45,"hide"]];
+fb_check(fb_contact(o_notcontact, n_ok, 1, "Kontakt A: "), false,
+  "Kontakt A: object 1 is not a contact.",
+  "Kontakt A: object 1 is not a contact.",
+  "fb_contact dev: not a contact");
+
+/* ---- dev diagnostics: targetRef cannot be resolved ---- */
+o_badref: [["contact","",[0,0],[0,-1],"Nonexistent","hide"],
+           ["wall","Boden",[0,0],[1,0],45,"hide"],
+           ["force","N_A",[0,0],[0,1],"active"]];
+fb_check(fb_contact(o_badref, n_ok, 1, "Kontakt A: "), false,
+  "Kontakt A: fb_contact(): referenced object 'Nonexistent' not found or ambiguous.",
+  "Kontakt A: fb_contact(): referenced object 'Nonexistent' not found or ambiguous.",
+  "fb_contact dev: unresolved targetRef");

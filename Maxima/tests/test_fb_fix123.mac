@@ -1,0 +1,120 @@
+/* ============================================================================
+   Tests for fb_fix123() and fb_fix123_name().
+   fb_fix123() displays reaction names via n[] (student-typed names);
+   fb_fix123_name() checks naming correctness via o[ir][2] (the object's
+   own literal name field) instead - these are deliberately different
+   fields, matching the source.
+   ============================================================================ */
+
+o_ok: [["fix123","A",[0,0],0,"hide"],
+       ["force","",[0,0],[1,0],"active"],
+       ["force","",[0,0],[0,1],"active"],
+       ["moment","",[0,0],"active"]];
+n_ok: [[2,3,4], "R_Ax", "R_Ay", "M_A"];
+fb_check(fb_fix123(o_ok, n_ok, 1, "A: "), true,
+  "<br>A: Reaktionskräfte \\(R_Ax,R_Ay\\) und Moment \\(M_A\\) gefunden.",
+  "<br>A: Reaction forces \\(R_Ax,R_Ay\\) and moment \\(M_A\\) found.",
+  "fb_fix123 ok");
+
+o_parallel: [["fix123","A",[0,0],0,"hide"],
+             ["force","",[0,0],[1,0],"active"],
+             ["force","",[0,0],[1,0],"active"],
+             ["moment","",[0,0],"active"]];
+fb_check(fb_fix123(o_parallel, n_ok, 1, "A: "), false,
+  "<br>A: Die Reaktionen \\(R_Ax\\) und \\(R_Ay\\) sind parallel.",
+  "<br>A: Reactions \\(R_Ax\\) and \\(R_Ay\\) are parallel.",
+  "fb_fix123 parallel forces");
+
+o_countmismatch: [["fix123","A",[0,0],0,"hide"],
+                   ["force","",[0,0],[1,0],"active"],
+                   ["force","",[0,0],[0,1],"active"],
+                   ["force","",[0,0],[1,1],"active"]];
+n_countmismatch: [[2,3,4], "R_Ax", "R_Ay", "R_Az"];
+fb_check(fb_fix123(o_countmismatch, n_countmismatch, 1, "A: "), false,
+  "<br>A: Kräfte: 3, Momente: 0 gefunden",
+  "<br>A: Forces: 3, moments: 0 found",
+  "fb_fix123 force/moment count mismatch");
+
+o_two: [["fix123","A",[0,0],0,"hide"],
+        ["force","",[0,0],[1,0],"active"],
+        ["moment","",[0,0],"active"]];
+n_two: [[2,3], "R_Ax", "M_A"];
+fb_check(fb_fix123(o_two, n_two, 1, "A: "), false,
+  "<br>A: Weniger als drei Reaktionen gefunden.",
+  "<br>A: Fewer than three reactions found.",
+  "fb_fix123 fewer than three");
+
+o_four: [["fix123","A",[0,0],0,"hide"],
+         ["force","",[0,0],[1,0],"active"],
+         ["force","",[0,0],[0,1],"active"],
+         ["moment","",[0,0],"active"],
+         ["force","",[0,0],[1,1],"active"]];
+n_four: [[2,3,4,5], "R_Ax", "R_Ay", "M_A", "R_Az"];
+fb_check(fb_fix123(o_four, n_four, 1, "A: "), false,
+  "<br>A: Mehr als drei Reaktionen gefunden.",
+  "<br>A: More than three reactions found.",
+  "fb_fix123 more than three");
+
+n_none: [[], "R_Ax", "R_Ay", "M_A"];
+fb_check(fb_fix123(o_ok, n_none, 1, "A: "), false,
+  "<br>A: Keine Reaktion gefunden.",
+  "<br>A: No reaction found.",
+  "fb_fix123 no reaction");
+
+o_pending: [["fix123","A",[0,0],0,"show"],
+            ["force","",[0,0],[1,0],"active"],
+            ["force","",[0,0],[0,1],"active"],
+            ["moment","",[0,0],"active"]];
+fb_check(fb_fix123(o_pending, n_ok, 1, "A: "), false,
+  "<br>A: ist nicht deaktiviert.",
+  "<br>A: is not deactivated.",
+  "fb_fix123 not deactivated");
+
+o_notfix123: [["wall","Boden",[0,0],[1,0],45,"hide"]];
+fb_check(fb_fix123(o_notfix123, n_ok, 1, "A: "), false,
+  "<br>A: object 1(wall) is not a built-in support.",
+  "<br>A: object 1(wall) is not a built-in support.",
+  "fb_fix123 dev: not a fix123");
+
+/* ============================================================================
+   fb_fix123_name(o, n, i) - naming check per reaction, via o[ir][2] (the
+   object's own name field), displayed in messages via n[ir] (the
+   student-typed name) - both set equal here for simplicity.
+   ============================================================================ */
+
+o_ok_name: [["fix123","A",[0,0],0,"hide"],
+            ["force","A_x",[0,0],[1,0],"active"],
+            ["force","A_y",[0,0],[0,1],"active"],
+            ["moment","M_A",[0,0],"active"]];
+n_ok_name: [[2,3,4], "A_x", "A_y", "M_A"];
+fb_check(fb_fix123_name(o_ok_name, n_ok_name, 1), true, "", "", "fb_fix123_name ok");
+
+o_force_mismatch: [["fix123","A",[0,0],0,"hide"],
+                    ["force","B_x",[0,0],[1,0],"active"],
+                    ["force","A_y",[0,0],[0,1],"active"],
+                    ["moment","M_A",[0,0],"active"]];
+n_force_mismatch: [[2,3,4], "B_x", "A_y", "M_A"];
+fb_check(fb_fix123_name(o_force_mismatch, n_force_mismatch, 1), false,
+  "<br>Der Name \\(B_x\\) passt nicht zum Name des Lagerpunktes.",
+  "<br>The name \\(B_x\\) does not match the name of the support point.",
+  "fb_fix123_name force name mismatch");
+
+o_moment_mismatch: [["fix123","A",[0,0],0,"hide"],
+                     ["force","A_x",[0,0],[1,0],"active"],
+                     ["force","A_y",[0,0],[0,1],"active"],
+                     ["moment","M_B",[0,0],"active"]];
+n_moment_mismatch: [[2,3,4], "A_x", "A_y", "M_B"];
+fb_check(fb_fix123_name(o_moment_mismatch, n_moment_mismatch, 1), false,
+  "<br>Der Name \\(M_B\\) passt nicht zum Name des Lagerpunktes.",
+  "<br>The name \\(M_B\\) does not match the name of the support point.",
+  "fb_fix123_name moment name mismatch");
+
+o_notmoment: [["fix123","A",[0,0],0,"hide"],
+              ["force","A_x",[0,0],[1,0],"active"],
+              ["force","A_y",[0,0],[0,1],"active"],
+              ["moment","X_A",[0,0],"active"]];
+n_notmoment: [[2,3,4], "A_x", "A_y", "X_A"];
+fb_check(fb_fix123_name(o_notmoment, n_notmoment, 1), false,
+  "<br>Der Name \\(X_A\\) passt nicht zu einem Moment.",
+  "<br>The name \\(X_A\\) does not match a moment.",
+  "fb_fix123_name not a moment name");

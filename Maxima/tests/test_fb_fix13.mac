@@ -1,0 +1,121 @@
+/* ============================================================================
+   Tests for fb_fix13() and fb_fix13_names()/fb_fix13_name().
+   "fix13" direction (frictionless support): [cos(angle),sin(angle)].
+   ============================================================================ */
+
+o_ok: [["fix13","A",[0,0],0,"hide"],
+       ["force","",[0,0],[1,0],"active"],
+       ["moment","",[0,0],"active"]];
+n_ok: [[2,3], "R_A", "M_A"];
+fb_check(fb_fix13(o_ok, n_ok, 1, "A: "), true,
+  "<br>A: Reaktionskraft \\(R_A\\) und Moment \\(M_A\\) gefunden.",
+  "<br>A: Reaction force \\(R_A\\) and moment \\(M_A\\) found.",
+  "fb_fix13 ok");
+
+o_wrongdir: [["fix13","A",[0,0],0,"hide"],
+             ["force","",[0,0],[0,1],"active"],
+             ["moment","",[0,0],"active"]];
+fb_check(fb_fix13(o_wrongdir, n_ok, 1, "A: "), false,
+  "<br>A: Die Reaktion \\(R_A\\) hat nicht die richtige Richtung.",
+  "<br>A: Reaction \\(R_A\\) does not have the correct direction.",
+  "fb_fix13 wrong direction");
+
+o_countmismatch: [["fix13","A",[0,0],0,"hide"],
+                   ["force","",[0,0],[1,0],"active"],
+                   ["force","",[0,0],[0,1],"active"]];
+n_countmismatch: [[2,3], "R_A", "R_B"];
+fb_check(fb_fix13(o_countmismatch, n_countmismatch, 1, "A: "), false,
+  "<br>A: Kräfte: 2, Momente: 0 gefunden",
+  "<br>A: Forces: 2, moments: 0 found",
+  "fb_fix13 force/moment count mismatch");
+
+o_one: [["fix13","A",[0,0],0,"hide"], ["force","",[0,0],[1,0],"active"]];
+n_one: [[2], "R_A"];
+fb_check(fb_fix13(o_one, n_one, 1, "A: "), false,
+  "<br>A: Weniger als zwei Reaktionen gefunden.",
+  "<br>A: Fewer than two reactions found.",
+  "fb_fix13 fewer than two");
+
+o_three: [["fix13","A",[0,0],0,"hide"],
+          ["force","",[0,0],[1,0],"active"],
+          ["moment","",[0,0],"active"],
+          ["force","",[0,0],[0,1],"active"]];
+n_three: [[2,3,4], "R_A", "M_A", "R_B"];
+fb_check(fb_fix13(o_three, n_three, 1, "A: "), false,
+  "<br>A: Mehr als zwei Reaktionen gefunden.",
+  "<br>A: More than two reactions found.",
+  "fb_fix13 more than two");
+
+n_none: [[], "R_A", "M_A"];
+fb_check(fb_fix13(o_ok, n_none, 1, "A: "), false,
+  "<br>A: Keine Reaktion gefunden.",
+  "<br>A: No reaction found.",
+  "fb_fix13 no reaction");
+
+o_pending: [["fix13","A",[0,0],0,"show"],
+            ["force","",[0,0],[1,0],"active"],
+            ["moment","",[0,0],"active"]];
+fb_check(fb_fix13(o_pending, n_ok, 1, "A: "), false,
+  "<br>A: ist nicht deaktiviert.",
+  "<br>A: is not deactivated.",
+  "fb_fix13 not deactivated");
+
+o_notfix13: [["wall","Boden",[0,0],[1,0],45,"hide"]];
+fb_check(fb_fix13(o_notfix13, n_ok, 1, "A: "), false,
+  "<br>A: object 1(wall) is not a frictionless support.",
+  "<br>A: object 1(wall) is not a frictionless support.",
+  "fb_fix13 dev: not a fix13");
+
+/* ============================================================================
+   fb_fix13_names(o, n, i) - naming checks only. The force's own name o[ir][2]
+   must be exactly the support's name (single letter); a moment's name must
+   start with "M" and end with the support's name. No H/V/x/y check here
+   (fix13 has exactly one reaction force), see comment in fb_fbd.mac.
+   ============================================================================ */
+
+fb_check(fb_fix13_names(o_ok, [[], "R_A", "M_A"], 1), false, "", "", "fb_fix13_names no reaction yet (guard only)");
+
+o_nm: [["fix13","A",[0,0],0,"hide"],
+       ["force","A",[0,0],[1,0],"active"],
+       ["moment","MA",[0,0],"active"]];
+n_nm: [[2,3], "A", "M_A"];
+fb_check(fb_fix13_names(o_nm, n_nm, 1), true, "", "", "fb_fix13_names ok");
+fb_check(fb_fix13_name(o_nm, n_nm, 1), true, "", "", "fb_fix13_name alias ok");
+
+/* Current wording of the single-letter message (leading space, no final
+   period, sentence starting after the formula) is documented as-is here. */
+o_nm_long: [["fix13","A",[0,0],0,"hide"],
+            ["force","AB",[0,0],[1,0],"active"],
+            ["moment","MA",[0,0],"active"]];
+n_nm_long: [[2,3], "AB", "M_A"];
+fb_check(fb_fix13_names(o_nm_long, n_nm_long, 1), false,
+  "<br> \\(AB\\) Ein einzelner Buchstabe sollte f&uuml;r die Bezeichnung der Kraft ausreichen<br>Der Name \\(AB\\) passt nicht zum Name des Lagerpunktes.",
+  "<br> \\(AB\\) a single letter should be enough to name the force<br>The name \\(AB\\) does not match the name of the support point.",
+  "fb_fix13_names force name too long (and mismatching)");
+
+o_nm_force: [["fix13","A",[0,0],0,"hide"],
+             ["force","B",[0,0],[1,0],"active"],
+             ["moment","MA",[0,0],"active"]];
+n_nm_force: [[2,3], "B", "M_A"];
+fb_check(fb_fix13_names(o_nm_force, n_nm_force, 1), false,
+  "<br>Der Name \\(B\\) passt nicht zum Name des Lagerpunktes.",
+  "<br>The name \\(B\\) does not match the name of the support point.",
+  "fb_fix13_names force name mismatch");
+
+o_nm_moment: [["fix13","A",[0,0],0,"hide"],
+              ["force","A",[0,0],[1,0],"active"],
+              ["moment","MB",[0,0],"active"]];
+n_nm_moment: [[2,3], "A", "M_B"];
+fb_check(fb_fix13_names(o_nm_moment, n_nm_moment, 1), false,
+  "<br>Der Name \\(M_B\\) passt nicht zum Name des Lagerpunktes.",
+  "<br>The name \\(M_B\\) does not match the name of the support point.",
+  "fb_fix13_names moment name mismatch");
+
+o_nm_notm: [["fix13","A",[0,0],0,"hide"],
+            ["force","A",[0,0],[1,0],"active"],
+            ["moment","XA",[0,0],"active"]];
+n_nm_notm: [[2,3], "A", "X_A"];
+fb_check(fb_fix13_names(o_nm_notm, n_nm_notm, 1), false,
+  "<br>Der Name \\(X_A\\) passt nicht zu einem Moment.",
+  "<br>The name \\(X_A\\) does not match a moment.",
+  "fb_fix13_names moment name without M");
