@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-Overview */ 
-fb_value_version: "2026 09 30";
+fb_value_version: "2026 10 07";
 
 /* https://github.com/mkraska/meclib/wiki/deg2rad */
 /* Substitutes any use of the "deg" marker in expr with its numeric value (pi/180), for use right
@@ -90,10 +90,10 @@ fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom
   str_unexpected_base_unit: castext("[[lang code='de']]&nbsp;Unerwartete Basiseinheit [[/lang]][[lang code='en,other']]&nbsp;Unexpected base unit [[/lang]]"),
   str_not_dimensionless: castext("[[lang code='de']]&nbsp;Der Wert sollte nicht dimensionslos sein.[[/lang]][[lang code='en,other']]&nbsp;The value should not be dimensionless.[[/lang]]"),
   str_deviation: castext("[[lang code='de']]&nbsp;Abweichung: [[/lang]][[lang code='en,other']]&nbsp;Deviation: [[/lang]]"),
-  str_value_too_large: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.[[/lang]][[lang code='en,other']]The absolute value is too large.[[/lang]]"),
-  str_value_too_small: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.[[/lang]][[lang code='en,other']]The absolute value is too small.[[/lang]]"),
-  str_sign: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie das Vorzeichen.[[/lang]][[lang code='en,other']]Check the sign.[[/lang]]"),
-  str_mantissa: castext("[[lang code='de']]&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. [[/lang]][[lang code='en,other']]The mantissa is correct but the value is off by at least one order of magnitude. Check your unit conversion.[[/lang]]"),
+  str_value_too_large: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.[[/lang]][[lang code='en,other']]&nbsp;The absolute value is too large.[[/lang]]"),
+  str_value_too_small: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.[[/lang]][[lang code='en,other']]&nbsp;The absolute value is too small.[[/lang]]"),
+  str_sign: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie das Vorzeichen.[[/lang]][[lang code='en,other']]&nbsp;Check the sign.[[/lang]]"),
+  str_mantissa: castext("[[lang code='de']]&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. [[/lang]][[lang code='en,other']]&nbsp;The mantissa is correct but the value is off by at least one order of magnitude. Check your unit conversion.[[/lang]]"),
   str_small_1: castext("[[lang code='de']]&nbsp;Der Betrag ist um mindestens [[/lang]][[lang code='en,other']]&nbsp;The value is too small by at least [[/lang]]"),
   str_small_2: castext("[[lang code='de']]% zu klein.[[/lang]][[lang code='en,other']]%.[[/lang]]"),
   str_large_1: castext("[[lang code='de']]&nbsp;Der Betrag ist um mindestens [[/lang]][[lang code='en,other']]&nbsp;The value is too large by at least [[/lang]]"),
@@ -220,7 +220,7 @@ fb_coeffs(%_sans, %_tans, %_tol, %_description):=block(
        sees at load time; a runtime-built string never gets that treatment, so castext()
        is left as a plain, undefined function call that Maxima can't reduce). */
     if %_cres # "" then
-      %_txt: castext_concat(%_txt, castext_concat(castext_concat(str_coeff_at, castext("{@string(%_v)@}: ")), %_cres))
+      %_txt: castext_concat(%_txt, castext_concat(castext_concat(str_coeff_at, castext("{@string(%_v)@}:")), %_cres))
   ),
   if %_txt # %_description then return([%_txt, false]),
   return([castext_concat(%_txt, str_equation_ok), true])

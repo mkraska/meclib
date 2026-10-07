@@ -1,0 +1,62 @@
+/* ============================================================================
+   Tests for fb_force_hvxy(o,i) - force-naming convention check (single-
+   letter base name, single-letter h/v/x/y direction index, and that the
+   object's actual direction matches what the index claims). All messages
+   use plain sconcat() with hoisted static castext() blocks - no {@...@}
+   placeholders, so (unlike fb_dir()/fb_bar()/fb_q(), see the status
+   update) this is fully testable offline.
+   ============================================================================ */
+
+o_multiletter: [["force","FF_x",[0,0],[1,0],"active"]];
+fb_check(fb_force_hvxy(o_multiletter, 1), false,
+  "\\(FF_x\\): Physikalische Gr&ouml;&szlig;en immer nur mit einem Buchstabe und eventuell Index schreiben, z.B. <code>F_1</code>.",
+  "\\(FF_x\\): always name physical quantities with a single letter and, if needed, an index, e.g. <code>F_1</code>.",
+  "fb_force_hvxy multi-letter base");
+
+o_noindex: [["force","F",[0,0],[1,0],"active"]];
+fb_check(fb_force_hvxy(o_noindex, 1), false,
+  "\\(F\\) sollte einen Richtungsindex (x, y, h, v) haben.",
+  "\\(F\\) should have a direction index (x, y, h, v).",
+  "fb_force_hvxy no index");
+
+o_idxlong: [["force","F_xy",[0,0],[1,0],"active"]];
+fb_check(fb_force_hvxy(o_idxlong, 1), false,
+  "\\(F_xy\\): Ein Buchstabe sollte für den Index reichen.",
+  "\\(F_xy\\): a single letter should be enough for the index.",
+  "fb_force_hvxy index too long");
+
+o_idxunknown: [["force","F_q",[0,0],[1,0],"active"]];
+fb_check(fb_force_hvxy(o_idxunknown, 1), false,
+  "\\(F_q\\): Der Richtungsindex sollte h, v, x oder y sein",
+  "\\(F_q\\): the direction index should be h, v, x or y",
+  "fb_force_hvxy unknown index");
+
+o_badh: [["force","F_h",[0,0],[1,1],"active"]];
+fb_check(fb_force_hvxy(o_badh, 1), false,
+  "\\(F_h\\) m&uuml;sste eine horizontale Kraft bezeichnen.",
+  "\\(F_h\\) should denote a horizontal force.",
+  "fb_force_hvxy should be horizontal");
+
+o_badv: [["force","F_v",[0,0],[1,1],"active"]];
+fb_check(fb_force_hvxy(o_badv, 1), false,
+  "\\(F_v\\) m&uuml;sste eine vertikale Kraft bezeichnen.",
+  "\\(F_v\\) should denote a vertical force.",
+  "fb_force_hvxy should be vertical");
+
+o_badx: [["force","F_x",[0,0],[0,1],"active"]];
+fb_check(fb_force_hvxy(o_badx, 1), false,
+  "\\(F_x\\) m&uuml;sste eine Kraft in positive x-Richtung (nach rechts) bezeichnen.",
+  "\\(F_x\\) should denote a force in the positive x direction (to the right).",
+  "fb_force_hvxy should be +x");
+
+o_bady: [["force","F_y",[0,0],[1,0],"active"]];
+fb_check(fb_force_hvxy(o_bady, 1), false,
+  "\\(F_y\\) m&uuml;sste eine Kraft in positive y-Richtung (nach oben) bezeichnen.",
+  "\\(F_y\\) should denote a force in the positive y direction (upward).",
+  "fb_force_hvxy should be +y");
+
+o_ok_x: [["force","F_x",[0,0],[1,0],"active"]];
+fb_check(fb_force_hvxy(o_ok_x, 1), true, "", "", "fb_force_hvxy ok (x)");
+
+o_ok_h: [["force","F_h",[0,0],[1,0],"active"]];
+fb_check(fb_force_hvxy(o_ok_h, 1), true, "", "", "fb_force_hvxy ok (h)");

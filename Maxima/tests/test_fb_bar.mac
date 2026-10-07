@@ -1,0 +1,156 @@
+/* ============================================================================
+   Tests for fb_bar(). Bar object layout: ["bar", name, p3, p4, state];
+   direction(bar) = p4-p3. A matching force reaction is any "force" object
+   anywhere in o whose own name, split on "_", has the bar's name as its
+   second part (e.g. bar "A" matches a force named "S_A" or "F_A").
+
+   Single-force case (no "2" option): L[1] is used regardless of how many
+   matches exist; the optional "T" flag additionally compares the
+   reaction's sign against the bar's own stored direction (p3->p4).
+
+   Two-force case ("2" option, new - method of joints/sections free-body
+   cut of a two-force member): exactly 2 matches required, both parallel
+   to the bar, carrying the SAME object name (Newton's third law pair -
+   unlike fb_fix12(), which requires DIFFERENT names), anchored one at
+   each end (by coordinate match against p3/p4), each pointing outward
+   (tension) at its own end. Tension is checked unconditionally here,
+   not gated by "T".
+   ============================================================================ */
+
+/* ---- dev diagnostics ---- */
+o_notbar: [["wall","Boden",[0,0],[1,0],45,"hide"]];
+fb_check(fb_bar(o_notbar, [0], 1), false,
+  "object 1 (wall) is not a bar.",
+  "object 1 (wall) is not a bar.",
+  "fb_bar dev: not a bar");
+
+o_noname: [["bar","",[0,0],[0,2],"hide"]];
+fb_check(fb_bar(o_noname, [0], 1), false,
+  "object #1 has no name.",
+  "object #1 has no name.",
+  "fb_bar dev: no name");
+
+/* ---- not deactivated ---- */
+o_pending: [["bar","A",[0,0],[0,2],"show"]];
+n_pending: [0];
+fb_check(fb_bar(o_pending, n_pending, 1), false,
+  "Stab A: Nicht deaktiviert.",
+  "Bar A: Not deactivated.",
+  "fb_bar not deactivated");
+
+/* ---- no matching force ---- */
+o_nomatch: [["bar","A",[0,0],[0,2],"hide"], ["force","F_B",[0,0],[0,1],"active"]];
+n_nomatch: [[2], F_B];
+fb_check(fb_bar(o_nomatch, n_nomatch, 1), false,
+  "Stab A: Keine Stabkraft mit passendem Namen (mit Index A) gefunden.",
+  "Bar A: No bar force with a matching name (with index A) found.",
+  "fb_bar no matching force");
+
+/* ============================================================================
+   single-force case (no "2")
+   ============================================================================ */
+
+o_ok1: [["bar","A",[0,0],[0,2],"hide"], ["force","S_A",[0,0],[0,-1],"active"]];
+n_ok1: [[2], S_A];
+fb_check(fb_bar(o_ok1, n_ok1, 1), true,
+  "Stab A: S_A OK.",
+  "Bar A: S_A OK.",
+  "fb_bar single-force ok");
+
+o_notpar1: [["bar","A",[0,0],[0,2],"hide"], ["force","S_A",[0,0],[1,0],"active"]];
+n_notpar1: [[2], S_A];
+fb_check(fb_bar(o_notpar1, n_notpar1, 1), false,
+  "Stab A: S_A ist nicht parallel zum Stab.",
+  "Bar A: S_A is not parallel to the bar.",
+  "fb_bar single-force not parallel");
+
+/* "T": reaction antiparallel to the bar's own stored direction (p3->p4) */
+o_antiT: [["bar","A",[0,0],[0,2],"hide"], ["force","S_A",[0,0],[0,-1],"active"]];
+n_antiT: [[2], S_A];
+fb_check(fb_bar(o_antiT, n_antiT, 1, "T"), false,
+  "Stab A: S_A ist nicht als Zugkraft definiert.",
+  "Bar A: S_A is not defined as a tensile force.",
+  "fb_bar single-force T: antiparallel (compression)");
+
+/* "T": reaction parallel AND same sign as the bar's own stored direction */
+o_okT: [["bar","A",[0,0],[0,2],"hide"], ["force","S_A",[0,0],[0,1],"active"]];
+n_okT: [[2], S_A];
+fb_check(fb_bar(o_okT, n_okT, 1, "T"), true,
+  "Stab A: S_A OK.",
+  "Bar A: S_A OK.",
+  "fb_bar single-force T: correct tension");
+
+/* ============================================================================
+   two-force case ("2")
+   ============================================================================ */
+
+o_2few: [["bar","A",[0,0],[0,2],"hide"], ["force","S_A",[0,0],[0,-1],"active"]];
+n_2few: [[2], S_A];
+fb_check(fb_bar(o_2few, n_2few, 1, "2"), false,
+  "Stab A: Weniger als zwei Stabkräfte mit passendem Namen gefunden.",
+  "Bar A: Fewer than two bar forces with a matching name found.",
+  "fb_bar two-force fewer than two");
+
+o_2many: [["bar","A",[0,0],[0,2],"hide"],
+          ["force","S_A",[0,0],[0,-1],"active"],
+          ["force","S_A",[0,2],[0,1],"active"],
+          ["force","S_A",[0,1],[1,1],"active"]];
+n_2many: [[2,3,4], S_A, S_A, S_A];
+fb_check(fb_bar(o_2many, n_2many, 1, "2"), false,
+  "Stab A: Mehr als zwei Stabkräfte mit passendem Namen gefunden.",
+  "Bar A: More than two bar forces with a matching name found.",
+  "fb_bar two-force more than two");
+
+o_2name: [["bar","A",[0,0],[0,2],"hide"],
+          ["force","S_A",[0,0],[0,-1],"active"],
+          ["force","F_A",[0,2],[0,1],"active"]];
+n_2name: [[2,3], S_A, F_A];
+fb_check(fb_bar(o_2name, n_2name, 1, "2"), false,
+  "Stab A: S_A, F_A haben unterschiedliche Namen. Als Freischnitt desselben Stabes sollten beide denselben Namen tragen.",
+  "Bar A: S_A, F_A have different names. As the free-body cut of the same bar, both should carry the same name.",
+  "fb_bar two-force name mismatch");
+
+o_2par: [["bar","A",[0,0],[0,2],"hide"],
+         ["force","S_A",[0,0],[0,-1],"active"],
+         ["force","S_A",[0,2],[1,2],"active"]];
+n_2par: [[2,3], S_A, S_A];
+fb_check(fb_bar(o_2par, n_2par, 1, "2"), false,
+  "Stab A: S_A ist nicht parallel zum Stab.",
+  "Bar A: S_A is not parallel to the bar.",
+  "fb_bar two-force one not parallel");
+
+o_2notend: [["bar","A",[0,0],[0,2],"hide"],
+            ["force","S_A",[0,0],[0,-1],"active"],
+            ["force","S_A",[0,1],[0,2],"active"]];
+n_2notend: [[2,3], S_A, S_A];
+fb_check(fb_bar(o_2notend, n_2notend, 1, "2"), false,
+  "Stab A: S_A greift an keinem Stabende an.",
+  "Bar A: S_A does not act at either end of the bar.",
+  "fb_bar two-force not at either end");
+
+o_2same: [["bar","A",[0,0],[0,2],"hide"],
+          ["force","S_A",[0,2],[0,3],"active"],
+          ["force","S_A",[0,2],[0,1.5],"active"]];
+n_2same: [[2,3], S_A, S_A];
+fb_check(fb_bar(o_2same, n_2same, 1, "2"), false,
+  "Stab A: S_A, S_A greifen beide am selben Stabende an. An jedem Stabende sollte eine Stabkraft angreifen.",
+  "Bar A: S_A, S_A both act at the same end of the bar. One bar force should act at each end.",
+  "fb_bar two-force same end (swapped)");
+
+o_2tension: [["bar","A",[0,0],[0,2],"hide"],
+             ["force","S_A",[0,0],[0,1],"active"],
+             ["force","S_A",[0,2],[0,3],"active"]];
+n_2tension: [[2,3], S_A, S_A];
+fb_check(fb_bar(o_2tension, n_2tension, 1, "2"), false,
+  "Stab A: S_A ist nicht als Zugkraft definiert.",
+  "Bar A: S_A is not defined as a tensile force.",
+  "fb_bar two-force wrong tension at one end");
+
+o_2ok: [["bar","A",[0,0],[0,2],"hide"],
+        ["force","S_A",[0,0],[0,-1],"active"],
+        ["force","S_A",[0,2],[0,3],"active"]];
+n_2ok: [[2,3], S_A, S_A];
+fb_check(fb_bar(o_2ok, n_2ok, 1, "2"), true,
+  "Stab A: S_A, S_A OK.",
+  "Bar A: S_A, S_A OK.",
+  "fb_bar two-force ok");

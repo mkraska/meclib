@@ -57,8 +57,23 @@ block([%_hits, %_dir],
 
 load("harness.mac")$
 load("../fb_fbd.mac")$
+load("../fb_value.mac")$
 
 load("test_fb_contact.mac")$
 load("test_fb_force.mac")$
+load("test_fb_fix1.mac")$
+load("test_fb_fix12.mac")$
+load("test_fb_fix123.mac")$
+load("test_fb_fix13.mac")$
+load("test_fb_unidir.mac")$
+load("test_fb_force_hvxy.mac")$
+load("test_fb_dir.mac")$
+load("test_fb_bar.mac")$
+load("test_fb_bar_name.mac")$
+load("test_fb_q.mac")$
+load("test_fb_vars.mac")$
+load("test_fb_unit.mac")$
+load("test_fb_coeffs.mac")$
+load("test_fb_dim.mac")$
 
 s_test_summary()$

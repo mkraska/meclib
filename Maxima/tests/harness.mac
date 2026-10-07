@@ -42,9 +42,173 @@
    it just isn't exercised when the real one is available. */
 if not(?boundp('meclib_real_stack_loaded)) then meclib_real_stack_loaded: false$
 
-castext(s) := s$
+/* fb_bar_name() reads the question-level `debug` flag to decide whether a handful of its
+   early pre-checks show a diagnostic message or stay silent; STACK questions that don't set
+   it themselves get it false from stack_options, so default it the same way here - without
+   this, referencing an entirely unbound `debug` would error instead of acting as false. */
+if not(?boundp('debug)) then debug: false$
+
+/* ---- castext2 templating stub: {@expr@}, [[define]], [[foreach]], [[if]]/[[else]] ----
+   The real castext() is generated per-question by STACK's PHP compiler, so there is
+   nothing to "load" for it even when the real stack/maxima library is present (see the
+   comment block above). What it actually resolves CAS-side has to be reimplemented here
+   instead of just stubbed as an identity, so that fb_bar()/fb_bar_name()/fb_q()/fb_dir()
+   (via fb_strip_list()) - every function in this codebase using {@expr@} or
+   [[foreach]]/[[define]]/[[if]] - can be exercised offline at all, not just the
+   already-i18n-converted "split-parts" functions that only ever use [[lang]].
+
+   {@expr@} evaluates `expr` as a Maxima expression IN THE CALLER'S OWN ENVIRONMENT: a
+   block-local of the function that called castext() (e.g. fb_q's own `ir`/`n`) is visible
+   here because Maxima's block-local variables are dynamically (not lexically) bound, so
+   any function called during that block's execution sees them - confirmed empirically
+   with a throwaway probe script before writing this. ev(parse_string(expr), eval) is the
+   idiom that forces that second-level evaluation; plain ev(parse_string(expr)) alone does
+   NOT re-evaluate a parsed bare symbol (also confirmed empirically) - the explicit `eval`
+   flag is required.
+
+   [[define name='expr'/]] and [[foreach var='listexpr']] bind a *global* variable (via
+   the "::"-by-name-assignment operator) rather than a true block-local - adequate here
+   since every known template using them (fb_strip_list()) is self-contained and never
+   nested inside another running [[foreach]], but it does mean these two constructs,
+   unlike {@...@}, don't need any special scope trick of their own.
+
+   [[lang code='...']]...[[/lang]] is NOT handled here - that selection happens later, in
+   resolve_lang() below, when a test calls fb_check(). A string can freely mix both systems
+   (an {@...@} placeholder inside a [[lang]] block, as a bilingual function will do) because
+   this renderer only recognizes "[[define", "[[foreach", "[[if" and "{@" as its own tags;
+   "[[lang"/"[[/lang]]" is just ordinary text to it and passes through untouched, to be
+   resolved by the separate, later pass. */
+fb_tmpl_eval_expr(%_src):= ev(parse_string(%_src), eval)$
+fb_tmpl_tostring(%_v):= if stringp(%_v) then %_v else string(%_v)$
+
+fb_tmpl_find_next(s, pos, taglist):= block([best: false, besttag: false, p, t],
+  for t in taglist do (
+    p: ssearch(t, s, pos),
+    if p # false and (best = false or p < best) then (best: p, besttag: t)
+  ),
+  [best, besttag]
+)$
+
+fb_tmpl_trim(s):= block([a:1, b: slength(s)+1],
+  if slength(s)>0 and charat(s,1)=" " then a:2,
+  if slength(s)>=a and charat(s,b-1)=" " then b: b-1,
+  substring(s,a,b)
+)$
+
+/* [[define name='expr'/]] (self-closing) starting at pos. Returns the position right
+   after the tag; sets the named global variable as a side effect. */
+fb_tmpl_do_define(s, pos):= block([eq, q1, q2, name, exprsrc],
+  eq: ssearch("=", s, pos),
+  name: fb_tmpl_trim(substring(s, pos+slength("[[define"), eq)),
+  q1: ssearch("'", s, eq+1), q2: ssearch("'", s, q1+1),
+  exprsrc: substring(s, q1+1, q2),
+  parse_string(name) :: fb_tmpl_eval_expr(exprsrc),
+  ssearch("]]", s, q2+1) + 2
+)$
+
+/* [[foreach var='expr']] or [[if test='expr']] open tag (NOT self-closing) starting at
+   pos. Returns [name, exprsrc, posAfterOpenTag]. */
+fb_tmpl_parse_open1(s, pos, prefix):= block([eq, q1, q2, name, exprsrc, tagend],
+  eq: ssearch("=", s, pos),
+  name: fb_tmpl_trim(substring(s, pos+slength(prefix), eq)),
+  q1: ssearch("'", s, eq+1), q2: ssearch("'", s, q1+1),
+  exprsrc: substring(s, q1+1, q2),
+  tagend: ssearch("]]", s, q2+1) + 2,
+  [name, exprsrc, tagend]
+)$
+
+/* Depth-aware scan from pos (just after a [[foreach ...]] open tag) to its matching
+   [[/foreach]], so a nested [[if]]/[[foreach]] inside the body isn't mistaken for the
+   end (not exercised by any current template, but cheap to get right). Returns
+   [rawBody, posAfterCloseTag]. */
+fb_tmpl_find_foreach_end(s, pos):= block([bodystart: pos, depth: 0, p, best, tag,
+    cands: ["[[if","[[foreach","[[/if]]","[[/foreach]]"], endpos: false],
+  while endpos = false do (
+    [best, tag]: fb_tmpl_find_next(s, pos, cands),
+    if best = false then endpos: slength(s)+1
+    elseif tag = "[[if" or tag = "[[foreach" then (depth: depth+1, pos: best+slength(tag))
+    elseif depth = 0 then endpos: best
+    else (depth: depth-1, pos: best+slength(tag))
+  ),
+  [substring(s, bodystart, endpos), endpos + slength("[[/foreach]]")]
+)$
+
+/* Depth-aware split of an [[if]] body into its raw (unevaluated) then/else parts.
+   Evaluation happens afterwards, on only the chosen branch, so a side effect in the
+   untaken branch never fires and the test is evaluated exactly once, before either
+   branch runs. Returns [thenraw, elseraw, posAfterEndifTag]. */
+fb_tmpl_split_if_body(s, p):= block([pos: p, depth: 0, elsepos: false, endpos: false,
+    cands: ["[[if","[[foreach","[[/if]]","[[/foreach]]","[[else]]"], best, tag],
+  while endpos = false do (
+    [best, tag]: fb_tmpl_find_next(s, pos, cands),
+    if best = false then endpos: slength(s)+1
+    elseif tag = "[[if" or tag = "[[foreach" then (depth: depth+1, pos: best+slength(tag))
+    elseif tag = "[[else]]" then (
+      if depth = 0 and elsepos = false then (elsepos: best, pos: best+slength(tag))
+      else pos: best+slength(tag)
+    )
+    elseif depth = 0 then endpos: best
+    else (depth: depth-1, pos: best+slength(tag))
+  ),
+  if elsepos = false then
+    [substring(s,p,endpos), "", endpos+slength("[[/if]]")]
+  else
+    [substring(s,p,elsepos), substring(s,elsepos+slength("[[else]]"),endpos), endpos+slength("[[/if]]")]
+)$
+
+/* Core renderer: walks s left to right, evaluating {@...@}, [[define]], [[foreach]],
+   [[if]]/[[else]] (everything else - including [[lang]]/[[/lang]] - passes through as
+   plain text, see the comment above this block). */
+fb_tmpl_render(s):= block(
+  [out: "", pos: 1, len: slength(s), cands: ["[[define","[[foreach","[[if","{@"],
+   p, tag, inner, closepos, val, var, exprsrc, bodyinfo, rawbody, listval, iterout,
+   ifbody, testval],
+  while true do (
+    [p, tag]: fb_tmpl_find_next(s, pos, cands),
+    if p = false then (
+      out: sconcat(out, substring(s, pos, len+1)),
+      return(out)
+    ),
+    out: sconcat(out, substring(s, pos, p)),
+    if tag = "{@" then (
+      closepos: ssearch("@}", s, p+2),
+      inner: substring(s, p+2, closepos),
+      val: fb_tmpl_eval_expr(inner),
+      out: sconcat(out, fb_tmpl_tostring(val)),
+      pos: closepos+2
+    ) elseif tag = "[[define" then (
+      pos: fb_tmpl_do_define(s, p)
+    ) elseif tag = "[[foreach" then (
+      [var, exprsrc, pos]: fb_tmpl_parse_open1(s, p, "[[foreach"),
+      [rawbody, pos]: fb_tmpl_find_foreach_end(s, pos),
+      listval: fb_tmpl_eval_expr(exprsrc),
+      iterout: "",
+      for %_item in listval do (
+        parse_string(var) :: %_item,
+        iterout: sconcat(iterout, fb_tmpl_render(rawbody))
+      ),
+      out: sconcat(out, iterout)
+    ) elseif tag = "[[if" then (
+      [var, exprsrc, pos]: fb_tmpl_parse_open1(s, p, "[[if"),
+      [ifbody, bodyinfo, pos]: fb_tmpl_split_if_body(s, pos),
+      testval: fb_tmpl_eval_expr(exprsrc),
+      out: sconcat(out, fb_tmpl_render(if testval then ifbody else bodyinfo))
+    )
+  )
+)$
+
+castext(s) := fb_tmpl_render(s)$
 if meclib_real_stack_loaded = false then (
-  castext_concat(a, b) := sconcat(a, b)
+  castext_concat(a, b) := sconcat(a, b),
+  /* Needed because the new {@...@} evaluation above can now reach a REAL stack/maxima
+     function that fb_fbd.mac/fb_value.mac calls from inside a placeholder (fb_vars() does,
+     via stack_disp_comma_separate()) - without the real library loaded, that name is
+     otherwise unbound, and {@...@} would print its literal unevaluated noun form instead of
+     a value. This plain join is enough to make the affected text match the real library's
+     own output exactly for every case these tests exercise; if a future function's {@...@}
+     reaches some OTHER real-library-only function, that one will need a similar stub added
+     here, or its test marked invalid when no sandbox is configured (see run_tests.mac). */
+  stack_disp_comma_separate(%_l) := simplode(map(lambda([%_x], if stringp(%_x) then %_x else string(%_x)), %_l), ", ")
 )$
 
 /* ---- STACK's [[lang code='...']] selection rule, reimplemented ----
@@ -159,6 +323,40 @@ fb_check(result, expected_ok, expected_de, expected_en, label) := block(
     print(sconcat("              expected <<", expected_en, ">>"))
   ),
   if pass then s_test_success: s_test_success + 1 else s_test_fails: s_test_fails + 1,
+  pass
+)$
+
+/* fb_check_str(result, expected_de, expected_en, label)
+   For functions that return a bare castext2 STRING directly (fb_vars(), fb_unit(),
+   fb_number()), not the [text, flag] pair fb_check() expects - there is no separate
+   ok/not-ok flag to compare; "" is itself the "ok, say nothing" result, same as any
+   other exact expected string. */
+fb_check_str(result, expected_de, expected_en, label) := block(
+  [de: resolve_lang(result, "de"), en: resolve_lang(result, "en"), pass: true],
+  if de # expected_de then (
+    pass: false,
+    print(sconcat("FAIL [", label, "] de:   got <<", de, ">>")),
+    print(sconcat("              expected <<", expected_de, ">>"))
+  ),
+  if en # expected_en then (
+    pass: false,
+    print(sconcat("FAIL [", label, "] en:   got <<", en, ">>")),
+    print(sconcat("              expected <<", expected_en, ">>"))
+  ),
+  if pass then s_test_success: s_test_success + 1 else s_test_fails: s_test_fails + 1,
+  pass
+)$
+
+/* fb_check_val(actual, expected, label)
+   For functions that return a plain CAS value rather than feedback text
+   (fb_dim(), deg2rad()). Compares via ratsimp of the difference, so two
+   algebraically equal but differently-formed expressions still match. */
+fb_check_val(actual, expected, label) := block([pass: is(ratsimp(actual - expected) = 0)],
+  if pass then s_test_success: s_test_success + 1
+  else (
+    s_test_fails: s_test_fails + 1,
+    print(sconcat("FAIL [", label, "] got <<", string(actual), ">> expected <<", string(expected), ">>"))
+  ),
   pass
 )$
 

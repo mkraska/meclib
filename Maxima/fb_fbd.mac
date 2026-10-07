@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-Free-Body-Diagrams */
-/* 2026 09 30 */
+/* 2026 10 07 */
 
 /* https://github.com/mkraska/meclib/wiki/direction%28%29 */
 direction(o):=block([%_v, a0, le, r1, r2, a1],
@@ -126,20 +126,29 @@ contributor(o, n, i_dir, tol):= block([d: direction(o[i_dir]), v, u, result: []]
    "in 1-Richtung" (so this stays reusable in other questions/languages without hardcoding the
    direction's own name or numbering here).
    Returns [text, flag], to be dropped into a PRT node the same way as fb_fix1/fb_contact/etc. */
-fb_dir(%_o, %_n, %_dirs, %_tol):= block([%_ok: true, %_parts: [], %_contrib, %_i, %_desc, %_sentence, %_text, %_k],
+/* %_desc (the phrase naming the direction, see above) is supplied by the calling question
+   and is NOT translated here - a question that wants this feedback in both languages must
+   author %_desc itself bilingually (e.g. as its own [[lang]]-wrapped phrase), the same way a
+   caller is responsible for %_description elsewhere in this file (fb_fix1 etc.). Only the
+   fixed wrapper text below is converted. */
+fb_dir(%_o, %_n, %_dirs, %_tol):= block([%_ok: true, %_parts: [], %_contrib, %_i, %_desc, %_sentence, %_text, %_k,
+    str_parallel: castext("[[lang code='de']]Die gewählten Richtungen sind parallel. Damit liefern die beiden Gleichgewichtsbedingungen keine voneinander unabhängigen Gleichungen.[[/lang]][[lang code='en,other']]The chosen directions are parallel. The two equilibrium conditions would then not provide independent equations.[[/lang]]"),
+    str_none_pre: castext("[[lang code='de']]Keine Kraft hat Anteile [[/lang]][[lang code='en,other']]No force has components [[/lang]]"),
+    str_has_mid: castext("[[lang code='de']] hat Anteile [[/lang]][[lang code='en,other']] has components [[/lang]]"),
+    str_have_mid: castext("[[lang code='de']] haben Anteile [[/lang]][[lang code='en,other']] have components [[/lang]]")],
   if length(%_dirs) = 2 and parallelp(%_o[%_dirs[1][1]], %_o[%_dirs[2][1]]) then (
     %_ok: false,
-    %_parts: cons("Die gewählten Richtungen sind parallel. Damit liefern die beiden Gleichgewichtsbedingungen keine voneinander unabhängigen Gleichungen.", %_parts)
+    %_parts: cons(str_parallel, %_parts)
   ),
   for %_pair in %_dirs do (
     %_i: %_pair[1], %_desc: %_pair[2],
     %_contrib: contributor(%_o, %_n, %_i, %_tol),
     %_sentence: if %_contrib = [] then
-        castext_concat("Keine Kraft hat Anteile ", castext_concat(%_desc, "."))
+        castext_concat(str_none_pre, castext_concat(%_desc, "."))
       elseif length(%_contrib) = 1 then
-        castext_concat(castext_concat(fb_strip_list(%_contrib), " hat Anteile "), castext_concat(%_desc, "."))
+        castext_concat(castext_concat(fb_strip_list(%_contrib), str_has_mid), castext_concat(%_desc, "."))
       else
-        castext_concat(castext_concat(fb_strip_list(%_contrib), " haben Anteile "), castext_concat(%_desc, ".")),
+        castext_concat(castext_concat(fb_strip_list(%_contrib), str_have_mid), castext_concat(%_desc, ".")),
     %_parts: cons(%_sentence, %_parts)
   ),
   %_parts: reverse(%_parts),
@@ -194,7 +203,7 @@ fb_force_hvxy(o,i):=block([dir, name, nl, base, idx,
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix1%22 */
 fb_fix1(%_o, %_n, %_i, %_description):=block(
     [%_txt: sconcat("<br>",%_description), %_R,
-     str_not_deactivated: castext("[[lang code='de']] ist nicht deaktiviert.[[/lang]][[lang code='en,other']] is not deactivated.[[/lang]]"),
+     str_not_deactivated: castext("[[lang code='de']]ist nicht deaktiviert.[[/lang]][[lang code='en,other']]is not deactivated.[[/lang]]"),
      str_no_reaction: castext("[[lang code='de']]Keine Reaktion gefunden.[[/lang]][[lang code='en,other']]No reaction found.[[/lang]]"),
      str_more_than_one: castext("[[lang code='de']]Mehr als eine Reaktion gefunden.[[/lang]][[lang code='en,other']]More than one reaction found.[[/lang]]"),
      str_must_be_force: castext("[[lang code='de']]Die Reaktion muss eine Kraft sein.[[/lang]][[lang code='en,other']]The reaction must be a force.[[/lang]]"),
@@ -236,7 +245,7 @@ fb_fix1_name(%_o, %_n, %_i):=block(
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix12%22 */
 fb_fix12(o, n, i, description):=block(
     [L1, L2, R1, R2,
-     str_not_deactivated: castext("[[lang code='de']] ist nicht deaktiviert.[[/lang]][[lang code='en,other']] is not deactivated.[[/lang]]"),
+     str_not_deactivated: castext("[[lang code='de']]ist nicht deaktiviert.[[/lang]][[lang code='en,other']]is not deactivated.[[/lang]]"),
      str_no_reaction: castext("[[lang code='de']]Keine Reaktion gefunden.[[/lang]][[lang code='en,other']]No reaction found.[[/lang]]"),
      str_more_than_two: castext("[[lang code='de']]Mehr als 2 Reaktionen gefunden.[[/lang]][[lang code='en,other']]More than 2 reactions found.[[/lang]]"),
      str_less_than_two: castext("[[lang code='de']]Weniger als 2 Reaktionen gefunden.[[/lang]][[lang code='en,other']]Fewer than 2 reactions found.[[/lang]]"),
@@ -338,7 +347,7 @@ fb_fix12_name(o, n, i):=block(
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix123%22 */
 fb_fix123(o, n, i, description):=block(
     [sname: o[i][2], txt: sconcat("<br>",description), lf, lm,
-     str_not_deactivated: castext("[[lang code='de']] ist nicht deaktiviert.[[/lang]][[lang code='en,other']] is not deactivated.[[/lang]]"),
+     str_not_deactivated: castext("[[lang code='de']]ist nicht deaktiviert.[[/lang]][[lang code='en,other']]is not deactivated.[[/lang]]"),
      str_no_reaction: castext("[[lang code='de']]Keine Reaktion gefunden.[[/lang]][[lang code='en,other']]No reaction found.[[/lang]]"),
      str_too_few: castext("[[lang code='de']]Weniger als drei Reaktionen gefunden.[[/lang]][[lang code='en,other']]Fewer than three reactions found.[[/lang]]"),
      str_too_many: castext("[[lang code='de']]Mehr als drei Reaktionen gefunden.[[/lang]][[lang code='en,other']]More than three reactions found.[[/lang]]"),
@@ -411,7 +420,7 @@ fb_fix123_name(o, n, i):=block(
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix13%22 */
 fb_fix13(o, n, i, description):=block(
     [sname: o[i][2], txt: sconcat("<br>",description), lf, lm,
-     str_not_deactivated: castext("[[lang code='de']] ist nicht deaktiviert.[[/lang]][[lang code='en,other']] is not deactivated.[[/lang]]"),
+     str_not_deactivated: castext("[[lang code='de']]ist nicht deaktiviert.[[/lang]][[lang code='en,other']]is not deactivated.[[/lang]]"),
      str_no_reaction: castext("[[lang code='de']]Keine Reaktion gefunden.[[/lang]][[lang code='en,other']]No reaction found.[[/lang]]"),
      str_too_few: castext("[[lang code='de']]Weniger als zwei Reaktionen gefunden.[[/lang]][[lang code='en,other']]Fewer than two reactions found.[[/lang]]"),
      str_too_many: castext("[[lang code='de']]Mehr als zwei Reaktionen gefunden.[[/lang]][[lang code='en,other']]More than two reactions found.[[/lang]]"),
@@ -445,7 +454,7 @@ fb_fix13(o, n, i, description):=block(
 );
 
 fb_fix13_names(o, n, i):=block(
-    [sname: o[i][2], txt: "", ir, fb_required, ntxt, nok,
+    [sname: o[i][2], txt: "", ir, fb_required,
      str_singleletter_pre: castext("[[lang code='de']]<br> \\([[/lang]][[lang code='en,other']]<br> \\([[/lang]]"),
      str_singleletter_post: castext("[[lang code='de']]\\) Ein einzelner Buchstabe sollte f&uuml;r die Bezeichnung der Kraft ausreichen[[/lang]][[lang code='en,other']]\\) a single letter should be enough to name the force[[/lang]]"),
      str_namemismatch_pre: castext("[[lang code='de']]<br>Der Name \\([[/lang]][[lang code='en,other']]<br>The name \\([[/lang]]"),
@@ -466,11 +475,9 @@ fb_fix13_names(o, n, i):=block(
                   fb_required: true),
             if (sname # o[ir][2]   ) then (
                  txt: castext_concat(txt, sconcat(str_namemismatch_pre, n[ir], str_namemismatch_post)),
-                 fb_required: true),
-            /* [ntxt,nok]: fb_force_hvxy(o, ir), */
-            if not nok then (
-                txt: castext_concat(txt, castext_concat("<br>", ntxt)),
-                fb_required: true)
+                 fb_required: true)
+            /* No fb_force_hvxy() check here: a fix13 support has exactly one reaction force
+               (plus one moment), so the H/V/x/y naming scheme checked in fb_fix123_name() does not apply. */
          ),
         if o[ir][1]="moment" then (
             if (sname # last(charlist( o[ir][2] ))  ) then (
@@ -610,72 +617,120 @@ fb_reaction_name(%_o, %_n, %_i, %_default):= block([],
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-line-loads */
 fb_q(o, n, i, description,q1,q2,le):=block(
-    [varcheck, txt: description, %_v, ir, ir1, ir2, %_R, mag, a0, xref, Rref, lm],
+    [varcheck, txt: description, %_v, ir, ir1, ir2, %_R, mag, a0, xref, Rref, lm,
+     str_not_deactivated: castext("[[lang code='de']]ist nicht deaktiviert.[[/lang]][[lang code='en,other']]is not deactivated.[[/lang]]"),
+     str_no_reaction: castext("[[lang code='de']]Keine Resultierende gefunden.[[/lang]][[lang code='en,other']]No resultant found.[[/lang]]"),
+     str_not_a_force: castext("[[lang code='de']] ist keine Kraft.[[/lang]][[lang code='en,other']] is not a force.[[/lang]]"),
+     str_too_many_pre: castext("[[lang code='de']]Höchstens zwei Resultierende sind sinnvoll. Gefunden wurden mehr:<br>[[/lang]][[lang code='en,other']]At most two resultants make sense. More were found:<br>[[/lang]]"),
+     str_constant_load: castext("[[lang code='de']]Bei konstanter Streckenlast sollte eine Resultierende ausreichen.[[/lang]][[lang code='en,other']]For a constant line load, one resultant should be sufficient.[[/lang]]"),
+     str_triangular_load: castext("[[lang code='de']]Bei einer Dreiecks-Streckenlast sollte eine Resultierende ausreichen.[[/lang]][[lang code='en,other']]For a triangular line load, one resultant should be sufficient.[[/lang]]"),
+     str_ok: castext("[[lang code='de']]Resultierende OK[[/lang]][[lang code='en,other']]Resultant OK[[/lang]]")],
     /* Is object a line load? */
-    if not member(o[i][1], ["q"]) 
+    if not member(o[i][1], ["q"])
        then return ([sconcat(txt, "object ", string(i), " (",o[i][1],") is not a line load."), false]),
     /* Resultant force */
     %_v: o[i][5]-o[i][4],
     mag: (cabs(%_v[1]+%i*%_v[2]))*le*(q1+q2)/2, a0: carg(%_v[1]+%i*%_v[2]),
-    xref: (o[i][4]*(2/3*q1+q2/3)+o[i][5]*(q1/3+2/3*q2))/(q1+q2), 
+    xref: (o[i][4]*(2/3*q1+q2/3)+o[i][5]*(q1/3+2/3*q2))/(q1+q2),
     Rref: [ "force", mag, xref, xref+[-sin(a0+o[i][8]*pi/180), -cos(a0+o[i][8]*pi/180)] ],
-    /* Is object i de-activated */ 
-    if ( last(o[i]) # "hide") then return ([sconcat(txt, "ist nicht deaktiviert."), false]),
+    /* Is object i de-activated */
+    if ( last(o[i]) # "hide") then return ([castext_concat(txt, str_not_deactivated), false]),
     /* Any reactions found at i? */
-    if not listp(n[i]) or n[i]=[] then return([sconcat(txt, "Keine Resultierende gefunden."), false]),
+    if not listp(n[i]) or n[i]=[] then return([castext_concat(txt, str_no_reaction), false]),
     /* forces only?*/
     lm: sublist(n[i], lambda ([x], o[x][1]="moment")),
     if ( length(lm) # 0 ) then (
+        /* NOTE: this concatenates each matched moment's {@n[ir]@} directly adjacent to the
+           next, with no separator - a pre-existing formatting gap (visible only when more
+           than one moment is present), left as current behaviour here, not fixed. */
         for ir in lm do txt: castext_concat(txt, castext("{@n[ir]@}") ),
-        return ([castext_concat(txt, " ist keine Kraft." ),false])
+        return ([castext_concat(txt, str_not_a_force),false])
     ),
     if (length(n[i]) =1) then (     /* just one reaction */
       /* correct direction? */
       ir: n[i][1],
-      if abs(angle(Rref, o[ir]))>0.01 then 
-        return([castext_concat(txt, castext("Die Resultierende {@n[ir]@} hat nicht die richtige Richtung.") ) ,false]),
+      if abs(angle(Rref, o[ir]))>0.01 then
+        return([castext_concat(txt, castext("[[lang code='de']]Die Resultierende {@n[ir]@} hat nicht die richtige Richtung.[[/lang]][[lang code='en,other']]Resultant {@n[ir]@} does not have the correct direction.[[/lang]]") ) ,false]),
       /* correct set of variables in the expression */
       varcheck: fb_vars(n[ir], mag, []),
       if varcheck # "" then return( [
-	  castext_concat( castext_concat( txt, castext("Die Resultierende {@n[ir]@} hat nicht den richtigen Betrag. ") ), varcheck),
+	  castext_concat( castext_concat( txt, castext("[[lang code='de']]Die Resultierende {@n[ir]@} hat nicht den richtigen Betrag. [[/lang]][[lang code='en,other']]Resultant {@n[ir]@} does not have the correct magnitude. [[/lang]]") ), varcheck),
           false]),
       /* correct value (comparison requires consistent set of variables) */
-      if (mag-n[ir])/mag>0.01 then 
-         return([castext_concat(txt, castext("Die Resultierende {@n[ir]@} hat nicht den richtigen Betrag.") ) ,false]),
+      if abs((mag-n[ir])/mag)>0.01 then
+         return([castext_concat(txt, castext("[[lang code='de']]Die Resultierende {@n[ir]@} hat nicht den richtigen Betrag.[[/lang]][[lang code='en,other']]Resultant {@n[ir]@} does not have the correct magnitude.[[/lang]]") ) ,false]),
       /* correct position? */
-      if abs(moment_of_force(xref, o[ir], 1, 1) ) > 0.01 then  
-        return([castext_concat(txt, castext("Die Resultierende {@n[ir]@} geht nicht durch den Schwerpunkt.") ) ,false])
+      if abs(moment_of_force(xref, o[ir], 1, 1) ) > 0.01 then
+        return([castext_concat(txt, castext("[[lang code='de']]Die Resultierende {@n[ir]@} geht nicht durch den Schwerpunkt.[[/lang]][[lang code='en,other']]Resultant {@n[ir]@} does not pass through the centroid.[[/lang]]") ) ,false])
     ) else ( /* two resultants, should be a trapezoidal load */
       /* just two resultants? */
       if (length(n[i]) >2) then (
         %_R: fb_strip_list(makelist(n[n[i][ir]], ir, 1, length(n[i]) ) ),
-        return([lreduce(castext_concat, [txt, "Höchstens zwei Resultierende sind sinnvoll. Gefunden wurden mehr:<br>", %_R ] ), false])
+        return([lreduce(castext_concat, [txt, str_too_many_pre, %_R ] ), false])
       ),
-      if q1 = q2 then return([sconcat(txt, "Bei konstanter Streckenlast sollte eine Resultierende ausreichen.") ,false]),
-      if q1*q2 =0 then return([sconcat(txt, "Bei einer Dreiecks-Streckenlast sollte eine Resultierende ausreichen.") ,false]),
+      if q1 = q2 then return([castext_concat(txt, str_constant_load) ,false]),
+      if q1*q2 =0 then return([castext_concat(txt, str_triangular_load) ,false]),
       /* correct direction? */
       ir1: n[i][1], ir2: n[i][2],
-      if abs(angle(Rref, o[ir1]))>0.01 then 
-        return([castext_concat(txt, castext("Die Resultierende {@n[ir1]@} hat nicht die richtige Richtung.") ) ,false]),
-      if abs(angle(Rref, o[ir2]))>0.01 then 
-        return([castext_concat(txt, castext("Die Resultierende {@n[ir2]@} hat nicht die richtige Richtung.") ) ,false]),
+      if abs(angle(Rref, o[ir1]))>0.01 then
+        return([castext_concat(txt, castext("[[lang code='de']]Die Resultierende {@n[ir1]@} hat nicht die richtige Richtung.[[/lang]][[lang code='en,other']]Resultant {@n[ir1]@} does not have the correct direction.[[/lang]]") ) ,false]),
+      if abs(angle(Rref, o[ir2]))>0.01 then
+        return([castext_concat(txt, castext("[[lang code='de']]Die Resultierende {@n[ir2]@} hat nicht die richtige Richtung.[[/lang]][[lang code='en,other']]Resultant {@n[ir2]@} does not have the correct direction.[[/lang]]") ) ,false]),
       /* correct value */
       varcheck: fb_vars(n[ir1], mag, []),
-      if varcheck # "" then return([ castext_concat( castext_concat( txt, castext("Die Resultierende {@n[ir1]@} kann nicht stimmen. ") ), varcheck) ,false]),
+      if varcheck # "" then return([ castext_concat( castext_concat( txt, castext("[[lang code='de']]Die Resultierende {@n[ir1]@} kann nicht stimmen. [[/lang]][[lang code='en,other']]Resultant {@n[ir1]@} cannot be correct. [[/lang]]") ), varcheck) ,false]),
       varcheck: fb_vars(n[ir2], mag, []),
-      if varcheck # "" then return([ castext_concat( castext_concat( txt, castext("Die Resultierende {@n[ir2]@} kann nicht stimmen. ") ), varcheck) ,false]),
-      if (mag-n[ir1]-n[ir2])/mag>0.01 then 
-         return([castext_concat(txt, castext("Die Summe der Resultierenden {@n[ir1]+n[ir2]@} hat nicht den richtigen Wert. ") ) ,false]),
+      if varcheck # "" then return([ castext_concat( castext_concat( txt, castext("[[lang code='de']]Die Resultierende {@n[ir2]@} kann nicht stimmen. [[/lang]][[lang code='en,other']]Resultant {@n[ir2]@} cannot be correct. [[/lang]]") ), varcheck) ,false]),
+      if abs((mag-n[ir1]-n[ir2])/mag)>0.01 then
+         return([castext_concat(txt, castext("[[lang code='de']]Die Summe der Resultierenden {@n[ir1]+n[ir2]@} hat nicht den richtigen Wert. [[/lang]][[lang code='en,other']]The sum of the resultants {@n[ir1]+n[ir2]@} does not have the correct value. [[/lang]]") ) ,false]),
       /* correct position? */
-      if abs((moment_of_force(xref, o[ir1], n[ir1], 1) + moment_of_force(xref, o[ir2], n[ir2], 1))/mag ) > 0.01 then  
-        return( [castext_concat(txt, castext("Pr&uuml;fen Sie die Lage der Resultierenden. Der gemeinsame Schwerpunkt entspricht nicht der Streckenlast. <br>{@n[ir1]@}, {@n[ir2]@}") ) ,false])
+      if abs((moment_of_force(xref, o[ir1], n[ir1], 1) + moment_of_force(xref, o[ir2], n[ir2], 1))/mag ) > 0.01 then
+        return( [castext_concat(txt, castext("[[lang code='de']]Pr&uuml;fen Sie die Lage der Resultierenden. Der gemeinsame Schwerpunkt entspricht nicht der Streckenlast. <br>{@n[ir1]@}, {@n[ir2]@}[[/lang]][[lang code='en,other']]Check the position of the resultants. Their common centroid does not match the line load. <br>{@n[ir1]@}, {@n[ir2]@}[[/lang]]") ) ,false])
     ),
-   [sconcat(txt, "Resultierende OK") ,true]
+   [castext_concat(txt, str_ok) ,true]
+);
+
+/* Which end of a "bar" object a force's own application point (R[3]) is anchored at, by
+   coordinate match within a small tolerance (sketches are grid-snapped, so a correctly
+   dragged reaction lands exactly on the bar's endpoint): 1 for the bar's own point 3, 2
+   for point 4, 0 if it matches neither (not expected in normal use - e.g. it was never
+   moved onto the bar at all). Used only by fb_bar()'s "2" (two-force member) option. */
+fb_bar_end(%_bar, %_R):= block([%_p3: %_bar[3], %_p4: %_bar[4], %_rp: %_R[3], %_tol: 0.1],
+  if sqrt((%_rp[1]-%_p3[1])^2+(%_rp[2]-%_p3[2])^2) < %_tol then 1
+  elseif sqrt((%_rp[1]-%_p4[1])^2+(%_rp[2]-%_p4[2])^2) < %_tol then 2
+  else 0
+);
+
+/* Does the force point AWAY from the bar at the given end (tension, not compression)? end
+   must be 1 or 2, as returned by fb_bar_end(). */
+fb_bar_tension_ok(%_bar, %_R, %_end):= block([%_bd: direction(%_bar), %_rd: direction(%_R), %_ref],
+  %_ref: if %_end=1 then -%_bd else %_bd,
+  is(%_rd[1]*%_ref[1]+%_rd[2]*%_ref[2] > 0)
 );
 
 /* https://github.com/mkraska/meclib/wiki/fb_bar */
+/* opt may contain "T" (single-force case only: also check the reaction's sign, i.e. that
+   it is defined as tension rather than compression) and/or "2" (two-force-member case: the
+   bar is cut free at BOTH ends at once, expecting one reaction at each end, sharing the
+   bar's own name - the free-body cut used for the method of joints/sections. Both ends are
+   always checked for the correct tension sign in this case - unlike the single-force case,
+   this isn't gated by "T", since a two-force member's whole point is that both ends must
+   be tension (or both compression, with the sign flipped) together; "T" is simply not
+   consulted when "2" is set.) */
 fb_bar(o, n, i, [opt]):=block(
-    [txt, R, name, testT, test2, L], 
+    [txt, R, R1, R2, name, testT, test2, L, e1, e2,
+     str_bar_pre: castext("[[lang code='de']]Stab [[/lang]][[lang code='en,other']]Bar [[/lang]]"),
+     str_not_deactivated: castext("[[lang code='de']]Nicht deaktiviert.[[/lang]][[lang code='en,other']]Not deactivated.[[/lang]]"),
+     str_no_match_pre: castext("[[lang code='de']]Keine Stabkraft mit passendem Namen (mit Index [[/lang]][[lang code='en,other']]No bar force with a matching name (with index [[/lang]]"),
+     str_no_match_post: castext("[[lang code='de']]) gefunden.[[/lang]][[lang code='en,other']]) found.[[/lang]]"),
+     str_not_parallel: castext("[[lang code='de']] ist nicht parallel zum Stab.[[/lang]][[lang code='en,other']] is not parallel to the bar.[[/lang]]"),
+     str_not_tension: castext("[[lang code='de']] ist nicht als Zugkraft definiert.[[/lang]][[lang code='en,other']] is not defined as a tensile force.[[/lang]]"),
+     str_ok: castext("[[lang code='de']] OK.[[/lang]][[lang code='en,other']] OK.[[/lang]]"),
+     str_fewer_than_two: castext("[[lang code='de']]Weniger als zwei Stabkräfte mit passendem Namen gefunden.[[/lang]][[lang code='en,other']]Fewer than two bar forces with a matching name found.[[/lang]]"),
+     str_more_than_two: castext("[[lang code='de']]Mehr als zwei Stabkräfte mit passendem Namen gefunden.[[/lang]][[lang code='en,other']]More than two bar forces with a matching name found.[[/lang]]"),
+     str_not_at_end: castext("[[lang code='de']] greift an keinem Stabende an.[[/lang]][[lang code='en,other']] does not act at either end of the bar.[[/lang]]"),
+     str_same_end: castext("[[lang code='de']] greifen beide am selben Stabende an. An jedem Stabende sollte eine Stabkraft angreifen.[[/lang]][[lang code='en,other']] both act at the same end of the bar. One bar force should act at each end.[[/lang]]"),
+     str_name_mismatch: castext("[[lang code='de']] haben unterschiedliche Namen. Als Freischnitt desselben Stabes sollten beide denselben Namen tragen.[[/lang]][[lang code='en,other']] have different names. As the free-body cut of the same bar, both should carry the same name.[[/lang]]")],
 	/* Extract options */
     if length(opt) = 1 then opt: string(opt[1]) else opt: "",
     testT: member("T", charlist(opt)),
@@ -685,27 +740,51 @@ fb_bar(o, n, i, [opt]):=block(
     /* Has the object a name? The name is used later to identify associated reactions. */
     name: o[i][2],
     if name = "" then return ([ sconcat("object #", string(i), " has no name."), false]),
-    txt: sconcat("Stab ", name, ": "),
-    /* Is object i de-activated */ 
-    if ( last(o[i]) # "hide") then return ([sconcat(txt, "Nicht deaktiviert."), false]),
+    txt: castext_concat(str_bar_pre, sconcat(name, ": ")),
+    /* Is object i de-activated */
+    if ( last(o[i]) # "hide") then return ([castext_concat(txt, str_not_deactivated), false]),
     /* Extract forces with matching name*/
     if listp(n[i]) then L: sublist (n[i], lambda ([x], o[x][1]="force" and split(o[x][2],"_")[2] = name )) else L: [],
     /* Check number of forces */
-    if L = [] then return ([ sconcat(txt, "Keine Stabkraft mit passendem Namen (mit Index ", name, ") gefunden.") , false]),
-    /* Single force required */    
+    if L = [] then return ([castext_concat(txt, sconcat(str_no_match_pre, name, str_no_match_post)) , false]),
+    /* Single force required */
     if not test2 then (
       R: o[L[1]],
       /* force parallel to bar? */
-      if not parallelp(R, o[i]) then return ([castext_concat(txt, castext("{@n[L[1]]@} ist nicht parallel zum Stab.") ),false]),
+      if not parallelp(R, o[i]) then return ([castext_concat(txt, castext_concat(castext("{@n[L[1]]@}"), str_not_parallel)),false]),
       /* eventually complaining about wrong direction */
-      if testT and (abs(angle(R, o[i])) > 0.1) then return ([castext_concat(txt, castext("{@n[L[1]]@} ist nicht als Zugkraft definiert.") ), false] ),
-      return ([castext_concat(txt, castext("{@n[L[1]]@} OK.") ), true] ) 
+      if testT and (abs(angle(R, o[i])) > 0.1) then return ([castext_concat(txt, castext_concat(castext("{@n[L[1]]@}"), str_not_tension)), false] ),
+      return ([castext_concat(txt, castext_concat(castext("{@n[L[1]]@}"), str_ok)), true] )
+    ) else (
+      /* Two-force member: exactly one reaction anchored at EACH end, both pointing
+         outward along the bar (tension), sharing the bar's own name. */
+      if length(L) < 2 then return ([castext_concat(txt, str_fewer_than_two), false]),
+      if length(L) > 2 then return ([castext_concat(txt, str_more_than_two), false]),
+      R1: o[L[1]], R2: o[L[2]],
+      /* The two reactions are the Newton's-third-law pair at the member's two cut ends, so
+         they should carry the same (student-chosen) object name - unlike fb_fix12(), which
+         requires its two reactions to have DIFFERENT names because those are two distinct
+         unknowns. */
+      if R1[2] # R2[2] then return ([castext_concat(txt, castext_concat(castext("{@n[L[1]]@}, {@n[L[2]]@}"), str_name_mismatch)),false]),
+      if not parallelp(R1, o[i]) then return ([castext_concat(txt, castext_concat(castext("{@n[L[1]]@}"), str_not_parallel)),false]),
+      if not parallelp(R2, o[i]) then return ([castext_concat(txt, castext_concat(castext("{@n[L[2]]@}"), str_not_parallel)),false]),
+      e1: fb_bar_end(o[i], R1), e2: fb_bar_end(o[i], R2),
+      if e1 = 0 then return ([castext_concat(txt, castext_concat(castext("{@n[L[1]]@}"), str_not_at_end)), false]),
+      if e2 = 0 then return ([castext_concat(txt, castext_concat(castext("{@n[L[2]]@}"), str_not_at_end)), false]),
+      if e1 = e2 then return ([castext_concat(txt, castext_concat(castext("{@n[L[1]]@}, {@n[L[2]]@}"), str_same_end)), false]),
+      if not fb_bar_tension_ok(o[i], R1, e1) then return ([castext_concat(txt, castext_concat(castext("{@n[L[1]]@}"), str_not_tension)), false]),
+      if not fb_bar_tension_ok(o[i], R2, e2) then return ([castext_concat(txt, castext_concat(castext("{@n[L[2]]@}"), str_not_tension)), false]),
+      return ([castext_concat(txt, castext_concat(castext("{@n[L[1]]@}, {@n[L[2]]@}"), str_ok)), true])
     )
 );
 
 /* https://github.com/mkraska/meclib/wiki/fb_bar_name */
 fb_bar_name(%_o, %_n, %_i):=block(
-  [%_str,%_R,%_nl,%_OK,%_var, %_bl],
+  [%_str,%_R,%_nl,%_OK,%_var, %_bl,
+   str_multiletter: castext("[[lang code='de']]Physikalische Gr&ouml;&szlig;en immer nur mit einem Buchstabe und eventuell Index schreiben, z.B. <code>F_1</code>.[[/lang]][[lang code='en,other']]Always name physical quantities with a single letter and, if needed, an index, e.g. <code>F_1</code>.[[/lang]]"),
+   str_sensible_names: castext("[[lang code='de']]Sinnvolle Namen für eine Stabkraft sind \\(F\\) (Kraft), \\(N\\) (Normalkraft) oder \\(S\\) (Stabkraft)[[/lang]][[lang code='en,other']]Sensible names for a bar force are \\(F\\) (force), \\(N\\) (normal force), or \\(S\\) (bar force)[[/lang]]"),
+   str_index_mismatch_pre: castext("[[lang code='de']]Der Index [[/lang]][[lang code='en,other']]The index [[/lang]]"),
+   str_index_mismatch_mid: castext("[[lang code='de']] passt nicht zum Stabname [[/lang]][[lang code='en,other']] does not match the bar's name [[/lang]]")],
   /* are the values consistent? */
   if length(%_n) # length(%_o) then return(sconcat("length(o)= ",length(%_o), " length(n)=", length(%_n))),
   if length(%_n) < %_i then return(sconcat("length(n)= ",length(%_n), " <", %_i)),
@@ -732,21 +811,21 @@ fb_bar_name(%_o, %_n, %_i):=block(
   /* Extract name parts */
   %_nl: split(%_R[2],"_"),
   /* base name single character? */    
-  if slength(%_nl[1]) > 1 then [ %_str, %_OK ]: 
-    [ castext( "<br>{@%_var@}: Physikalische Gr&ouml;&szlig;en immer nur mit einem Buchstabe und eventuell Index schreiben, z.B. <code>F_1</code>." 
-        ), false ],    
-  /* base name a sensible character? (F-Kraft, N-Normalkraft, S-Stabkraft)  */ 
-  if not member(charlist(%_nl[1])[1], ["F", "N", "S" ])  then [ %_str, %_OK ]: 
-    [ castext_concat( %_str, castext("<br>{@%_var@}: Sinnvolle Namen für eine Stabkraft sind \\(F\\) (Kraft), \\(N\\) (Normalkraft) oder \\(S\\) (Stabkraft)") ), false ],   
+  if slength(%_nl[1]) > 1 then [ %_str, %_OK ]:
+    [ castext_concat(castext("<br>{@%_var@}: "), str_multiletter), false ],
+  /* base name a sensible character? (F-Kraft, N-Normalkraft, S-Stabkraft)  */
+  if not member(charlist(%_nl[1])[1], ["F", "N", "S" ])  then [ %_str, %_OK ]:
+    [ castext_concat( %_str, castext_concat(castext("<br>{@%_var@}: "), str_sensible_names) ), false ],
   /* label of the bar */
-  %_bl: %_o[%_i][2], 
+  %_bl: %_o[%_i][2],
   if %_bl # "" then (
     /* the label is not empty */
     if length(%_nl) = 2 then /* the reaction should have an index */
       if %_bl # %_nl[2] then /* the index and the label don't match */
-        [ %_str, %_OK ]: 
-    [ castext_concat( %_str, castext("<br>Der Index {@%_nl[2]@} passt nicht zum Stabname {@%_bl@}.")), false ]
-  ), 
+        [ %_str, %_OK ]:
+    [ castext_concat( %_str, castext_concat(castext("<br>"), castext_concat(str_index_mismatch_pre, castext_concat(castext("{@%_nl[2]@}"), castext_concat(str_index_mismatch_mid, castext("{@%_bl@}."))))))
+, false ]
+  ),
       
   [%_str, %_OK]
 );

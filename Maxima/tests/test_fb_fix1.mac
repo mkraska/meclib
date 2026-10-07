@@ -1,0 +1,104 @@
+/* ============================================================================
+   Tests for fb_fix1() and fb_fix1_name().
+   "fix1" object layout: [1]="fix1", [2]=name, [3]=point, [4]=angle (deg;
+   direction()=[-sin(angle),cos(angle)]), [5]=state.
+   ============================================================================ */
+
+/* ---- fb_fix1: ok / found ----
+   angle 0 -> direction [0,1]; reaction force R_A parallel to [0,1]. */
+o_ok: [["fix1","A",[0,0],0,"hide"],
+       ["force","R_A",[0,0],[0,1],"active"]];
+n_ok: [[2], "R_A"];
+fb_check(fb_fix1(o_ok, n_ok, 1, "A: "), true,
+  "<br>A: Reaktion \\(R_A\\) gefunden.",
+  "<br>A: Reaction \\(R_A\\) found.",
+  "fb_fix1 ok");
+
+/* ---- wrong direction ---- */
+o_wrongdir: [["fix1","A",[0,0],0,"hide"],
+             ["force","R_A",[0,0],[1,0],"active"]];
+fb_check(fb_fix1(o_wrongdir, n_ok, 1, "A: "), false,
+  "<br>A: Die Reaktion \\(R_A\\) hat nicht die richtige Richtung.",
+  "<br>A: Reaction \\(R_A\\) does not have the correct direction.",
+  "fb_fix1 wrong direction");
+
+/* ---- reaction is not a force ---- */
+o_notforce: [["fix1","A",[0,0],0,"hide"],
+             ["moment","M_A",[0,0],"active"]];
+n_notforce: [[2], "M_A"];
+fb_check(fb_fix1(o_notforce, n_notforce, 1, "A: "), false,
+  "<br>A: Die Reaktion muss eine Kraft sein.",
+  "<br>A: The reaction must be a force.",
+  "fb_fix1 reaction not a force");
+
+/* ---- more than one reaction found ---- */
+o_twor: [["fix1","A",[0,0],0,"hide"],
+         ["force","R_A",[0,0],[0,1],"active"],
+         ["force","R_B",[0,0],[0,1],"active"]];
+n_twor: [[2,3], "R_A", "R_B"];
+fb_check(fb_fix1(o_twor, n_twor, 1, "A: "), false,
+  "<br>A: Mehr als eine Reaktion gefunden.",
+  "<br>A: More than one reaction found.",
+  "fb_fix1 more than one reaction");
+
+/* ---- no reaction found ---- */
+n_none: [[], "R_A"];
+fb_check(fb_fix1(o_ok, n_none, 1, "A: "), false,
+  "<br>A: Keine Reaktion gefunden.",
+  "<br>A: No reaction found.",
+  "fb_fix1 no reaction");
+
+/* ---- not deactivated ----
+   str_not_deactivated used to have a leading space, which combined with
+   %_txt's own trailing space (from the "A: " description) produced a
+   double space before "ist"/"is" - fixed upstream (07.10.) by dropping
+   the leading space from str_not_deactivated in fb_fix1/12/123/13. */
+o_pending: [["fix1","A",[0,0],0,"show"],
+            ["force","R_A",[0,0],[0,1],"active"]];
+fb_check(fb_fix1(o_pending, n_ok, 1, "A: "), false,
+  "<br>A: ist nicht deaktiviert.",
+  "<br>A: is not deactivated.",
+  "fb_fix1 not deactivated");
+
+/* ---- dev diagnostics: object i is not a "fix1" ---- */
+o_notfix1: [["wall","Boden",[0,0],[1,0],45,"hide"]];
+fb_check(fb_fix1(o_notfix1, n_ok, 1, "A: "), false,
+  "<br>A: object 1 is not a fixed support (fix1)",
+  "<br>A: object 1 is not a fixed support (fix1)",
+  "fb_fix1 dev: not a fix1");
+
+/* ============================================================================
+   fb_fix1_name(o, n, i) - purely about the reaction's NAME, assuming the
+   structural checks above already passed. o[i] not read; %_n[%_i] must be
+   a 1-element list, and %_R: o[n[i][1]].
+   ============================================================================ */
+
+/* ---- ok: single-letter name ---- */
+/* fb_fix1_name() checks the WHOLE reaction name's length (not split by
+   "_" the way fb_fix12_name()/fb_fix13_names() do), so o_ok's "R_A" (3
+   chars) would already fail the single-letter check - needs its own
+   fixture: a single-letter name equal to the support's own name. */
+o_ok_name: [["fix1","A",[0,0],0,"hide"], ["force","A",[0,0],[0,1],"active"]];
+n_ok_name: [[2], "A"];
+fb_check(fb_fix1_name(o_ok_name, n_ok_name, 1), true, "", "", "fb_fix1_name ok");
+
+/* ---- no reaction resolved yet (n[i] not a list) - silently false, no text ---- */
+o_single: [["fix1","A",[0,0],0,"hide"], ["force","R_A",[0,0],[0,1],"active"]];
+n_unresolved: ["show", "R_A"];
+fb_check(fb_fix1_name(o_single, n_unresolved, 1), false, "", "", "fb_fix1_name unresolved (silent false)");
+
+/* ---- name too long (more than one letter) ---- */
+o_long: [["fix1","A",[0,0],0,"hide"], ["force","R_AB",[0,0],[0,1],"active"]];
+n_long: [[2], "R_AB"];
+fb_check(fb_fix1_name(o_long, n_long, 1), false,
+  "<br>Ein einzelner Buchstabe sollte f&uuml;r die Bezeichnung der Kraft ausreichen.",
+  "<br>A single letter should be enough to name the force.",
+  "fb_fix1_name too long");
+
+/* ---- name does not match the support's own name ---- */
+o_mismatch: [["fix1","A",[0,0],0,"hide"], ["force","B",[0,0],[0,1],"active"]];
+n_mismatch: [[2], "B"];
+fb_check(fb_fix1_name(o_mismatch, n_mismatch, 1), false,
+  "<br>Der Name der Reaktionskraft sollte zum Namen des Lagerpunkts passen.",
+  "<br>The reaction force's name should match the name of the support point.",
+  "fb_fix1_name name mismatch");

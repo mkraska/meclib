@@ -1,0 +1,177 @@
+/* ============================================================================
+   Tests for fb_q(o, n, i, description, q1, q2, le). "q" (line load) object
+   layout confirmed against demo_questions/"QA 04a fb_q unit test part 1.xml":
+   o[i] = ["q", name, label, p_start(o[i][4]), p_end(o[i][5]), q1disp, q2disp,
+   angle(o[i][8]), state] - fb_q() itself only reads o[i][4], o[i][5],
+   o[i][8] and last(o[i]); q1/q2/le are passed as fb_q()'s own arguments,
+   not read from the object.
+
+   Geometry used throughout: p_start=[0,0], p_end=[2,0], angle=0, le=1, so
+   the line load's own resultant always points straight down ([0,-1]) and,
+   for q1=q2 (constant load), is centred at [1,0].
+   ============================================================================ */
+
+/* ---- dev: not a line load (ground-truth wording from the demo XML) ---- */
+o_notq: [["beam","B",[0,0],[2,0],0,"active"]];
+fb_check(fb_q(o_notq, [0], 1, "2: ", 1, 1, 1), false,
+  "2: object 1 (beam) is not a line load.",
+  "2: object 1 (beam) is not a line load.",
+  "fb_q dev: not a line load");
+
+/* ---- not deactivated (ground-truth wording from the demo XML) ---- */
+o_pending: [["q","","q_0",[0,0],[2,0],0.7,0.7,0,"show"]];
+fb_check(fb_q(o_pending, [0], 1, "DE: ", 1, 1, 1), false,
+  "DE: ist nicht deaktiviert.",
+  "DE: is not deactivated.",
+  "fb_q not deactivated");
+
+/* ---- no reaction found ---- */
+o_noreact: [["q","","q_0",[0,0],[2,0],0.7,0.7,0,"hide"]];
+fb_check(fb_q(o_noreact, ["hide"], 1, "AB: ", 1, 1, 1), false,
+  "AB: Keine Resultierende gefunden.",
+  "AB: No resultant found.",
+  "fb_q no reaction found");
+
+/* ---- a matched reaction is a moment, not a force ---- */
+o_moment: [["q","","q_0",[0,0],[2,0],0.7,0.7,0,"hide"], ["moment","M_1",[1,0],"active"]];
+n_moment: [[2], M_1];
+fb_check(fb_q(o_moment, n_moment, 1, "AB: ", 1, 1, 1), false,
+  "AB: M_1 ist keine Kraft.",
+  "AB: M_1 is not a force.",
+  "fb_q matched reaction is a moment");
+
+/* ---- single resultant: ok (q1=q2=q0, symbolic) ---- */
+o_ok1: [["q","","q_0",[0,0],[2,0],0.7,0.7,0,"hide"], ["force","F_AB",[1,0],[1,-1],"active"]];
+n_ok1: [[2], 2*q0];
+fb_check(fb_q(o_ok1, n_ok1, 1, "AB: ", q0, q0, 1), true,
+  "AB: Resultierende OK",
+  "AB: Resultant OK",
+  "fb_q single resultant ok");
+
+/* ---- single resultant: wrong direction ---- */
+o_wrongdir1: [["q","","q_0",[0,0],[2,0],0.7,0.7,0,"hide"], ["force","F_AB",[1,0],[2,0],"active"]];
+n_wrongdir1: [[2], 2*q0];
+fb_check(fb_q(o_wrongdir1, n_wrongdir1, 1, "AB: ", q0, q0, 1), false,
+  "AB: Die Resultierende 2*q0 hat nicht die richtige Richtung.",
+  "AB: Resultant 2*q0 does not have the correct direction.",
+  "fb_q single resultant wrong direction");
+
+/* ---- single resultant: unexpected variable in the student's expression ---- */
+o_wrongvar1: [["q","","q_0",[0,0],[2,0],0.7,0.7,0,"hide"], ["force","F_AB",[1,0],[1,-1],"active"]];
+n_wrongvar1: [[2], 2*qx];
+fb_check(fb_q(o_wrongvar1, n_wrongvar1, 1, "AB: ", q0, q0, 1), false,
+  "AB: Die Resultierende 2*qx hat nicht den richtigen Betrag. &nbsp;Unerwartete Variable qx.&nbsp;Fehlende Variable q0 (<code>q0</code>).",
+  "AB: Resultant 2*qx does not have the correct magnitude. &nbsp;Unexpected variable qx.&nbsp;Missing variable q0 (<code>q0</code>).",
+  "fb_q single resultant unexpected variable");
+
+/* ---- single resultant: correct variable set, wrong numeric value ---- */
+o_wrongval1: [["q","","q_0",[0,0],[2,0],0.7,0.7,0,"hide"], ["force","F_AB",[1,0],[1,-1],"active"]];
+n_wrongval1: [[2], q0];
+fb_check(fb_q(o_wrongval1, n_wrongval1, 1, "AB: ", q0, q0, 1), false,
+  "AB: Die Resultierende q0 hat nicht den richtigen Betrag.",
+  "AB: Resultant q0 does not have the correct magnitude.",
+  "fb_q single resultant wrong value");
+
+/* ---- single resultant: wrong numeric value, OVER-estimate (regression test for the
+   fixed asymmetric check - 07.10. this used to pass as "OK" before fb_q() compared
+   abs(mag-n[ir])/mag instead of the signed (mag-n[ir])/mag) ---- */
+o_wrongval1over: [["q","","q_0",[0,0],[2,0],0.7,0.7,0,"hide"], ["force","F_AB",[1,0],[1,-1],"active"]];
+n_wrongval1over: [[2], 3*q0];
+fb_check(fb_q(o_wrongval1over, n_wrongval1over, 1, "AB: ", q0, q0, 1), false,
+  "AB: Die Resultierende 3*q0 hat nicht den richtigen Betrag.",
+  "AB: Resultant 3*q0 does not have the correct magnitude.",
+  "fb_q single resultant wrong value (over-estimate)");
+
+/* ---- single resultant: wrong position (line of action misses the centroid) ---- */
+o_wrongpos1: [["q","","q_0",[0,0],[2,0],0.7,0.7,0,"hide"], ["force","F_AB",[0,0],[0,-1],"active"]];
+n_wrongpos1: [[2], 2*q0];
+fb_check(fb_q(o_wrongpos1, n_wrongpos1, 1, "AB: ", q0, q0, 1), false,
+  "AB: Die Resultierende 2*q0 geht nicht durch den Schwerpunkt.",
+  "AB: Resultant 2*q0 does not pass through the centroid.",
+  "fb_q single resultant wrong position");
+
+/* ---- more than two resultants given ---- */
+o_toomany: [["q","","q_0",[0,0],[2,0],0.7,0.7,0,"hide"],
+            ["force","F_1",[0,0],[0,-1],"active"],
+            ["force","F_2",[1,0],[1,-1],"active"],
+            ["force","F_3",[2,0],[2,-1],"active"]];
+n_toomany: [[2,3,4], F_1, F_2, F_3];
+fb_check(fb_q(o_toomany, n_toomany, 1, "AB: ", q0, q0, 1), false,
+  "AB: Höchstens zwei Resultierende sind sinnvoll. Gefunden wurden mehr:<br>F_1, F_2, F_3",
+  "AB: At most two resultants make sense. More were found:<br>F_1, F_2, F_3",
+  "fb_q more than two resultants");
+
+/* ---- two resultants given for a constant load (one would suffice) ---- */
+o_constant2: [["q","","q_0",[0,0],[2,0],0.7,0.7,0,"hide"],
+              ["force","F_1",[0,0],[0,-1],"active"],
+              ["force","F_2",[2,0],[2,-1],"active"]];
+n_constant2: [[2,3], q0, q0];
+fb_check(fb_q(o_constant2, n_constant2, 1, "AB: ", q0, q0, 1), false,
+  "AB: Bei konstanter Streckenlast sollte eine Resultierende ausreichen.",
+  "AB: For a constant line load, one resultant should be sufficient.",
+  "fb_q constant load with two resultants");
+
+/* ---- two resultants given for a triangular load (one would suffice) ---- */
+o_triangular2: [["q","","q_0",[0,0],[2,0],1.4,0,0,"hide"],
+                ["force","F_1",[0,0],[0,-1],"active"],
+                ["force","F_2",[2,0],[2,-1],"active"]];
+n_triangular2: [[2,3], q0, 0];
+fb_check(fb_q(o_triangular2, n_triangular2, 1, "AB: ", q0, 0, 1), false,
+  "AB: Bei einer Dreiecks-Streckenlast sollte eine Resultierende ausreichen.",
+  "AB: For a triangular line load, one resultant should be sufficient.",
+  "fb_q triangular load with two resultants");
+
+/* ---- two resultants (trapezoidal, q1#q2, both nonzero): wrong direction on the first ---- */
+o_trapwrongdir: [["q","","q_0",[0,0],[2,0],0.7,1.4,0,"hide"],
+                 ["force","F_1",[0,0],[1,0],"active"],
+                 ["force","F_2",[2,0],[2,-1],"active"]];
+n_trapwrongdir: [[2,3], q0, 2*q0];
+fb_check(fb_q(o_trapwrongdir, n_trapwrongdir, 1, "BC: ", q0, 2*q0, 1), false,
+  "BC: Die Resultierende q0 hat nicht die richtige Richtung.",
+  "BC: Resultant q0 does not have the correct direction.",
+  "fb_q two resultants wrong direction (first)");
+
+/* ---- two resultants: value mismatch on the first (fb_vars complaint) ---- */
+o_trapwrongvar: [["q","","q_0",[0,0],[2,0],0.7,1.4,0,"hide"],
+                 ["force","F_1",[0,0],[0,-1],"active"],
+                 ["force","F_2",[2,0],[2,-1],"active"]];
+n_trapwrongvar: [[2,3], 1, 2*q0];
+fb_check(fb_q(o_trapwrongvar, n_trapwrongvar, 1, "BC: ", q0, 2*q0, 1), false,
+  "BC: Die Resultierende 1 kann nicht stimmen. &nbsp;Fehlende Variable q0 (<code>q0</code>).",
+  "BC: Resultant 1 cannot be correct. &nbsp;Missing variable q0 (<code>q0</code>).",
+  "fb_q two resultants value mismatch (first)");
+
+/* ---- two resultants: correct sets/values individually, wrong combined sum ---- */
+o_trapwrongsum: [["q","","q_0",[0,0],[2,0],0.7,1.4,0,"hide"],
+                 ["force","F_1",[0,0],[0,-1],"active"],
+                 ["force","F_2",[2,0],[2,-1],"active"]];
+n_trapwrongsum: [[2,3], q0, q0];
+fb_check(fb_q(o_trapwrongsum, n_trapwrongsum, 1, "BC: ", q0, 2*q0, 1), false,
+  "BC: Die Summe der Resultierenden 2*q0 hat nicht den richtigen Wert. ",
+  "BC: The sum of the resultants 2*q0 does not have the correct value. ",
+  "fb_q two resultants wrong sum");
+
+/* ---- two resultants: correct sets individually, wrong combined sum, OVER-estimate
+   (regression test for the fixed asymmetric check - 07.10.; mag=3*q0 here, n1+n2=4*q0) ---- */
+o_trapwrongsumover: [["q","","q_0",[0,0],[2,0],0.7,1.4,0,"hide"],
+                     ["force","F_1",[0,0],[0,-1],"active"],
+                     ["force","F_2",[2,0],[2,-1],"active"]];
+n_trapwrongsumover: [[2,3], 2*q0, 2*q0];
+fb_check(fb_q(o_trapwrongsumover, n_trapwrongsumover, 1, "BC: ", q0, 2*q0, 1), false,
+  "BC: Die Summe der Resultierenden 4*q0 hat nicht den richtigen Wert. ",
+  "BC: The sum of the resultants 4*q0 does not have the correct value. ",
+  "fb_q two resultants wrong sum (over-estimate)");
+
+/* ---- two resultants ok (trapezoidal load, q1=q0, q2=2*q0) ----
+   For this trapezoid, the correct split between the two end resultants is
+   derived from the actual centroid/area split; rather than re-deriving it
+   by hand, this is confirmed empirically against the real library (see
+   the status update) before being committed here as the expected ok case. */
+o_trapok: [["q","","q_0",[0,0],[2,0],0.7,1.4,0,"hide"],
+           ["force","F_1",[0,0],[0,-1],"active"],
+           ["force","F_2",[2,0],[2,-1],"active"]];
+n_trapok: [[2,3], 4*q0/3, 5*q0/3];
+fb_check(fb_q(o_trapok, n_trapok, 1, "BC: ", q0, 2*q0, 1), true,
+  "BC: Resultierende OK",
+  "BC: Resultant OK",
+  "fb_q two resultants ok");

@@ -1,0 +1,68 @@
+/* ============================================================================
+   Tests for fb_unidir(). Fixture ported from the hand-verified demo
+   question "fb_unidir() unit test.xml" (demo_questions/) - same initdata/
+   names1 object set, same DE expected text (confirmed against that
+   question's PRTs); EN text added here from fb_unidir()'s current
+   bilingual source, which didn't exist when that XML was authored.
+   Unlike fb_fix1/12/123/13, fb_unidir() does NOT prepend "<br>" to its
+   description, and its own str_not_deactivated has no leading space -
+   so it does NOT show the double-space finding noted in test_fb_fix1.mac.
+   ============================================================================ */
+
+o_unidir: [
+  [ "grid", "", "", -1,10,-2,4,40],
+  [ "bar", "2", [0,0], [0,2], "show"],
+  [ "force", "S_3", [0,0], [0,-1], 1, "active"],
+  [ "bar", "4", [1,0], [1,2], "hide"],
+  [ "bar", "5", [2,0], [2,2], "hide"],
+  [ "force", "S_6", [2,0], [2,-1], 1, "active"],
+  [ "moment", "M_7", [2,2], [1.5,2.5], [2.5,2.5], "active"],
+  [ "bar", "8", [3,0], [2,2], "hide"],
+  [ "bar", "9", [4,0], [4,2], "hide"],
+  [ "force", "S_10", [4,0.5], [4.5,-0.5], 1, "active"],
+  [ "bar", "11", [5,0], [5,2], "hide"],
+  [ "force", "SK_12", [5,0.5], [5,-0.5], 1, "active"]
+];
+n_unidir: [0,"show",S_3,"hide",[6,7],S_6,M_7,[7],[10],S_10,[12],SK_12];
+
+/* ---- dev diagnostics: object 3 (a "force") is not an unidirectional support ---- */
+fb_check(fb_unidir(o_unidir, n_unidir, 3, "force \\(S_3\\): "), false,
+  "force \\(S_3\\): object 3 (force) is not an unidirectional support.",
+  "force \\(S_3\\): object 3 (force) is not an unidirectional support.",
+  "fb_unidir dev: not an unidirectional support");
+
+/* ---- not deactivated (bar 2, state \"show\") ---- */
+fb_check(fb_unidir(o_unidir, n_unidir, 2, "bar 2: "), false,
+  "bar 2: Nicht deaktiviert.",
+  "bar 2: Not deactivated.",
+  "fb_unidir not deactivated");
+
+/* ---- no reaction found (bar 4: n[4]=\"hide\", not a list) ---- */
+fb_check(fb_unidir(o_unidir, n_unidir, 4, "bar 4: "), false,
+  "bar 4: Keine Reaktion gefunden.",
+  "bar 4: No reaction found.",
+  "fb_unidir no reaction");
+
+/* ---- more than one reaction (bar 5: n[5]=[6,7]) ---- */
+fb_check(fb_unidir(o_unidir, n_unidir, 5, "bar 5: "), false,
+  "bar 5: Mehr als eine Reaktion gefunden.",
+  "bar 5: More than one reaction found.",
+  "fb_unidir more than one reaction");
+
+/* ---- reaction is not a force (bar 8: n[8]=[7], object 7 is a moment) ---- */
+fb_check(fb_unidir(o_unidir, n_unidir, 8, "bar 8: "), false,
+  "bar 8: Die Reaktion muss eine Kraft sein.",
+  "bar 8: The reaction must be a force.",
+  "fb_unidir reaction not a force");
+
+/* ---- wrong direction (bar 9: S_10 not parallel to the bar) ---- */
+fb_check(fb_unidir(o_unidir, n_unidir, 9, "bar 9: "), false,
+  "bar 9: Die Reaktion \\(S_10\\) hat nicht die richtige Richtung.",
+  "bar 9: Reaction \\(S_10\\) does not have the correct direction.",
+  "fb_unidir wrong direction");
+
+/* ---- ok (bar 11: SK_12 parallel to the bar) ---- */
+fb_check(fb_unidir(o_unidir, n_unidir, 11, "bar 11: "), true,
+  "bar 11: Reaktion \\(SK_12\\) gefunden.",
+  "bar 11: Reaction \\(SK_12\\) found.",
+  "fb_unidir ok");

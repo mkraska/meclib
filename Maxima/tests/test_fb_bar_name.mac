@@ -1,0 +1,68 @@
+/* ============================================================================
+   Tests for fb_bar_name(o, n, i) - naming convention check for the single
+   reaction already resolved at n[i] (structurally matched elsewhere, e.g.
+   by fb_bar() or the student's own placement - NOT re-filtered by name
+   here, so a structurally-correct match can still carry the wrong label).
+
+   The two pre-checks for length(n)#length(o) and length(n)<i return a
+   bare STRING, not a [text,flag] pair - an existing inconsistency, left
+   untested here since fb_check() assumes the [text,flag] shape.
+
+   fb_bar_name() reads the global `debug` flag for its early diagnostics;
+   harness.mac defaults it to false (as an unset stack_options debug would
+   be), so those branches return "" here, not a debug message.
+   ============================================================================ */
+
+/* ---- dev: not a bar ---- */
+o_notbar: [["force","x",[0,0],[0,1],"active"]];
+fb_check(fb_bar_name(o_notbar, [0], 1), false,
+  "object 1 is not of type 'bar'",
+  "object 1 is not of type 'bar'",
+  "fb_bar_name dev: not a bar");
+
+/* ---- not deactivated (debug=false -> silent) ---- */
+o_pending: [["bar","A",[0,0],[0,2],"show"]];
+fb_check(fb_bar_name(o_pending, [0], 1), false, "", "", "fb_bar_name not deactivated (silent)");
+
+/* ---- no reaction found (n[1] not a list) ---- */
+o_noreact: [["bar","A",[0,0],[0,2],"hide"]];
+fb_check(fb_bar_name(o_noreact, ["show"], 1), false, "", "", "fb_bar_name no reaction (silent)");
+
+/* ---- more than one reaction found ---- */
+o_two: [["bar","A",[0,0],[0,2],"hide"], ["force","x",[0,0],[0,1],"active"], ["force","y",[0,0],[0,1],"active"]];
+n_two: [[2,3], x, y];
+fb_check(fb_bar_name(o_two, n_two, 1), false, "", "", "fb_bar_name more than one reaction (silent)");
+
+/* ---- reaction is not a force ---- */
+o_notforce: [["bar","A",[0,0],[0,2],"hide"], ["moment","M_A",[0,0],"active"]];
+n_notforce: [[2], M_A];
+fb_check(fb_bar_name(o_notforce, n_notforce, 1), false, "", "", "fb_bar_name reaction not a force (silent)");
+
+/* ---- naming: multi-letter base ---- */
+o_multiletter: [["bar","A",[0,0],[0,2],"hide"], ["force","SS_A",[0,0],[0,1],"active"]];
+n_multiletter: [[2], SS_A];
+fb_check(fb_bar_name(o_multiletter, n_multiletter, 1), false,
+  "<br>SS_A: Physikalische Gr&ouml;&szlig;en immer nur mit einem Buchstabe und eventuell Index schreiben, z.B. <code>F_1</code>.",
+  "<br>SS_A: Always name physical quantities with a single letter and, if needed, an index, e.g. <code>F_1</code>.",
+  "fb_bar_name multi-letter base");
+
+/* ---- naming: base letter is not F, N, or S ---- */
+o_notsensible: [["bar","A",[0,0],[0,2],"hide"], ["force","X_A",[0,0],[0,1],"active"]];
+n_notsensible: [[2], X_A];
+fb_check(fb_bar_name(o_notsensible, n_notsensible, 1), false,
+  "<br>X_A: Sinnvolle Namen für eine Stabkraft sind \\(F\\) (Kraft), \\(N\\) (Normalkraft) oder \\(S\\) (Stabkraft)",
+  "<br>X_A: Sensible names for a bar force are \\(F\\) (force), \\(N\\) (normal force), or \\(S\\) (bar force)",
+  "fb_bar_name base letter not sensible");
+
+/* ---- naming: index does not match the bar's own label ---- */
+o_idxmismatch: [["bar","A",[0,0],[0,2],"hide"], ["force","S_B",[0,0],[0,1],"active"]];
+n_idxmismatch: [[2], S_B];
+fb_check(fb_bar_name(o_idxmismatch, n_idxmismatch, 1), false,
+  "<br>Der Index B passt nicht zum Stabname A.",
+  "<br>The index B does not match the bar's name A.",
+  "fb_bar_name index mismatch");
+
+/* ---- naming: ok ---- */
+o_ok: [["bar","A",[0,0],[0,2],"hide"], ["force","S_A",[0,0],[0,1],"active"]];
+n_ok: [[2], S_A];
+fb_check(fb_bar_name(o_ok, n_ok, 1), true, "", "", "fb_bar_name ok");

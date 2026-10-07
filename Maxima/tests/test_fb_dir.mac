@@ -1,0 +1,58 @@
+/* ============================================================================
+   Tests for fb_dir(). Covers: single contributing force (singular "hat"/
+   "has"), several contributing forces (plural "haben"/"have"), no
+   contributing force, two non-parallel chosen directions (both reported,
+   flag true), and two parallel chosen directions (parallel warning
+   prepended, flag false).
+
+   %_desc (the phrase naming the direction, e.g. "in 1-Richtung") is
+   supplied BY THE CALLER and is deliberately NOT translated by fb_dir()
+   itself - same convention as %_description elsewhere in this file. Every
+   test below therefore expects the exact same %_desc text in both the DE
+   and EN rendering, which is the point being demonstrated/documented here,
+   not an oversight.
+   ============================================================================ */
+
+o_dir: [
+  [ "grid", "", "", -1,10,-2,4,40],
+  [ "dir", "1", [0,0], 0],    /* +x direction */
+  [ "dir", "2", [0,0], 90],   /* +y direction */
+  [ "force", "F_A", [0,0], [1,0], "active"],   /* parallel to dir "1" */
+  [ "force", "F_B", [0,0], [0,1], "active"],   /* parallel to dir "2" */
+  [ "force", "F_C", [0,0], [2,0], "active"],   /* also parallel to dir "1" */
+  [ "dir", "3", [0,0], 0]     /* another +x direction - parallel to dir "1" */
+];
+n_dir: [0, 0, 0, F_A, F_B, F_C, 0];
+
+/* ---- single contributor (singular) ---- */
+fb_check(fb_dir(o_dir, n_dir, [[3, "in 2-Richtung"]], 0.1), true,
+  "F_B hat Anteile in 2-Richtung.",
+  "F_B has components in 2-Richtung.",
+  "fb_dir single contributor (singular)");
+
+/* ---- two contributors (plural) ---- */
+fb_check(fb_dir(o_dir, n_dir, [[2, "in 1-Richtung"]], 0.1), true,
+  "F_A, F_C haben Anteile in 1-Richtung.",
+  "F_A, F_C have components in 1-Richtung.",
+  "fb_dir two contributors (plural)");
+
+/* ---- no contributor (tolerance set above every possible coefficient) ---- */
+fb_check(fb_dir(o_dir, n_dir, [[3, "in 2-Richtung"]], 2.0), true,
+  "Keine Kraft hat Anteile in 2-Richtung.",
+  "No force has components in 2-Richtung.",
+  "fb_dir no contributor");
+
+/* ---- two non-parallel directions: both reported, flag stays true ---- */
+fb_check(fb_dir(o_dir, n_dir, [[2, "in 1-Richtung"],[3, "in 2-Richtung"]], 0.1), true,
+  "F_A, F_C haben Anteile in 1-Richtung.<br>F_B hat Anteile in 2-Richtung.",
+  "F_A, F_C have components in 1-Richtung.<br>F_B has components in 2-Richtung.",
+  "fb_dir two non-parallel directions");
+
+/* ---- two parallel directions: warning prepended, flag false ----
+   dir "1" (index 2) and dir "3" (index 7) are both at angle 0, so they are
+   parallel - the per-direction contributor sentences are still appended
+   afterwards (same contributor set for both, since both point the same way). */
+fb_check(fb_dir(o_dir, n_dir, [[2, "in 1-Richtung"],[7, "in 3-Richtung"]], 0.1), false,
+  "Die gewählten Richtungen sind parallel. Damit liefern die beiden Gleichgewichtsbedingungen keine voneinander unabhängigen Gleichungen.<br>F_A, F_C haben Anteile in 1-Richtung.<br>F_A, F_C haben Anteile in 3-Richtung.",
+  "The chosen directions are parallel. The two equilibrium conditions would then not provide independent equations.<br>F_A, F_C have components in 1-Richtung.<br>F_A, F_C have components in 3-Richtung.",
+  "fb_dir two parallel directions");

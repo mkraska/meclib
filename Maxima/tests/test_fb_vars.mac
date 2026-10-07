@@ -1,0 +1,88 @@
+/* ============================================================================
+   Tests for fb_vars(%_sans, %_tans, [%_vars, %_label, %_tol]). Mirrors, one
+   for one, the cases in demo_questions/"fb_vars() unit test.xml" (t01-t09),
+   which compares fb_vars()'s own output against a hand-written castext()
+   via STACK's AlgEquiv answer test - i.e. these ARE the project's own
+   ground truth for this function, just run here instead of in Moodle.
+
+   Unlike fb_fbd.mac's feedback functions, fb_vars() returns a bare castext2
+   STRING directly (not a [text, flag] pair) - "" itself means "ok, say
+   nothing" - so these use fb_check_str(), not fb_check().
+   ============================================================================ */
+
+/* ---- t01: tans is literally 0 -> always "", regardless of sans ---- */
+fb_check_str(fb_vars(a, 0), "", "", "fb_vars t01: tans=0");
+
+/* ---- t01a: tans is a nonzero constant (no vars) -> sans' vars are all "unexpected" ---- */
+fb_check_str(fb_vars(a, 2),
+  "&nbsp;Unerwartete Variable a.",
+  "&nbsp;Unexpected variable a.",
+  "fb_vars t01a: tans nonzero constant");
+
+/* ---- t02: one unexpected variable ---- */
+fb_check_str(fb_vars(a+b, a),
+  "&nbsp;Unerwartete Variable b.",
+  "&nbsp;Unexpected variable b.",
+  "fb_vars t02: one unexpected variable");
+
+/* ---- t03: two unexpected variables (comma-separated via fb_strip_list) ---- */
+fb_check_str(fb_vars(a+b+omega, a),
+  "&nbsp;Unerwartete Variable b, omega.",
+  "&nbsp;Unexpected variable b, omega.",
+  "fb_vars t03: two unexpected variables");
+
+/* ---- t04: two missing variables (also lists the plain-text <code> form) ---- */
+fb_check_str(fb_vars(a, a+b+omega),
+  "&nbsp;Fehlende Variable b, omega (<code>b, omega</code>).",
+  "&nbsp;Missing variable b, omega (<code>b, omega</code>).",
+  "fb_vars t04: two missing variables");
+
+/* ---- t05: one unexpected AND two missing at once ---- */
+fb_check_str(fb_vars(a+a_12, a+b+omega),
+  "&nbsp;Unerwartete Variable a_12.&nbsp;Fehlende Variable b, omega (<code>b, omega</code>).",
+  "&nbsp;Unexpected variable a_12.&nbsp;Missing variable b, omega (<code>b, omega</code>).",
+  "fb_vars t05: unexpected and missing combined");
+
+/* ---- t06: correct variable set, one term's coefficient differs (%_vars given) ---- */
+fb_check_str(fb_vars(a+2*b, a+b, [a,b]),
+  "&nbsp;Pr&uuml;fen Sie den Term mit b.",
+  "&nbsp;Check the term with b.",
+  "fb_vars t06: single differing term");
+
+/* ---- t07: correct variable set, two terms differ ---- */
+fb_check_str(fb_vars(a+2*b-4*c, a+b+3*c, [a,b,c]),
+  "&nbsp;Pr&uuml;fen Sie die Terme mit b, c.",
+  "&nbsp;Check the terms with b, c.",
+  "fb_vars t07: two differing terms");
+
+/* ---- t08: correct variable set AND all given terms match -> "" ---- */
+fb_check_str(fb_vars(a+2*b-4*c, a+2*b-4*c, [a,b,c]),
+  "", "",
+  "fb_vars t08: fully correct");
+
+/* ---- t09: %_label is prepended to a non-empty result ---- */
+fb_check_str(fb_vars(a+b, a, [], "Label:"),
+  "Label:&nbsp;Unerwartete Variable b.",
+  "Label:&nbsp;Unexpected variable b.",
+  "fb_vars t09: label prepended");
+
+/* ---- tolerance option (%_tol, 3rd optional arg): a variable whose coefficient in
+   BOTH sans and tans does not exceed %_tol is ignored for the variable-set check -
+   protects against spurious extra/missing-variable complaints from floating-point
+   noise (e.g. a coefficient that should be exactly zero coming out as 1e-13). Not
+   covered by the demo XML (which only exercises the first two optional args); this
+   one is my own, derived from the doc comment in fb_value.mac. ---- */
+fb_check_str(fb_vars(a+1e-13*b, a, [], "", 1e-6),
+  "", "",
+  "fb_vars tolerance: tiny spurious coefficient ignored on the sans side");
+
+fb_check_str(fb_vars(a, a+1e-13*b, [], "", 1e-6),
+  "", "",
+  "fb_vars tolerance: tiny spurious coefficient ignored on the tans side");
+
+/* without the tolerance, the same tiny coefficient is NOT ignored (confirms the
+   tolerance argument is actually doing something, not a no-op) */
+fb_check_str(fb_vars(a+1e-13*b, a),
+  "&nbsp;Unerwartete Variable b.",
+  "&nbsp;Unexpected variable b.",
+  "fb_vars tolerance: same case without a tolerance still flags it");

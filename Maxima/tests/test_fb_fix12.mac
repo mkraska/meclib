@@ -1,0 +1,149 @@
+/* ============================================================================
+   Tests for fb_fix12() and fb_fix12_name().
+   ============================================================================ */
+
+o_ok: [["fix12","A",[0,0],0,"hide"],
+       ["force","R_Ax",[0,0],[1,0],"active"],
+       ["force","R_Ay",[0,0],[0,1],"active"]];
+n_ok: [[2,3], "R_Ax", "R_Ay"];
+fb_check(fb_fix12(o_ok, n_ok, 1, "A: "), true,
+  "<br>A: Reaktionen \\(R_Ax,R_Ay\\) gefunden. ",
+  "<br>A: Reactions \\(R_Ax,R_Ay\\) found. ",
+  "fb_fix12 ok");
+
+o_parallel: [["fix12","A",[0,0],0,"hide"],
+             ["force","R_Ax",[0,0],[1,0],"active"],
+             ["force","R_Ay",[0,0],[1,0],"active"]];
+fb_check(fb_fix12(o_parallel, n_ok, 1, "A: "), false,
+  "<br>A: Die Reaktionen \\(R_Ax,R_Ay\\) sind parallel.",
+  "<br>A: Reactions \\(R_Ax,R_Ay\\) are parallel.",
+  "fb_fix12 parallel");
+
+o_samename: [["fix12","A",[0,0],0,"hide"],
+             ["force","R_A",[0,0],[1,0],"active"],
+             ["force","R_A",[0,0],[0,1],"active"]];
+n_samename: [[2,3], "R_A", "R_A"];
+fb_check(fb_fix12(o_samename, n_samename, 1, "A: "), false,
+  "<br>A: Die Reaktionen müssen verschiedene Namen haben.",
+  "<br>A: The reactions must have different names.",
+  "fb_fix12 same name");
+
+o_notforce1: [["fix12","A",[0,0],0,"hide"],
+              ["moment","M_A",[0,0],"active"],
+              ["force","R_Ay",[0,0],[0,1],"active"]];
+n_notforce1: [[2,3], "M_A", "R_Ay"];
+fb_check(fb_fix12(o_notforce1, n_notforce1, 1, "A: "), false,
+  "<br>A: Die Reaktion \\(M_A\\) muss eine Kraft sein.",
+  "<br>A: Reaction \\(M_A\\) must be a force.",
+  "fb_fix12 R1 not a force");
+
+o_notforce2: [["fix12","A",[0,0],0,"hide"],
+              ["force","R_Ax",[0,0],[1,0],"active"],
+              ["moment","M_A",[0,0],"active"]];
+n_notforce2: [[2,3], "R_Ax", "M_A"];
+fb_check(fb_fix12(o_notforce2, n_notforce2, 1, "A: "), false,
+  "<br>A: Die Reaktion \\(M_A\\) muss eine Kraft sein.",
+  "<br>A: Reaction \\(M_A\\) must be a force.",
+  "fb_fix12 R2 not a force");
+
+o_one: [["fix12","A",[0,0],0,"hide"], ["force","R_Ax",[0,0],[1,0],"active"]];
+n_one: [[2], "R_Ax"];
+fb_check(fb_fix12(o_one, n_one, 1, "A: "), false,
+  "<br>A: Weniger als 2 Reaktionen gefunden.",
+  "<br>A: Fewer than 2 reactions found.",
+  "fb_fix12 fewer than 2");
+
+o_three: [["fix12","A",[0,0],0,"hide"],
+          ["force","R_Ax",[0,0],[1,0],"active"],
+          ["force","R_Ay",[0,0],[0,1],"active"],
+          ["force","R_Az",[0,0],[1,1],"active"]];
+n_three: [[2,3,4], "R_Ax", "R_Ay", "R_Az"];
+fb_check(fb_fix12(o_three, n_three, 1, "A: "), false,
+  "<br>A: Mehr als 2 Reaktionen gefunden.",
+  "<br>A: More than 2 reactions found.",
+  "fb_fix12 more than 2");
+
+n_none: [[], "R_Ax", "R_Ay"];
+fb_check(fb_fix12(o_ok, n_none, 1, "A: "), false,
+  "<br>A: Keine Reaktion gefunden.",
+  "<br>A: No reaction found.",
+  "fb_fix12 no reaction");
+
+o_pending: [["fix12","A",[0,0],0,"show"],
+            ["force","R_Ax",[0,0],[1,0],"active"],
+            ["force","R_Ay",[0,0],[0,1],"active"]];
+fb_check(fb_fix12(o_pending, n_ok, 1, "A: "), false,
+  "<br>A: ist nicht deaktiviert.",
+  "<br>A: is not deactivated.",
+  "fb_fix12 not deactivated");
+
+o_notfix12: [["wall","Boden",[0,0],[1,0],45,"hide"]];
+fb_check(fb_fix12(o_notfix12, n_ok, 1, "A: "), false,
+  "<br>A: object 1 (wall) is not a fixed support.",
+  "<br>A: object 1 (wall) is not a fixed support.",
+  "fb_fix12 dev: not a fix12");
+
+/* ============================================================================
+   fb_fix12_name(o, n, i) - naming convention check per reaction, looped
+   over n[i]. Pre-checks before the loop are silent (["",false]) - no type
+   diagnostic text here, unlike fb_fix12() itself.
+   ============================================================================ */
+
+/* o_ok/n_ok (above) use "R_Ax"/"R_Ay", valid for fb_fix12() itself but
+   not for fb_fix12_name()'s naming check (base "R" != support "A"; index
+   "Ax"/"Ay" are two letters) - needs its own, properly-named fixture. */
+o_ok_name: [["fix12","A",[0,0],0,"hide"],
+            ["force","A_x",[0,0],[1,0],"active"],
+            ["force","A_y",[0,0],[0,1],"active"]];
+n_ok_name: [[2,3], "A_x", "A_y"];
+fb_check(fb_fix12_name(o_ok_name, n_ok_name, 1), true, "", "", "fb_fix12_name ok");
+
+/* The second (not-under-test) reaction must itself be a validly-named
+   force (base = support name, single-letter h/v/x/y index matching its
+   actual direction) - fb_fix12_name() has no early return for most of
+   these checks, so an invalid companion would add its OWN messages too
+   and contaminate the expected text (found by running this against the
+   real engine: an earlier draft used "R_Ay", whose index part "Ay" is
+   two letters - already enough on its own to add two more messages). */
+o_multiletter: [["fix12","A",[0,0],0,"hide"],
+                ["force","AA_x",[0,0],[1,0],"active"],
+                ["force","A_y",[0,0],[0,1],"active"]];
+n_multiletter: [[2,3], "AA_x", "A_y"];
+fb_check(fb_fix12_name(o_multiletter, n_multiletter, 1), false,
+  "<br>\\(AA_x\\): Physikalische Gr&ouml;&szlig;en immer nur mit einem Buchstabe und eventuell Index schreiben, z.B. <code>F_1</code>.",
+  "<br>\\(AA_x\\): always name physical quantities with a single letter and, if needed, an index, e.g. <code>F_1</code>.",
+  "fb_fix12_name multi-letter base");
+
+o_namemismatch: [["fix12","A",[0,0],0,"hide"],
+                  ["force","B_x",[0,0],[1,0],"active"],
+                  ["force","A_y",[0,0],[0,1],"active"]];
+n_namemismatch: [[2,3], "B_x", "A_y"];
+fb_check(fb_fix12_name(o_namemismatch, n_namemismatch, 1), false,
+  "<br>Der Name \\(B_x\\) passt nicht zum Name des Lagerpunkts.",
+  "<br>The name \\(B_x\\) does not match the name of the support point.",
+  "fb_fix12_name name mismatch");
+
+/* Base name matches the support name ("x") so neither the name-mismatch
+   nor (with direction [1,0]) the should_x check also fires - isolates
+   the missing-index message alone. Companion "x_y" is likewise valid. */
+o_noindex: [["fix12","x",[0,0],0,"hide"],
+            ["force","x",[0,0],[1,0],"active"],
+            ["force","x_y",[0,0],[0,1],"active"]];
+n_noindex: [[2,3], "x", "x_y"];
+fb_check(fb_fix12_name(o_noindex, n_noindex, 1), false,
+  "<br>\\(x\\) sollte einen Richtungsindex (x, y, h, v) haben.",
+  "<br>\\(x\\) should have a direction index (x, y, h, v).",
+  "fb_fix12_name missing index");
+
+/* Base name matches the support name ("R") so name-mismatch doesn't also
+   fire; index "q" is unknown but doesn't match any of the h/v/x/y
+   direction-check letters either, so no further message follows it.
+   Companion "R_y" is likewise valid relative to support "R". */
+o_badidx: [["fix12","R",[0,0],0,"hide"],
+           ["force","R_q",[0,0],[1,0],"active"],
+           ["force","R_y",[0,0],[0,1],"active"]];
+n_badidx: [[2,3], "R_q", "R_y"];
+fb_check(fb_fix12_name(o_badidx, n_badidx, 1), false,
+  "<br>\\(R_q\\): Der Richtungsindex sollte h, v, x oder y sein",
+  "<br>\\(R_q\\): the direction index should be h, v, x or y",
+  "fb_fix12_name unknown index");
