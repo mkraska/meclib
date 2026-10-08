@@ -1,0 +1,49 @@
+/* ============================================================================
+   GENERATED FILE - do not edit by hand.
+   Written by tools/tryout/scenes_to_maxima.py from the JSON files in tests/scenes/
+   (automatically whenever a scene is saved in the tryout, or by running the
+   script). Edit the scenes instead, in the tryout (tools/tryout) or in the
+   JSON files, and regenerate.
+
+   scene_obj(scene, case)    objects input after rendering, as stackjson_parse()
+                             returns it in STACK
+   scene_names(scene, case)  names input after rendering
+   scene_init(scene)         initdata of the scene
+   ============================================================================ */
+
+scene_lookup(arr, key, what) := block([v: arrayapply(arr, key)],
+  if subvarp(v) then
+    error(sconcat("no ", what, " for ", string(key), " in fixtures/scenes.mac - regenerate it or check the scene/case id")),
+  v)$
+scene_obj(scene, case) := scene_lookup('meclib_scene_obj, [scene, case], "objects")$
+scene_names(scene, case) := scene_lookup('meclib_scene_names, [scene, case], "names")$
+scene_init(scene) := scene_lookup('meclib_scene_init, [scene], "initdata")$
+
+/* ---- scene example_beam: Beam on two supports with bar (wiki example) ---- */
+meclib_scene_init["example_beam"]: [["grid","","",-1,6,-2,4,40],["forceGen","F_1",[-0.5,3.5]],["momentGen","M_1",[1.5,3.5]],["beam","",[0,0],[4,0],0.15],["bar","",[4,0],[5,-1.5],"show"],["fix12","A",[0,0],0,"show"],["fix12","C",[5,-1.5],0,"show"],["label","\\(B\\)",[3.8,-0.5]],["q","","q_0",[0,0.3],[4,0.3],0.7,0.7,0,"show"]]$
+meclib_scene_obj["example_beam","init"]: [["grid","","",-1,6,-2,4,40],["forceGen","F_1",[-0.5,3.5]],["momentGen","M_1",[1.5,3.5]],["beam","",[0,0],[4,0],0.15,"SHOW"],["bar","",[4,0],[5,-1.5],"show"],["fix12","A",[0,0],0,"show"],["fix12","C",[5,-1.5],0,"show"],["label","\\(B\\)",[3.8,-0.5]],["q","","q_0",[0,0.3],[4,0.3],0.7,0.7,0,"show"]]$
+meclib_scene_names["example_beam","init"]: [0,0,0,"SHOW","show","show","show",0,"show"]$
+meclib_scene_obj["example_beam","A-deactivated"]: [["grid","","",-1,6,-2,4,40],["forceGen","F_1",[-0.5,3.5]],["momentGen","M_1",[1.5,3.5]],["beam","",[0,0],[4,0],0.15,"SHOW"],["bar","",[4,0],[5,-1.5],"show"],["fix12","A",[0,0],0,"hide"],["fix12","C",[5,-1.5],0,"show"],["label","\\(B\\)",[3.8,-0.5]],["q","","q_0",[0,0.3],[4,0.3],0.7,0.7,0,"show"]]$
+meclib_scene_names["example_beam","A-deactivated"]: [0,0,0,"SHOW","show","hide","show",0,"show"]$
+meclib_scene_obj["example_beam","force-snap"]: [["grid","","",-1,6,-2,4,40],["forceGen","F_1",[-0.5,3.5]],["momentGen","M_1",[1.5,3.5]],["beam","",[0,0],[4,0],0.15,"SHOW"],["bar","",[4,0],[5,-1.5],"show"],["fix12","A",[0,0],0,"hide"],["fix12","C",[5,-1.5],0,"show"],["label","\\(B\\)",[3.8,-0.5]],["q","","q_0",[0,0.3],[4,0.3],0.7,0.7,0,"show"],["force","F_A",[0,0],[0,1],10,"active"]]$
+meclib_scene_names["example_beam","force-snap"]: [0,0,0,"SHOW","show",[10],"show",0,"show",F_A]$
+
+/* ---- scene fb_bar: fb_bar() unit test scene (QA 05) ---- */
+meclib_scene_init["fb_bar"]: [["grid","","",-1,10,-2,4,40],["bar","",[0,0],[0,2],"hide"],["force","S_3",[0,0],[0,-1],1,"active"],["bar","4",[1,0],[1,2],"show"],["bar","5",[2,0],[2,2],"hide"],["bar","6",[3,0],[3,2],"hide"],["force","S_7",[3,0.5],[3,-0.5],1,"active"],["bar","8",[4,0],[4,2],"hide"],["force","S_8",[4,0.5],[4.5,-0.5],1,"active"],["bar","9",[5,0],[5,2],"hide"],["node","A",[5,0]],["force","S_9",[5,0.5],[5,-0.5],1,"active"],["force","S_11",[4,1.5],[4,2.5],1,"active"],["bar","10",[6,0],[6,2],"hide"],["bar","11",[7,0],[6,2],"hide"],["force","S_10",[6,2],[6.5,1],1,"active"],["force","S_11",[6,2],[6,1],1,"active"]]$
+meclib_scene_obj["fb_bar","init"]: [["grid","","",-1,10,-2,4,40],["bar","",[0,0],[0,2],"hide"],["force","S_3",[0,0],[0,-1],1,"active"],["bar","4",[1,0],[1,2],"show"],["bar","5",[2,0],[2,2],"hide"],["bar","6",[3,0],[3,2],"hide"],["force","S_7",[3,0.5],[3,-0.5],1,"active"],["bar","8",[4,0],[4,2],"hide"],["force","S_8",[4,0.5],[4.5,-0.5],1,"active"],["bar","9",[5,0],[5,2],"hide"],["node","A",[5,0]],["force","S_9",[5,0.5],[5,-0.5],1,"active"],["force","S_11",[4,1.5],[4,2.5],1,"active"],["bar","10",[6,0],[6,2],"hide"],["bar","11",[7,0],[6,2],"hide"],["force","S_10",[6,2],[6.500000000000001,0.9999999999999982],1,"active"],["force","S_11",[6,2],[6,1],1,"active"]]$
+meclib_scene_names["fb_bar","init"]: [0,[3],S_3,"show","hide",[7],S_7,[9,13],S_8,[12],"A",S_9,S_11,[16,17],[16,17],S_10,S_11]$
+
+/* ---- scene fb_bar_name: fb_bar_name() unit test scene ---- */
+meclib_scene_init["fb_bar_name"]: [["grid","","",-1,10,-2,4,40],["bar","2",[0,0],[0,2],"show"],["force","S_3",[0,0],[0,-1],1,"active"],["bar","4",[1,0],[1,2],"hide"],["bar","5",[2,0],[2,2],"hide"],["force","S_6",[2,0],[2,-1],1,"active"],["moment","M_7",[2,2],[1.5,2.5],[2.5,2.5],"active"],["bar","8",[3,0],[2,2],"hide"],["bar","9",[4,0],[4,2],"hide"],["force","S_10",[4,0.5],[4,-0.5],1,"active"],["force","S_11",[4,1.5],[4,2.5],1,"active"],["bar","12",[5,0],[5,2],"hide"],["force","SK_12",[5,0.5],[5,-0.5],1,"active"],["bar","14",[6,0],[6,2],"hide"],["force","A_14",[6,0.5],[6,-0.5],1,"active"],["bar","16",[7,0],[7,2],"hide"],["force","S_17",[7,0.5],[7,-0.5],1,"active"]]$
+meclib_scene_obj["fb_bar_name","init"]: [["grid","","",-1,10,-2,4,40],["bar","2",[0,0],[0,2],"show"],["force","S_3",[0,0],[0,-1],1,"active"],["bar","4",[1,0],[1,2],"hide"],["bar","5",[2,0],[2,2],"hide"],["force","S_6",[2,0],[2,-1],1,"active"],["moment","M_7",[2,2],[1.5,2.5],[2.5,2.5],"active"],["bar","8",[3,0],[2,2],"hide"],["bar","9",[4,0],[4,2],"hide"],["force","S_10",[4,0.5],[4,-0.5],1,"active"],["force","S_11",[4,1.5],[4,2.5],1,"active"],["bar","12",[5,0],[5,2],"hide"],["force","SK_12",[5,0.5],[5,-0.5],1,"active"],["bar","14",[6,0],[6,2],"hide"],["force","A_14",[6,0.5],[6,-0.5],1,"active"],["bar","16",[7,0],[7,2],"hide"],["force","S_17",[7,0.5],[7,-0.5],1,"active"]]$
+meclib_scene_names["fb_bar_name","init"]: [0,"show",S_3,"hide",[6,7],S_6,M_7,[7],[10,11],S_10,S_11,[13],SK_12,[15],A_14,[17],S_17]$
+
+/* ---- scene fb_q: fb_q() unit test scene (QA 04a) ---- */
+meclib_scene_init["fb_q"]: [["grid","","",-1,10.5,-2.5,3,50],["beam","",[0,0],[9.5,0],0.15],["point","A",[0,0],0],["point","B",[2,0]],["point","C",[5,0],0],["point","D",[6.5,0]],["q","","q_0",[0,0.3],[2,0.3],0.7,0.7,0,"hide"],["q","","",[2,0.3],[5,0.3],0.7,1.4,0,"hide"],["q","2 q_0","",[5,0.3],[6.5,0.3],1.4,0,0,"hide"],["force","2 q_0 a",[1,1.5],[1,0.5],1,"active"],["force","3/2 q_0 a",[3,1.5],[3,0.5],1,"active"],["force","3 q_0 a",[4,1.5],[4,0.5],1,"active"],["force","3/2 q_0 a",[5.5,1.5],[5.5,0.5],1,"active"],["q","q_0","",[6.5,0.3],[7.5,0.3],0.7,0.7,0,"show"],["point","E",[7.5,0]],["q","q_0","",[7.5,0.3],[8.5,0.3],0.7,0.7,0,"hide"],["point","F",[8.5,0]],["q","q_0","",[8.5,0.3],[9.5,0.3],0.7,0.7,0,"hide"],["point","G",[9.5,0]],["moment","M",[9,0.5],[9.5,1.5],[8.5,1.5],"active"],["beam","",[0,-2],[3,-2],0.15],["point","H",[0,-2]],["point","I",[1,-2]],["q","q_0","",[0,-1.7],[1,-1.7],0.7,0.7,0,"hide"],["force","q_0 a",[0,-0.5],[0.5,-1.5],1,"active"],["point","J",[2,-2]],["q","q_0","",[1,-1.7],[2,-1.7],0.7,0.7,0,"hide"],["force","R",[1.5,-0.5],[1.5,-1.5],1,"active"],["point","K",[3,-2]],["q","q_0","",[2,-1.7],[3,-1.7],0.7,0.7,0,"hide"],["force","2 q_0 a",[2.5,-0.5],[2.5,-1.5],1,"active"]]$
+meclib_scene_obj["fb_q","init"]: [["grid","","",-1,10.5,-2.5,3,50],["beam","",[0,0],[9.5,0],0.15,"SHOW"],["point","A",[0,0],0],["point","B",[2,0]],["point","C",[5,0],0],["point","D",[6.5,0]],["q","","q_0",[0,0.3],[2,0.3],0.7,0.7,0,"hide"],["q","","",[2,0.3],[5,0.3],0.7,1.4,0,"hide"],["q","2 q_0","",[5,0.3],[6.5,0.3],1.4,0,0,"hide"],["force","2 q_0 a",[1,1.5],[1,0.5],1,"active"],["force","3/2 q_0 a",[3,1.5],[3,0.5],1,"active"],["force","3 q_0 a",[4,1.5],[4,0.5],1,"active"],["force","3/2 q_0 a",[5.5,1.5],[5.5,0.5],1,"active"],["q","q_0","",[6.5,0.3],[7.5,0.3],0.7,0.7,0,"show"],["point","E",[7.5,0]],["q","q_0","",[7.5,0.3],[8.5,0.3],0.7,0.7,0,"hide"],["point","F",[8.5,0]],["q","q_0","",[8.5,0.3],[9.5,0.3],0.7,0.7,0,"hide"],["point","G",[9.5,0]],["moment","M",[9,0.5],[9.5,1.5],[8.5,1.5],"active"],["beam","",[0,-2],[3,-2],0.15,"SHOW"],["point","H",[0,-2]],["point","I",[1,-2]],["q","q_0","",[0,-1.7],[1,-1.7],0.7,0.7,0,"hide"],["force","q_0 a",[0,-0.5],[0.5,-1.5],1,"active"],["point","J",[2,-2]],["q","q_0","",[1,-1.7],[2,-1.7],0.7,0.7,0,"hide"],["force","R",[1.5,-0.5],[1.5,-1.5],1,"active"],["point","K",[3,-2]],["q","q_0","",[2,-1.7],[3,-1.7],0.7,0.7,0,"hide"],["force","2 q_0 a",[2.5,-0.5],[2.5,-1.5],1,"active"]]$
+meclib_scene_names["fb_q","init"]: [0,"SHOW","A","B","C","D",[10],[11,12],[13],2*q_0*a,3/2*q_0*a,3*q_0*a,3/2*q_0*a,"show","E","hide","F",[20],"G",M,"SHOW","H","I",[25],q_0*a,"J",[28],R,"K",[31],2*q_0*a]$
+
+/* ---- scene fb_unidir: fb_unidir() unit test scene ---- */
+meclib_scene_init["fb_unidir"]: [["grid","","",-1,10,-2,4,40],["bar","2",[0,0],[0,2],"show"],["force","S_3",[0,0],[0,-1],1,"active"],["bar","4",[1,0],[1,2],"hide"],["bar","5",[2,0],[2,2],"hide"],["force","S_6",[2,0],[2,-1],1,"active"],["moment","M_7",[2,2],[1.5,2.5],[2.5,2.5],"active"],["bar","8",[3,0],[2,2],"hide"],["bar","9",[4,0],[4,2],"hide"],["force","S_10",[4,0.5],[4.5,-0.5],1,"active"],["bar","11",[5,0],[5,2],"hide"],["force","SK_12",[5,0.5],[5,-0.5],1,"active"]]$
+meclib_scene_obj["fb_unidir","init"]: [["grid","","",-1,10,-2,4,40],["bar","2",[0,0],[0,2],"show"],["force","S_3",[0,0],[0,-1],1,"active"],["bar","4",[1,0],[1,2],"hide"],["bar","5",[2,0],[2,2],"hide"],["force","S_6",[2,0],[2,-1],1,"active"],["moment","M_7",[2,2],[1.5,2.5],[2.5,2.5],"active"],["bar","8",[3,0],[2,2],"hide"],["bar","9",[4,0],[4,2],"hide"],["force","S_10",[4,0.5],[4.5,-0.5],1,"active"],["bar","11",[5,0],[5,2],"hide"],["force","SK_12",[5,0.5],[5,-0.5],1,"active"]]$
+meclib_scene_names["fb_unidir","init"]: [0,"show",S_3,"hide",[6,7],S_6,M_7,[7],[10],S_10,[12],SK_12]$

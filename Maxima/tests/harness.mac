@@ -1,10 +1,10 @@
 /* ============================================================================
-   Offline test harness for meclib's free-body-diagram feedback functions
-   (../fb_fbd.mac).
+   Offline test harness for meclib's Maxima feedback functions
+   (../fb_fbd.mac, ../fb_value.mac).
 
-   This stubs out the two STACK/CASText primitives fb_fbd.mac calls -
-   castext() and castext_concat() - and adds a small, faithful
-   reimplementation of STACK's own [[lang code='...']] selection rule
+   This provides castext() - a renderer for the castext2 blocks the feedback
+   functions use - and a small, faithful reimplementation of STACK's own
+   [[lang code='...']] selection rule
    (see https://docs.stack-assessment.org/en/Authoring/Languages/), so a
    test case can check the EXACT text a student would see in either
    language, not just whether the function returned true/false. That is
@@ -22,25 +22,17 @@
    bare pass/fail is not enough to spot a one-character formatting glitch.
    ============================================================================ */
 
-/* ---- stubs for the two CAS-side primitives fb_fbd.mac calls ----
-   castext() is stubbed UNCONDITIONALLY: it is never part of STACK's
-   redistributable stack/maxima library - STACK's PHP compiler generates a
-   per-question definition for it - so there is no "real" one to load here
-   regardless of whether run_tests.mac found a copy of that library under
-   ../../config/stack/<version>/maxima/.
-
-   castext_concat() IS part of that real library (stack/maxima/stackstrings.mac,
-   loaded transitively by stackmaxima.mac). If run_tests.mac already loaded
-   it, meclib_real_stack_loaded is true and the real definition - which does
-   genuine castext2-internal-structure merging, not just sconcat() - is
-   already in place, so keep it. Otherwise fall back to the plain-identity
-   stand-in below: every already-i18n-converted function in fb_fbd.mac
-   builds its castext() calls from fully static string literals (no {@...@}
-   placeholders) and only ever plain-concatenates dynamic values via
-   sconcat()/castext_concat() at the point of use (the "split-parts"
-   architecture), so this stub is structurally faithful for them either way -
-   it just isn't exercised when the real one is available. */
-if not(?boundp('meclib_real_stack_loaded)) then meclib_real_stack_loaded: false$
+/* ---- relation to STACK ----
+   run_tests.mac loads STACK's own Maxima library first (required), so
+   castext_concat(), ct2_latex(), stack_disp...(), real_numberp() and the
+   answer tests are the real ones. Only castext() itself is provided here
+   (below): STACK's PHP compiler turns each castext("...") literal into Maxima
+   code at question compile time, so there is no castext() function in the
+   library to load. The renderer below produces the same text as that
+   compiled code: {@expr@} goes through the library's own ct2_latex(), exactly
+   as compiled castext does. */
+if not(?boundp('meclib_real_stack_loaded)) or meclib_real_stack_loaded # true then
+  error("harness.mac needs STACK's Maxima library - load the suite via run_tests.mac")$
 
 /* fb_bar_name() reads the question-level `debug` flag to decide whether a handful of its
    early pre-checks show a diagnostic message or stay silent; STACK questions that don't set
@@ -79,7 +71,15 @@ if not(?boundp('debug)) then debug: false$
    "[[lang"/"[[/lang]]" is just ordinary text to it and passes through untouched, to be
    resolved by the separate, later pass. */
 fb_tmpl_eval_expr(%_src):= ev(parse_string(%_src), eval)$
-fb_tmpl_tostring(%_v):= if stringp(%_v) then %_v else string(%_v)$
+/* {@expr@} -> text, exactly as STACK does it: compiled castext calls the library's
+   ct2_latex(value, "i", simp), which gives ["smlt", "\\({{S}_{10}}\\)"] for a CAS value and
+   ["smlt", "17"] for a string (castext2 latex block, stack/maxima/stackstrings.mac); the
+   smlt payload is what the student sees. */
+fb_tmpl_smlt_text(%_r):= if stringp(%_r) then %_r
+  elseif listp(%_r) and length(%_r) > 0 and %_r[1] = "smlt" then %_r[2]
+  elseif listp(%_r) and length(%_r) > 0 and %_r[1] = "%root" then simplode(map(fb_tmpl_smlt_text, rest(%_r)), "")
+  else string(%_r)$
+fb_tmpl_tostring(%_v):= fb_tmpl_smlt_text(ct2_latex(%_v, "i", simp))$
 
 fb_tmpl_find_next(s, pos, taglist):= block([best: false, besttag: false, p, t],
   for t in taglist do (
@@ -198,18 +198,6 @@ fb_tmpl_render(s):= block(
 )$
 
 castext(s) := fb_tmpl_render(s)$
-if meclib_real_stack_loaded = false then (
-  castext_concat(a, b) := sconcat(a, b),
-  /* Needed because the new {@...@} evaluation above can now reach a REAL stack/maxima
-     function that fb_fbd.mac/fb_value.mac calls from inside a placeholder (fb_vars() does,
-     via stack_disp_comma_separate()) - without the real library loaded, that name is
-     otherwise unbound, and {@...@} would print its literal unevaluated noun form instead of
-     a value. This plain join is enough to make the affected text match the real library's
-     own output exactly for every case these tests exercise; if a future function's {@...@}
-     reaches some OTHER real-library-only function, that one will need a similar stub added
-     here, or its test marked invalid when no sandbox is configured (see run_tests.mac). */
-  stack_disp_comma_separate(%_l) := simplode(map(lambda([%_x], if stringp(%_x) then %_x else string(%_x)), %_l), ", ")
-)$
 
 /* ---- STACK's [[lang code='...']] selection rule, reimplemented ----
    Walks s left to right. Outside any [[lang]]...[[/lang]] block, text

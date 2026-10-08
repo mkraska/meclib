@@ -1,0 +1,29 @@
+{
+  "port": 8765,
+  "github_repo": "mkraska/meclib",
+  "branches": {
+    "dev": "dev2026",
+    "main": "main"
+  },
+  "jsxgraph": {
+    "STACK 4.13.1 bundled (JSXGraph 1.12.2)": {
+      "js": "proxy:https://raw.githubusercontent.com/maths/moodle-qtype_stack/v4.13.1/corsscripts/jsxgraphcore.min.js",
+      "css": "proxy:https://raw.githubusercontent.com/maths/moodle-qtype_stack/v4.13.1/corsscripts/jsxgraph.min.css"
+    },
+    "CDN 1.12.2": {
+      "js": "https://cdn.jsdelivr.net/npm/jsxgraph@1.12.2/distrib/jsxgraphcore.js",
+      "css": "https://cdn.jsdelivr.net/npm/jsxgraph@1.12.2/distrib/jsxgraph.min.css"
+    },
+    "CDN latest": {
+      "js": "https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraphcore.js",
+      "css": "https://cdn.jsdelivr.net/npm/jsxgraph/distrib/jsxgraph.min.css"
+    }
+  },
+  "mathjax": {
+    "MathJax 2.7.9 (Moodle default)": "https://cdn.jsdelivr.net/npm/mathjax@2.7.9/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+  },
+  "proxy_allowed_prefixes": [
+    "https://raw.githubusercontent.com/maths/moodle-qtype_stack/",
+    "https://raw.githubusercontent.com/mkraska/meclib/"
+  ]
+}

@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meclib test cases</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  #scenes { padding: 16px; max-width: 1400px; }
+  .scene h2 { font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--ink); }
+  .scene h2 .file { color: var(--muted); font-weight: normal; font-size: 12px; font-family: var(--mono); }
+  .scene .notes { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+  table { border-collapse: collapse; width: 100%; }
+  th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--line); padding: 4px 6px; }
+  td { vertical-align: top; border-bottom: 1px solid #ecece7; padding: 6px; font-size: 13px; }
+  td.num { width: 32px; color: var(--muted); }
+  td.label { width: 220px; }
+  td.label .cnotes { color: var(--muted); font-size: 12px; }
+  td.label code.cid { font-size: 11px; color: var(--muted); background: #f0f0ec; padding: 0 4px; border-radius: 3px; }
+  td.thumb { width: 1%; }
+  td.thumb .placeholder { width: 120px; height: 80px; border: 1px dashed var(--line); border-radius: 4px; }
+  td.names code { display: block; white-space: pre-wrap; word-break: break-all; font-size: 12px; }
+  td.names .lbl { color: var(--muted); font-size: 11px; }
+  td.status { width: 1%; white-space: nowrap; }
+  td.actions { width: 1%; white-space: nowrap; }
+  td.actions button { display: block; width: 100%; margin-bottom: 4px; font-size: 12px; padding: 2px 8px; }
+  .details { font-family: var(--mono); font-size: 12px; white-space: pre-wrap; color: var(--err);
+             background: #fbf1f0; border-radius: 4px; padding: 4px 6px; margin-top: 6px; }
+  .details.warn { color: var(--warn); background: #fbf6ea; }
+  details.warnings { margin-top: 4px; }
+  .secs { font-size: 11px; color: var(--muted); }
+  details.warnings > summary { font-size: 12px; color: var(--warn); }
+  tr.passed.hide-passed { display: none; }
+  .mismatch { color: var(--err); }
+  #summary { font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="cases.html">meclib test cases</a></h1>
+  <nav><a href="index.html">Tryout</a></nav>
+  <label>meclib.js <select id="src"></select></label>
+  <label>JSXGraph <select id="jsx"></select></label>
+  <label>MathJax <select id="mathjax"></select></label>
+  <button id="runAll" class="primary">Run all</button>
+  <label><input type="checkbox" id="failuresOnly"> failures only</label>
+  <span id="summary"></span>
+  <div id="status">connecting to server ...</div>
+</header>
+<div id="scenes"></div>
+
+<script src="frame.js"></script>
+<script>
+"use strict";
+const F = MeclibFrame;
+const $ = (id) => document.getElementById(id);
+const STORE_KEY = "meclib-tryout-v1";   // shares the source/JSXGraph/MathJax choice with the tryout
+let config = null;
+let scenes = [];            // full scene objects, with .file
+let running = false;
+let usage = {};             // scene -> case id -> [Maxima test files], from /api/usage
+const results = {};         // "file#n" -> {status, actual...}
+
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function fillSelect(sel, entries, wanted) {
+  sel.innerHTML = "";
+  for (const [value, label] of entries) {
+    const o = document.createElement("option"); o.value = value; o.textContent = label; sel.appendChild(o);
+  }
+  if (wanted !== undefined && entries.some(([v]) => v === wanted)) sel.value = wanted;
+}
+function stored() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); } catch (e) { return {}; } }
+function storeChoice() {
+  const data = stored();
+  for (const id of ["src", "jsx", "mathjax"]) data[id] = $(id).value;
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { /* ignore */ }
+}
+
+// ---------------------------------------------------------------- loading and drawing
+async function loadAll() {
+  const list = await (await fetch("/api/cases")).json();
+  try { usage = await (await fetch("/api/usage")).json(); } catch (e) { usage = {}; }
+  scenes = [];
+  for (const s of list) {
+    const resp = await fetch("/api/cases/" + encodeURIComponent(s.file));
+    const scene = resp.ok ? await resp.json() : { title: s.title, initdata: [], cases: [], error: s.error || resp.statusText };
+    scene.file = s.file;
+    scenes.push(scene);
+  }
+  draw();
+}
+
+function caseId(scene, i) { return scene.cases[i].id || String(i + 1); }
+function caseKey(scene, i) { return scene.file + "#" + caseId(scene, i); }
+function usedBy(scene, i) {
+  const u = usage[scene.file] || {};
+  const files = [...(u[caseId(scene, i)] || [])];
+  for (const f of (u[""] || [])) if (!files.includes(f)) files.push(f);   // scene_init() users
+  return files;
+}
+
+function draw() {
+  const box = $("scenes");
+  if (!scenes.length) {
+    box.innerHTML = '<section><p class="hint">No test cases yet. Create them in the <a href="index.html">tryout</a> with "Save as test case".</p></section>';
+    return;
+  }
+  box.innerHTML = "";
+  for (const scene of scenes) {
+    const sec = document.createElement("section");
+    sec.className = "scene";
+    sec.innerHTML = `<h2>${esc(scene.title)} <span class="file">${esc(scene.file)}.json</span><span class="spacer"></span>
+      <button class="small" data-act="runScene">Run scene</button>
+      <a class="small" href="index.html?scene=${encodeURIComponent(scene.file)}">open initdata in tryout</a></h2>
+      ${scene.notes ? `<p class="notes">${esc(scene.notes)}</p>` : ""}
+      ${scene.error ? `<p class="error">${esc(scene.error)}</p>` : ""}
+      <table><thead><tr><th>#</th><th>Case</th><th>Graphic</th><th>names</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>`;
+    sec.querySelector('[data-act="runScene"]').addEventListener("click", () => runCases(scenes.filter((s) => s === scene)));
+    const tbody = sec.querySelector("tbody");
+    scene.cases.forEach((c, i) => tbody.appendChild(caseRow(scene, i)));
+    box.appendChild(sec);
+  }
+  applyFilter();
+}
+
+function caseRow(scene, i) {
+  const c = scene.cases[i];
+  const tr = document.createElement("tr");
+  tr.id = "row-" + caseKey(scene, i);
+  const users = usedBy(scene, i);
+  tr.innerHTML = `<td class="num">${i + 1}</td>
+    <td class="label">${esc(c.label)} <code class="cid">${esc(caseId(scene, i))}</code>
+      ${c.notes ? `<div class="cnotes">${esc(c.notes)}</div>` : ""}
+      ${c.state ? '<div class="cnotes">starts from a stored state</div>' : ""}
+      ${users.length ? `<div class="cnotes">used by ${users.map(esc).join(", ")}</div>` : ""}</td>
+    <td class="thumb"><div class="placeholder"></div></td>
+    <td class="names"><span class="lbl">expected</span><code>${esc(c.expected?.names ?? "(none)")}</code>
+      <span class="lbl">actual</span><code class="actual">-</code></td>
+    <td class="status"><span class="badge">not run</span></td>
+    <td class="actions">
+      <button data-act="run">Run</button>
+      <button data-act="open">Open in tryout</button>
+      <button data-act="accept" disabled title="Store the actual result as the expected one">Accept actual</button>
+      <button data-act="delete">Delete</button></td>`;
+  tr.querySelector('[data-act="run"]').addEventListener("click", () => runOne(scene, i));
+  tr.querySelector('[data-act="open"]').addEventListener("click", () => {
+    location.href = "index.html?scene=" + encodeURIComponent(scene.file) + "&case=" + encodeURIComponent(caseId(scene, i)) +
+      "&src=" + encodeURIComponent($("src").value);
+  });
+  tr.querySelector('[data-act="accept"]').addEventListener("click", () => acceptActual(scene, i));
+  tr.querySelector('[data-act="delete"]').addEventListener("click", () => deleteCase(scene, i));
+  const r = results[caseKey(scene, i)];
+  if (r) showResult(tr, r, false);
+  return tr;
+}
+
+// ---------------------------------------------------------------- running
+async function runOne(scene, i, src) {
+  const tr = $("row-" + caseKey(scene, i));
+  const c = scene.cases[i];
+  tr.querySelector(".status").innerHTML = '<span class="badge run">running</span>';
+  if (!src) {
+    try { src = await F.loadMeclib($("src").value, true); }
+    catch (e) { tr.querySelector(".status").innerHTML = `<span class="badge fail">error</span><div class="details">${esc(e.message)}</div>`; return null; }
+  }
+  const thumb = tr.querySelector(".thumb");
+  let handle;
+  try {
+    handle = F.run({
+      container: thumb, config, jsxKey: $("jsx").value, mathjaxKey: $("mathjax").value,
+      meclibSource: src.text, initText: JSON.stringify(scene.initdata),
+      blockText: scene.block || F.BLOCK_PRESETS.interactive, decsep: scene.decsep || ".",
+      startState: c.state ? JSON.stringify(c.state) : "", scale: 0.5,
+    });
+  } catch (e) {
+    const r = { status: "fail", details: [e.message], warnings: [] };
+    results[caseKey(scene, i)] = r; showResult(tr, r, true); return r;
+  }
+  const res = await handle.done;
+  handle.stop();
+  const r = evaluate(c, res);
+  r.meclib = src.version + " (" + $("src").value + ")";
+  results[caseKey(scene, i)] = r;
+  showResult(tr, r, true);
+  return r;
+}
+
+function evaluate(c, res) {
+  const details = [];
+  if (!res.finished) details.push("meclib did not finish its initialisation (timeout)");
+  for (const e of res.errors) details.push("console error: " + e);
+  const exp = c.expected || {};
+  if ((exp.names ?? null) !== (res.names ?? null))
+    details.push("names: expected " + (exp.names ?? "(none)") + "\n       got " + (res.names ?? "(none)"));
+  let actualObjects = null;
+  if (res.objects !== undefined && res.objects !== null) {
+    try { actualObjects = JSON.parse(res.objects); } catch (e) { details.push("objects are not valid JSON: " + res.objects); }
+  }
+  details.push(...F.diffObjects(exp.objects ?? null, actualObjects));
+  return { status: details.length ? "fail" : "pass", details, warnings: res.warnings, seconds: res.initSeconds,
+           actual: { names: res.names ?? null, objects: actualObjects } };
+}
+
+function showResult(tr, r, fresh) {
+  tr.classList.toggle("passed", r.status === "pass");
+  const actual = tr.querySelector("code.actual");
+  actual.textContent = r.actual ? (r.actual.names ?? "(none)") : "-";
+  actual.classList.toggle("mismatch", r.status === "fail");
+  let html = `<span class="badge ${r.status}">${r.status === "pass" ? "passed" : "failed"}</span>` +
+    (r.seconds !== undefined && r.seconds !== null ? ` <span class="secs">${r.seconds.toFixed(1)} s</span>` : "");
+  if (r.details.length) html += `<div class="details">${esc(r.details.join("\n"))}</div>`;
+  if (r.warnings && r.warnings.length) {
+    const w = [...new Set(r.warnings)];
+    html += `<details class="warnings"><summary>${w.length} warning${w.length > 1 ? "s" : ""}</summary>` +
+            `<div class="details warn">${esc(w.join("\n"))}</div></details>`;
+  }
+  tr.querySelector(".status").innerHTML = html;
+  tr.querySelector('[data-act="accept"]').disabled = !(r.status === "fail" && r.actual);
+  if (!fresh) tr.querySelector(".thumb").innerHTML = '<div class="placeholder"></div>';
+  applyFilter();
+}
+
+async function runCases(list) {
+  if (running) return;
+  running = true; $("runAll").disabled = true;
+  let src;
+  try { src = await F.loadMeclib($("src").value, true); }
+  catch (e) { $("status").textContent = e.message; running = false; $("runAll").disabled = false; return; }
+  $("status").textContent = src.info + " - Meclib " + src.version;
+  let pass = 0, fail = 0;
+  for (const scene of list) {
+    for (let i = 0; i < scene.cases.length; i++) {
+      const r = await runOne(scene, i, src);
+      if (r && r.status === "pass") pass++; else fail++;
+      $("summary").innerHTML = `<span class="badge pass">${pass} passed</span> <span class="badge ${fail ? "fail" : ""}">${fail} failed</span>`;
+    }
+  }
+  running = false; $("runAll").disabled = false;
+}
+
+function applyFilter() {
+  const only = $("failuresOnly").checked;
+  for (const tr of document.querySelectorAll("tr.passed")) tr.classList.toggle("hide-passed", only);
+}
+
+// ---------------------------------------------------------------- editing cases
+async function saveScene(scene) {
+  const copy = Object.assign({}, scene); delete copy.file; delete copy.error;
+  const resp = await fetch("/api/cases/" + encodeURIComponent(scene.file), {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(copy) });
+  if (!resp.ok) throw new Error(await resp.text());
+}
+
+async function freshScene(scene) {
+  const fresh = await (await fetch("/api/cases/" + encodeURIComponent(scene.file))).json();
+  fresh.file = scene.file;
+  return fresh;
+}
+
+async function acceptActual(scene, i) {
+  const r = results[caseKey(scene, i)];
+  if (!r || !r.actual) return;
+  const c = scene.cases[i];
+  if (!confirm("Store the actual result of case " + (i + 1) + " (" + c.label + ") as its expected result?")) return;
+  const fresh = await freshScene(scene);
+  if (!fresh.cases[i] || (fresh.cases[i].id || String(i + 1)) !== caseId(scene, i)) { alert("The scene file has changed - reload the page."); return; }
+  fresh.cases[i].expected = { objects: r.actual.objects, names: r.actual.names };
+  fresh.cases[i].recorded = { meclib: r.meclib, jsxgraph: $("jsx").value };
+  await saveScene(fresh);
+  Object.assign(scene, fresh);
+  delete results[caseKey(scene, i)];
+  const tr = $("row-" + caseKey(scene, i));
+  tr.replaceWith(caseRow(scene, i));
+  await runOne(scene, i);
+}
+
+async function deleteCase(scene, i) {
+  const c = scene.cases[i];
+  const users = usedBy(scene, i);
+  if (!confirm("Delete case '" + caseId(scene, i) + "' (" + c.label + ") from " + scene.file + ".json?" +
+      (users.length ? "\n\nIt is used by " + users.join(", ") + " - those tests will fail until updated." : ""))) return;
+  const fresh = await freshScene(scene);
+  if (!fresh.cases[i] || (fresh.cases[i].id || String(i + 1)) !== caseId(scene, i)) { alert("The scene file has changed - reload the page."); return; }
+  fresh.cases.splice(i, 1);
+  await saveScene(fresh);
+  for (const k of Object.keys(results)) if (k.startsWith(scene.file + "#")) delete results[k];
+  Object.assign(scene, fresh);
+  draw();
+}
+
+// ---------------------------------------------------------------- wiring
+async function start() {
+  try { config = await (await fetch("/api/config")).json(); }
+  catch (e) { $("status").textContent = "Server not reachable - start it with start_tryout.bat (or python server.py)."; return; }
+  const saved = stored();
+  const srcEntries = [["local", "local working copy (" + (config.local_branch || "?") + ")"]];
+  for (const [key, branch] of Object.entries(config.branches)) srcEntries.push([key, "GitHub " + key + " (" + branch + ")"]);
+  fillSelect($("src"), srcEntries, saved.src);
+  fillSelect($("jsx"), Object.keys(config.jsxgraph).map((k) => [k, k]), saved.jsx);
+  fillSelect($("mathjax"), Object.keys(config.mathjax).map((k) => [k, k]), saved.mathjax);
+  $("status").textContent = "repository: " + config.repo_path;
+  await loadAll();
+}
+$("runAll").addEventListener("click", () => runCases(scenes));
+$("failuresOnly").addEventListener("change", applyFilter);
+for (const id of ["src", "jsx", "mathjax"]) $(id).addEventListener("change", storeChoice);
+start();
+</script>
+</body>
+</html>

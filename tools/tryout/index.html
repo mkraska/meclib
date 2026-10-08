@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meclib tryout</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  #frameWrap { overflow: auto; min-height: 120px; }
+  #console { font-family: var(--mono); font-size: 12px; max-height: 220px; overflow: auto;
+             background: #f3f3ef; border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px; }
+  #console div { white-space: pre-wrap; border-bottom: 1px dotted #e4e4de; padding: 1px 0; }
+  #console .error { color: var(--err); margin: 0; }
+  #console .warn { color: var(--warn); }
+  #console .log { color: var(--muted); }
+  #saveCase .newScene { display: none; }
+  #saveCase.is-new .newScene { display: flex; }
+  #offscreen { position: absolute; left: -10000px; top: 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="/">meclib tryout</a></h1>
+  <nav><a href="cases.html">Test cases</a></nav>
+  <label>meclib.js <select id="src"></select></label>
+  <label>JSXGraph <select id="jsx"></select></label>
+  <label>MathJax <select id="mathjax"></select></label>
+  <label>Decimal separator <select id="decsep"><option value=".">.</option><option value=",">,</option></select></label>
+  <button id="render" class="primary" title="Ctrl+Enter">Render</button>
+  <div id="status">connecting to server ...</div>
+</header>
+<div id="loadedBanner" class="banner" hidden></div>
+
+<main>
+  <div>
+    <section>
+      <h2>initdata<span class="spacer"></span><button id="formatInit" title="One object per line">Format</button></h2>
+      <textarea id="init" rows="14" spellcheck="false"></textarea>
+      <p class="hint">JSON list of meclib objects, i.e. what <code>stackjson_stringify(initdata)</code> produces.
+        A leading <code>initdata:</code> and a trailing <code>;</code> or <code>$</code> are ignored, so a constant
+        Maxima list can be pasted as is.</p>
+      <div id="initError" class="error"></div>
+    </section>
+
+    <section>
+      <h2>Start state (objects input)<span class="spacer"></span><button id="clearState">Clear</button></h2>
+      <textarea id="startState" rows="4" spellcheck="false" placeholder="empty: meclib starts from initdata"></textarea>
+      <p class="hint">If filled, meclib starts from this state instead of initdata, as when a student revisits an
+        answered question. Use "Use as start state" below to continue from the current graphic.</p>
+    </section>
+
+    <section>
+      <details>
+        <summary>STACK [[jsxgraph]] block</summary>
+        <textarea id="block" rows="9" spellcheck="false" style="margin-top:6px"></textarea>
+        <p class="hint">As in the question text. <code>{#init#}</code> is replaced by initdata,
+          <code>{#stackfltsep#}</code> by the decimal separator, and the <code>[[include ...meclib.js"/]]</code>
+          line by the meclib.js version selected above. Width, height and <code>input-ref-...</code> are taken from
+          the opening tag. Presets from the wiki page "MecLib Question Setup":
+          <button id="presetInteractive" class="small">interactive</button>
+          <button id="presetNonInteractive" class="small">non-interactive</button></p>
+      </details>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>Graphic<span class="spacer"></span><span id="meclibVersion" class="badge"></span></h2>
+      <div id="frameWrap"><p class="hint">Press Render (or Ctrl+Enter).</p></div>
+    </section>
+
+    <section>
+      <h2>names<span class="spacer"></span><button data-copy="outNames">Copy</button></h2>
+      <textarea id="outNames" rows="2" readonly spellcheck="false"></textarea>
+    </section>
+
+    <section>
+      <h2>objects<span class="spacer"></span>
+        <label><input type="checkbox" id="prettyObjects" checked> one per line</label>
+        <button id="useState">Use as start state</button>
+        <button data-copy="outObjects">Copy</button></h2>
+      <textarea id="outObjects" rows="8" readonly spellcheck="false"></textarea>
+    </section>
+
+    <section id="saveCase">
+      <details id="saveDetails">
+        <summary>Save as test case</summary>
+        <div class="form-row" style="margin-top:8px">
+          <label for="sceneSel">Scene</label>
+          <select id="sceneSel"></select>
+        </div>
+        <div class="form-row newScene">
+          <label for="newSceneFile">File name</label>
+          <input type="text" id="newSceneFile" placeholder="e.g. truss_11_bars" spellcheck="false">
+        </div>
+        <div class="form-row newScene">
+          <label for="newSceneTitle">Scene title</label>
+          <input type="text" id="newSceneTitle" placeholder="what the graphic shows">
+        </div>
+        <div class="form-row">
+          <label for="caseLabel">Case label</label>
+          <input type="text" id="caseLabel" placeholder="what this situation tests">
+        </div>
+        <div class="form-row">
+          <label for="caseId">Case id</label>
+          <input type="text" id="caseId" placeholder="short key, e.g. init" spellcheck="false">
+        </div>
+        <div class="form-row">
+          <label for="caseNotes">Notes</label>
+          <input type="text" id="caseNotes" placeholder="optional, e.g. related wiki page or function">
+        </div>
+        <div class="form-row">
+          <button id="saveCaseBtn" class="primary">Save case</button>
+        </div>
+        <p class="hint">Saves the current graphic as a case: its state (the current objects if you have interacted
+          with the graphic, otherwise the start state, if any) is rendered once more, and the resulting objects and
+          names are stored as the expected result. All cases of a scene share the same initdata, decimal separator
+          and [[jsxgraph]] block. The case id is how Maxima tests refer to the case:
+          <code>scene_obj("scene", "id")</code>, <code>scene_names("scene", "id")</code>.</p>
+        <div id="saveMsg"></div>
+      </details>
+    </section>
+
+    <section>
+      <h2>Console <span id="errCount" class="badge"></span><span class="spacer"></span>
+        <label><input type="checkbox" id="showLog"> show log messages</label>
+        <button id="clearConsole">Clear</button></h2>
+      <div id="console"></div>
+    </section>
+  </div>
+</main>
+<div id="offscreen"></div>
+
+<script src="frame.js"></script>
+<script>
+"use strict";
+const F = MeclibFrame;
+const $ = (id) => document.getElementById(id);
+
+const DEFAULT_INIT =
+`[["grid","","",-1,6,-2,4,40],
+["forceGen","F_1",[-0.5,3.5]],
+["momentGen","M_1",[1.5,3.5]],
+["beam","",[0,0],[4,0],0.15],
+["bar","",[4,0],[5,-1.5],"show"],
+["fix12","A",[0,0],0,"show"],
+["fix12","C",[5,-1.5],0,"show"],
+["label","\\\\(B\\\\)",[3.8,-0.5]],
+["q","","q_0",[0,0.3],[4,0.3],0.7,0.7,0,"show"]]`;
+
+const STORE_KEY = "meclib-tryout-v1";
+const FIELDS = ["src", "jsx", "mathjax", "decsep", "init", "startState", "block", "prettyObjects", "showLog"];
+
+let config = null;
+let live = null;               // handle of the graphic currently shown
+let lastObjects = "";          // current value of the objects input
+let renderedObjects = null;    // objects right after the last render (before any interaction)
+let renderedStartState = "";   // start state the last render was made from
+let rendering = null;          // promise of a render still initialising
+let scenes = [];               // [{file, title, cases}] from the server
+
+// ---------------------------------------------------------------- persistence
+function saveFields() {
+  const data = {};
+  for (const f of FIELDS) { const el = $(f); data[f] = el.type === "checkbox" ? el.checked : el.value; }
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { /* private mode etc. */ }
+}
+function loadFields() {
+  let data = {};
+  try { data = JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); } catch (e) { data = {}; }
+  $("init").value = data.init ?? DEFAULT_INIT;
+  $("block").value = data.block ?? F.BLOCK_PRESETS.interactive;
+  $("startState").value = data.startState ?? "";
+  $("decsep").value = data.decsep ?? ".";
+  $("prettyObjects").checked = data.prettyObjects ?? true;
+  $("showLog").checked = data.showLog ?? false;
+  return data;
+}
+
+function fillSelect(sel, entries, wanted) {
+  sel.innerHTML = "";
+  for (const [value, label] of entries) {
+    const o = document.createElement("option"); o.value = value; o.textContent = label; sel.appendChild(o);
+  }
+  if (wanted !== undefined && entries.some(([v]) => v === wanted)) sel.value = wanted;
+}
+
+// ---------------------------------------------------------------- console panel
+let errorCount = 0;
+function logLine(level, text) {
+  const div = document.createElement("div");
+  div.className = level === "error" ? "error" : level === "warn" ? "warn" : "log";
+  div.textContent = (level === "error" ? "✖ " : level === "warn" ? "⚠ " : "") + text;
+  div.dataset.level = level;
+  if ((level === "log" || level === "info") && !$("showLog").checked) div.style.display = "none";
+  const box = $("console");
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  if (level === "error") { errorCount++; updateErrBadge(); }
+}
+function updateErrBadge() {
+  const b = $("errCount");
+  b.textContent = errorCount ? errorCount + (errorCount === 1 ? " error" : " errors") : "";
+  b.className = errorCount ? "badge err" : "badge";
+}
+function clearConsole() { $("console").innerHTML = ""; errorCount = 0; updateErrBadge(); }
+
+function showObjects() {
+  if (!lastObjects) { $("outObjects").value = ""; return; }
+  if ($("prettyObjects").checked) {
+    try { $("outObjects").value = F.formatObjects(JSON.parse(lastObjects)); return; } catch (e) { /* fall through */ }
+  }
+  $("outObjects").value = lastObjects;
+}
+
+// ---------------------------------------------------------------- render
+async function render() {
+  saveFields();
+  $("initError").textContent = "";
+  let init;
+  try { init = F.parseInit($("init").value); } catch (e) { $("initError").textContent = e.message; return; }
+  if (live) live.stop();
+  clearConsole();
+  $("outNames").value = ""; lastObjects = ""; showObjects();
+  renderedObjects = null;
+  $("status").textContent = "loading meclib.js (" + $("src").value + ") ...";
+  let src;
+  try { src = await F.loadMeclib($("src").value, true); }
+  catch (e) { $("status").textContent = ""; logLine("error", e.message); return; }
+  $("meclibVersion").textContent = "Meclib " + src.version;
+  $("status").textContent = src.info;
+  const startState = $("startState").value.trim();
+  try {
+    live = F.run({
+      container: $("frameWrap"), config, jsxKey: $("jsx").value, mathjaxKey: $("mathjax").value,
+      meclibSource: src.text, initText: init.text, blockText: $("block").value,
+      decsep: $("decsep").value, startState,
+      onConsole: logLine,
+      onInput: (varName, value) => {
+        if (varName === "stateRef") { lastObjects = value; showObjects(); }
+        else if (varName === "fbd_names") $("outNames").value = value;
+      },
+    });
+  } catch (e) { $("initError").textContent = e.message; return; }
+  rendering = live.done;
+  const result = await live.done;
+  rendering = null;
+  renderedObjects = result.objects;
+  renderedStartState = startState;
+  if (!result.finished && !result.errors.length) logLine("warn", "meclib did not finish its initialisation within 60 s.");
+  else if (result.initSeconds !== undefined) $("meclibVersion").textContent += " · " + result.initSeconds.toFixed(1) + " s";
+}
+
+// ---------------------------------------------------------------- test cases
+async function loadScenes(wanted) {
+  try { scenes = await (await fetch("/api/cases")).json(); } catch (e) { scenes = []; }
+  const entries = [["", "＋ new scene ..."]].concat(scenes.map((s) => [s.file, s.title + "  (" + s.file + ", " + s.cases + " cases)"]));
+  fillSelect($("sceneSel"), entries, wanted ?? (scenes.length ? scenes[0].file : ""));
+  $("saveCase").classList.toggle("is-new", $("sceneSel").value === "");
+}
+
+function sameJSON(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+
+function saveMsg(text, ok) {
+  $("saveMsg").className = ok ? "okmsg" : "error";
+  $("saveMsg").textContent = text;
+}
+
+async function saveCase() {
+  saveMsg("", true);
+  const label = $("caseLabel").value.trim();
+  if (!label) return saveMsg("Please give the case a label.");
+  const cid = $("caseId").value.trim() || slug(label);
+  if (!/^[A-Za-z0-9_-]+$/.test(cid)) return saveMsg("Case id: letters, digits, '_' and '-' only.");
+  let init;
+  try { init = F.parseInit($("init").value); } catch (e) { return saveMsg(e.message); }
+  if (rendering) { saveMsg("waiting for the graphic to finish initialising ...", true); await rendering; }
+  if (renderedObjects === null && lastObjects === "") return saveMsg("Render the graphic first.");
+
+  // The case state: what the graphic shows now. Without interaction since the last render,
+  // that is the start state of that render (possibly none, i.e. initdata itself).
+  const interacted = lastObjects !== "" && lastObjects !== renderedObjects;
+  const stateText = interacted ? lastObjects : renderedStartState;
+  const block = $("block").value.trim() === F.BLOCK_PRESETS.interactive.trim() ? null : $("block").value;
+  const decsep = $("decsep").value;
+
+  let file = $("sceneSel").value, scene;
+  if (file === "") {
+    file = $("newSceneFile").value.trim().replace(/\.json$/i, "");
+    if (!/^[A-Za-z0-9_-]+$/.test(file)) return saveMsg("File name: letters, digits, '_' and '-' only.");
+    if (scenes.some((s) => s.file === file)) return saveMsg("A scene '" + file + "' exists already - choose it from the list.");
+    scene = { title: $("newSceneTitle").value.trim() || file, initdata: init.data, cases: [] };
+    if (decsep !== ".") scene.decsep = decsep;
+    if (block) scene.block = block;
+  } else {
+    scene = await (await fetch("/api/cases/" + encodeURIComponent(file))).json();
+    const problems = [];
+    if (!sameJSON(scene.initdata, init.data)) problems.push("initdata");
+    if ((scene.decsep || ".") !== decsep) problems.push("decimal separator");
+    if ((scene.block || null) !== block) problems.push("[[jsxgraph]] block");
+    if (problems.length) return saveMsg("The " + problems.join(", ") + " of this graphic differ(s) from scene '" + file +
+      "'. Cases of a scene share these - save to a new scene, or load a case of that scene first.");
+    if (scene.cases.some((c, i) => (c.id || String(i + 1)) === cid))
+      return saveMsg("Scene '" + file + "' already has a case with id '" + cid + "'.");
+  }
+
+  // Render the case once more, exactly as the test runner will, and take its result as expected.
+  saveMsg("rendering the case for the expected result ...", true);
+  let src;
+  try { src = await F.loadMeclib($("src").value); } catch (e) { return saveMsg(e.message); }
+  const handle = F.run({
+    container: $("offscreen"), config, jsxKey: $("jsx").value, mathjaxKey: $("mathjax").value,
+    meclibSource: src.text, initText: init.text, blockText: scene.block || F.BLOCK_PRESETS.interactive,
+    decsep, startState: stateText,
+  });
+  const res = await handle.done;
+  handle.stop(); $("offscreen").innerHTML = "";
+  if (!res.finished || res.errors.length)
+    return saveMsg("Not saved: rendering the case failed.\n" + (res.errors.join("\n") || "timeout"));
+
+  const entry = { id: cid, label };
+  const notes = $("caseNotes").value.trim();
+  if (notes) entry.notes = notes;
+  if (stateText) entry.state = JSON.parse(stateText);
+  entry.expected = { objects: res.objects === undefined ? null : JSON.parse(res.objects || "null"), names: res.names };
+  entry.recorded = { meclib: src.version + " (" + $("src").value + ")", jsxgraph: $("jsx").value };
+  scene.cases.push(entry);
+
+  const resp = await fetch("/api/cases/" + encodeURIComponent(file), {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(scene) });
+  if (!resp.ok) return saveMsg("Saving failed: " + (await resp.text()));
+  const saved = await resp.json();
+  saveMsg("Saved as case '" + cid + "' of scene '" + file + "'." +
+    (saved.fixture_problems && saved.fixture_problems.length ? "\nMaxima fixtures: " + saved.fixture_problems.join("; ") : ""),
+    !(saved.fixture_problems && saved.fixture_problems.length));
+  $("caseLabel").value = ""; $("caseId").value = ""; $("caseNotes").value = "";
+  await loadScenes(file);
+}
+
+function slug(text) {
+  return text.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "case";
+}
+
+// Opens a case given as ?scene=<file>&case=<id or 1-based number>.
+async function openCaseFromUrl() {
+  const p = new URLSearchParams(location.search);
+  const file = p.get("scene");
+  if (!file) return false;
+  const want = p.get("case") || "";
+  let scene;
+  try {
+    const resp = await fetch("/api/cases/" + encodeURIComponent(file));
+    if (!resp.ok) throw new Error(resp.statusText);
+    scene = await resp.json();
+  } catch (e) { $("initError").textContent = "Could not load scene " + file + ": " + e.message; return false; }
+  let n = scene.cases.findIndex((c, i) => (c.id || String(i + 1)) === want) + 1;
+  if (!n && /^\d+$/.test(want)) n = parseInt(want, 10);
+  const c = n >= 1 ? scene.cases[n - 1] : null;
+  $("init").value = F.formatObjects(scene.initdata);
+  $("startState").value = c && c.state ? JSON.stringify(c.state) : "";
+  $("decsep").value = scene.decsep || ".";
+  $("block").value = scene.block || F.BLOCK_PRESETS.interactive;
+  if (p.get("src")) $("src").value = p.get("src");
+  const banner = $("loadedBanner");
+  banner.hidden = false;
+  banner.textContent = "Loaded scene '" + scene.title + "' (" + file + ")" + (c ? ", case '" + (c.id || n) + "': " + c.label : "") +
+    (c && c.notes ? " - " + c.notes : "");
+  await loadScenes(file);
+  return true;
+}
+
+// ---------------------------------------------------------------- wiring
+async function start() {
+  const saved = loadFields();
+  try {
+    config = await (await fetch("/api/config")).json();
+  } catch (e) {
+    $("status").textContent = "Server not reachable - start it with start_tryout.bat (or python server.py).";
+    return;
+  }
+  const srcEntries = [["local", "local working copy (" + (config.local_branch || "?") + ")"]];
+  for (const [key, branch] of Object.entries(config.branches)) srcEntries.push([key, "GitHub " + key + " (" + branch + ")"]);
+  fillSelect($("src"), srcEntries, saved.src);
+  fillSelect($("jsx"), Object.keys(config.jsxgraph).map((k) => [k, k]), saved.jsx);
+  fillSelect($("mathjax"), Object.keys(config.mathjax).map((k) => [k, k]), saved.mathjax);
+  $("status").textContent = "repository: " + config.repo_path;
+  if (await openCaseFromUrl()) render(); else await loadScenes();
+}
+
+$("render").addEventListener("click", render);
+document.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); render(); } });
+$("formatInit").addEventListener("click", () => {
+  try { $("init").value = F.formatObjects(F.parseInit($("init").value).data); $("initError").textContent = ""; }
+  catch (e) { $("initError").textContent = e.message; }
+});
+$("clearState").addEventListener("click", () => { $("startState").value = ""; saveFields(); });
+$("useState").addEventListener("click", () => { $("startState").value = lastObjects; saveFields(); });
+$("presetInteractive").addEventListener("click", () => { $("block").value = F.BLOCK_PRESETS.interactive; saveFields(); });
+$("presetNonInteractive").addEventListener("click", () => { $("block").value = F.BLOCK_PRESETS.noninteractive; saveFields(); });
+$("prettyObjects").addEventListener("change", () => { showObjects(); saveFields(); });
+$("showLog").addEventListener("change", () => {
+  for (const d of $("console").children)
+    if (d.dataset.level === "log" || d.dataset.level === "info") d.style.display = $("showLog").checked ? "" : "none";
+  saveFields();
+});
+$("clearConsole").addEventListener("click", clearConsole);
+$("sceneSel").addEventListener("change", () => $("saveCase").classList.toggle("is-new", $("sceneSel").value === ""));
+$("saveCaseBtn").addEventListener("click", saveCase);
+$("caseLabel").addEventListener("input", () => { $("caseId").placeholder = $("caseLabel").value ? slug($("caseLabel").value) : "short key, e.g. init"; });
+for (const b of document.querySelectorAll("[data-copy]"))
+  b.addEventListener("click", () => navigator.clipboard.writeText($(b.dataset.copy).value));
+for (const id of ["src", "jsx", "mathjax", "decsep"]) $(id).addEventListener("change", saveFields);
+start();
+</script>
+</body>
+</html>

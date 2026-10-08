@@ -18,20 +18,20 @@ from that release's `version.php` (e.g. `2026080600`, which is STACK
 4.13.1), not the human release number, since that's what's unambiguous
 across releases.
 
-`../Maxima/tests/run_tests.mac` looks here automatically: if any
-`stack/<version>/maxima/stackmaxima.mac` exists, it loads that library and
-gets STACK's real `castext_concat()` (and everything else the library
-provides) instead of `harness.mac`'s lightweight stand-in. If nothing is
-here yet, the test harness falls back to that stand-in and still works with
-nothing but a bare Maxima install.
+`../Maxima/tests/run_tests.mac` requires this library and loads the first
+`stack/<version>/maxima/stackmaxima.mac` it finds here, so the offline tests
+use STACK's real `castext_concat()`, `ct2_latex()`, `stack_disp...()`,
+answer tests etc. It stops with an error message if nothing is here.
 
-Two things that library load does NOT give you, so `harness.mac` keeps
-providing them regardless of whether a sandbox is configured here:
+What the library does NOT contain, so `harness.mac` provides it:
 
-- `castext()` itself - it is generated per-question by STACK's PHP compiler
-  and is deliberately never part of the redistributable library.
-- `[[lang code='...']]...[[/lang]]` selection - resolved by STACK's PHP
-  rendering layer, never by Maxima, in either setup.
+- `castext()` itself - STACK's PHP compiler turns each `castext("...")`
+  literal into Maxima code per question; there is no `castext()` function in
+  the library. The harness renders the castext blocks the feedback functions
+  use, with `{@...@}` going through the library's `ct2_latex()` as in STACK.
+- the per-question language setting for `[[lang code='...']]` blocks
+  (compiled castext checks it via `is_lang()`); the harness renders both
+  languages and selects with `resolve_lang()`.
 
 STACK's own compatibility table
 (https://docs.stack-assessment.org/en/Installation/STACK_versions/) maps

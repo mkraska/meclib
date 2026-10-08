@@ -53,31 +53,31 @@ fb_check(fb_bar(o_nomatch, n_nomatch, 1), false,
 o_ok1: [["bar","A",[0,0],[0,2],"hide"], ["force","S_A",[0,0],[0,-1],"active"]];
 n_ok1: [[2], S_A];
 fb_check(fb_bar(o_ok1, n_ok1, 1), true,
-  "Stab A: S_A OK.",
-  "Bar A: S_A OK.",
+  "Stab A: \\({{S}_{A}}\\) OK.",
+  "Bar A: \\({{S}_{A}}\\) OK.",
   "fb_bar single-force ok");
 
 o_notpar1: [["bar","A",[0,0],[0,2],"hide"], ["force","S_A",[0,0],[1,0],"active"]];
 n_notpar1: [[2], S_A];
 fb_check(fb_bar(o_notpar1, n_notpar1, 1), false,
-  "Stab A: S_A ist nicht parallel zum Stab.",
-  "Bar A: S_A is not parallel to the bar.",
+  "Stab A: \\({{S}_{A}}\\) ist nicht parallel zum Stab.",
+  "Bar A: \\({{S}_{A}}\\) is not parallel to the bar.",
   "fb_bar single-force not parallel");
 
 /* "T": reaction antiparallel to the bar's own stored direction (p3->p4) */
 o_antiT: [["bar","A",[0,0],[0,2],"hide"], ["force","S_A",[0,0],[0,-1],"active"]];
 n_antiT: [[2], S_A];
 fb_check(fb_bar(o_antiT, n_antiT, 1, "T"), false,
-  "Stab A: S_A ist nicht als Zugkraft definiert.",
-  "Bar A: S_A is not defined as a tensile force.",
+  "Stab A: \\({{S}_{A}}\\) ist nicht als Zugkraft definiert.",
+  "Bar A: \\({{S}_{A}}\\) is not defined as a tensile force.",
   "fb_bar single-force T: antiparallel (compression)");
 
 /* "T": reaction parallel AND same sign as the bar's own stored direction */
 o_okT: [["bar","A",[0,0],[0,2],"hide"], ["force","S_A",[0,0],[0,1],"active"]];
 n_okT: [[2], S_A];
 fb_check(fb_bar(o_okT, n_okT, 1, "T"), true,
-  "Stab A: S_A OK.",
-  "Bar A: S_A OK.",
+  "Stab A: \\({{S}_{A}}\\) OK.",
+  "Bar A: \\({{S}_{A}}\\) OK.",
   "fb_bar single-force T: correct tension");
 
 /* ============================================================================
@@ -106,8 +106,8 @@ o_2name: [["bar","A",[0,0],[0,2],"hide"],
           ["force","F_A",[0,2],[0,1],"active"]];
 n_2name: [[2,3], S_A, F_A];
 fb_check(fb_bar(o_2name, n_2name, 1, "2"), false,
-  "Stab A: S_A, F_A haben unterschiedliche Namen. Als Freischnitt desselben Stabes sollten beide denselben Namen tragen.",
-  "Bar A: S_A, F_A have different names. As the free-body cut of the same bar, both should carry the same name.",
+  "Stab A: \\({{S}_{A}}\\), \\({{F}_{A}}\\) haben unterschiedliche Namen. Als Freischnitt desselben Stabes sollten beide denselben Namen tragen.",
+  "Bar A: \\({{S}_{A}}\\), \\({{F}_{A}}\\) have different names. As the free-body cut of the same bar, both should carry the same name.",
   "fb_bar two-force name mismatch");
 
 o_2par: [["bar","A",[0,0],[0,2],"hide"],
@@ -115,8 +115,8 @@ o_2par: [["bar","A",[0,0],[0,2],"hide"],
          ["force","S_A",[0,2],[1,2],"active"]];
 n_2par: [[2,3], S_A, S_A];
 fb_check(fb_bar(o_2par, n_2par, 1, "2"), false,
-  "Stab A: S_A ist nicht parallel zum Stab.",
-  "Bar A: S_A is not parallel to the bar.",
+  "Stab A: \\({{S}_{A}}\\) ist nicht parallel zum Stab.",
+  "Bar A: \\({{S}_{A}}\\) is not parallel to the bar.",
   "fb_bar two-force one not parallel");
 
 o_2notend: [["bar","A",[0,0],[0,2],"hide"],
@@ -124,8 +124,8 @@ o_2notend: [["bar","A",[0,0],[0,2],"hide"],
             ["force","S_A",[0,1],[0,2],"active"]];
 n_2notend: [[2,3], S_A, S_A];
 fb_check(fb_bar(o_2notend, n_2notend, 1, "2"), false,
-  "Stab A: S_A greift an keinem Stabende an.",
-  "Bar A: S_A does not act at either end of the bar.",
+  "Stab A: \\({{S}_{A}}\\) greift an keinem Stabende an.",
+  "Bar A: \\({{S}_{A}}\\) does not act at either end of the bar.",
   "fb_bar two-force not at either end");
 
 o_2same: [["bar","A",[0,0],[0,2],"hide"],
@@ -133,8 +133,8 @@ o_2same: [["bar","A",[0,0],[0,2],"hide"],
           ["force","S_A",[0,2],[0,1.5],"active"]];
 n_2same: [[2,3], S_A, S_A];
 fb_check(fb_bar(o_2same, n_2same, 1, "2"), false,
-  "Stab A: S_A, S_A greifen beide am selben Stabende an. An jedem Stabende sollte eine Stabkraft angreifen.",
-  "Bar A: S_A, S_A both act at the same end of the bar. One bar force should act at each end.",
+  "Stab A: \\({{S}_{A}}\\), \\({{S}_{A}}\\) greifen beide am selben Stabende an. An jedem Stabende sollte eine Stabkraft angreifen.",
+  "Bar A: \\({{S}_{A}}\\), \\({{S}_{A}}\\) both act at the same end of the bar. One bar force should act at each end.",
   "fb_bar two-force same end (swapped)");
 
 o_2tension: [["bar","A",[0,0],[0,2],"hide"],
@@ -142,8 +142,8 @@ o_2tension: [["bar","A",[0,0],[0,2],"hide"],
              ["force","S_A",[0,2],[0,3],"active"]];
 n_2tension: [[2,3], S_A, S_A];
 fb_check(fb_bar(o_2tension, n_2tension, 1, "2"), false,
-  "Stab A: S_A ist nicht als Zugkraft definiert.",
-  "Bar A: S_A is not defined as a tensile force.",
+  "Stab A: \\({{S}_{A}}\\) ist nicht als Zugkraft definiert.",
+  "Bar A: \\({{S}_{A}}\\) is not defined as a tensile force.",
   "fb_bar two-force wrong tension at one end");
 
 o_2ok: [["bar","A",[0,0],[0,2],"hide"],
@@ -151,6 +151,81 @@ o_2ok: [["bar","A",[0,0],[0,2],"hide"],
         ["force","S_A",[0,2],[0,3],"active"]];
 n_2ok: [[2,3], S_A, S_A];
 fb_check(fb_bar(o_2ok, n_2ok, 1, "2"), true,
-  "Stab A: S_A, S_A OK.",
-  "Bar A: S_A, S_A OK.",
+  "Stab A: \\({{S}_{A}}\\), \\({{S}_{A}}\\) OK.",
+  "Bar A: \\({{S}_{A}}\\), \\({{S}_{A}}\\) OK.",
   "fb_bar two-force ok");
+
+/* ============================================================================
+   Scene "fb_bar" (tests/scenes/fb_bar.json), ported from the hand-verified
+   demo question "QA 05 fb_bar.xml" (demo_questions/): objects and names as meclib
+   produces them for the untouched graphic (no hand-written fixture), DE
+   expected texts and flags from that question's PRTs, EN texts from the
+   current bilingual source.
+   That question sets debug: true, so these cases do as well.
+   All PRTs of that question are ported.
+   ============================================================================ */
+o_scene: scene_obj("fb_bar", "init");
+n_scene: scene_names("fb_bar", "init");
+debug: true;
+
+/* ---- PRT fb2: bar without a name ---- */
+fb_check(fb_bar(o_scene, n_scene, 2), false,
+  "object #2 has no name.",
+  "object #2 has no name.",
+  "scene fb_bar: PRT fb2");
+
+/* ---- PRT fb3: object 3 is a force, not a bar ---- */
+fb_check(fb_bar(o_scene, n_scene, 3), false,
+  "object 3 (force) is not a bar.",
+  "object 3 (force) is not a bar.",
+  "scene fb_bar: PRT fb3");
+
+/* ---- PRT fb4: bar 4 not deactivated ---- */
+fb_check(fb_bar(o_scene, n_scene, 4), false,
+  "Stab 4: Nicht deaktiviert.",
+  "Bar 4: Not deactivated.",
+  "scene fb_bar: PRT fb4");
+
+/* ---- PRT fb5: bar 5 without any force ---- */
+fb_check(fb_bar(o_scene, n_scene, 5), false,
+  "Stab 5: Keine Stabkraft mit passendem Namen (mit Index 5) gefunden.",
+  "Bar 5: No bar force with a matching name (with index 5) found.",
+  "scene fb_bar: PRT fb5");
+
+/* ---- PRT fb6: bar 6: force S_7 has the wrong index ---- */
+fb_check(fb_bar(o_scene, n_scene, 6), false,
+  "Stab 6: Keine Stabkraft mit passendem Namen (mit Index 6) gefunden.",
+  "Bar 6: No bar force with a matching name (with index 6) found.",
+  "scene fb_bar: PRT fb6");
+
+/* ---- PRT fb8: bar 8: S_8 not parallel ---- */
+fb_check(fb_bar(o_scene, n_scene, 8), false,
+  "Stab 8: \\({{S}_{8}}\\) ist nicht parallel zum Stab.",
+  "Bar 8: \\({{S}_{8}}\\) is not parallel to the bar.",
+  "scene fb_bar: PRT fb8");
+
+/* ---- PRT fb9: bar 9 (object 10) with "T": S_9 is compression ---- */
+fb_check(fb_bar(o_scene, n_scene, 10, "T"), false,
+  "Stab 9: \\({{S}_{9}}\\) ist nicht als Zugkraft definiert.",
+  "Bar 9: \\({{S}_{9}}\\) is not defined as a tensile force.",
+  "scene fb_bar: PRT fb9");
+
+/* ---- PRT fb9a: bar 9 (object 10) without "T": ok ---- */
+fb_check(fb_bar(o_scene, n_scene, 10), true,
+  "Stab 9: \\({{S}_{9}}\\) OK.",
+  "Bar 9: \\({{S}_{9}}\\) OK.",
+  "scene fb_bar: PRT fb9a");
+
+/* ---- PRT fb10: bar 10 (object 14): S_10 not parallel ---- */
+fb_check(fb_bar(o_scene, n_scene, 14), false,
+  "Stab 10: \\({{S}_{10}}\\) ist nicht parallel zum Stab.",
+  "Bar 10: \\({{S}_{10}}\\) is not parallel to the bar.",
+  "scene fb_bar: PRT fb10");
+
+/* ---- PRT fb11: bar 11 (object 15): S_11 not parallel ---- */
+fb_check(fb_bar(o_scene, n_scene, 15), false,
+  "Stab 11: \\({{S}_{11}}\\) ist nicht parallel zum Stab.",
+  "Bar 11: \\({{S}_{11}}\\) is not parallel to the bar.",
+  "scene fb_bar: PRT fb11");
+
+debug: false;

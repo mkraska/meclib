@@ -21,30 +21,17 @@
    not fb_check(). ============================================================================ */
 
 /* ---- non-numeric guard (units feature not declared) ----
-   real_numberp() turns out to be a STACK-library function, not a bare-Maxima
-   one (confirmed: even real_numberp(5) is left as an unevaluated noun form
-   without stackmaxima.mac loaded) - so without the real library, fb_unit()'s
-   "if not real_numberp(...) then return(...)" condition never resolves to
-   true or false at all. Maxima's bare "if cond then X" (no "else") with an
-   unresolved cond does not error, it just silently continues to the NEXT
-   block statement - so every later check in fb_unit() falls through the
-   same way, all the way to its final (otherwise dead) list expression,
-   which is not a string and breaks resolve_lang(). In real deployment this
-   is harmless (fb_fbd.mac is always stack_include()'d inside a real STACK
-   render, so real_numberp() is always defined there) - it only means this
-   specific guard cannot be exercised offline without the real library, so
-   these two cases are gated accordingly rather than run unconditionally. */
-if meclib_real_stack_loaded then (
-  fb_check_str(fb_unit(x, 5, 0.01),
-    "fb_unit: sans is not a real number (and the units feature is not declared): x",
-    "fb_unit: sans is not a real number (and the units feature is not declared): x",
-    "fb_unit: sans not a real number"),
+   real_numberp() is a STACK-library function (not bare Maxima), loaded by
+   run_tests.mac together with the rest of the library. */
+fb_check_str(fb_unit(x, 5, 0.01),
+  "fb_unit: sans is not a real number (and the units feature is not declared): x",
+  "fb_unit: sans is not a real number (and the units feature is not declared): x",
+  "fb_unit: sans not a real number");
 
-  fb_check_str(fb_unit(5, y, 0.01),
-    "fb_unit: tans is not a real number (and the units feature is not declared): y",
-    "fb_unit: tans is not a real number (and the units feature is not declared): y",
-    "fb_unit: tans not a real number")
-)$
+fb_check_str(fb_unit(5, y, 0.01),
+  "fb_unit: tans is not a real number (and the units feature is not declared): y",
+  "fb_unit: tans is not a real number (and the units feature is not declared): y",
+  "fb_unit: tans not a real number");
 
 /* ---- tans = 0 special-cased ahead of the sign/tolerance checks ---- */
 fb_check_str(fb_unit(5, 0, 0.01),
@@ -77,8 +64,8 @@ fb_check_str(fb_unit(-1.1, 1.11, 0.005),
 /* ---- %_tol = 0: always just report the deviation, never compare against a
    tolerance band ---- */
 fb_check_str(fb_unit(1.05, 1, 0),
-  "&nbsp;Abweichung: 5.0%",
-  "&nbsp;Deviation: 5.0%",
+  "&nbsp;Abweichung: \\({5.0}\\)%",
+  "&nbsp;Deviation: \\({5.0}\\)%",
   "fb_unit: tol=0 reports plain deviation");
 
 /* ---- within tolerance ---- */
@@ -86,8 +73,8 @@ fb_check_str(fb_unit(1, 1.001, 0.005), "", "", "fb_unit: within tolerance, debug
 
 block([debug: true],
   fb_check_str(fb_unit(1, 1.001, 0.005),
-    "&nbsp;Abweichung: -0.1% (display because debug=true. Would be empty otherwise.)",
-    "&nbsp;Deviation: -0.1% (display because debug=true. Would be empty otherwise.)",
+    "&nbsp;Abweichung: \\({-0.1}\\)% (display because debug=true. Would be empty otherwise.)",
+    "&nbsp;Deviation: \\({-0.1}\\)% (display because debug=true. Would be empty otherwise.)",
     "fb_unit: within tolerance, debug true -> deviation shown")
 )$
 

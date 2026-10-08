@@ -42,16 +42,16 @@ fb_check(fb_bar_name(o_notforce, n_notforce, 1), false, "", "", "fb_bar_name rea
 o_multiletter: [["bar","A",[0,0],[0,2],"hide"], ["force","SS_A",[0,0],[0,1],"active"]];
 n_multiletter: [[2], SS_A];
 fb_check(fb_bar_name(o_multiletter, n_multiletter, 1), false,
-  "<br>SS_A: Physikalische Gr&ouml;&szlig;en immer nur mit einem Buchstabe und eventuell Index schreiben, z.B. <code>F_1</code>.",
-  "<br>SS_A: Always name physical quantities with a single letter and, if needed, an index, e.g. <code>F_1</code>.",
+  "<br>\\({{{\\it SS}}_{A}}\\): Physikalische Gr&ouml;&szlig;en immer nur mit einem Buchstabe und eventuell Index schreiben, z.B. <code>F_1</code>.",
+  "<br>\\({{{\\it SS}}_{A}}\\): Always name physical quantities with a single letter and, if needed, an index, e.g. <code>F_1</code>.",
   "fb_bar_name multi-letter base");
 
 /* ---- naming: base letter is not F, N, or S ---- */
 o_notsensible: [["bar","A",[0,0],[0,2],"hide"], ["force","X_A",[0,0],[0,1],"active"]];
 n_notsensible: [[2], X_A];
 fb_check(fb_bar_name(o_notsensible, n_notsensible, 1), false,
-  "<br>X_A: Sinnvolle Namen für eine Stabkraft sind \\(F\\) (Kraft), \\(N\\) (Normalkraft) oder \\(S\\) (Stabkraft)",
-  "<br>X_A: Sensible names for a bar force are \\(F\\) (force), \\(N\\) (normal force), or \\(S\\) (bar force)",
+  "<br>\\({{X}_{A}}\\): Sinnvolle Namen für eine Stabkraft sind \\(F\\) (Kraft), \\(N\\) (Normalkraft) oder \\(S\\) (Stabkraft)",
+  "<br>\\({{X}_{A}}\\): Sensible names for a bar force are \\(F\\) (force), \\(N\\) (normal force), or \\(S\\) (bar force)",
   "fb_bar_name base letter not sensible");
 
 /* ---- naming: index does not match the bar's own label ---- */
@@ -66,3 +66,66 @@ fb_check(fb_bar_name(o_idxmismatch, n_idxmismatch, 1), false,
 o_ok: [["bar","A",[0,0],[0,2],"hide"], ["force","S_A",[0,0],[0,1],"active"]];
 n_ok: [[2], S_A];
 fb_check(fb_bar_name(o_ok, n_ok, 1), true, "", "", "fb_bar_name ok");
+
+/* ============================================================================
+   Scene "fb_bar_name" (tests/scenes/fb_bar_name.json), ported from the hand-verified
+   demo question "fb_bar_name() unit test.xml" (demo_questions/): objects and names as meclib
+   produces them for the untouched graphic (no hand-written fixture), DE
+   expected texts and flags from that question's PRTs, EN texts from the
+   current bilingual source.
+   That question sets debug: true, so these cases do as well.
+   All PRTs of that question are ported.
+   ============================================================================ */
+o_scene: scene_obj("fb_bar_name", "init");
+n_scene: scene_names("fb_bar_name", "init");
+debug: true;
+
+/* ---- PRT fb3: object 3 is a force, not a bar ---- */
+fb_check(fb_bar_name(o_scene, n_scene, 3), false,
+  "object 3 is not of type 'bar'",
+  "object 3 is not of type 'bar'",
+  "scene fb_bar_name: PRT fb3");
+
+/* ---- PRT fb4: bar 4 has no reaction (debug message) ---- */
+fb_check(fb_bar_name(o_scene, n_scene, 4), false,
+  "no reaction found at object 4 (debug message)",
+  "no reaction found at object 4 (debug message)",
+  "scene fb_bar_name: PRT fb4");
+
+/* ---- PRT fb5: bar 5 has two reactions (debug message) ---- */
+fb_check(fb_bar_name(o_scene, n_scene, 5), false,
+  "more than one reaction found [6,7] (debug message)",
+  "more than one reaction found [6,7] (debug message)",
+  "scene fb_bar_name: PRT fb5");
+
+/* ---- PRT fb8: bar 8: reaction is a moment (debug message) ---- */
+fb_check(fb_bar_name(o_scene, n_scene, 8), false,
+  "Reaction M_7 is not a force (debug message)",
+  "Reaction M_7 is not a force (debug message)",
+  "scene fb_bar_name: PRT fb8");
+
+/* ---- PRT fb9: bar 9 has two forces (debug message) ---- */
+fb_check(fb_bar_name(o_scene, n_scene, 9), false,
+  "more than one reaction found [10,11] (debug message)",
+  "more than one reaction found [10,11] (debug message)",
+  "scene fb_bar_name: PRT fb9");
+
+/* ---- PRT fb16: bar 16: index of S_17 does not match ---- */
+fb_check(fb_bar_name(o_scene, n_scene, 16), false,
+  "<br>Der Index 17 passt nicht zum Stabname 16.",
+  "<br>The index 17 does not match the bar's name 16.",
+  "scene fb_bar_name: PRT fb16");
+
+/* ---- PRT fb12: bar 12: force name SK_12 has a multi-letter base ---- */
+fb_check(fb_bar_name(o_scene, n_scene, 12), false,
+  "<br>\\({{{\\it SK}}_{12}}\\): Physikalische Gr&ouml;&szlig;en immer nur mit einem Buchstabe und eventuell Index schreiben, z.B. <code>F_1</code>.",
+  "<br>\\({{{\\it SK}}_{12}}\\): Always name physical quantities with a single letter and, if needed, an index, e.g. <code>F_1</code>.",
+  "scene fb_bar_name: PRT fb12");
+
+/* ---- PRT fb14: bar 14: base letter A is not F, N or S ---- */
+fb_check(fb_bar_name(o_scene, n_scene, 14), false,
+  "<br>\\({{A}_{14}}\\): Sinnvolle Namen für eine Stabkraft sind \\(F\\) (Kraft), \\(N\\) (Normalkraft) oder \\(S\\) (Stabkraft)",
+  "<br>\\({{A}_{14}}\\): Sensible names for a bar force are \\(F\\) (force), \\(N\\) (normal force), or \\(S\\) (bar force)",
+  "scene fb_bar_name: PRT fb14");
+
+debug: false;

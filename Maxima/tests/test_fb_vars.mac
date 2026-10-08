@@ -15,44 +15,44 @@ fb_check_str(fb_vars(a, 0), "", "", "fb_vars t01: tans=0");
 
 /* ---- t01a: tans is a nonzero constant (no vars) -> sans' vars are all "unexpected" ---- */
 fb_check_str(fb_vars(a, 2),
-  "&nbsp;Unerwartete Variable a.",
-  "&nbsp;Unexpected variable a.",
+  "&nbsp;Unerwartete Variable \\({a}\\).",
+  "&nbsp;Unexpected variable \\({a}\\).",
   "fb_vars t01a: tans nonzero constant");
 
 /* ---- t02: one unexpected variable ---- */
 fb_check_str(fb_vars(a+b, a),
-  "&nbsp;Unerwartete Variable b.",
-  "&nbsp;Unexpected variable b.",
+  "&nbsp;Unerwartete Variable \\({b}\\).",
+  "&nbsp;Unexpected variable \\({b}\\).",
   "fb_vars t02: one unexpected variable");
 
 /* ---- t03: two unexpected variables (comma-separated via fb_strip_list) ---- */
 fb_check_str(fb_vars(a+b+omega, a),
-  "&nbsp;Unerwartete Variable b, omega.",
-  "&nbsp;Unexpected variable b, omega.",
+  "&nbsp;Unerwartete Variable \\({b}\\), \\({\\omega}\\).",
+  "&nbsp;Unexpected variable \\({b}\\), \\({\\omega}\\).",
   "fb_vars t03: two unexpected variables");
 
 /* ---- t04: two missing variables (also lists the plain-text <code> form) ---- */
 fb_check_str(fb_vars(a, a+b+omega),
-  "&nbsp;Fehlende Variable b, omega (<code>b, omega</code>).",
-  "&nbsp;Missing variable b, omega (<code>b, omega</code>).",
+  "&nbsp;Fehlende Variable \\({b}\\), \\({\\omega}\\) (<code>b, omega</code>).",
+  "&nbsp;Missing variable \\({b}\\), \\({\\omega}\\) (<code>b, omega</code>).",
   "fb_vars t04: two missing variables");
 
 /* ---- t05: one unexpected AND two missing at once ---- */
 fb_check_str(fb_vars(a+a_12, a+b+omega),
-  "&nbsp;Unerwartete Variable a_12.&nbsp;Fehlende Variable b, omega (<code>b, omega</code>).",
-  "&nbsp;Unexpected variable a_12.&nbsp;Missing variable b, omega (<code>b, omega</code>).",
+  "&nbsp;Unerwartete Variable \\({{a}_{12}}\\).&nbsp;Fehlende Variable \\({b}\\), \\({\\omega}\\) (<code>b, omega</code>).",
+  "&nbsp;Unexpected variable \\({{a}_{12}}\\).&nbsp;Missing variable \\({b}\\), \\({\\omega}\\) (<code>b, omega</code>).",
   "fb_vars t05: unexpected and missing combined");
 
 /* ---- t06: correct variable set, one term's coefficient differs (%_vars given) ---- */
 fb_check_str(fb_vars(a+2*b, a+b, [a,b]),
-  "&nbsp;Pr&uuml;fen Sie den Term mit b.",
-  "&nbsp;Check the term with b.",
+  "&nbsp;Pr&uuml;fen Sie den Term mit \\({b}\\).",
+  "&nbsp;Check the term with \\({b}\\).",
   "fb_vars t06: single differing term");
 
 /* ---- t07: correct variable set, two terms differ ---- */
 fb_check_str(fb_vars(a+2*b-4*c, a+b+3*c, [a,b,c]),
-  "&nbsp;Pr&uuml;fen Sie die Terme mit b, c.",
-  "&nbsp;Check the terms with b, c.",
+  "&nbsp;Pr&uuml;fen Sie die Terme mit \\({b}\\), \\({c}\\).",
+  "&nbsp;Check the terms with \\({b}\\), \\({c}\\).",
   "fb_vars t07: two differing terms");
 
 /* ---- t08: correct variable set AND all given terms match -> "" ---- */
@@ -62,8 +62,8 @@ fb_check_str(fb_vars(a+2*b-4*c, a+2*b-4*c, [a,b,c]),
 
 /* ---- t09: %_label is prepended to a non-empty result ---- */
 fb_check_str(fb_vars(a+b, a, [], "Label:"),
-  "Label:&nbsp;Unerwartete Variable b.",
-  "Label:&nbsp;Unexpected variable b.",
+  "Label:&nbsp;Unerwartete Variable \\({b}\\).",
+  "Label:&nbsp;Unexpected variable \\({b}\\).",
   "fb_vars t09: label prepended");
 
 /* ---- tolerance option (%_tol, 3rd optional arg): a variable whose coefficient in
@@ -83,6 +83,6 @@ fb_check_str(fb_vars(a, a+1e-13*b, [], "", 1e-6),
 /* without the tolerance, the same tiny coefficient is NOT ignored (confirms the
    tolerance argument is actually doing something, not a no-op) */
 fb_check_str(fb_vars(a+1e-13*b, a),
-  "&nbsp;Unerwartete Variable b.",
-  "&nbsp;Unexpected variable b.",
+  "&nbsp;Unerwartete Variable \\({b}\\).",
+  "&nbsp;Unexpected variable \\({b}\\).",
   "fb_vars tolerance: same case without a tolerance still flags it");

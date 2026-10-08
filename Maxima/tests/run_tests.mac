@@ -1,63 +1,57 @@
 /* ============================================================================
-   Offline regression test runner for meclib's free-body-diagram feedback
-   functions. Loads the stub/harness, the library itself, then every
-   test_*.mac file in this folder, and prints a pass/fail summary.
+   Offline regression test runner for meclib's Maxima feedback functions.
+   Loads STACK's Maxima library, the harness, the meclib feedback files and
+   the scene fixtures, then every test_*.mac file listed below, and prints a
+   pass/fail summary.
 
    Run from this folder with a working Maxima installation:
      maxima --very-quiet -b run_tests.mac
    or just double-click run_tests.bat on Windows.
-   No Moodle, STACK, or network connection needed.
+   No Moodle, STACK server, or network connection needed.
    ============================================================================ */
 
 linel: 4000$
 
-/* If a copy of STACK's own stack/maxima/ library has been placed under
-   ../../config/stack/<version>/maxima/ (see ../../config/README.md), load
-   the REAL castext_concat() - and everything else that library provides -
-   from it, instead of harness.mac's lightweight reimplementation. This
-   catches any future fb_fbd.mac function that starts relying on castext2's
-   actual placeholder-evaluation behaviour rather than harness.mac's "plain
-   identity" stand-in.
+/* STACK's own Maxima library (stack/maxima/ from moodle-qtype_stack) is
+   REQUIRED: the feedback functions call its castext_concat(), ct2_latex()
+   (what STACK uses to render {@...@}), real_numberp(), stack_disp...() etc.
+   A copy is kept in the repository under ../../config/stack/<version>/maxima/
+   (see ../../config/README.md); the first version found there is loaded.
 
-   Note this does NOT cover castext() itself (STACK's PHP compiler injects
-   that one per-question - it is deliberately absent from the redistributable
-   library), and does NOT cover [[lang code='...']] selection (resolved by
-   STACK's PHP rendering layer, never by Maxima) - harness.mac keeps stubbing
-   both of those regardless of whether a sandbox is configured here.
-
-   Falls back silently to harness.mac's own castext_concat() stub when no
-   sandbox has been set up yet, so this still runs with nothing but a bare
-   Maxima install. */
-/* NOTE: loading stackmaxima.mac runs STACK's own stack_reset(true) as a
+   NOTE: loading stackmaxima.mac runs STACK's own stack_reset(true) as a
    side effect, which does kill(allbut [functions]) - wiping every plain
-   variable (ours included, meclib_real_stack_loaded excepted below since we
-   set it AFTER load() returns). So nothing here may read back a plain
-   variable set before load() - everything %_dir is needed for has to happen
-   (or be printed) before that call, not after. */
+   variable set before. So nothing here may read back a plain variable set
+   before load() - everything %_dir is needed for happens before that call. */
 meclib_real_stack_loaded: false$
 block([%_hits, %_dir],
   %_hits: directory("../../config/stack/*/maxima/stackmaxima.mac"),
-  if listp(%_hits) and length(%_hits) > 0 then (
-    %_dir: substring(%_hits[1], 1, slength(%_hits[1]) - slength("stackmaxima.mac") + 1),
-    print(sconcat("[ using real STACK-Maxima library from ", %_dir, " ]")),
-    file_search_maxima: cons(sconcat(%_dir, "###.{mac,mc}"), file_search_maxima),
-    file_search_maxima: cons(sconcat(%_dir, "contrib/###.{mac,mc}"), file_search_maxima),
-    file_search_lisp: cons(sconcat(%_dir, "###.{lisp}"), file_search_lisp),
-    /* Load stackmaxima.mac itself by its exact path, not by bare name via
-       file_search's "###.{mac,mc}" pattern - that brace-alternation lookup
-       is what failed on at least one Windows Maxima build even though the
-       file plainly exists (reported: "stackmaxima not found in
-       file_search_maxima,file_search_lisp"). The file_search entries above
-       are still needed for stackmaxima.mac's OWN internal load(stackstrings)-
-       style calls to its sibling files, which we don't control. */
-    load(sconcat(%_dir, "stackmaxima.mac")),
-    meclib_real_stack_loaded: true
-  )
+  if not (listp(%_hits) and length(%_hits) > 0) then (
+    print("ERROR: STACK's Maxima library not found under ../../config/stack/<version>/maxima/."),
+    print("       It is part of the meclib repository - check your working copy (see ../../config/README.md)."),
+    error("STACK Maxima library missing")
+  ),
+  %_dir: substring(%_hits[1], 1, slength(%_hits[1]) - slength("stackmaxima.mac") + 1),
+  print(sconcat("[ using STACK-Maxima library from ", %_dir, " ]")),
+  file_search_maxima: cons(sconcat(%_dir, "###.{mac,mc}"), file_search_maxima),
+  file_search_maxima: cons(sconcat(%_dir, "contrib/###.{mac,mc}"), file_search_maxima),
+  file_search_lisp: cons(sconcat(%_dir, "###.{lisp}"), file_search_lisp),
+  /* Load stackmaxima.mac itself by its exact path, not by bare name via
+     file_search's "###.{mac,mc}" pattern - that brace-alternation lookup
+     is what failed on at least one Windows Maxima build even though the
+     file plainly exists (reported: "stackmaxima not found in
+     file_search_maxima,file_search_lisp"). The file_search entries above
+     are still needed for stackmaxima.mac's OWN internal load(stackstrings)-
+     style calls to its sibling files, which we don't control. */
+  load(sconcat(%_dir, "stackmaxima.mac")),
+  meclib_real_stack_loaded: true
 )$
 
 load("harness.mac")$
 load("../fb_fbd.mac")$
 load("../fb_value.mac")$
+/* objects/names that meclib produced for the test scenes in tests/scenes/ -
+   generated by tools/tryout/scenes_to_maxima.py, see fixtures/scenes.mac */
+load("fixtures/scenes.mac")$
 
 load("test_fb_contact.mac")$
 load("test_fb_force.mac")$
