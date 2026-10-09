@@ -79,125 +79,201 @@ fb_tmpl_smlt_text(%_r):= if stringp(%_r) then %_r
   elseif listp(%_r) and length(%_r) > 0 and %_r[1] = "smlt" then %_r[2]
   elseif listp(%_r) and length(%_r) > 0 and %_r[1] = "%root" then simplode(map(fb_tmpl_smlt_text, rest(%_r)), "")
   else string(%_r)$
-fb_tmpl_tostring(%_v):= fb_tmpl_smlt_text(ct2_latex(%_v, "i", simp))$
+fb_tmpl_tostring(%_v):= fb_tmpl_smlt_text(ct2_latex(%_v, if fb_tmpl_md then "im" else "i", simp))$
+/* Inside math mode STACK compiles {@expr@} without its own delimiters (latex block,
+   mathmode=true -> ct2_latex mode ""): "{...}" instead of "\\({...}\\)". */
+fb_tmpl_tostring_math(%_v):= fb_tmpl_smlt_text(ct2_latex(%_v, if fb_tmpl_md then "m" else "", simp))$
+/* In Markdown text (fb_tmpl_md: true) the modes are "im" and "m": the same, escaped for
+   Markdown with str_to_md(), so that Markdown turns it back into LaTeX. */
 
-fb_tmpl_find_next(s, pos, taglist):= block([best: false, besttag: false, p, t],
-  for t in taglist do (
-    p: ssearch(t, s, pos),
-    if p # false and (best = false or p < best) then (best: p, besttag: t)
+/* Math mode after scanning str, starting from state mm (true/false), following STACK's
+   castext2 math_paint() (stack/cas/castext2/utils.php). HTML: \\( and \\[ switch it on,
+   \\) and \\] off, as do \\begin{...}/\\end{...} of the math environments (align,
+   equation, ...); a doubled backslash is a literal one. In Markdown text (fb_tmpl_md: true),
+   which still passes through Markdown's backslash escapes, the delimiters count only after
+   three backslashes and begin/end after two - the same state machine as STACK's. */
+/* All parameters and locals of the castext renderer below carry the prefix %ct_: Maxima
+   binds them dynamically, so {@...@} expressions and the functions they call (e.g. fb_unit,
+   which uses the unit symbols s, m, t, ... and meclib's own %_ locals) must not see them. */
+fb_tmpl_md: false$
+fb_tmpl_mathscan(%ct_mm, %ct_str):= block([%ct_k: 1, %ct_i, %ct_j, %ct_c, %ct_n: slength(%ct_str), %ct_last, %ct_dbl, %ct_tri, %ct_delim, %ct_env,
+    %ct_envs: ["align","align*","alignat","alignat*","eqnarray","eqnarray*","equation","equation*",
+           "gather","gather*","multline","multline*"]],
+  while %ct_k <= %ct_n do (
+    %ct_i: ssearch("\\", %ct_str, %ct_k),
+    if %ct_i = false then %ct_k: %ct_n + 1
+    else (
+      %ct_j: %ct_i, %ct_last: false, %ct_dbl: false, %ct_tri: false,
+      while %ct_j <= %ct_n and charat(%ct_str, %ct_j) = "\\" do (
+        if not fb_tmpl_md then %ct_last: not %ct_last
+        elseif %ct_dbl then (%ct_last: not %ct_last, %ct_dbl: false, %ct_tri: true)
+        elseif %ct_last then (%ct_last: false, %ct_dbl: true)
+        elseif not %ct_tri then %ct_last: true,
+        %ct_j: %ct_j + 1
+      ),
+      if %ct_j <= %ct_n then (
+        %ct_c: charat(%ct_str, %ct_j),
+        %ct_delim: if fb_tmpl_md then %ct_tri else %ct_last,
+        %ct_env: if fb_tmpl_md then %ct_dbl else %ct_last,
+        if %ct_delim and (%ct_c = "(" or %ct_c = "[") then %ct_mm: true
+        elseif %ct_delim and (%ct_c = ")" or %ct_c = "]") then %ct_mm: false
+        elseif %ct_env and %ct_c = "b" and some(lambda([%ct_e], is(ssearch(sconcat("begin{", %ct_e, "}"), %ct_str, %ct_j) = %ct_j)
+               or (fb_tmpl_md and is(ssearch(sconcat("begin\\{", %ct_e), %ct_str, %ct_j) = %ct_j))), %ct_envs) then %ct_mm: true
+        elseif %ct_env and %ct_c = "e" and some(lambda([%ct_e], is(ssearch(sconcat("end{", %ct_e, "}"), %ct_str, %ct_j) = %ct_j)
+               or (fb_tmpl_md and is(ssearch(sconcat("end\\{", %ct_e), %ct_str, %ct_j) = %ct_j))), %ct_envs) then %ct_mm: false
+      ),
+      %ct_k: %ct_j + 1
+    )
   ),
-  [best, besttag]
+  %ct_mm
 )$
 
-fb_tmpl_trim(s):= block([a:1, b: slength(s)+1],
-  if slength(s)>0 and charat(s,1)=" " then a:2,
-  if slength(s)>=a and charat(s,b-1)=" " then b: b-1,
-  substring(s,a,b)
+fb_tmpl_find_next(%ct_s, %ct_pos, %ct_taglist):= block([%ct_best: false, %ct_besttag: false, %ct_p, %ct_t],
+  for %ct_t in %ct_taglist do (
+    %ct_p: ssearch(%ct_t, %ct_s, %ct_pos),
+    if %ct_p # false and (%ct_best = false or %ct_p < %ct_best) then (%ct_best: %ct_p, %ct_besttag: %ct_t)
+  ),
+  [%ct_best, %ct_besttag]
+)$
+
+fb_tmpl_trim(%ct_s):= block([%ct_a:1, %ct_b: slength(%ct_s)+1],
+  if slength(%ct_s)>0 and charat(%ct_s,1)=" " then %ct_a:2,
+  if slength(%ct_s)>=%ct_a and charat(%ct_s,%ct_b-1)=" " then %ct_b: %ct_b-1,
+  substring(%ct_s,%ct_a,%ct_b)
+)$
+
+/* Positions of the quotes around an attribute value starting after position eq: the
+   value may be in single quotes (as in meclib's own castext) or double quotes (as STACK's
+   editor writes them into question texts, e.g. [[if test="a > 0"]]). */
+fb_tmpl_quoted(%ct_s, %ct_eq):= block([%ct_q1: false, %ct_ch],
+  for %ct_i: %ct_eq+1 thru slength(%ct_s) while %ct_q1 = false do
+    if charat(%ct_s, %ct_i) = "'" or charat(%ct_s, %ct_i) = "\"" then %ct_q1: %ct_i,
+  %ct_ch: charat(%ct_s, %ct_q1),
+  [%ct_q1, ssearch(%ct_ch, %ct_s, %ct_q1+1)]
 )$
 
 /* [[define name='expr'/]] (self-closing) starting at pos. Returns the position right
    after the tag; sets the named global variable as a side effect. */
-fb_tmpl_do_define(s, pos):= block([eq, q1, q2, name, exprsrc],
-  eq: ssearch("=", s, pos),
-  name: fb_tmpl_trim(substring(s, pos+slength("[[define"), eq)),
-  q1: ssearch("'", s, eq+1), q2: ssearch("'", s, q1+1),
-  exprsrc: substring(s, q1+1, q2),
-  parse_string(name) :: fb_tmpl_eval_expr(exprsrc),
-  ssearch("]]", s, q2+1) + 2
+fb_tmpl_do_define(%ct_s, %ct_pos):= block([%ct_eq, %ct_q1, %ct_q2, %ct_name, %ct_exprsrc],
+  %ct_eq: ssearch("=", %ct_s, %ct_pos),
+  %ct_name: fb_tmpl_trim(substring(%ct_s, %ct_pos+slength("[[define"), %ct_eq)),
+  [%ct_q1, %ct_q2]: fb_tmpl_quoted(%ct_s, %ct_eq),
+  %ct_exprsrc: substring(%ct_s, %ct_q1+1, %ct_q2),
+  parse_string(%ct_name) :: fb_tmpl_eval_expr(%ct_exprsrc),
+  ssearch("]]", %ct_s, %ct_q2+1) + 2
 )$
 
 /* [[foreach var='expr']] or [[if test='expr']] open tag (NOT self-closing) starting at
    pos. Returns [name, exprsrc, posAfterOpenTag]. */
-fb_tmpl_parse_open1(s, pos, prefix):= block([eq, q1, q2, name, exprsrc, tagend],
-  eq: ssearch("=", s, pos),
-  name: fb_tmpl_trim(substring(s, pos+slength(prefix), eq)),
-  q1: ssearch("'", s, eq+1), q2: ssearch("'", s, q1+1),
-  exprsrc: substring(s, q1+1, q2),
-  tagend: ssearch("]]", s, q2+1) + 2,
-  [name, exprsrc, tagend]
+fb_tmpl_parse_open1(%ct_s, %ct_pos, %ct_prefix):= block([%ct_eq, %ct_q1, %ct_q2, %ct_name, %ct_exprsrc, %ct_tagend],
+  %ct_eq: ssearch("=", %ct_s, %ct_pos),
+  %ct_name: fb_tmpl_trim(substring(%ct_s, %ct_pos+slength(%ct_prefix), %ct_eq)),
+  [%ct_q1, %ct_q2]: fb_tmpl_quoted(%ct_s, %ct_eq),
+  %ct_exprsrc: substring(%ct_s, %ct_q1+1, %ct_q2),
+  %ct_tagend: ssearch("]]", %ct_s, %ct_q2+1) + 2,
+  [%ct_name, %ct_exprsrc, %ct_tagend]
 )$
 
 /* Depth-aware scan from pos (just after a [[foreach ...]] open tag) to its matching
    [[/foreach]], so a nested [[if]]/[[foreach]] inside the body isn't mistaken for the
    end (not exercised by any current template, but cheap to get right). Returns
    [rawBody, posAfterCloseTag]. */
-fb_tmpl_find_foreach_end(s, pos):= block([bodystart: pos, depth: 0, p, best, tag,
-    cands: ["[[if","[[foreach","[[/if]]","[[/foreach]]"], endpos: false],
-  while endpos = false do (
-    [best, tag]: fb_tmpl_find_next(s, pos, cands),
-    if best = false then endpos: slength(s)+1
-    elseif tag = "[[if" or tag = "[[foreach" then (depth: depth+1, pos: best+slength(tag))
-    elseif depth = 0 then endpos: best
-    else (depth: depth-1, pos: best+slength(tag))
+fb_tmpl_find_foreach_end(%ct_s, %ct_pos):= block([%ct_bodystart: %ct_pos, %ct_depth: 0, %ct_p, %ct_best, %ct_tag,
+    %ct_cands: ["[[if","[[foreach","[[/if]]","[[/foreach]]"], %ct_endpos: false],
+  while %ct_endpos = false do (
+    [%ct_best, %ct_tag]: fb_tmpl_find_next(%ct_s, %ct_pos, %ct_cands),
+    if %ct_best = false then %ct_endpos: slength(%ct_s)+1
+    elseif %ct_tag = "[[if" or %ct_tag = "[[foreach" then (%ct_depth: %ct_depth+1, %ct_pos: %ct_best+slength(%ct_tag))
+    elseif %ct_depth = 0 then %ct_endpos: %ct_best
+    else (%ct_depth: %ct_depth-1, %ct_pos: %ct_best+slength(%ct_tag))
   ),
-  [substring(s, bodystart, endpos), endpos + slength("[[/foreach]]")]
+  [substring(%ct_s, %ct_bodystart, %ct_endpos), %ct_endpos + slength("[[/foreach]]")]
 )$
 
 /* Depth-aware split of an [[if]] body into its raw (unevaluated) then/else parts.
    Evaluation happens afterwards, on only the chosen branch, so a side effect in the
    untaken branch never fires and the test is evaluated exactly once, before either
    branch runs. Returns [thenraw, elseraw, posAfterEndifTag]. */
-fb_tmpl_split_if_body(s, p):= block([pos: p, depth: 0, elsepos: false, endpos: false,
-    cands: ["[[if","[[foreach","[[/if]]","[[/foreach]]","[[else]]"], best, tag],
-  while endpos = false do (
-    [best, tag]: fb_tmpl_find_next(s, pos, cands),
-    if best = false then endpos: slength(s)+1
-    elseif tag = "[[if" or tag = "[[foreach" then (depth: depth+1, pos: best+slength(tag))
-    elseif tag = "[[else]]" then (
-      if depth = 0 and elsepos = false then (elsepos: best, pos: best+slength(tag))
-      else pos: best+slength(tag)
+fb_tmpl_split_if_body(%ct_s, %ct_p):= block([%ct_pos: %ct_p, %ct_depth: 0, %ct_elsepos: false, %ct_endpos: false,
+    %ct_cands: ["[[if","[[foreach","[[/if]]","[[/foreach]]","[[else]]"], %ct_best, %ct_tag],
+  while %ct_endpos = false do (
+    [%ct_best, %ct_tag]: fb_tmpl_find_next(%ct_s, %ct_pos, %ct_cands),
+    if %ct_best = false then %ct_endpos: slength(%ct_s)+1
+    elseif %ct_tag = "[[if" or %ct_tag = "[[foreach" then (%ct_depth: %ct_depth+1, %ct_pos: %ct_best+slength(%ct_tag))
+    elseif %ct_tag = "[[else]]" then (
+      if %ct_depth = 0 and %ct_elsepos = false then (%ct_elsepos: %ct_best, %ct_pos: %ct_best+slength(%ct_tag))
+      else %ct_pos: %ct_best+slength(%ct_tag)
     )
-    elseif depth = 0 then endpos: best
-    else (depth: depth-1, pos: best+slength(tag))
+    elseif %ct_depth = 0 then %ct_endpos: %ct_best
+    else (%ct_depth: %ct_depth-1, %ct_pos: %ct_best+slength(%ct_tag))
   ),
-  if elsepos = false then
-    [substring(s,p,endpos), "", endpos+slength("[[/if]]")]
+  if %ct_elsepos = false then
+    [substring(%ct_s,%ct_p,%ct_endpos), "", %ct_endpos+slength("[[/if]]")]
   else
-    [substring(s,p,elsepos), substring(s,elsepos+slength("[[else]]"),endpos), endpos+slength("[[/if]]")]
+    [substring(%ct_s,%ct_p,%ct_elsepos), substring(%ct_s,%ct_elsepos+slength("[[else]]"),%ct_endpos), %ct_endpos+slength("[[/if]]")]
 )$
 
-/* Core renderer: walks s left to right, evaluating {@...@}, [[define]], [[foreach]],
-   [[if]]/[[else]] (everything else - including [[lang]]/[[/lang]] - passes through as
-   plain text, see the comment above this block). */
-fb_tmpl_render(s):= block(
-  [out: "", pos: 1, len: slength(s), cands: ["[[define","[[foreach","[[if","{@"],
-   p, tag, inner, closepos, val, var, exprsrc, bodyinfo, rawbody, listval, iterout,
-   ifbody, testval],
+/* Core renderer: walks s left to right, evaluating {@...@}, {#...#}, [[define]],
+   [[foreach]], [[if]]/[[else]] and dropping [[comment]]...[[/comment]] (everything else -
+   including [[lang]]/[[/lang]] - passes through as plain text, see the comment above this
+   block). {#expr#} is STACK's raw output, string(expr): for a string that is a quoted
+   literal, which is how e.g. {#init#} becomes a JavaScript string in a [[jsxgraph]] block. */
+fb_tmpl_render(%ct_s):= block(
+  [%ct_out: "", %ct_pos: 1, %ct_len: slength(%ct_s), %ct_cands: ["[[define","[[foreach","[[if","{@","{#","[[comment]]","[[htmlformat]]"],
+   %ct_p, %ct_tag, %ct_inner, %ct_closepos, %ct_val, %ct_var, %ct_exprsrc, %ct_bodyinfo, %ct_rawbody, %ct_listval, %ct_iterout,
+   %ct_ifbody, %ct_testval, %ct_mm: false],
   while true do (
-    [p, tag]: fb_tmpl_find_next(s, pos, cands),
-    if p = false then (
-      out: sconcat(out, substring(s, pos, len+1)),
-      return(out)
+    [%ct_p, %ct_tag]: fb_tmpl_find_next(%ct_s, %ct_pos, %ct_cands),
+    if %ct_p = false then (
+      %ct_out: sconcat(%ct_out, substring(%ct_s, %ct_pos, %ct_len+1)),
+      return(%ct_out)
     ),
-    out: sconcat(out, substring(s, pos, p)),
-    if tag = "{@" then (
-      closepos: ssearch("@}", s, p+2),
-      inner: substring(s, p+2, closepos),
-      val: fb_tmpl_eval_expr(inner),
-      out: sconcat(out, fb_tmpl_tostring(val)),
-      pos: closepos+2
-    ) elseif tag = "[[define" then (
-      pos: fb_tmpl_do_define(s, p)
-    ) elseif tag = "[[foreach" then (
-      [var, exprsrc, pos]: fb_tmpl_parse_open1(s, p, "[[foreach"),
-      [rawbody, pos]: fb_tmpl_find_foreach_end(s, pos),
-      listval: fb_tmpl_eval_expr(exprsrc),
-      iterout: "",
-      for %_item in listval do (
-        parse_string(var) :: %_item,
-        iterout: sconcat(iterout, fb_tmpl_render(rawbody))
+    %ct_out: sconcat(%ct_out, substring(%ct_s, %ct_pos, %ct_p)),
+    %ct_mm: fb_tmpl_mathscan(%ct_mm, substring(%ct_s, %ct_pos, %ct_p)),
+    if %ct_tag = "{@" then (
+      %ct_closepos: ssearch("@}", %ct_s, %ct_p+2),
+      %ct_inner: substring(%ct_s, %ct_p+2, %ct_closepos),
+      %ct_val: fb_tmpl_eval_expr(%ct_inner),
+      %ct_out: sconcat(%ct_out, if %ct_mm then fb_tmpl_tostring_math(%ct_val) else fb_tmpl_tostring(%ct_val)),
+      %ct_pos: %ct_closepos+2
+    ) elseif %ct_tag = "{#" then (
+      %ct_closepos: ssearch("#}", %ct_s, %ct_p+2),
+      %ct_inner: substring(%ct_s, %ct_p+2, %ct_closepos),
+      %ct_val: fb_tmpl_eval_expr(%ct_inner),
+      %ct_out: sconcat(%ct_out, string(%ct_val)),
+      %ct_pos: %ct_closepos+2
+    ) elseif %ct_tag = "[[comment]]" then (
+      %ct_closepos: ssearch("[[/comment]]", %ct_s, %ct_p),
+      %ct_pos: if %ct_closepos = false then %ct_len+1 else %ct_closepos+slength("[[/comment]]")
+    ) elseif %ct_tag = "[[htmlformat]]" then (
+      /* raw HTML inside Markdown text (the workbench marks Markdown's HTML blocks this way):
+         plain LaTeX output and single-backslash math delimiters, as STACK does */
+      %ct_closepos: ssearch("[[/htmlformat]]", %ct_s, %ct_p),
+      if %ct_closepos = false then %ct_closepos: %ct_len + 1,
+      %ct_out: sconcat(%ct_out, block([fb_tmpl_md: false], fb_tmpl_render(substring(%ct_s, %ct_p + slength("[[htmlformat]]"), %ct_closepos)))),
+      %ct_pos: min(%ct_len + 1, %ct_closepos + slength("[[/htmlformat]]"))
+    ) elseif %ct_tag = "[[define" then (
+      %ct_pos: fb_tmpl_do_define(%ct_s, %ct_p)
+    ) elseif %ct_tag = "[[foreach" then (
+      [%ct_var, %ct_exprsrc, %ct_pos]: fb_tmpl_parse_open1(%ct_s, %ct_p, "[[foreach"),
+      [%ct_rawbody, %ct_pos]: fb_tmpl_find_foreach_end(%ct_s, %ct_pos),
+      %ct_listval: fb_tmpl_eval_expr(%ct_exprsrc),
+      %ct_iterout: "",
+      for %ct_item in %ct_listval do (
+        parse_string(%ct_var) :: %ct_item,
+        %ct_iterout: sconcat(%ct_iterout, fb_tmpl_render(%ct_rawbody))
       ),
-      out: sconcat(out, iterout)
-    ) elseif tag = "[[if" then (
-      [var, exprsrc, pos]: fb_tmpl_parse_open1(s, p, "[[if"),
-      [ifbody, bodyinfo, pos]: fb_tmpl_split_if_body(s, pos),
-      testval: fb_tmpl_eval_expr(exprsrc),
-      out: sconcat(out, fb_tmpl_render(if testval then ifbody else bodyinfo))
+      %ct_out: sconcat(%ct_out, %ct_iterout)
+    ) elseif %ct_tag = "[[if" then (
+      [%ct_var, %ct_exprsrc, %ct_pos]: fb_tmpl_parse_open1(%ct_s, %ct_p, "[[if"),
+      [%ct_ifbody, %ct_bodyinfo, %ct_pos]: fb_tmpl_split_if_body(%ct_s, %ct_pos),
+      %ct_testval: fb_tmpl_eval_expr(%ct_exprsrc),
+      %ct_out: sconcat(%ct_out, fb_tmpl_render(if %ct_testval then %ct_ifbody else %ct_bodyinfo))
     )
   )
 )$
 
-castext(s) := fb_tmpl_render(s)$
+castext(%ct_s) := fb_tmpl_render(%ct_s)$
 
 /* ---- STACK's [[lang code='...']] selection rule, reimplemented ----
    Walks s left to right. Outside any [[lang]]...[[/lang]] block, text
@@ -226,10 +302,11 @@ fb_test_split_csv(s) := block([parts: [], start: 1, p, len: slength(s)],
 /* Parses one [[lang code='...']]...[[/lang]] block starting exactly at
    position `start`. Returns [codes, body, nextpos]. */
 fb_test_parse_lang_block(s, start) := block(
-  [tagend, codestart, codeend, codes, bodyend, body],
+  [tagend, codestart, codeend, codes, bodyend, body, q],
   tagend: ssearch("]]", s, start),
-  codestart: ssearch("'", s, start) + 1,
-  codeend: ssearch("'", s, codestart),
+  q: fb_tmpl_quoted(s, ssearch("=", s, start)),
+  codestart: q[1] + 1,
+  codeend: q[2],
   codes: fb_test_split_csv(substring(s, codestart, codeend)),
   bodyend: ssearch("[[/lang]]", s, tagend),
   body: substring(s, tagend + 2, bodyend),
@@ -239,6 +316,29 @@ fb_test_parse_lang_block(s, start) := block(
 /* True if s starting at `pos` begins with the literal text `prefix`. */
 fb_test_starts_with(s, pos, prefix) := block([plen: slength(prefix)],
   if pos + plen - 1 > slength(s) then false else substring(s, pos, pos + plen) = prefix
+)$
+
+/* STACK's own rule, used by the workbench's question preview: STACK picks ONE language per
+   question (stack_multilang::pick_lang() - the user's language if the question text uses it,
+   else "other", else the first one used) and compiles every [[lang code='...']] block to
+   is_lang(...) checks, so a block is shown exactly if that code is among its codes. code ""
+   (question text without any [[lang]] block, so no language is set) shows no block at all,
+   as in Moodle. resolve_lang() below is the per-pair variant the offline tests use; for
+   meclib's own [[lang code='de']]/[[lang code='en,other']] pairs both give the same text. */
+stack_resolve_lang(s, code) := block([out: "", pos: 1, len: slength(s), tagstart, parsed],
+  if not stringp(s) then return(s),
+  while pos <= len do (
+    tagstart: ssearch("[[lang", s, pos),
+    if tagstart = false then (out: sconcat(out, substring(s, pos, len + 1)), pos: len + 1)
+    else (
+      out: sconcat(out, substring(s, pos, tagstart)),
+      parsed: fb_test_parse_lang_block(s, tagstart),
+      if member(code, map(lambda([c], ssubst("_", "-", sdowncase(c))), parsed[1])) then
+        out: sconcat(out, parsed[2]),
+      pos: parsed[3]
+    )
+  ),
+  out
 )$
 
 resolve_lang(s, lang) := block(

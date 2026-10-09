@@ -1,0 +1,11 @@
+<div style="float:right; margin: 0 0 0.5em 1.5em;">
+[[jsxgraph width='500px' height='400px']]
+var mode  = "STACK";
+var stateRef;
+const initstring = {#init#};
+var decsep = {#stackfltsep#};
+const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
+  anchorX:'left', anchorY:'middle'}};
+// End of STACK header
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
+[[/jsxgraph]]</div>

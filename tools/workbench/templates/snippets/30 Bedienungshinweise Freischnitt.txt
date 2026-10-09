@@ -1,0 +1,35 @@
+[[lang code="de"]]
+<details><summary><strong>Bedienungshinweise</strong></summary>
+<ul>
+ <li>Objekte (de-)aktivieren: Doppelklick
+ <li>Kraft/Moment 
+ <ul>
+   <li>erzeugen: Name (oder Ausdruck für Wert) eintragen und grauen Pfeil auf die Skizze ziehen
+  <li>löschen: Doppelklicken
+  <li>Name ändern: Löschen und neu erzeugen. Sorry, etwas unbequem :(
+  <li>Position und Richtung ändern: Rote Kontrollpunkte ziehen
+ </ul>
+<li> Resultierende von Streckenlasten: Mindestens ein Kontrollpunkt muss auf der Streckenlast liegen
+<li> Reaktionskräfte: Anfangs- oder Endpunkt müssen auf dem Lagerpunkt liegen
+<li> Reaktionsmomente: Mittelpunkt muss auf dem Lager liegen
+</ul>
+</details>
+[[/lang]]
+[[lang code="other"]]
+<details><summary><strong>Hints for interactive input</strong></summary>
+<ul>
+<li>Activate/de-activate objects: double click 
+<li>Force/moment 
+  <ul>
+  <li>Create: Enter name (or expression indicating the value) in the text field and then drag the gray arrow onto the sketch. 
+  <li>Delete: Double click on the arrow
+  <li>Change name: Delete and create new with correct name. Sorry, somewhat inconvenient :(
+  <li>Change position and direction: Drag red control points 
+  </ul>
+<li>Resultants of line loads: At least one control point is on the line load area
+<li>Force reactions: Either of the two control points must be on the support point
+<li>Moment reactions: Center point must coincide with the support point.
+</ul>
+</details>
+
+[[/lang]]

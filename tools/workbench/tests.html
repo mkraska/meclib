@@ -37,8 +37,8 @@
 </head>
 <body>
 <header>
-  <h1><a href="cases.html">meclib test cases</a></h1>
-  <nav><a href="index.html">Tryout</a></nav>
+  <h1>meclib workbench</h1>
+  <nav class="pages"><a href="index.html">Graphic</a> · <a href="questions.html">Questions</a> · <b>Tests</b></nav>
   <label>meclib.js <select id="src"></select></label>
   <label>JSXGraph <select id="jsx"></select></label>
   <label>MathJax <select id="mathjax"></select></label>
@@ -54,7 +54,7 @@
 "use strict";
 const F = MeclibFrame;
 const $ = (id) => document.getElementById(id);
-const STORE_KEY = "meclib-tryout-v1";   // shares the source/JSXGraph/MathJax choice with the tryout
+const STORE_KEY = "meclib-tryout-v1";   // shared with the other pages (source, JSXGraph, MathJax); name kept from the former "tryout"
 let config = null;
 let scenes = [];            // full scene objects, with .file
 let running = false;
@@ -102,7 +102,7 @@ function usedBy(scene, i) {
 function draw() {
   const box = $("scenes");
   if (!scenes.length) {
-    box.innerHTML = '<section><p class="hint">No test cases yet. Create them in the <a href="index.html">tryout</a> with "Save as test case".</p></section>';
+    box.innerHTML = '<section><p class="hint">No test cases yet. Create them on the <a href="index.html">Graphic</a> page with "Save as test case".</p></section>';
     return;
   }
   box.innerHTML = "";
@@ -111,7 +111,7 @@ function draw() {
     sec.className = "scene";
     sec.innerHTML = `<h2>${esc(scene.title)} <span class="file">${esc(scene.file)}.json</span><span class="spacer"></span>
       <button class="small" data-act="runScene">Run scene</button>
-      <a class="small" href="index.html?scene=${encodeURIComponent(scene.file)}">open initdata in tryout</a></h2>
+      <a class="small" href="index.html?scene=${encodeURIComponent(scene.file)}">open initdata on Graphic page</a></h2>
       ${scene.notes ? `<p class="notes">${esc(scene.notes)}</p>` : ""}
       ${scene.error ? `<p class="error">${esc(scene.error)}</p>` : ""}
       <table><thead><tr><th>#</th><th>Case</th><th>Graphic</th><th>names</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>`;
@@ -139,7 +139,7 @@ function caseRow(scene, i) {
     <td class="status"><span class="badge">not run</span></td>
     <td class="actions">
       <button data-act="run">Run</button>
-      <button data-act="open">Open in tryout</button>
+      <button data-act="open">Open on Graphic page</button>
       <button data-act="accept" disabled title="Store the actual result as the expected one">Accept actual</button>
       <button data-act="delete">Delete</button></td>`;
   tr.querySelector('[data-act="run"]').addEventListener("click", () => runOne(scene, i));
@@ -247,7 +247,7 @@ function applyFilter() {
 async function saveScene(scene) {
   const copy = Object.assign({}, scene); delete copy.file; delete copy.error;
   const resp = await fetch("/api/cases/" + encodeURIComponent(scene.file), {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(copy) });
+    method: "POST", headers: { "Content-Type": "application/json", "X-Workbench": "1" }, body: JSON.stringify(copy) });
   if (!resp.ok) throw new Error(await resp.text());
 }
 
@@ -291,7 +291,7 @@ async function deleteCase(scene, i) {
 // ---------------------------------------------------------------- wiring
 async function start() {
   try { config = await (await fetch("/api/config")).json(); }
-  catch (e) { $("status").textContent = "Server not reachable - start it with start_tryout.bat (or python server.py)."; return; }
+  catch (e) { $("status").textContent = "Server not reachable - start it with start_workbench.bat (or python server.py)."; return; }
   const saved = stored();
   const srcEntries = [["local", "local working copy (" + (config.local_branch || "?") + ")"]];
   for (const [key, branch] of Object.entries(config.branches)) srcEntries.push([key, "GitHub " + key + " (" + branch + ")"]);

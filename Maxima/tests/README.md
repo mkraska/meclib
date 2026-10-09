@@ -115,9 +115,9 @@ o_unidir: scene_obj("fb_unidir", "init");
 n_unidir: scene_names("fb_unidir", "init");
 ```
 
-`fixtures/scenes.mac` is regenerated from the scenes by the tryout
-(`tools/tryout`) on every save, or by hand with
-`python tools/tryout/scenes_to_maxima.py`. Commit it together with the scene
+`fixtures/scenes.mac` is regenerated from the scenes by the workbench
+(`tools/workbench`) on every save, or by hand with
+`python tools/workbench/scenes_to_maxima.py`. Commit it together with the scene
 files, so the suite runs with nothing but Maxima. A case is referenced by its
 id; `scene_obj()`/`scene_names()` stop with an error naming the missing
 scene/case if it doesn't exist. See `../../tests/scenes/README.md`.

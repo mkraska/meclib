@@ -7,8 +7,8 @@ the scenes check meclib itself (rendering, snapping, load-to-target
 assignment), and the same objects and names feed the offline Maxima tests of
 the feedback functions.
 
-Create, view, run and edit the scenes with the tryout in `tools/tryout/`
-(page "Test cases"); see [its README](../../tools/tryout/README.md).
+Create, view, run and edit the scenes with the meclib workbench in `tools/workbench/`
+(page "Tests"); see [its README](../../tools/workbench/README.md).
 
 ## File format
 
@@ -43,8 +43,8 @@ object per line, so git diffs show which object of which case changed.
 
 ## Use in the Maxima tests
 
-Every save in the tryout regenerates `Maxima/tests/fixtures/scenes.mac`
-(also by hand: `python tools/tryout/scenes_to_maxima.py`). `run_tests.mac`
+Every save in the workbench regenerates `Maxima/tests/fixtures/scenes.mac`
+(also by hand: `python tools/workbench/scenes_to_maxima.py`). `run_tests.mac`
 loads it, so a test file can use the real meclib output instead of
 hand-written lists:
 
@@ -54,7 +54,7 @@ n: scene_names("fb_unidir", "init");   /* names */
 fb_check(fb_unidir(o, n, 9, "bar 9: "), false, "...", "...", "label");
 ```
 
-`scene_init("fb_unidir")` returns the initdata. The test page in the tryout
+`scene_init("fb_unidir")` returns the initdata. The Tests page of the workbench
 shows for each case which Maxima test files use it. Since the case id is the
 reference, renumbering or reordering cases does not break the tests; deleting
 or renaming a case that is in use does.

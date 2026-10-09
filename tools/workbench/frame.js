@@ -1,4 +1,4 @@
-// Shared by index.html (tryout) and cases.html (test cases): builds and runs a meclib graphic
+// Shared by the workbench pages (Graphic, Questions, Tests): builds and runs a meclib graphic
 // in a sandboxed frame the way STACK 4.13 does for a [[jsxgraph]] block, and collects what
 // meclib writes into the objects and names inputs.
 "use strict";
@@ -161,7 +161,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
     // "</script" inside the inlined library would end the script element early.
     const safeSource = meclibSource.replace(/<\/script/gi, "<\\/script");
     body = include.test(body) ? body.replace(include, () => safeSource) : body + "\n" + safeSource;
-    if (/\[\[\s*include/.test(body)) throw new Error("Only the meclib.js [[include]] can be resolved by the tryout.");
+    if (/\[\[\s*include/.test(body)) throw new Error("Only the meclib.js [[include]] can be resolved by the workbench.");
 
     const inputNames = Object.keys(block.inputs);
     const initial = {};
@@ -179,8 +179,8 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
 <script src="${mathjaxUrl}"><\/script>
 <link rel="stylesheet" href="${jsx.css}">
 <script src="${jsx.js}"><\/script>
-<style>html,body{margin:0;padding:0;overflow:hidden;background:#fff}</style>
-</head><body>
+<style>html{background:#fff}</style>
+</head><body style="margin:0px;">
 <div style="width:calc(100% - 3px);height:calc(100vh - 3px);"><div class="jxgbox" id="jxgbox" style="width:100%;height:100%;"></div></div>
 <script type="module">
 const stack_js = window.__tryout_stack_js;
@@ -208,7 +208,7 @@ ${body}
   // there, e.g. because of an error. The frame stays live afterwards; onInput/onConsole keep
   // reporting interactions until stop() is called or the next graphic is rendered.
   // opts: container, config, jsxKey, mathjaxKey, meclibSource, initText, blockText, decsep,
-  //       startState, onConsole(level, text), onInput(varName, value), onResize(w, h),
+  //       startState, onConsole(level, text), onInput(varName, value, inputName), onResize(w, h),
   //       scale (thumbnail factor, default 1), timeout (ms, default 60000 - a scene with many
   //       line loads can take several seconds to initialise)
   function run(opts) {
@@ -226,6 +226,10 @@ ${body}
     const frame = document.createElement("iframe");
     frame.title = "meclib graphic";
     frame.setAttribute("sandbox", "allow-scripts");
+    // as STACK for [[jsxgraph]] (stackjsvle.js create_iframe with scrolling = false): the frame
+    // does not scroll, but the document's body does not clip - meclib makes the frame 3 px
+    // larger than the board, and the board's 1 px border lies outside its wrapper div
+    frame.scrolling = "no"; frame.style.overflow = "hidden";
     const wrap = document.createElement("div");
     wrap.style.overflow = "hidden";
     wrap.appendChild(frame);
@@ -263,7 +267,7 @@ ${body}
         const varName = block.inputs[msg.name];
         if (varName === "stateRef") result.objects = msg.value;
         else if (varName === "fbd_names") result.names = msg.value;
-        if (opts.onInput) opts.onInput(varName, msg.value);
+        if (opts.onInput) opts.onInput(varName, msg.value, msg.name);
       } else if (msg.type === "done") {
         result.initSeconds = (performance.now() - started) / 1000;
         setTimeout(() => finish(true), 400);

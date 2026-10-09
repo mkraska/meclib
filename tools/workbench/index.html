@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>meclib tryout</title>
+<title>meclib workbench - Graphic</title>
 <link rel="stylesheet" href="style.css">
 <style>
   #frameWrap { overflow: auto; min-height: 120px; }
@@ -20,8 +20,8 @@
 </head>
 <body>
 <header>
-  <h1><a href="/">meclib tryout</a></h1>
-  <nav><a href="cases.html">Test cases</a></nav>
+  <h1>meclib workbench</h1>
+  <nav class="pages"><b>Graphic</b> · <a href="questions.html">Questions</a> · <a href="tests.html">Tests</a></nav>
   <label>meclib.js <select id="src"></select></label>
   <label>JSXGraph <select id="jsx"></select></label>
   <label>MathJax <select id="mathjax"></select></label>
@@ -80,6 +80,32 @@
         <button id="useState">Use as start state</button>
         <button data-copy="outObjects">Copy</button></h2>
       <textarea id="outObjects" rows="8" readonly spellcheck="false"></textarea>
+    </section>
+
+    <section id="saveQuestion">
+      <details id="saveQDetails">
+        <summary>Save as question</summary>
+        <div class="form-row" style="margin-top:8px">
+          <label for="qFolder">Folder</label>
+          <select id="qFolder" style="flex:1;min-width:0"></select>
+          <button id="qPick" class="small" title="choose another folder in the system's folder dialog">...</button>
+        </div>
+        <div class="form-row">
+          <label for="qName">Name</label>
+          <input type="text" id="qName" placeholder="question name (also the file name)">
+        </div>
+        <div class="form-row">
+          <label><input type="checkbox" id="qTans"> current objects as model answer (<code>tans</code>)</label>
+        </div>
+        <div class="form-row">
+          <button id="saveQBtn" class="primary">Save as new question</button>
+        </div>
+        <p class="hint">Writes a new Moodle XML file with a meclib question from the template: initdata in the
+          question variables, the [[jsxgraph]] block above in the question text, the inputs
+          <code>objects</code> and <code>names</code>. "..." chooses another folder (it is added to the
+          question folders). Continue on the Questions page.</p>
+        <div id="saveQMsg"></div>
+      </details>
     </section>
 
     <section id="saveCase">
@@ -148,7 +174,7 @@ const DEFAULT_INIT =
 ["label","\\\\(B\\\\)",[3.8,-0.5]],
 ["q","","q_0",[0,0.3],[4,0.3],0.7,0.7,0,"show"]]`;
 
-const STORE_KEY = "meclib-tryout-v1";
+const STORE_KEY = "meclib-tryout-v1";   // name kept from the former "tryout", so settings survive
 const FIELDS = ["src", "jsx", "mathjax", "decsep", "init", "startState", "block", "prettyObjects", "showLog"];
 
 let config = null;
@@ -327,7 +353,7 @@ async function saveCase() {
   scene.cases.push(entry);
 
   const resp = await fetch("/api/cases/" + encodeURIComponent(file), {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(scene) });
+    method: "POST", headers: { "Content-Type": "application/json", "X-Workbench": "1" }, body: JSON.stringify(scene) });
   if (!resp.ok) return saveMsg("Saving failed: " + (await resp.text()));
   const saved = await resp.json();
   saveMsg("Saved as case '" + cid + "' of scene '" + file + "'." +
@@ -370,13 +396,86 @@ async function openCaseFromUrl() {
   return true;
 }
 
+// ---------------------------------------------------------------- questions
+async function pickQuestionFolder() {
+  $("saveQMsg").innerHTML = '<p class="hint">Choose the folder in the dialog (it may open behind the browser window) ...</p>';
+  try {
+    const resp = await fetch("/api/pick-folder", { method: "POST", headers: { "Content-Type": "application/json", "X-Workbench": "1" },
+      body: JSON.stringify({ title: "Save the question in folder ...", initial: $("qFolder").value || "" }) });
+    const r = await resp.json();
+    if (!resp.ok || r.error) throw new Error(r.error || resp.statusText);
+    $("saveQMsg").innerHTML = "";
+    if (!r.path) return;
+    const add = await fetch("/api/q/folders", { method: "POST", headers: { "Content-Type": "application/json", "X-Workbench": "1" },
+      body: JSON.stringify({ add: r.path }) });
+    const data = await add.json();
+    if (!add.ok || data.error) throw new Error(data.error || add.statusText);
+    storePatch("meclib-question-v2", { graphicFolder: r.path });
+    await loadQuestionFolders();
+    const opt = [...$("qFolder").options].find((o) => o.value.replace(/\\/g, "/").toLowerCase() === r.path.replace(/\\/g, "/").toLowerCase());
+    if (opt) $("qFolder").value = opt.value;
+  } catch (e) { $("saveQMsg").innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+async function loadQuestionFolders() {
+  try {
+    const data = await (await fetch("/api/q/folders")).json();
+    const last = (stored("meclib-question-v2") || {}).graphicFolder;
+    fillSelect($("qFolder"), data.folders.filter((d) => d.exists).map((d) => [d.path, d.source === "inbox" ? "workbench inbox" : d.path]), last);
+    if (!$("qFolder").options.length) $("saveQMsg").innerHTML = '<p class="hint">No question folder yet - choose one with "...".</p>';
+  } catch (e) { /* server without question support */ }
+}
+function stored(key) { try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { return {}; } }
+function storePatch(key, patch) { try { localStorage.setItem(key, JSON.stringify(Object.assign(stored(key), patch))); } catch (e) { /* ignore */ } }
+
+async function saveAsQuestion() {
+  const msg = $("saveQMsg"); msg.innerHTML = "";
+  const name = $("qName").value.trim();
+  if (!name) { msg.innerHTML = '<p class="error">Please give the question a name.</p>'; return; }
+  if (!$("qFolder").value) { msg.innerHTML = '<p class="error">No question folder - choose one with "...".</p>'; return; }
+  let init;
+  try { init = F.parseInit($("init").value).data; } catch (e) { msg.innerHTML = `<p class="error">initdata: ${e.message}</p>`; return; }
+  // JSON lists, strings and numbers are valid Maxima syntax
+  const lines = ["initdata: " + F.formatObjects(init) + ";", "init: stackjson_stringify(initdata);"];
+  if ($("qTans").checked && lastObjects) {
+    lines.push("tansdata: " + F.formatObjects(JSON.parse(lastObjects)) + ";", "tans: stackjson_stringify(tansdata);");
+  } else lines.push("tansdata: initdata;", "tans: stackjson_stringify(tansdata);");
+  lines.push('stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_fbd.mac");',
+             'stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_value.mac");', "");
+  const text = ['<p hidden>[[input:objects]] [[validation:objects]]</p>', '<p hidden>[[input:names]] [[validation:names]] </p>',
+    '<div style="float:right; margin: 0 0 0.5em 1.5em;">', $("block").value.trim() + "</div>", '[[lang code="de"]] [[/lang]][[lang code="other"]] [[/lang]]', "", "Aufgabentext.", ""].join("\n");
+  try {
+    const resp = await fetch("/api/q/new", { method: "POST", headers: { "Content-Type": "application/json", "X-Workbench": "1" },
+      body: JSON.stringify({ folder: $("qFolder").value, name, questionvariables: lines.join("\n"), questiontext: text }) });
+    const r = await resp.json();
+    if (!resp.ok || r.error) throw new Error(r.error || resp.statusText);
+    storePatch("meclib-question-v2", { graphicFolder: $("qFolder").value });
+    msg.innerHTML = `<p class="okmsg">Saved: ${r.path.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`;
+    const a = document.createElement("button"); a.className = "small"; a.textContent = "Open on Questions page";
+    a.addEventListener("click", () => { storePatch("meclib-question-v2", { path: r.path, index: r.index, tab: "edit" }); location.href = "questions.html"; });
+    msg.appendChild(a);
+  } catch (e) { msg.innerHTML = `<p class="error">${e.message}</p>`; }
+}
+
+function loadFromQuestion() {   // returns true if the graphic came from a question
+  // set by the Questions page ("Graphic" button): banner only, the fields are already stored
+  const from = stored("meclib-graphic-from");
+  if (!from.name) return false;
+  localStorage.removeItem("meclib-graphic-from");
+  const banner = $("loadedBanner");
+  banner.hidden = false;
+  banner.textContent = "Graphic of question '" + from.name + "' (" + from.path + ", variant " + from.seed + "): initdata as evaluated by Maxima." +
+    (from.note ? " " + from.note : "");
+  return true;
+}
+
 // ---------------------------------------------------------------- wiring
 async function start() {
   const saved = loadFields();
   try {
     config = await (await fetch("/api/config")).json();
   } catch (e) {
-    $("status").textContent = "Server not reachable - start it with start_tryout.bat (or python server.py).";
+    $("status").textContent = "Server not reachable - start it with start_workbench.bat (or python server.py).";
     return;
   }
   const srcEntries = [["local", "local working copy (" + (config.local_branch || "?") + ")"]];
@@ -385,7 +484,10 @@ async function start() {
   fillSelect($("jsx"), Object.keys(config.jsxgraph).map((k) => [k, k]), saved.jsx);
   fillSelect($("mathjax"), Object.keys(config.mathjax).map((k) => [k, k]), saved.mathjax);
   $("status").textContent = "repository: " + config.repo_path;
-  if (await openCaseFromUrl()) render(); else await loadScenes();
+  loadQuestionFolders();
+  const fromQuestion = loadFromQuestion();
+  if (await openCaseFromUrl()) render();
+  else { await loadScenes(); if (fromQuestion) render(); }
 }
 
 $("render").addEventListener("click", render);
@@ -407,6 +509,8 @@ $("showLog").addEventListener("change", () => {
 $("clearConsole").addEventListener("click", clearConsole);
 $("sceneSel").addEventListener("change", () => $("saveCase").classList.toggle("is-new", $("sceneSel").value === ""));
 $("saveCaseBtn").addEventListener("click", saveCase);
+$("saveQBtn").addEventListener("click", saveAsQuestion);
+$("qPick").addEventListener("click", pickQuestionFolder);
 $("caseLabel").addEventListener("input", () => { $("caseId").placeholder = $("caseLabel").value ? slug($("caseLabel").value) : "short key, e.g. init"; });
 for (const b of document.querySelectorAll("[data-copy]"))
   b.addEventListener("click", () => navigator.clipboard.writeText($(b.dataset.copy).value));

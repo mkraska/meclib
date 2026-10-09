@@ -23,6 +23,12 @@ across releases.
 use STACK's real `castext_concat()`, `ct2_latex()`, `stack_disp...()`,
 answer tests etc. It stops with an error message if nothing is here.
 
+`stack/<plugin version>/security-map.json` is STACK's `stack/cas/security-map.json`
+from the same release: the list of identifiers STACK refuses in questions
+(e.g. the Maxima system variable `values`, or `eval_string`). The workbench
+(`tools/workbench/`) uses it to report such statements as STACK would,
+instead of evaluating them.
+
 What the library does NOT contain, so `harness.mac` provides it:
 
 - `castext()` itself - STACK's PHP compiler turns each `castext("...")`

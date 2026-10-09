@@ -1,4 +1,4 @@
-/* Shared styles of the meclib tryout pages (index.html, cases.html). */
+/* Shared styles of the meclib workbench pages (index.html, questions.html, tests.html). */
 :root {
   --bg: #f6f6f3; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6b66; --line: #d9d9d3;
   --accent: #1f5f99; --accent-ink: #ffffff; --err: #b3261e; --warn: #8a5a00; --ok: #2e6b30;
@@ -14,6 +14,7 @@ header h1 { font-size: 16px; margin: 0 8px 0 0; }
 header h1 a { color: inherit; text-decoration: none; }
 header nav a { color: var(--accent); text-decoration: none; font-size: 13px; }
 header nav a:hover { text-decoration: underline; }
+header nav b { font-size: 13px; }
 header label { display: flex; gap: 6px; align-items: center; color: var(--muted); }
 select, button, textarea, input { font: inherit; color: inherit; }
 select, input[type=text] { padding: 3px 4px; border: 1px solid var(--line); border-radius: 4px; background: #fff; }
@@ -39,7 +40,9 @@ code { font-family: var(--mono); font-size: 12.5px; }
 .error { color: var(--err); font-size: 12.5px; white-space: pre-wrap; margin: 6px 0 0; }
 .okmsg { color: var(--ok); font-size: 12.5px; white-space: pre-wrap; margin: 6px 0 0; }
 details > summary { cursor: pointer; color: var(--muted); font-size: 13px; }
-iframe { border: 1px solid var(--line); background: #fff; display: block; }
+/* content-box: the frame size meclib requests (via resize_containing_frame, as in STACK)
+   is the size of its content; with border-box the 1px border would cut off the bottom edge */
+iframe { border: 1px solid var(--line); background: #fff; display: block; box-sizing: content-box; }
 .badge { font-size: 11px; padding: 1px 6px; border-radius: 8px; background: #eee; color: var(--muted); white-space: nowrap; }
 .badge.err, .badge.fail { background: #f8dcda; color: var(--err); }
 .badge.pass { background: #dcefdc; color: var(--ok); }

@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2026 09 26";
+const versionText= "JXG "+JXG.version+" Meclib 2026 10 09";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -1485,12 +1485,13 @@ class q {
       [ this.p[0],this.p[1],this.p[this.p.length-1],this.p[this.p.length-2] ],
       { fillcolor:'#0000ff44', fillOpacity:1, strokecolor:loadColor, fixed:true, hasInnerPoints:true,
         vertices:{visible:false}, borders:{fixed:true} });
+    // automatic label placement is expensive in crowded drawings - only for non-empty names
     this.label.push(board.create('point',this.p[0],
       { name:toTEX(this.name1), size:0, fixed:true,
-        label:{autoPosition:true,offset:[-5,5],color:loadColor} }));
+        label:{autoPosition:!!this.name1,offset:[-5,5],color:loadColor} }));
     this.label.push(board.create('point',this.p[this.p.length-2], 
       { name:toTEX(this.name2), size:0, fixed:true,
-        label:{autoPosition:true, offset:[5,5], color:loadColor} }));
+        label:{autoPosition:!!this.name2, offset:[5,5], color:loadColor} }));
     // implement state switching
     this.obj = this.arrow.concat([this.polygon, this.label[0].label, this.label[1].label]); 
     this.obj = this.obj.concat(this.polygon.borders); 
@@ -1936,6 +1937,7 @@ function init() {
 }
 
 function update() {
+  if (batchDepth > 0) { updatePending = true; return } // done once at the end of the batch
   console.log(stateRef);
   if (!stateRef) { return }
   console.log("update")
@@ -1954,9 +1956,10 @@ function update() {
   let loadlist = [], targetlist = [];
   for (let i = 0; i < objects.length; i++) {
     if (load.includes( objects[i].data()[0] )) { loadlist.push(i)}
-    if (target.includes( objects[i].data()[0] ) && objects[i].state == 'hide') { // only hidden targets
-      targetlist.push(i); objects[i].loads = []} // empty load list
-    }
+    if (target.includes( objects[i].data()[0] )) {
+      objects[i].loads = []; // empty load list (also of targets switched back to "show")
+      if (objects[i].state == 'hide') { targetlist.push(i) } // only hidden targets get loads
+    } }
   console.log(targetlist)
   // establish proximity relations
   for (let L of loadlist) { 
@@ -2123,68 +2126,56 @@ function hermitename(Ref,p1, p2, t1, t2) {
     return n.replace(/\+\-/g,"-")  } 
   else {return "NaN"}
 }
+// Batched changes: JSXGraph redraws the whole board (including the automatic label
+// placement, which is expensive) after every setAttribute call. Inside batch() the board
+// is redrawn once at the end, and meclib's update() also runs only once. Nesting is allowed.
+var batchDepth = 0, updatePending = false;
+function batch(fn) {
+  if (batchDepth++ == 0) { board.suspendUpdate() }
+  try { fn() }
+  finally {
+    if (--batchDepth == 0) {
+      board.unsuspendUpdate();
+      if (updatePending) { updatePending = false; update() }
+    }
+  }
+}
+// sets stroke and fill opacity of all parts of an object. Arrow heads are SVG markers painted
+// with "context-stroke", which takes the stroke color but not its opacity - set it separately.
+function setOpacity(ref, op, extra) {
+  batch(() => {
+    for (let part of ref.obj) {
+      part.setAttribute({strokeOpacity: op, fillOpacity: op, ...extra});
+      for (let m of [part.rendNodeTriangleStart, part.rendNodeTriangleEnd]) {
+        if (m && m.setAttribute) { m.setAttribute('fill-opacity', op) }
+      }
+    }
+    update()
+  })
+}
 // functions for state switching
 function lock(ref) {
-        for (let part of ref.obj) {
-          part.setAttribute({highlight:false});
-        } update()}
+  batch(() => {
+    for (let part of ref.obj) { part.setAttribute({highlight:false}) }
+    update() })}
 // applies settings for active state of fixed objects
-function show(ref) { ref.state = "show";
-        for (let part of ref.obj) {
-          part.setAttribute({strokeOpacity:1, fillOpacity:1});
-        } update()}
+function show(ref) { ref.state = "show"; setOpacity(ref, 1) }
 // applies settings for inactive state of fixed objects
-function hide(ref) { ref.state = "hide";
-        for (let part of ref.obj) {
-          part.setAttribute({strokeOpacity:0.2, fillOpacity:0.2});
-        } update()}
+function hide(ref) { ref.state = "hide"; setOpacity(ref, 0.2) }
         // applies settings for active state of fixed objects with locked property (not highlighted)
-function SHOW(ref) {
-    ref.state = "SHOW";
-    for (let part of ref.obj) {
-      part.setAttribute({
-        strokeOpacity: 1,
-        fillOpacity: 1,
-        highlight: false
-      });
-    }
-    update()
-  }
+function SHOW(ref) { ref.state = "SHOW"; setOpacity(ref, 1, {highlight: false}) }
   // applies settings for inactive state of fixed objects with locked property (not highlighted)
-  function HIDE(ref) {
-    ref.state = "HIDE";
-    for (let part of ref.obj) {
-      part.setAttribute({
-        strokeOpacity: 0.2,
-        fillOpacity: 0.2,
-        highlight: false
-      });
-    }
-    update()
-  }
-    function hideforce(ref) {
-    ref.state = "hideforce";
-    for (let part of ref.obj) {
-      part.setAttribute({
-        strokeOpacity: 0,
-        fillOpacity: 0,
-        highlight: false
-      });
-    }
-    update()
-  }
+  function HIDE(ref) { ref.state = "HIDE"; setOpacity(ref, 0.2, {highlight: false}) }
+  function hideforce(ref) { ref.state = "hideforce"; setOpacity(ref, 0, {highlight: false}) }
   
 function activate(ref) { ref.state = "active";
-        for (let part of ref.obj) {
-          part.setAttribute({visible:true});
-          part.setAttribute({fixed:false});
-          part.setAttribute({snapToGrid:true});
-        } update()}
+  batch(() => {
+    for (let part of ref.obj) { part.setAttribute({visible:true, fixed:false, snapToGrid:true}) }
+    update() })}
 function deactivate(ref) { ref.state = "inactive";
-        for (let part of ref.obj) {
-          part.setAttribute({visible:false});
-          part.setAttribute({fixed:true});
-        } update()}
+  batch(() => {
+    for (let part of ref.obj) { part.setAttribute({visible:false, fixed:true}) }
+    update() })}
 function Switch(ref) { switch (ref.state) {
     case "active":  deactivate(ref); break
     case "inactive":  activate(ref); break
@@ -2203,10 +2194,8 @@ function makeSwitchable(element, obj) {
   }
 for (const el of element) {
   //switch by doubleclick
-  el.setAttribute({highlight:true});
-  el.setAttribute({highlightStrokeColor:highlightColor});
-  el.setAttribute({highlightFillColor:highlightColor});
-  el.setAttribute({highlightFillOpacity:0.5});
+  el.setAttribute({highlight:true, highlightStrokeColor:highlightColor,
+    highlightFillColor:highlightColor, highlightFillOpacity:0.5});
   el.parent = obj;
   el.lastclick = Date.now();    
   el.on('up', function() {
@@ -2231,5 +2220,28 @@ function isNewerVersion (oldVer, newVer) {
 // initialization
 let objects = [];
 let targets = []; // for sliding of points 
-init();
+batch(() => { init(); muteEmptyLabels() }); // board drawn once at the end
 update();
+// empty labels (e.g. the unnamed end of a force or of a distributed load) need no placement
+function muteEmptyLabels() {
+  for (const el of board.objectsList) {
+    if (el.elType == 'text' && el.visProp.islabel && el.visProp.autoposition &&
+        /^(\\\(\s*\\\))?$/.test(String(el.plaintext).trim())) { el.visProp.autoposition = false }
+  }
+}
+// Automatic label placement (autoPosition) runs on every redraw of the board and is the main
+// cost of dragging in drawings with many labels. Labels of points that cannot move (fixed,
+// not constrained to other elements, not transformed) are placed once more at the first
+// mouse/touch down - by then MathJax has typeset them - and then keep that position.
+function freezeFixedLabels() {
+  board.update();
+  for (const el of board.objectsList) {
+    const p = el.element;
+    if (el.elType == 'text' && el.visProp.islabel && el.visProp.autoposition && p &&
+        p.elementClass == JXG.OBJECT_CLASS_POINT && p.visProp.fixed && !p.isConstrained &&
+        (!p.transformations || p.transformations.length == 0)) {
+      el.visProp.autoposition = false }
+  }
+}
+let labelsFrozen = false;
+board.on('down', () => { if (!labelsFrozen) { labelsFrozen = true; freezeFixedLabels() } });

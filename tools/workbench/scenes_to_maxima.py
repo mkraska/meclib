@@ -3,7 +3,7 @@ Generates Maxima/tests/fixtures/scenes.mac from the test scenes in tests/scenes/
 so that the offline Maxima tests can use exactly the objects and names that meclib
 produced for a scene (instead of hand-written lists).
 
-Run by tools/tryout/server.py at start-up and whenever a scene is saved. Can also be run
+Run by tools/workbench/server.py at start-up and whenever a scene is saved. Can also be run
 by hand, e.g. after editing a scene file or pulling changes:
     python scenes_to_maxima.py
 
@@ -71,9 +71,9 @@ def scene_lines(name, scene):
 
 HEADER = """/* ============================================================================
    GENERATED FILE - do not edit by hand.
-   Written by tools/tryout/scenes_to_maxima.py from the JSON files in tests/scenes/
-   (automatically whenever a scene is saved in the tryout, or by running the
-   script). Edit the scenes instead, in the tryout (tools/tryout) or in the
+   Written by tools/workbench/scenes_to_maxima.py from the JSON files in tests/scenes/
+   (automatically whenever a scene is saved in the workbench, or by running the
+   script). Edit the scenes instead, in the workbench (tools/workbench) or in the
    JSON files, and regenerate.
 
    scene_obj(scene, case)    objects input after rendering, as stackjson_parse()

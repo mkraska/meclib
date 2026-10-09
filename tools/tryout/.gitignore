@@ -1,4 +1,0 @@
-# local caches and per-machine settings of the tryout server
-.cache/
-vendor/
-tryout_config.local.json
