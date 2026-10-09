@@ -249,7 +249,7 @@ class beam {
    this.p = data; // end points of center line
    // loop over pairs of points
    this.angle = -Math.atan2(this.p[1][1]-this.p[0][1],this.p[1][0]-this.p[0][0])+90*deg2rad;
-   this.attr = {opacity: true, layer:defaultMecLayer, fillcolor:this.col[0],
+   this.attr = {layer:defaultMecLayer, fillcolor:this.col[0],
      gradient:'linear', gradientSecondColor:this.col[1], gradientAngle:this.angle, hasInnerPoints:true,
      ...normalStyle};
    this.b = board.create('curve', [[],[]], {...normalStyle, hasInnerPoints:true});
@@ -341,7 +341,7 @@ class circle {
     if (typeof(data[3]) == 'number') {this.p2 = board.create('point', [this.p1.X() + data[3] * Math.cos(theta), this.p1.Y() + data[3] * Math.sin(theta)], {visible:false})}
      else {this.p2 = board.create('point', data[3], {visible:false});}
     // circle
-    this.c = board.create('circle', [this.p1,this.p2], {opacity: true, fillcolor:'lightgray', hasInnerPoints:true, strokeWidth: normalStyle.strokeWidth, strokeColor: normalStyle.strokeColor});
+    this.c = board.create('circle', [this.p1,this.p2], {fillcolor:'lightgray', hasInnerPoints:true, strokeWidth: normalStyle.strokeWidth, strokeColor: normalStyle.strokeColor});
     this.obj = [this.c];
     this.p0 = board.create('point', [0,0], {fixed:true, visible:false});
     const diffX = this.p1.X() - this.p0.X();
@@ -763,7 +763,7 @@ class fix1 {
     // label
     this.label = board.create('point', XY(this.p8), {name:toTEX(data[1]), ...centeredLabelStyle });
     // body
-    this.t = board.create('polygon', [this.p1, this.p2, this.p3], {name: '',fillColor: "white", Opacity: true, layer: 7,
+    this.t = board.create('polygon', [this.p1, this.p2, this.p3], {name: '',fillColor: "white", layer: 7,
       borders: {...normalStyle, layer:8}, vertices: {fixed:true, size:0}});
     // baseline with hatch
     this.bl = board.create('segment', [this.p6,this.p7], {name: '', ...normalStyle});
@@ -820,7 +820,7 @@ class fix12 {
     [this.p1, this.p2, this.p3, this.p4, this.p5, this.p6] = points;
     this.label = board.create('point', XY(this.p6), {name:toTEX(data[1]), ...centeredLabelStyle});
     // body
-    this.t = board.create('polygon', [this.p1, this.p2, this.p3], {name:'',fillColor:"white", Opacity:true, layer:7, 
+    this.t = board.create('polygon', [this.p1, this.p2, this.p3], {name:'',fillColor:"white", layer:7, 
       borders:{...normalStyle, layer:8}, vertices: {fixed:true, size:0}});
     // baseline with hatch
     this.bl = board.create('segment', [this.p4, this.p5], {name: '',...normalStyle});
@@ -1406,7 +1406,7 @@ class point {
 // gray filled polygon with black border
 class polygon{
     constructor(data) {
-      let pstyle = {opacity:true, fillcolor:'lightgray', vertices:{size:0, fixed:true}, borders:normalStyle, hasInnerPoints:true}
+      let pstyle = {fillcolor:'lightgray', vertices:{size:0, fixed:true}, borders:normalStyle, hasInnerPoints:true}
       // if last argument is a string, use it as state flag and remove from list
       this.state = typeof data[data.length - 1] === 'string' ? data.pop() : 'SHOW';      
       // data for name()
