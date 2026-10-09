@@ -1,3 +1,5 @@
+// LEGACY - NOT MAINTAINED. This file is kept in the repository only for old questions that
+// still include it. Do not change it; all development happens in meclib.js.
 // https://github.com/mkraska/meclib/wiki
 // version info
 const versionText= "JXG "+JXG.version+" iMeclib 2024 09 27";
