@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2026 10 09";
+const versionText= "JXG "+JXG.version+" Meclib 2026 10 10";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -1502,7 +1502,7 @@ class q {
     if (this.state == "SHOW") { SHOW(this) }
     if (this.state == "HIDE") { HIDE(this) }
   } 
-  data(){ let a = this.d.slice(0); a[8] = this.state; return a}
+  data(){ let a = this.d.slice(0); if (a[7] === undefined) { a[7] = 0 } a[8] = this.state; return a} // phi defaults to 0
   name(){ return targetName(this) } 
   hasPoint(pt) {return this.polygon.hasPoint(pt.coords.scrCoords[1], pt.coords.scrCoords[2])} 
 }

@@ -104,15 +104,22 @@ def question_fields(text, index):
     return fields
 
 
+NODE_FIELDS = ("description", "answertest", "sans", "tans", "testoptions", "quiet",
+               "truescoremode", "truescore", "truepenalty", "truenextnode", "trueanswernote",
+               "falsescoremode", "falsescore", "falsepenalty", "falsenextnode", "falseanswernote")
+PRT_FIELDS = ("value", "autosimplify", "feedbackstyle")
+
+
 def prt_summary(p):
-    """A PRT for display (read only in this version)."""
+    """A PRT as plain strings (the PRT editor of the Questions page)."""
     nodes = []
     for n in p.findall("node"):
-        nodes.append({k: _text(n, k) for k in ("name", "description", "answertest", "sans", "tans", "testoptions",
-                                               "quiet", "truescoremode", "truescore", "truenextnode",
-                                               "trueanswernote", "falsescoremode", "falsescore",
-                                               "falsenextnode", "falseanswernote")}
-                     | {"truefeedback": _text(n, "truefeedback/text"), "falsefeedback": _text(n, "falsefeedback/text")})
+        node = {k: _text(n, k) for k in ("name",) + NODE_FIELDS}
+        for br in ("true", "false"):
+            fb = n.find(br + "feedback")
+            node[br + "feedback"] = _text(n, br + "feedback/text")
+            node[br + "feedback_format"] = (fb.get("format") if fb is not None else None) or "html"
+        nodes.append(node)
     return {"name": _text(p, "name"), "value": _text(p, "value"), "autosimplify": _text(p, "autosimplify"),
             "feedbackstyle": _text(p, "feedbackstyle"), "feedbackvariables": _text(p, "feedbackvariables/text"),
             "nodes": nodes}
@@ -231,6 +238,9 @@ def apply_changes(text, index, changes):
                 if c:
                     changed.append("input %s: %s" % (inp["name"], k))
         q = q[:target.start()] + block + q[target.end():]
+    for pc in changes.get("prts", []):
+        q, c = _apply_prt(q, pc, nl)
+        changed += c
     return text[:a] + q + text[b:], changed
 
 
@@ -285,7 +295,59 @@ INPUT_KINDS = {
         "prt": {"autosimplify": "1", "answertest": "AlgEquiv", "options": False,
                 "true": "{@fb_vars(%(s)s, %(t)s)@}", "false": "{@fb_vars(%(s)s, %(t)s)@}"},
     },
+    # matrix inputs: grid size from the model answer; element-wise feedback (fb_value.mac)
+    "matrix": {
+        "input": {"type": "matrix", "boxsize": "4", "insertstars": "3", "syntaxhint": "",
+                  "syntaxattribute": "0", "forbidfloat": "0", "mustverify": "1", "showvalidation": "3"},
+        "prt": {"autosimplify": "1", "answertest": "AlgEquiv", "options": False, "sans": "isOK", "tans": "true",
+                "fv": "[txt, isOK]: fb_unit_matrix(%(s)s, %(t)s, %(tol)s%(lab)s);",
+                "true": "{@txt@}", "false": "{@txt@}"},
+    },
+    "matrixexpr": {
+        "input": {"type": "matrix", "boxsize": "8", "insertstars": "3", "syntaxhint": "",
+                  "syntaxattribute": "0", "forbidfloat": "1", "mustverify": "1", "showvalidation": "3"},
+        "prt": {"autosimplify": "1", "answertest": "AlgEquiv", "options": False,
+                "fv": "txt: fb_vars_matrix(%(s)s, %(t)s, []%(lab)s);",
+                "true": "{@txt@}", "false": "{@txt@}"},
+    },
 }
+
+
+def split_top(s):
+    """Splits s at commas outside brackets."""
+    parts, depth, cur = [], 0, ""
+    for ch in s:
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        if ch == "," and depth == 0:
+            parts.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    parts.append(cur)
+    return [p.strip() for p in parts if p.strip()]
+
+
+def matrix_labels(labels):
+    """Component labels of the dialog as the labels argument of fb_unit_matrix/fb_vars_matrix:
+    empty -> "" (default x, y, z), "index" -> ', "index"', else a list of quoted symbols
+    ('x_A) or strings, e.g. 'x_A, y_A' -> ", ['x_A, 'y_A]"."""
+    labels = (labels or "").strip()
+    if not labels or labels == "xyz":
+        return ""
+    if labels == "index":
+        return ', "index"'
+    items = []
+    for it in split_top(labels):
+        if it.startswith('"') or it.startswith("'"):
+            items.append(it)
+        else:
+            items.append("'" + it)
+    return ", [" + ", ".join(items) + "]"
+
+
 NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 
 
@@ -300,9 +362,11 @@ def input_block(name, kind, tans, nl, indent="    "):
     return "%s<input>%s%s%s</input>" % (indent, nl, inner, indent)
 
 
-def prt_block(name, kind, sans, tans, tol, nl, indent="    "):
+def prt_block(name, kind, sans, tans, tol, nl, indent="    ", labels=""):
     spec = INPUT_KINDS[kind]["prt"]
-    sub = {"s": sans, "t": tans, "tol": tol}
+    sub = {"s": sans, "t": tans, "tol": tol, "lab": matrix_labels(labels)}
+    fvars = spec.get("fv", "") % sub
+    sans, tans = spec.get("sans", sans), spec.get("tans", tans)
     i2, i3, i4 = indent + "  ", indent + "    ", indent + "      "
 
     def fb(tag, text):
@@ -322,7 +386,7 @@ def prt_block(name, kind, sans, tans, tol, nl, indent="    "):
             i2 + "</node>" + nl)
     head = "".join("%s<%s>%s</%s>%s" % (i2, k, v, k, nl) for k, v in [
         ("name", name), ("value", "1.0000000"), ("autosimplify", spec["autosimplify"]), ("feedbackstyle", "2")])
-    fv = "%s<feedbackvariables>%s%s<text></text>%s%s</feedbackvariables>%s" % (i2, nl, i3, nl, i2, nl)
+    fv = "%s<feedbackvariables>%s%s<text>%s</text>%s%s</feedbackvariables>%s" % (i2, nl, i3, encode_plain(fvars), nl, i2, nl)
     return indent + "<prt>" + nl + head + fv + node + indent + "</prt>"
 
 
@@ -342,7 +406,7 @@ def _insert_after_last(q, closing, block, nl, fallbacks):
     return q[:line] + block + nl + q[line:]
 
 
-def add_input(text, index, name, kind, tans=None, tol="0.005"):
+def add_input(text, index, name, kind, tans=None, tol="0.005", labels=""):
     """New input S_<name> and PRT <name> (see INPUT_KINDS). Returns (text, input name, prt name)."""
     if kind not in INPUT_KINDS:
         raise ValueError("unknown kind %r" % kind)
@@ -362,13 +426,159 @@ def add_input(text, index, name, kind, tans=None, tol="0.005"):
     tans = tans or name
     q = _insert_after_last(q, "</input>", input_block(iname, kind, tans, nl), nl,
                            ["<prt>", "<deployedseed>", "<qtest>", "<hint"])
-    q = _insert_after_last(q, "</prt>", prt_block(pname, kind, iname, tans, str(tol), nl), nl,
+    q = _insert_after_last(q, "</prt>", prt_block(pname, kind, iname, tans, str(tol), nl, labels=labels), nl,
                            ["<deployedseed>", "<qtest>", "<hint"])
     # a question with PRTs needs a mark; the template starts with 0
     m = re.search(r"<defaultgrade>([^<]*)</defaultgrade>", q)
     if m and float(m.group(1) or 0) == 0:
         q = q[:m.start(1)] + "1" + q[m.end(1):]
     return text[:a] + q + text[b:], iname, pname
+
+
+# ---------------------------------------------------------------------- PRTs
+def _prt_span(q, name):
+    for m in re.finditer(r"<prt>.*?</prt>", q, re.S):
+        if re.match(r"<prt>\s*<name>%s</name>" % re.escape(name), m.group(0)):
+            return m
+    raise ValueError("PRT %r not found" % name)
+
+
+def _node_span(block, name):
+    for m in re.finditer(r"<node>.*?</node>", block, re.S):
+        if re.match(r"<node>\s*<name>%s</name>" % re.escape(name), m.group(0)):
+            return m
+    raise ValueError("node %r not found" % name)
+
+
+def _apply_prt(q, pc, nl):
+    """Changes of one PRT: {name, value?, autosimplify?, feedbackstyle?, feedbackvariables?,
+    nodes?: [{name, <node field>?, truefeedback?, truefeedback_format?, ...}]}."""
+    m = _prt_span(q, pc["name"])
+    blk, changed = m.group(0), []
+    head_end = blk.find("<node>") if "<node>" in blk else len(blk)
+    head, rest = blk[:head_end], blk[head_end:]
+    for k in PRT_FIELDS:
+        if k in pc:
+            head, c = _replace_simple(head, k, str(pc[k]))
+            changed += ["PRT %s: %s" % (pc["name"], k)] if c else []
+    if "feedbackvariables" in pc:
+        head, c = _replace_text_child(head, "feedbackvariables", pc["feedbackvariables"], nl)
+        changed += ["PRT %s: feedback variables" % pc["name"]] if c else []
+    blk = head + rest
+    for nc in pc.get("nodes", []):
+        n = _node_span(blk, nc["name"])
+        nb = n.group(0)
+        for k in NODE_FIELDS:
+            if k in nc:
+                nb, c = _replace_simple(nb, k, str(nc[k]))
+                changed += ["PRT %s node %s: %s" % (pc["name"], _node_no(nc["name"]), k)] if c else []
+        for br in ("true", "false"):
+            if br + "feedback" in nc or br + "feedback_format" in nc:
+                cur = ET.fromstring(nb).find(br + "feedback/text")
+                value = nc.get(br + "feedback", cur.text if cur is not None and cur.text else "")
+                nb, c = _replace_text_child(nb, br + "feedback", value, nl, nc.get(br + "feedback_format"))
+                changed += ["PRT %s node %s: %s feedback" % (pc["name"], _node_no(nc["name"]), br)] if c else []
+        blk = blk[:n.start()] + nb + blk[n.end():]
+    return q[:m.start()] + blk + q[m.end():], changed
+
+
+def _node_no(name):
+    """Node names count from 0, STACK's form and answer notes from 1."""
+    return str(int(name) + 1) if str(name).isdigit() else str(name)
+
+
+def _node_xml(prt, name, nl, indent):
+    i3, i4 = indent + "  ", indent + "    "
+    no = _node_no(name)
+    fields = [("name", name), ("description", ""), ("answertest", "AlgEquiv"), ("sans", ""), ("tans", ""),
+              ("testoptions", ""), ("quiet", "1"), ("truescoremode", "="), ("truescore", "1"), ("truepenalty", ""),
+              ("truenextnode", "-1"), ("trueanswernote", "%s-%s-T" % (prt, no))]
+    fields2 = [("falsescoremode", "="), ("falsescore", "0"), ("falsepenalty", ""), ("falsenextnode", "-1"),
+               ("falseanswernote", "%s-%s-F" % (prt, no))]
+
+    def simple(fs):
+        return "".join("%s<%s>%s</%s>%s" % (i3, k, encode_plain(v), k, nl) for k, v in fs)
+
+    def fb(tag):
+        return '%s<%s format="html">%s%s<text></text>%s%s</%s>%s' % (i3, tag, nl, i4, nl, i3, tag, nl)
+    return "%s<node>%s%s%s%s%s%s</node>" % (indent, nl, simple(fields), fb("truefeedback"), simple(fields2),
+                                            fb("falsefeedback"), indent)
+
+
+def prt_op(text, index, op):
+    """Structural PRT changes: {op: add-node, prt, from?, branch?} (new node, optionally linked
+    from a branch of node from), {op: delete-node, prt, node} (references to it end the PRT),
+    {op: add-prt, name}, {op: delete-prt, name} (with [[feedback:..]] and expected test results).
+    Returns (new text, label)."""
+    a, b, qtype = question_span(text, index)
+    if qtype != "stack":
+        raise ValueError("question %d is not a STACK question" % index)
+    nl = _newline(text)
+    q = text[a:b]
+    kind = op.get("op")
+    if kind == "add-prt":
+        name = op.get("name") or ""
+        if not NAME.match(name):
+            raise ValueError("PRT name: a letter, then letters, digits or _")
+        if any(re.match(r"<prt>\s*<name>%s</name>" % re.escape(name), m.group(0))
+               for m in re.finditer(r"<prt>.*?</prt>", q, re.S)):
+            raise ValueError("there is already a PRT %s" % name)
+        i2 = "      "
+        block = ("    <prt>%s" % nl + "".join("%s<%s>%s</%s>%s" % (i2, k, v, k, nl) for k, v in [
+            ("name", name), ("value", "1.0000000"), ("autosimplify", "1"), ("feedbackstyle", "2")]) +
+            "%s<feedbackvariables>%s%s  <text></text>%s%s</feedbackvariables>%s" % (i2, nl, i2, nl, i2, nl) +
+            _node_xml(name, "0", nl, i2) + nl + "    </prt>")
+        q = _insert_after_last(q, "</prt>", block, nl, ["<deployedseed>", "<qtest>", "<hint"])
+        m = re.search(r"<defaultgrade>([^<]*)</defaultgrade>", q)
+        if m and float(m.group(1) or 0) == 0:
+            q = q[:m.start(1)] + "1" + q[m.end(1):]
+        label = "PRT %s added" % name
+    elif kind == "delete-prt":
+        name = op["name"]
+        _prt_span(q, name)
+        q = _remove_block(q, r"<prt>(?:(?!</prt>).)*?<name>%s</name>.*?</prt>" % re.escape(name))
+        q = _remove_block(q, r"<expected>(?:(?!</expected>).)*?<name>%s</name>.*?</expected>" % re.escape(name))
+        q = re.sub(r" ?\[\[\s*feedback:%s\s*\]\]" % re.escape(name), "", q)
+        q = re.sub(r"[ \t]*<p( hidden)?>\s*</p>[ \t]*\r?\n?", "", q)
+        label = "PRT %s deleted" % name
+    elif kind in ("add-node", "delete-node"):
+        P = op["prt"]
+        m = _prt_span(q, P)
+        blk = m.group(0)
+        names = re.findall(r"<node>\s*<name>([^<]*)</name>", blk)
+        if kind == "add-node":
+            new = str(max([int(x) for x in names if x.isdigit()] + [-1]) + 1)
+            last = list(re.finditer(r"([ \t]*)<node>.*?</node>", blk, re.S))[-1]
+            blk = blk[:last.end()] + nl + _node_xml(P, new, nl, last.group(1)) + blk[last.end():]
+            if op.get("from") is not None and op.get("branch") in ("true", "false"):
+                n = _node_span(blk, str(op["from"]))
+                nb, _ = _replace_simple(n.group(0), op["branch"] + "nextnode", new)
+                blk = blk[:n.start()] + nb + blk[n.end():]
+            label = "PRT %s: node %s added" % (P, _node_no(new))
+        else:
+            node = str(op["node"])
+            if len(names) < 2:
+                raise ValueError("a PRT needs at least one node; delete the PRT instead")
+            if node == prt_root(blk):
+                raise ValueError("node %s is the first node of the PRT and cannot be deleted" % _node_no(node))
+            n = _node_span(blk, node)
+            blk = _remove_block(blk, re.escape(n.group(0)))
+            for br in ("true", "false"):      # references to the deleted node now end the PRT
+                blk = re.sub(r"<%snextnode>%s</%snextnode>" % (br, re.escape(node), br),
+                             "<%snextnode>-1</%snextnode>" % (br, br), blk)
+            label = "PRT %s: node %s deleted" % (P, _node_no(node))
+        q = q[:m.start()] + blk + q[m.end():]
+    else:
+        raise ValueError("unknown PRT operation %r" % kind)
+    return text[:a] + q + text[b:], label
+
+
+def prt_root(prt_block):
+    """The first node: the one no other node leads to (as STACK determines it)."""
+    names = re.findall(r"<node>\s*<name>([^<]*)</name>", prt_block)
+    targets = set(re.findall(r"<(?:true|false)nextnode>([^<]*)</(?:true|false)nextnode>", prt_block))
+    roots = [n for n in names if n not in targets]
+    return roots[0] if roots else (names[0] if names else None)
 
 
 def _remove_block(q, pattern):

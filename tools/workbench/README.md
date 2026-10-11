@@ -21,7 +21,8 @@ not) and are saved continuously while you work.
 ## Starting
 
 - Windows: double-click `start_workbench.bat`. It starts a small local server
-  and opens <http://localhost:8765/> in the browser. The console window is the
+  and opens <http://localhost:8765/> in the browser, on the page used last
+  (Graphic, Questions or Tests). The console window is the
   server; closing it stops the server. Starting again while a workbench
   server is running stops the old one first (its window closes), so a new
   start always runs the current code, e.g. after an update.
@@ -99,10 +100,52 @@ and question variables are below the preview. On narrower screens the header
 has Edit / Preview tabs (Ctrl+Shift+Enter switches). "Files ◂" in the header
 hides the files column.
 
+**Sections** (header button "Sections: ..."): buttons that jump to the
+sections of the editor (Review, Variables, Text, Inputs, Options, General FB,
+Specific FB, Note, PRTs and each PRT by name) and of the preview (Question,
+General FB, Note, Messages, Inputs, PRT graphs, Variables). A click on the
+header button switches the arrangement: top (a bar above each column), or
+narrow rails beside the columns (saves height): outer (editor rail left,
+preview rail right), inner (both between the columns), left, right. On narrow
+screens (one column) the rails stay visible, outer and inner then on both
+sides of the column, and a button of the other column's rail switches between
+Edit and Preview. A jump opens
+a collapsed section; the section at the top of the column is highlighted.
+
 **Editor**: name, question variables, question text, inputs (type, model
 answer, size, verification, validation; more under "more"), general and
-specific feedback, question note, each text with its format. PRTs are shown
-read only in this version.
+specific feedback, question note, each text with its format, and the PRTs.
+
+**PRTs** ("Potential response trees", below the texts): per PRT value,
+simplification, feedback style and feedback variables; per node description,
+answer test, SAns, TAns, test options, quiet, and per branch (true/false)
+score mode and score, penalty, next node, answer note and feedback with its
+format. Changes are saved like the other fields. "+ node" in a branch adds a
+node that this branch leads to, "+ Node" below the nodes an unlinked one; ✕
+deletes a node (branches leading to it then end the PRT; the first node - the
+one no branch leads to, as in STACK - cannot be deleted) or the whole PRT
+(with its `[[feedback:..]]` and expected test results). "+ PRT ..." adds a PRT
+without an input (e.g. a further check of a graphic) and puts its
+`[[feedback:..]]` at the cursor in the question text. New nodes are numbered
+after the highest node; nodes are never renumbered, so answer notes and test
+expectations stay valid.
+
+**PRT graphs** (right column): each PRT as a tree, nodes in layers from the
+first node; green the true, red the false branch, a branch that ends the PRT
+with its score. After "Check" the branches taken (by their answer notes) are
+drawn bold. Warnings: branches to missing nodes, loops (STACK refuses them),
+nodes not reachable from the first one. A click on a node shows it in the
+editor.
+
+**Undo / Redo** (editor header): every change of the question - typing (one
+step per field within a minute), review fixes, new or deleted inputs, PRT and
+node operations - is kept in a history next to the question file
+(`.workbench-history/<file>.json`, the last 50 steps, only the changed part
+of the question). It survives closing the workbench and belongs to the
+question edited last: the first change to another question of the file starts
+a new history. Undo and redo refuse if the question was changed outside the
+workbench in the meantime. Text fields also have their own undo (Ctrl+Z in
+the field). Do not commit `.workbench-history` folders.
 
 **Input ...** (next to the question text) creates an input together with its
 PRT: give a name `X` and a type; this adds the input `S_X`, the PRT `X` (one
@@ -116,12 +159,32 @@ question variable `X` (another expression can be given). Types and defaults
 | number with unit | units, size 8, syntax hint `{@meclib_h_unit@}`, insert stars 3 | UnitsRelative, rel. tolerance 0.005, simplify off | `fb_unit(S_X, X, tol)` / `fb_unit(S_X, X, 0)` |
 | number without unit | numerical, size 8, syntax hint `{@meclib_h_number@}` | NumRelative, rel. tolerance 0.005 | `fb_unit(S_X, X, tol)` / `fb_unit(S_X, X, 0)` |
 | expression | algebraic, size 15, syntax hint `{@meclib_h_alg@}`, insert stars 3, forbid float | AlgEquiv | `fb_vars(S_X, X)` |
+| vector / matrix of numbers | matrix, size 4, insert stars 3 | feedback variables `[txt, isOK]: fb_unit_matrix(S_X, X, tol, labels);`, AlgEquiv `isOK` = `true` | `txt` |
+| vector / matrix of expressions | matrix, size 8, insert stars 3, forbid float | feedback variables `txt: fb_vars_matrix(S_X, X, [], labels);`, AlgEquiv `S_X` = `X` | `txt` |
 
 The syntax hints are the multilingual ones from `fb_value.mac` (wiki page
 "Multilingual questions"); the preview shows them in the language chosen.
 All inputs: students must verify, compact validation; all nodes quiet. For
 "number with unit" `X` must include the unit, e.g. `FA: 720*N;`. A question
 with mark 0 (the template) gets mark 1 with its first PRT.
+
+The two matrix types insert a table row instead of the placeholders, since a
+matrix input is a block of its own (wiki "Matrix input"): label | matrix |
+unit | validation, with `[[feedback:X]]` in a paragraph below the table.
+Further fields of the dialog: **Label** (LaTeX left of the matrix, default
+`X`), **Unit** (optional, plain text right of the matrix; matrix inputs have
+no units), **Components** (labels of the elements in the feedback: empty =
+x-, y-, z-component, `index` = Element 1, 2, ..., or a list such as
+`x_A, y_A`, written as `['x_A, 'y_A]`). If the model answer is not yet a
+question variable, a placeholder `X: matrix([0],[0]);` of the size given in
+the dialog is added to the question variables; the size of the model answer
+sets the size of the input. See the wiki drafts `doc/wiki/fb_unit_matrix().md`
+and `doc/wiki/fb_vars_matrix().md`.
+
+The dialog is not modal: the editor stays usable while it is open (e.g. to
+look up a variable); the model answer field suggests the question variables.
+A name that is already used by an input `S_X` or a PRT `X` is reported in the
+dialog and "Create" stays disabled. Esc closes it.
 
 **✕** in the input table deletes an input with its `[[input:..]]` and
 `[[validation:..]]` placeholders and its test inputs; the PRT of the same
@@ -162,6 +225,12 @@ penalty per branch. The feedback of the branches taken appears in place of
 the answer notes below it; errors in feedback variables, answer tests or
 feedback texts are listed there too. Next to the inputs the answer is shown
 typeset (or "invalid input" if it does not parse).
+
+**Matrix inputs** (STACK input type "matrix") are shown as a grid of fields
+in brackets (question option "matrix parentheses"), as in Moodle; the grid has
+the size of the model answer. "Check" builds `matrix([..],[..])` from the
+cells, each cell processed like a single input; only some cells filled counts
+as invalid (incomplete), as in STACK.
 
 **Model answers** fills in the model answers of all inputs; the graphic
 starts from the model answer of its objects input. Then "Check" should give
@@ -217,6 +286,33 @@ SHOW/show as shown) for object types with a regression test, i.e. types that
 appear with `"SHOW"` in a scene of `tests/scenes/` (`state_show.json`: beam,
 q, fix1, fix12, fix123, bar, force, moment); other types get a hint.
 
+Math delimiters (`text.math-delimiters`): in HTML texts `\( ... \)`; in
+Markdown texts the strict form `\\\( ... \\\)` (backslash and bracket both
+escaped, so Markdown never takes the bracket for part of a link), except
+inside block-level HTML (a line starting with `<p>`, `<table>`, `<div>` ...
+up to its closing tag), which Markdown passes through unchanged: there
+`\( ... \)` as in HTML. Checked: question text, general and specific
+feedback, question note, PRT node feedback, each by its own format; only
+complete pairs, not in `[[jsxgraph]]` blocks or `{@...@}`/`{#...#}`.
+
+Matrix inputs (`matrix.layout`, `matrix.feedback`, wiki "Matrix input" and
+"Matrix Feedback"): a paragraph `<p>label [[input:S_X]] [[validation:S_X]]
+[[feedback:X]]</p>` becomes a table row label | input | validation with the
+feedback below; PRT `X` gets the feedback variable
+`[txt, isOK]: fb_unit_matrix(S_X, T, tol)` (numeric: a numeric answer test,
+`fb_unit` or the old `toList` pattern; the answer test becomes AlgEquiv
+`isOK` = `true`, `toList` is removed) or `txt: fb_vars_matrix(S_X, T, vars)`
+(otherwise; AlgEquiv on the matrix stays), feedback `{@txt@}` in both
+branches, quiet. `T` is the input's model answer; tolerance and `vars` are
+taken from the old PRT, simple symbol labels of the old per-component
+feedback (`<br>\(N\): {@fb_unit(...)@}`) become the label list. PRTs with
+several nodes or other feedback text get a hint only.
+
+Unused embedded files (`files.unused`): files stored in the question (`<file>`
+elements of its texts) that no text shows as `@@PLUGINFILE@@/name` - usually
+leftovers of earlier versions edited in Moodle. The review shows the image;
+the fix removes all copies of that file from the question.
+
 **Snippet ...** inserts a text snippet at the cursor of the field last
 edited: the interactive and the fixed [[jsxgraph]] block, the empty
 `[[lang]]` declaration, the hints for the free body diagram input (de/en).
@@ -224,7 +320,7 @@ The snippets are text files in `templates/snippets/` - add or change them
 there (see its README).
 
 **Preview**: the question as the student sees it, with working meclib
-graphics; the inputs follow the graphic live. **Graphic ↗** opens the
+graphics and the images embedded in the file (`@@PLUGINFILE@@/...`); the inputs follow the graphic live. **Graphic ↗** opens the
 question's graphic (first [[jsxgraph]] block, initdata as evaluated) on the
 Graphic page.
 

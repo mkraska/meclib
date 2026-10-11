@@ -1,0 +1,55 @@
+/* ============================================================================
+   Tests for fb_name(n, i, lon [, show]) and fb_reaction_name(o, n, i, default),
+   derived from the wiki pages "fb_name()" / "fb_name" and the source comments.
+   Scene obj_loads: the active force R (object 11) stands on the hidden line
+   load 10, so names[10] = [11] and names[11] = R.
+
+   FINDINGS (not fixed; expected texts show the CURRENT behaviour):
+   - Wiki "fb_name()" says a names entry with more than one load gives
+     ["", false]; the code (and the sentence further down on the same page)
+     checks the first load. The test below follows the code.
+   - The message has a space before \) ("\(R \) ist ..."), and the optional
+     4th argument (show the accepted names, default true) is not in the wiki.
+   - fb_reaction_name() has no wiki page.
+   ============================================================================ */
+
+n_loads: scene_names("obj_loads", "init");
+o_loads: scene_obj("obj_loads", "init");
+
+fb_check(fb_name(n_loads, 10, ["R"]), true, "", "", "fb_name accepted (string)");
+fb_check(fb_name(n_loads, 10, [R]), true, "", "", "fb_name accepted (symbol)");
+fb_check(fb_name(n_loads, 10, ["F"]), false,
+  "\\(R \\) ist kein passender Name. Akzeptiert: \\(F\\).",
+  "\\(R \\) is not an acceptable name. Accepted: \\(F\\).",
+  "fb_name one accepted name");
+fb_check(fb_name(n_loads, 10, ["F", "F_q"]), false,
+  "\\(R \\) ist kein passender Name. Akzeptiert: \\(F\\) oder \\(F_q\\).",
+  "\\(R \\) is not an acceptable name. Accepted: \\(F\\) or \\(F_q\\).",
+  "fb_name two accepted names");
+fb_check(fb_name(n_loads, 10, ["F", "F_q", "Q"]), false,
+  "\\(R \\) ist kein passender Name. Akzeptiert: \\(F\\), \\(F_q\\) oder \\(Q\\).",
+  "\\(R \\) is not an acceptable name. Accepted: \\(F\\), \\(F_q\\) or \\(Q\\).",
+  "fb_name three accepted names");
+fb_check(fb_name(n_loads, 10, ["F"], false), false,
+  "\\(R \\) ist kein passender Name.",
+  "\\(R \\) is not an acceptable name.",
+  "fb_name without list of accepted names");
+/* no reaction at the index: silent, the support's own feedback reports it */
+fb_check(fb_name(scene_names("obj_loads", "R-off"), 10, ["R"]), false, "", "", "fb_name no reaction");
+fb_check(fb_name(n_loads, 2, ["F_3"]), false, "", "", "fb_name index without load list");
+/* several loads: the first one is checked */
+fb_check(fb_name([[3, 2], R, Q], 1, ["R"]), false,
+  "\\(Q \\) ist kein passender Name. Akzeptiert: \\(R\\).",
+  "\\(Q \\) is not an acceptable name. Accepted: \\(R\\).",
+  "fb_name several loads, first checked");
+
+/* ---- fb_reaction_name(): name of the single reaction force, else the default ---- */
+fb_check_val(fb_reaction_name(o_loads, n_loads, 10, "X"), R, "fb_reaction_name single force");
+fb_check(["", is(fb_reaction_name(o_loads, scene_names("obj_loads", "R-off"), 10, "X") = "X")], true, "", "",
+  "fb_reaction_name no reaction -> default");
+fb_check(["", is(fb_reaction_name(o_loads, n_loads, 2, "X") = "X")], true, "", "",
+  "fb_reaction_name no load list -> default");
+fb_check(["", is(fb_reaction_name([["q"], ["moment", "M"], ["force", "F"]], [[2], M, F], 1, "X") = "X")], true, "", "",
+  "fb_reaction_name moment -> default");
+fb_check(["", is(fb_reaction_name([["q"], ["force", "G"], ["force", "F"]], [[2, 3], G, F], 1, "X") = "X")], true, "", "",
+  "fb_reaction_name two forces -> default");

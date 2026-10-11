@@ -1,0 +1,27 @@
+/* ============================================================================
+   Tests for fb_spline(sans, tans, x1, x2, fx), derived from the wiki page
+   "Values and Slope of Splines": value and slope at both ends of the range
+   are compared with a tolerance of 0.02 (grid units); x1, x2 are local
+   coordinates, fx converts them to grid coordinates (x1/fx, x2/fx).
+
+   FINDING (not fixed; expected texts show the CURRENT behaviour): the English
+   texts have a double space ("The value at  \(...\)"), and the text starts
+   with a space (" zwischen ...").
+   ============================================================================ */
+
+fb_check(fb_spline(2*x, 2*x, 0, 1, 1), true,
+  " zwischen \\({0}\\) und \\({1}\\)",
+  " between \\({0}\\) and \\({1}\\)",
+  "fb_spline identical");
+fb_check(fb_spline(2*x + 0.01, 2*x, 0, 0.5, 0.25), true,
+  " zwischen \\({0}\\) und \\({0.5}\\)",
+  " between \\({0}\\) and \\({0.5}\\)",
+  "fb_spline within tolerance, scaled range");
+fb_check(fb_spline(2*x + 0.1, 2*x, 0, 1, 1), false,
+  " zwischen \\({0}\\) und \\({1}\\)<br>Der Wert bei \\({0}\\) stimmt nicht.<br>Der Wert bei \\({1}\\) stimmt nicht.",
+  " between \\({0}\\) and \\({1}\\)<br>The value at  \\({0}\\) is not correct.<br>The value at  \\({1}\\) is not correct.",
+  "fb_spline values off");
+fb_check(fb_spline(x^2, 2*x, 0, 1, 1), false,
+  " zwischen \\({0}\\) und \\({1}\\)<br>Der Wert bei \\({1}\\) stimmt nicht.<br>Der Anstieg bei \\({0}\\) stimmt nicht.",
+  " between \\({0}\\) and \\({1}\\)<br>The value at  \\({1}\\) is not correct.<br>The slope at  \\({0}\\) is not correct.",
+  "fb_spline value and slope off");

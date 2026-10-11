@@ -100,6 +100,25 @@ def prt_data(p):
             "feedbackvariables": text_of(p, "feedbackvariables/text"), "nodes": nodes}
 
 
+def embedded_files(q):
+    """Files embedded in the question's texts (Moodle XML <file> elements, referenced as
+    @@PLUGINFILE@@/name) as {name: data URL}; only files that a text actually references."""
+    import urllib.parse
+    used = set()
+    for t in q.iter("text"):
+        for m in re.finditer(r"@@PLUGINFILE@@/([^\"'()\s<>]+)", t.text or ""):
+            used.add(urllib.parse.unquote(m.group(1)))
+    mime = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "gif": "image/gif",
+            "svg": "image/svg+xml", "webp": "image/webp"}
+    out = {}
+    for f in q.iter("file"):
+        name = f.get("name") or ""
+        if name in used and f.get("encoding") == "base64":
+            ext = name.rsplit(".", 1)[-1].lower()
+            out[name] = "data:%s;base64,%s" % (mime.get(ext, "application/octet-stream"), "".join((f.text or "").split()))
+    return out
+
+
 def question_data(q):
     inputs = []
     for inp in q.findall("input"):
@@ -427,6 +446,36 @@ def uses_units(data):
         n["answertest"].startswith("Units") for p in data["prts"] for n in p["nodes"])
 
 
+def matrix_cells(text):
+    """The cells of a matrix model answer as rows of strings (from stackjson_stringify), or None."""
+    if not text:
+        return None
+    import json
+    try:
+        rows = json.loads(text)
+    except ValueError:
+        return None
+    return rows if isinstance(rows, list) and rows and all(isinstance(r, list) for r in rows) else None
+
+
+def matrix_answer(inp, raw, decimals):
+    """A matrix input's answer: the page sends the cells as JSON rows. Returns ("blank", None),
+    ("invalid", None) if only some cells are filled (STACK: incomplete), or ("ok", "matrix(...)")
+    with each cell processed like a single input."""
+    import json
+    try:
+        rows = json.loads(raw) if raw.strip() else []
+    except ValueError:
+        return "invalid", None
+    cells = [str(c).strip() for r in rows for c in r]
+    if not cells or all(c == "" for c in cells):
+        return "blank", None
+    if any(c == "" for c in cells):
+        return "invalid", None
+    cell = dict(inp, type="algebraic")
+    return "ok", "matrix(%s)" % ",".join("[%s]" % ",".join(student_value(cell, str(c), decimals) for c in r) for r in rows)
+
+
 def student_value(inp, raw, decimals):
     """The Maxima expression for a student's raw input, approximating STACK's input
     processing: strings are quoted; otherwise a decimal comma becomes a point (and ; the
@@ -588,6 +637,13 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
             code.append('block([%%_v: errcatch(%s)], if %%_v # [] then (meclib_out(%s, string(%%_v[1])),'
                         ' meclib_out(%s, fb_tmpl_tostring(%%_v[1]))))$'
                         % (tans, mstring("tans:" + inp["name"]), mstring("tanstex:" + inp["name"])))
+    # matrix inputs: the size and the cells of the model answer (STACK takes the size of the
+    # input grid from the model answer)
+    for inp in data["inputs"]:
+        if inp.get("type") == "matrix" and (inp.get("tans") or "").strip():
+            code.append('block([%%_v: errcatch(%s)], if %%_v # [] and matrixp(%%_v[1]) then meclib_out(%s,'
+                        ' stackjson_stringify(map(lambda([%%_r], map(string, %%_r)), args(%%_v[1])))))$'
+                        % (inp["tans"], mstring("mcells:" + inp["name"])))
     # syntax hints are castext too (e.g. {@meclib_h_unit@}, multilingual)
     langs_q = languages_used(data["questiontext"])
     for inp in data["inputs"]:
@@ -661,7 +717,8 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
         "names": names,
         "includes": includes,
         "inputs": [dict(inp, tans_raw=first("tans:" + inp["name"]), tans_tex=first("tanstex:" + inp["name"]),
-                        hint_de=first("hint:de:" + inp["name"]), hint_en=first("hint:en:" + inp["name"]))
+                        hint_de=first("hint:de:" + inp["name"]), hint_en=first("hint:en:" + inp["name"]),
+                        mcells=matrix_cells(first("mcells:" + inp["name"])))
                    for inp in data["inputs"]],
         "texts": {key: {"de": first(key + ":de"), "en": first(key + ":en")} for key in texts if texts[key].strip()},
         "castext_errors": castext_errors,
@@ -685,10 +742,16 @@ def answer_code(data, answers, langs, resolver, checked):
     for inp in data["inputs"]:
         n = inp["name"]
         raw = raw_by_input[n]
-        if not raw.strip():
+        if inp.get("type") == "matrix":
+            mstate, value = matrix_answer(inp, raw, data["decimals"])
+            if mstate != "ok":
+                inputs[n] = {"state": mstate}
+                continue
+        elif not raw.strip():
             inputs[n] = {"state": "blank"}
             continue
-        value = student_value(inp, raw, data["decimals"])
+        else:
+            value = student_value(inp, raw, data["decimals"])
         inputs[n] = {"state": "?", "value": value}
         code.append('block([%%_p: errcatch(parse_string(%s))], if %%_p = [] then meclib_out(%s, "invalid") else ('
                     '%s: %%_p[1], meclib_out(%s, "valid"), meclib_out(%s, fb_tmpl_tostring(%s))))$'

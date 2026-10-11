@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>try { localStorage.setItem("meclib-last-page", "questions.html"); } catch (e) { /* no storage */ }</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>meclib workbench - Questions</title>
 <link rel="stylesheet" href="style.css">
@@ -24,6 +25,59 @@
     main.qgrid.tab-edit #previewCol, main.qgrid.tab-preview #editCol { display: none; }
   }
   @media (max-width: 800px) { main.qgrid, main.qgrid.nofiles { grid-template-columns: minmax(0, 1fr); } }
+  /* jump navigation: a bar at the top of each column ("top") or a narrow rail beside it ("side");
+     rails: editor rail left of the editor, preview rail right of the preview */
+  nav.jump { display: flex; gap: 3px; font-size: 11.5px; }
+  nav.jump button { font-size: 11.5px; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+  nav.jump button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  nav.jump button.sub { font-family: var(--mono); color: var(--muted); }
+  nav.jump button.sub.on { color: var(--accent-ink); }
+  nav.jump.top { flex-wrap: wrap; position: sticky; top: 0; z-index: 1; background: var(--bg);
+    padding: 4px 0 6px; margin-bottom: 4px; }
+  nav.jump.side { flex-direction: column; overflow-y: auto; min-height: 0; }
+  nav.jump.side button { writing-mode: vertical-rl; padding: 6px 1px; }
+  /* arrangement of the rails: outer (editor rail left, preview rail right), inner (both between
+     the columns), left, right; a rail on the left reads bottom-up, on the right top-down */
+  nav.jump.side.up button { transform: rotate(180deg); }
+  main.qgrid.side { --rail: 24px; column-gap: 8px; }
+  main.qgrid.side #railEdit { grid-area: re; } main.qgrid.side #railPreview { grid-area: rp; }
+  main.qgrid.side #filesCol { grid-area: files; } main.qgrid.side #editCol { grid-area: edit; } main.qgrid.side #previewCol { grid-area: prev; }
+  main.qgrid.side.r-outer { grid-template-columns: minmax(230px, 290px) var(--rail) minmax(0, 1fr) minmax(0, 1fr) var(--rail); grid-template-areas: "files re edit prev rp"; }
+  main.qgrid.side.r-inner { grid-template-columns: minmax(230px, 290px) minmax(0, 1fr) var(--rail) var(--rail) minmax(0, 1fr); grid-template-areas: "files edit re rp prev"; }
+  main.qgrid.side.r-left { grid-template-columns: minmax(230px, 290px) var(--rail) var(--rail) minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "files re rp edit prev"; }
+  main.qgrid.side.r-right { grid-template-columns: minmax(230px, 290px) minmax(0, 1fr) minmax(0, 1fr) var(--rail) var(--rail); grid-template-areas: "files edit prev re rp"; }
+  main.qgrid.side.nofiles.r-outer { grid-template-columns: var(--rail) minmax(0, 1fr) minmax(0, 1fr) var(--rail); grid-template-areas: "re edit prev rp"; }
+  main.qgrid.side.nofiles.r-inner { grid-template-columns: minmax(0, 1fr) var(--rail) var(--rail) minmax(0, 1fr); grid-template-areas: "edit re rp prev"; }
+  main.qgrid.side.nofiles.r-left { grid-template-columns: var(--rail) var(--rail) minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "re rp edit prev"; }
+  main.qgrid.side.nofiles.r-right { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--rail) var(--rail); grid-template-areas: "edit prev re rp"; }
+  main.qgrid.side.r-outer #editCol, main.qgrid.side.r-left #editCol, main.qgrid.side.r-right #editCol { margin-right: 8px; }
+  @media (max-width: 1399px) {     /* one column: outer and inner keep a rail on each side */
+    main.qgrid.side #previewCol { grid-area: edit; }
+    main.qgrid.side.r-outer, main.qgrid.side.r-inner { grid-template-columns: minmax(230px, 290px) var(--rail) minmax(0, 1fr) var(--rail); grid-template-areas: "files re edit rp"; }
+    main.qgrid.side.r-left { grid-template-columns: minmax(230px, 290px) var(--rail) var(--rail) minmax(0, 1fr); grid-template-areas: "files re rp edit"; }
+    main.qgrid.side.r-right { grid-template-columns: minmax(230px, 290px) minmax(0, 1fr) var(--rail) var(--rail); grid-template-areas: "files edit re rp"; }
+    main.qgrid.side.nofiles.r-outer, main.qgrid.side.nofiles.r-inner { grid-template-columns: var(--rail) minmax(0, 1fr) var(--rail); grid-template-areas: "re edit rp"; }
+    main.qgrid.side.nofiles.r-left { grid-template-columns: var(--rail) var(--rail) minmax(0, 1fr); grid-template-areas: "re rp edit"; }
+    main.qgrid.side.nofiles.r-right { grid-template-columns: minmax(0, 1fr) var(--rail) var(--rail); grid-template-areas: "edit re rp"; }
+    main.qgrid.side #editCol { margin-right: 0; }
+    main.qgrid.side.r-inner #railEdit button { transform: rotate(180deg); }   /* inner = outer here: left rail bottom-up */
+    main.qgrid.side.r-inner #railPreview button { transform: none; }
+    nav.jump.top { top: var(--hdr, 52px); }          /* the page scrolls under the sticky header */
+    #editCol [data-jump], #previewCol [data-jump], #prtView .prt { scroll-margin-top: calc(var(--hdr, 52px) + 36px); }
+    main.qgrid.side #editCol [data-jump], main.qgrid.side #previewCol [data-jump], main.qgrid.side #prtView .prt { scroll-margin-top: calc(var(--hdr, 52px) + 6px); }
+    main.qgrid.side nav.jump.side { position: sticky; top: calc(var(--hdr, 52px) + 8px); align-self: start; max-height: calc(100vh - var(--hdr, 52px) - 24px); }
+  }
+  @media (max-width: 800px) {
+    main.qgrid.side #filesCol { display: none; }
+    main.qgrid.side.r-outer, main.qgrid.side.r-inner, main.qgrid.side.nofiles.r-outer, main.qgrid.side.nofiles.r-inner { grid-template-columns: var(--rail) minmax(0, 1fr) var(--rail); grid-template-areas: "re edit rp"; }
+    main.qgrid.side.r-left, main.qgrid.side.nofiles.r-left { grid-template-columns: var(--rail) var(--rail) minmax(0, 1fr); grid-template-areas: "re rp edit"; }
+    main.qgrid.side.r-right, main.qgrid.side.nofiles.r-right { grid-template-columns: minmax(0, 1fr) var(--rail) var(--rail); grid-template-areas: "edit re rp"; }
+  }
+  main.qgrid:not(.side) nav.jump.side, main.qgrid.side nav.jump.top { display: none; }
+  @media (min-width: 1400px) {
+    #editCol [data-jump], #previewCol [data-jump], #prtView .prt { scroll-margin-top: 36px; }
+    main.qgrid.side #editCol [data-jump], main.qgrid.side #previewCol [data-jump], main.qgrid.side #prtView .prt { scroll-margin-top: 6px; }
+  }
   .langs { display: inline-flex; }
   .langs button { border-radius: 0; }
   .langs button:first-child { border-radius: 4px 0 0 4px; }
@@ -62,6 +116,16 @@
   input.stack-input { font: inherit; padding: 2px 4px; border: 1px solid #9aa; border-radius: 3px; max-width: 100%; box-sizing: content-box; }
   input.stack-input.mono { font-family: var(--mono); }
   input.stack-input.right { text-align: right; }
+  /* matrix input as in STACK (styles.css): grid of cells in brackets after the option matrixparens */
+  /* a grid of spans, not a table (a table inside a paragraph would end it); on a line of its own
+     like in Moodle, where STACK's <div> ends the paragraph */
+  .stack-matrix { display: grid; width: max-content; gap: 2px; padding: 0.5em; margin: 0.2em 0; }
+  .stack-matrix.paren-sq { background-image: linear-gradient(#000, #000), linear-gradient(#000, #000), linear-gradient(#000, #000), linear-gradient(#000, #000);
+    background-repeat: no-repeat; background-size: 8px 2px; background-position: top left, top right, bottom left, bottom right;
+    border: solid #000; border-width: 0 2px; }
+  .stack-matrix.paren-round { border-left: 2px solid #000; border-right: 2px solid #000; border-radius: 1em; }
+  .stack-matrix.paren-bar { border-left: 2px solid #000; border-right: 2px solid #000; }
+  input.stack-input.matrix-cell { width: auto; }
   .stack-validation { font-size: 12px; color: var(--muted); margin-left: 6px; }
   .stack-prt .prtfb { color: var(--ink); font-size: 14px; }
   .stack-prt .prtinfo { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; font-size: 11.5px; color: var(--muted); }
@@ -121,8 +185,10 @@
   #snippetDialog { border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; width: min(460px, 92vw); }
   #snippetDialog::backdrop { background: rgba(0, 0, 0, .15); }
   #snippetList li .pv { display: block; font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #inputDialog { border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; width: min(460px, 92vw); }
-  #inputDialog::backdrop { background: rgba(0, 0, 0, .15); }
+  /* not modal: the editor stays usable (look up variable names) while the dialog is open */
+  #inputDialog { border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; width: min(460px, 92vw);
+    position: fixed; inset: 64px 16px auto auto; margin: 0; z-index: 50; box-shadow: 0 6px 24px rgba(0, 0, 0, .18); }
+  #inInfo .bad { color: #b3261e; font-weight: 600; }
   table.inp button.del { color: var(--err); }
   .msg.goto { cursor: pointer; }
   .msg.goto:hover { text-decoration: underline; }
@@ -152,6 +218,28 @@
   .prt td, .prt th { border-bottom: 1px solid #ecece7; padding: 2px 4px; text-align: left; vertical-align: top; }
   .prt th { color: var(--muted); font-weight: 600; }
   .prt td code { font-size: 11.5px; }
+  /* PRT editor */
+  .prt .prthead { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 12px; margin-bottom: 4px; }
+  .prt .prthead b { font-size: 13px; margin-right: 4px; }
+  .prt .prthead .spacer { flex: 1; }
+  .prt textarea, .prt input[type=text], .prt select { font-size: 12px; }
+  .prt textarea { width: 100%; box-sizing: border-box; font-family: var(--mono); resize: vertical; }
+  .prt .lbl { color: var(--muted); font-size: 11.5px; margin: 4px 0 1px; }
+  .prt .node { border-left: 3px solid #d9d9d2; padding: 4px 0 4px 8px; margin: 8px 0; }
+  .prt .node.flash { border-left-color: var(--accent); background: #f3f7fb; }
+  .prt .nodehead { display: flex; gap: 6px; align-items: center; font-size: 12px; }
+  .prt .nodehead input { flex: 1; }
+  .prt .test { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 3px 6px; align-items: center; font-size: 12px; margin: 4px 0; }
+  .prt .test input { width: 100%; box-sizing: border-box; font-family: var(--mono); }
+  .prt .branches { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .prt .branch { font-size: 12px; border-top: 2px solid; padding-top: 3px; }
+  .prt .branch.true { border-color: #3a8a4f; } .prt .branch.false { border-color: #b3261e; }
+  .prt .branch .row { display: flex; flex-wrap: wrap; gap: 3px 6px; align-items: center; margin: 2px 0; }
+  .prt .branch input.num { width: 4.5em; } .prt .branch input.note { flex: 1; min-width: 6em; font-family: var(--mono); }
+  #prtGraph svg { display: block; margin: 4px 0 10px; }
+  .rvimg { display: block; max-width: 260px; max-height: 200px; margin: 4px 0; border: 1px solid var(--line); }
+  #prtGraph .gtitle { font-size: 12px; font-weight: 600; }
+  #prtGraph .gwarn { font-size: 12px; color: #b3261e; }
 </style>
 </head>
 <body>
@@ -167,6 +255,7 @@
   <span class="tabs"><button id="tab-edit" class="small" title="Ctrl+Shift+Enter switches">Edit</button><button id="tab-preview" class="small" title="Ctrl+Shift+Enter switches">Preview</button></span>
   <span id="savestate"></span>
   <button id="toggleFiles" title="show/hide the files column">Files ◂</button>
+  <button id="toggleNav" title="section buttons: top (bar above each column), outer, inner, left, right (rails beside the columns) - click to switch">Sections: top</button>
   <div id="status">connecting to server ...</div>
 </header>
 
@@ -200,9 +289,13 @@
     </section>
   </aside>
 
+  <nav id="railEdit" class="jump side" aria-label="editor sections"></nav>
   <div id="editCol">
+    <nav id="barEdit" class="jump top" aria-label="editor sections"></nav>
     <section>
       <h2><button type="button" id="qtitle" title="rename the question">Question</button><span class="spacer"></span>
+        <button id="undoBtn" class="small" disabled title="nothing to undo">↶ Undo</button>
+        <button id="redoBtn" class="small" disabled title="nothing to redo">↷ Redo</button>
         <button id="snippetBtn" class="small" title="insert a text snippet at the cursor (templates/snippets/)">Snippet ...</button>
         <button id="toGraphic" class="small" title="open the question's graphic (first [[jsxgraph]] block, evaluated initdata) on the Graphic page">Graphic ↗</button></h2>
       <div id="conflict"></div>
@@ -234,7 +327,8 @@
         <details><summary>Question note</summary>
           <label class="f">format <select data-format="questionnote"></select></label>
           <textarea data-field="questionnote" rows="2" spellcheck="false"></textarea></details>
-        <details id="prtBox"><summary>Potential response trees (read only in this version)</summary><div id="prtView"></div></details>
+        <details id="prtBox"><summary>Potential response trees</summary><div id="prtView"></div>
+          <button type="button" id="addPrt" class="small" title="new PRT without an input (e.g. a further check of a graphic); [[feedback:..]] goes to the cursor in the question text">+ PRT ...</button></details>
         <p class="hint">Changes are saved to the file automatically (a copy of the file as it was when
           opened: <code>.bak</code> next to it). Ctrl+Enter: save, evaluate and update the preview.</p>
       </div>
@@ -242,6 +336,7 @@
   </div>
 
   <div id="previewCol">
+    <nav id="barPreview" class="jump top" aria-label="preview sections"></nav>
     <section>
       <h2>Preview<span class="spacer"></span>
         <span class="langs" title="language of the [[lang]] blocks"><button id="lang-de" class="small">de</button><button id="lang-en" class="small">en</button></span>
@@ -266,10 +361,15 @@
       <table class="vars" id="inputs"><tbody></tbody></table>
     </section>
     <section>
+      <h2>PRT graphs</h2>
+      <div id="prtGraph"><p class="hint">-</p></div>
+    </section>
+    <section>
       <h2>Question variables<span class="spacer"></span><input type="text" id="varFilter" placeholder="filter" style="width:8em"></h2>
       <table class="vars" id="vars"><tbody></tbody></table>
     </section>
   </div>
+  <nav id="railPreview" class="jump side" aria-label="preview sections"></nav>
 </main>
 <dialog id="snippetDialog">
   <form method="dialog">
@@ -290,8 +390,18 @@
         <option value="units">number with unit (fb_unit)</option>
         <option value="number">number without unit (fb_unit)</option>
         <option value="expression">expression (fb_vars)</option>
+        <option value="matrix">vector / matrix of numbers (fb_unit_matrix)</option>
+        <option value="matrixexpr">vector / matrix of expressions (fb_vars_matrix)</option>
       </select></div>
-    <div class="form-row"><label style="width:8em">Model answer</label><input type="text" id="inTans" spellcheck="false"></div>
+    <div class="form-row"><label style="width:8em">Model answer</label><input type="text" id="inTans" spellcheck="false" list="inVars"></div>
+    <datalist id="inVars"></datalist>
+    <div id="inMatrix">
+      <div class="form-row"><label style="width:8em">Label</label><input type="text" id="inLabel" spellcheck="false" placeholder="LaTeX left of the matrix, e.g. \underline x_{M,1}"></div>
+      <div class="form-row"><label style="width:8em">Unit</label><input type="text" id="inUnit" spellcheck="false" placeholder="optional, e.g. m/s (shown as text right of the matrix)"></div>
+      <div class="form-row"><label style="width:8em">Components</label><input type="text" id="inComp" spellcheck="false" placeholder="empty: x-, y-, z-component; index: Element 1, 2, ...; or x_A, y_A"></div>
+      <div class="form-row" id="inSizeRow"><label style="width:8em">Size</label><input type="number" id="inRows" min="1" max="9" value="2" style="max-width:4em;flex:0"> ×
+        <input type="number" id="inCols" min="1" max="9" value="1" style="max-width:4em;flex:0"> <span class="hint">rows × columns, for the new question variable</span></div>
+    </div>
     <div class="form-row" id="inTolRow"><label style="width:8em">Rel. tolerance</label><input type="text" id="inTol" value="0.005" spellcheck="false" style="max-width:6em;flex:0"></div>
     <p class="hint" id="inInfo" style="white-space:pre-wrap"></p>
     <div class="form-row" style="justify-content:flex-end">
@@ -482,6 +592,7 @@ async function newFile(folder) {
 // ---------------------------------------------------------------- question selection and editor
 async function selectQuestion(index) {
   if (!(await flush())) return;
+  if ($("inputDialog").open) $("inputDialog").close("");   // it belongs to the question it was opened for
   qindex = index; markSelected();
   store(QSTORE_KEY, { path: file.path, index });
   result = null; conflict = false; $("conflict").innerHTML = "";
@@ -489,10 +600,39 @@ async function selectQuestion(index) {
     const r = await postJSON("/api/q/question", { path: file.path, index });
     file.rev = r.rev;
     fillEditor(r.fields);
+    showHistory(r.history);
   } catch (e) { showMessages([{ cls: "err", text: e.message }]); return; }
   loadReview();
   evaluate(true);
 }
+
+// ---------------------------------------------------------------- undo / redo (history.py)
+// The server keeps versions of the question edited last (.workbench-history next to the file);
+// text fields have their own undo (Ctrl+Z inside the field) as well.
+function showHistory(h) {
+  h = h || {};
+  for (const [id, dir, label] of [["undoBtn", "undo", h.undo], ["redoBtn", "redo", h.redo]]) {
+    $(id).disabled = !label;
+    $(id).title = label ? `${dir}: ${label}` + (h[dir + "_count"] > 1 ? ` (${h[dir + "_count"]} steps)` : "") : `nothing to ${dir}`;
+  }
+}
+async function historyStep(dir) {
+  if (!file || qindex === null || !(await flush())) return;
+  try {
+    const r = await postJSON("/api/q/" + dir, { path: file.path, index: qindex, rev: file.rev });
+    file.rev = r.rev;
+    fillEditor(r.fields);
+    showHistory(r.history);
+    showMessages([{ cls: "info", text: (dir === "undo" ? "Undone: " : "Redone: ") + r.label }]);
+    loadReview();
+    evaluate(false);
+  } catch (e) {
+    if (e.conflict) { conflict = true; showConflict(); }
+    else showMessages([{ cls: "err", text: e.message }]);
+  }
+}
+$("undoBtn").addEventListener("click", () => historyStep("undo"));
+$("redoBtn").addEventListener("click", () => historyStep("redo"));
 
 function fillEditor(fields) {
   saved = JSON.parse(JSON.stringify(fields));
@@ -517,7 +657,18 @@ const INPUT_MAIN = [["type", "type"], ["tans", "model answer"], ["boxsize", "siz
 const INPUT_MORE = [["options", "options"], ["syntaxhint", "syntax hint"], ["forbidwords", "forbidden words"], ["allowwords", "allowed words"],
   ["insertstars", "insert stars"], ["forbidfloat", "forbid float"], ["requirelowestterms", "lowest terms"], ["checkanswertype", "check type"],
   ["strictsyntax", "strict syntax"], ["syntaxattribute", "hint attribute"]];
+// inputs and PRTs are listed in the order of their first [[input:..]] / [[feedback:..]] tag in the
+// question text, then the specific feedback; anything not placed keeps its XML order at the end
+function textOrder() {
+  const txt = (k) => (editors[k] ? editors[k].get() : saved[k]) || "";
+  return txt("questiontext") + "\n" + txt("specificfeedback");
+}
+function byTextOrder(list, tag) {
+  const t = textOrder(), pos = (n) => { const i = t.indexOf(`[[${tag}:${n}]]`); return i < 0 ? Infinity : i; };
+  return list.map((x, k) => [pos(x.name), k, x]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map((e) => e[2]);
+}
 function renderInputEditor(inputs) {
+  inputs = byTextOrder(inputs, "input");
   const t = $("inputEd");
   if (!inputs.length) { t.innerHTML = '<tr><td class="hint">no inputs</td></tr>'; return; }
   let h = "<tr><th>name</th>" + INPUT_MAIN.map(([, l]) => `<th>${l}</th>`).join("") + "<th></th></tr>";
@@ -589,17 +740,214 @@ async function setOption(k, v) {
   if (await save()) evaluate(false);
 }
 
+// ---------------------------------------------------------------- PRT editor
+const ANSWER_TESTS = ["AlgEquiv", "AlgEquivNouns", "CasEqual", "EqualComAss", "EqualComAssRules", "SameType", "SubstEquiv",
+  "SysEquiv", "Sets", "Equiv", "EquivFirst", "Expanded", "FacForm", "SingleFrac", "PartFrac", "CompSquare", "LowestTerms",
+  "PropLogic", "Int", "Diff", "GT", "GTE", "NumRelative", "NumAbsolute", "NumSigFigs", "NumDecPlaces", "NumDecPlacesWrong",
+  "UnitsRelative", "UnitsStrictRelative", "UnitsAbsolute", "UnitsStrictAbsolute", "UnitsSigFigs", "UnitsStrictSigFigs",
+  "String", "StringSloppy", "Levenshtein", "SRegExp", "Validator"];
+const FEEDBACK_STYLES = [["0", "formative"], ["1", "standard"], ["2", "compact"], ["3", "symbolic only"]];
+const opt = (list, cur) => (list.some(([v]) => v === cur) ? list : [[cur, cur], ...list])
+  .map(([v, l]) => `<option value="${esc(v)}"${v === cur ? " selected" : ""}>${esc(l)}</option>`).join("");
+const rowsFor = (t, min) => Math.max(min, Math.min(14, String(t || "").split("\n").length + 1));
 function renderPRTs(prts) {
+  prts = byTextOrder(prts, "feedback");
   const box = $("prtView");
-  if (!prts.length) { box.innerHTML = '<p class="hint">no PRTs</p>'; return; }
-  box.innerHTML = prts.map((p) => `<div class="prt"><h3>${esc(p.name)} <span class="hint">value ${esc(p.value)}, simplify ${p.autosimplify === "1" ? "yes" : "no"}</span></h3>
-    ${p.feedbackvariables.trim() ? `<pre>${esc(p.feedbackvariables)}</pre>` : ""}
-    <table><tr><th>node</th><th>test</th><th>SAns</th><th>TAns</th><th>options</th><th>true</th><th>false</th></tr>
-    ${p.nodes.map((n) => `<tr><td>${esc(nodeNo(n.name))}</td><td>${esc(n.answertest)}${n.quiet === "1" ? " (quiet)" : ""}</td>
-      <td><code>${esc(n.sans)}</code></td><td><code>${esc(n.tans)}</code></td><td><code>${esc(n.testoptions)}</code></td>
-      <td>${esc(n.truescoremode)}${esc(n.truescore)} → ${n.truenextnode === "-1" ? "end" : esc(nodeNo(n.truenextnode))}<br><span class="hint">${esc(n.trueanswernote)}</span>${n.truefeedback ? `<pre>${esc(n.truefeedback)}</pre>` : ""}</td>
-      <td>${esc(n.falsescoremode)}${esc(n.falsescore)} → ${n.falsenextnode === "-1" ? "end" : esc(nodeNo(n.falsenextnode))}<br><span class="hint">${esc(n.falseanswernote)}</span>${n.falsefeedback ? `<pre>${esc(n.falsefeedback)}</pre>` : ""}</td></tr>`).join("")}
-    </table></div>`).join("");
+  if (!prts.length) { box.innerHTML = '<p class="hint">no PRTs</p>'; renderPRTGraphs(); return; }
+  box.innerHTML = prts.map((p) => {
+    const targets = (cur) => opt([["-1", "end"], ...p.nodes.map((n) => [n.name, "node " + nodeNo(n.name)])], cur);
+    const branch = (n, br) => `<div class="branch ${br}">
+        <div class="row"><b>${br}</b>
+          <select data-nk="${br}scoremode" title="score mode">${opt([["=", "="], ["+", "+"], ["-", "−"]], n[br + "scoremode"])}</select>
+          <input type="text" class="num" data-nk="${br}score" value="${esc(n[br + "score"])}" title="score">
+          penalty <input type="text" class="num" data-nk="${br}penalty" value="${esc(n[br + "penalty"])}" placeholder="default">
+          → <select data-nk="${br}nextnode">${targets(n[br + "nextnode"])}</select>
+          <button type="button" class="small" data-op="add-node" data-branch="${br}" title="new node after this branch">+ node</button></div>
+        <div class="row">note <input type="text" class="note" data-nk="${br}answernote" value="${esc(n[br + "answernote"])}"></div>
+        <div class="lbl">feedback <select data-nk="${br}feedback_format">${opt(FORMATS.map((f) => [f, f]), n[br + "feedback_format"])}</select></div>
+        <textarea data-nk="${br}feedback" rows="${rowsFor(n[br + "feedback"], 2)}" spellcheck="false">${esc(n[br + "feedback"])}</textarea></div>`;
+    return `<div class="prt" data-prt="${esc(p.name)}">
+      <div class="prthead"><b>${esc(p.name)}</b>
+        value <input type="text" class="num" data-pk="value" value="${esc(p.value)}" style="width:6em">
+        simplify <select data-pk="autosimplify">${opt([["1", "yes"], ["0", "no"]], p.autosimplify)}</select>
+        feedback style <select data-pk="feedbackstyle">${opt(FEEDBACK_STYLES, p.feedbackstyle)}</select>
+        <span class="spacer"></span>
+        <button type="button" class="small del" data-op="delete-prt" title="delete this PRT and its [[feedback:..]]">✕ PRT</button></div>
+      <div class="lbl">feedback variables</div>
+      <textarea data-pk="feedbackvariables" rows="${rowsFor(p.feedbackvariables, 2)}" spellcheck="false">${esc(p.feedbackvariables)}</textarea>
+      ${p.nodes.map((n) => `<div class="node" data-node="${esc(n.name)}" id="${esc("node-" + p.name + "-" + n.name)}">
+        <div class="nodehead"><b>Node ${esc(nodeNo(n.name))}</b>
+          <input type="text" data-nk="description" value="${esc(n.description)}" placeholder="description">
+          <button type="button" class="small del" data-op="delete-node" title="delete this node (branches leading to it end the PRT)">✕</button></div>
+        <div class="test">
+          <span>test</span><select data-nk="answertest">${opt(ANSWER_TESTS.map((t) => [t, t]), n.answertest)}</select>
+          <span>options</span><input type="text" data-nk="testoptions" value="${esc(n.testoptions)}">
+          <span>SAns</span><input type="text" data-nk="sans" value="${esc(n.sans)}" spellcheck="false">
+          <span>TAns</span><input type="text" data-nk="tans" value="${esc(n.tans)}" spellcheck="false">
+          <span>quiet</span><select data-nk="quiet">${opt([["0", "no"], ["1", "yes"]], n.quiet)}</select></div>
+        <div class="branches">${branch(n, "true")}${branch(n, "false")}</div></div>`).join("")}
+      <button type="button" class="small" data-op="add-node" title="new node, not linked yet">+ Node</button></div>`;
+  }).join("");
+  for (const el of box.querySelectorAll("[data-pk], [data-nk]")) {
+    el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+      setDirty(true);
+      if (/nextnode$/.test(el.dataset.nk || "")) renderPRTGraphs();
+    });
+  }
+  for (const b of box.querySelectorAll("[data-op]")) {
+    const prt = b.closest(".prt").dataset.prt, node = b.closest(".node");
+    b.addEventListener("click", () => {
+      const op = b.dataset.op;
+      if (op === "delete-prt") {
+        if (confirm(`Delete PRT ${prt} with its [[feedback:${prt}]] and expected test results?`)) prtOp({ op, name: prt });
+      } else if (op === "delete-node") {
+        if (confirm(`Delete node ${nodeNo(node.dataset.node)} of PRT ${prt}? Branches leading to it will end the PRT.`))
+          prtOp({ op, prt, node: node.dataset.node });
+      } else prtOp({ op, prt, from: node ? node.dataset.node : null, branch: b.dataset.branch || null });
+    });
+  }
+  renderPRTGraphs();
+  if (typeof renderJumpNav === "function" && $("barEdit")) renderJumpNav();
+}
+// the PRTs as currently in the editor (saved state with the edits in the fields)
+function editedPRTs() {
+  return (saved && saved.prts || []).map((p) => {
+    const card = document.querySelector(`#prtView .prt[data-prt="${CSS.escape(p.name)}"]`);
+    const q = JSON.parse(JSON.stringify(p));
+    if (!card) return q;
+    for (const el of card.querySelectorAll("[data-pk]")) q[el.dataset.pk] = el.value;
+    for (const n of q.nodes) {
+      const nd = card.querySelector(`.node[data-node="${CSS.escape(n.name)}"]`);
+      if (nd) for (const el of nd.querySelectorAll("[data-nk]")) n[el.dataset.nk] = el.value;
+    }
+    return q;
+  });
+}
+function prtChanges() {
+  const out = [];
+  for (const [i, q] of editedPRTs().entries()) {
+    const p = saved.prts[i], pc = { name: p.name }, nodes = [];
+    for (const k of ["value", "autosimplify", "feedbackstyle", "feedbackvariables"]) if ((p[k] ?? "") !== q[k]) pc[k] = q[k];
+    for (const [j, n] of q.nodes.entries()) {
+      const o = p.nodes[j], nc = { name: n.name };
+      for (const k of Object.keys(n)) if (k !== "name" && (o[k] ?? "") !== n[k]) nc[k] = n[k];
+      for (const br of ["true", "false"]) {     // text and format of a branch go together
+        if ((br + "feedback" in nc) || (br + "feedback_format" in nc)) { nc[br + "feedback"] = n[br + "feedback"]; nc[br + "feedback_format"] = n[br + "feedback_format"]; }
+      }
+      if (Object.keys(nc).length > 1) nodes.push(nc);
+    }
+    if (nodes.length) pc.nodes = nodes;
+    if (Object.keys(pc).length > 1) out.push(pc);
+  }
+  return out;
+}
+async function prtOp(body) {
+  if (!file || qindex === null || !(await flush())) return null;
+  const backup = !backedUp.has(file.path);
+  try {
+    const r = await postJSON("/api/q/prt", Object.assign({ path: file.path, index: qindex, rev: file.rev, backup }, body));
+    if (backup) backedUp.add(file.path);
+    file.rev = r.rev;
+    fillEditor(r.fields);
+    showHistory(r.history);
+    showMessages([{ cls: "info", text: r.label + "." }]);
+    loadReview();
+    evaluate(false);
+    return r;
+  } catch (e) {
+    if (e.conflict) { conflict = true; showConflict(); }
+    else showMessages([{ cls: "err", text: e.message }]);
+    return null;
+  }
+}
+$("addPrt").addEventListener("click", async () => {
+  const name = (prompt("Name of the new PRT (e.g. sys2):") || "").trim();
+  if (!name) return;
+  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(name)) { showMessages([{ cls: "err", text: "PRT name: a letter, then letters, digits or _" }]); return; }
+  if ((saved.prts || []).some((p) => p.name === name)) { showMessages([{ cls: "err", text: `There is already a PRT ${name}.` }]); return; }
+  editors.questiontext.insert(`[[feedback:${name}]]`);     // at the cursor; saved before the PRT is added
+  setDirty(true);
+  await prtOp({ op: "add-prt", name });
+});
+
+// ---------------------------------------------------------------- PRT graphs (right column)
+// Nodes in layers by their longest distance from the first node (the one no branch leads to,
+// as in STACK); green: true branch, red: false branch; a branch ending the PRT shows its score.
+// After "Check" the branches taken (by their answer notes) are drawn bold.
+function prtGraphSVG(p, taken) {
+  const names = p.nodes.map((n) => n.name), byName = Object.fromEntries(p.nodes.map((n) => [n.name, n]));
+  const targets = new Set(p.nodes.flatMap((n) => [n.truenextnode, n.falsenextnode]));
+  const root = names.find((n) => !targets.has(n)) ?? names[0];
+  const warn = [];
+  for (const n of p.nodes) for (const br of ["true", "false"]) {
+    const t = n[br + "nextnode"];
+    if (t !== "-1" && !byName[t]) warn.push(`node ${nodeNo(n.name)} ${br}: leads to a missing node ${t}`);
+  }
+  // longest-path layering from the root; a cycle is reported
+  const depth = {}, onStack = new Set();
+  let cyclic = false;
+  const visit = (n, d) => {
+    if (onStack.has(n)) { cyclic = true; return; }
+    if (depth[n] !== undefined && depth[n] >= d) return;
+    depth[n] = d; onStack.add(n);
+    for (const br of ["true", "false"]) { const t = byName[n][br + "nextnode"]; if (byName[t]) visit(t, d + 1); }
+    onStack.delete(n);
+  };
+  if (root !== undefined) visit(root, 0);
+  if (cyclic) warn.push("the branches form a loop - STACK does not accept this");
+  const unreached = names.filter((n) => depth[n] === undefined);
+  if (unreached.length) warn.push("not reachable from node " + nodeNo(root) + ": node " + unreached.map(nodeNo).join(", "));
+  let maxD = Math.max(0, ...Object.values(depth));
+  unreached.forEach((n) => { depth[n] = ++maxD; });
+  const layers = [];
+  for (const n of names) (layers[depth[n]] = layers[depth[n]] || []).push(n);
+  const W = 260, dy = 58, r = 13, pos = {};
+  layers.forEach((l, d) => l.forEach((n, i) => { pos[n] = [W * (i + 1) / (l.length + 1), 22 + d * dy]; }));
+  const H = 22 + layers.length * dy + 4;
+  let svg = "";
+  for (const n of names) {
+    const [x, y] = pos[n];
+    for (const [k, br] of [[-1, "true"], [1, "false"]]) {
+      const t = byName[n][br + "nextnode"], col = br === "true" ? "#3a8a4f" : "#b3261e";
+      const bold = taken.has(byName[n][br + "answernote"]) ? 3.2 : 1.3;
+      if (byName[t]) {
+        const [tx, ty] = pos[t], skip = Math.round((ty - y) / dy) - 1;
+        // an edge across layers bends sideways (true left, false right), so it does not run through other nodes
+        const cx = (x + tx) / 2 + k * 45 * Math.max(0, skip), cy = (y + ty) / 2;
+        svg += `<path d="M${x + k * 6},${y + r - 2} Q${cx},${cy} ${tx + (skip > 0 ? k * 6 : 0)},${ty - r}" fill="none" stroke="${col}" stroke-width="${bold}" marker-end="url(#ah)"/>`;
+      } else {
+        const ex = x + k * 30, ey = y + 34, sc = byName[n][br + "scoremode"] + byName[n][br + "score"];
+        svg += `<line x1="${x + k * 6}" y1="${y + r - 2}" x2="${ex}" y2="${ey - 8}" stroke="${col}" stroke-width="${bold}"/>` +
+          `<text x="${ex}" y="${ey + 2}" font-size="10.5" text-anchor="middle" fill="${col}">${esc(sc)}</text>`;
+      }
+    }
+  }
+  for (const n of names) {
+    const [x, y] = pos[n], nd = byName[n];
+    svg += `<g class="gnode" data-node="${esc(n)}" style="cursor:pointer"><title>${esc(nd.answertest + "(" + nd.sans + ", " + nd.tans + ")")}</title>` +
+      `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" stroke="#555"/>` +
+      `<text x="${x}" y="${y + 4}" font-size="12" text-anchor="middle">${esc(nodeNo(n))}</text>` +
+      `<text x="${x + r + 3}" y="${y - 6}" font-size="10" fill="#777">${esc(nd.answertest)}</text></g>`;
+  }
+  return { svg: `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#777"/></marker></defs>${svg}</svg>`, warn };
+}
+function renderPRTGraphs() {
+  const box = $("prtGraph");
+  if (!box) return;
+  const prts = byTextOrder(editedPRTs(), "feedback");
+  if (!prts.length) { box.innerHTML = '<p class="hint">-</p>'; return; }
+  box.innerHTML = prts.map((p) => {
+    const notes = lastCheck && lastCheck.prts && lastCheck.prts[p.name] ? String(lastCheck.prts[p.name].notes || "") : "";
+    const { svg, warn } = prtGraphSVG(p, new Set(notes.split("|").map((x) => x.trim()).filter(Boolean)));
+    return `<div data-prt="${esc(p.name)}"><div class="gtitle">${esc(p.name)}</div>${warn.map((w) => `<div class="gwarn">${esc(w)}</div>`).join("")}${svg}</div>`;
+  }).join("");
+  for (const g of box.querySelectorAll(".gnode")) g.addEventListener("click", () => {
+    const P = g.closest("[data-prt]").dataset.prt, el = document.getElementById("node-" + P + "-" + g.dataset.node);
+    if (!el) return;
+    setTab("edit"); $("prtBox").open = true;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1500);
+  });
 }
 
 function collectChanges() {
@@ -627,6 +975,8 @@ function collectChanges() {
     if (((saved.options || {})[el.dataset.opt] ?? "") !== el.value) opts[el.dataset.opt] = el.value;
   }
   if (Object.keys(opts).length) ch.options = opts;
+  const prts = saved.prts ? prtChanges() : [];
+  if (prts.length) ch.prts = prts;
   return ch;
 }
 
@@ -656,9 +1006,15 @@ async function save(force) {
       const r = await postJSON("/api/q/save", { path: file.path, index: qindex, rev: file.rev, changes, backup });
       if (backup) backedUp.add(file.path);
       file.rev = r.rev;
+      showHistory(r.history);
       // the state that was sent is now the saved state
       for (const [k, v] of Object.entries(changes)) {
         if (k === "inputs") for (const d of v) Object.assign(saved.inputs.find((i) => i.name === d.name), d);
+        else if (k === "prts") for (const pc of v) {
+          const p = saved.prts.find((x) => x.name === pc.name);
+          for (const [f, val] of Object.entries(pc)) if (f !== "nodes" && f !== "name") p[f] = val;
+          for (const nc of pc.nodes || []) Object.assign(p.nodes.find((n) => n.name === nc.name), nc);
+        }
         else if (k === "options") Object.assign(saved.options, v);
         else saved[k] = v;
       }
@@ -775,6 +1131,7 @@ async function check() {
     $("status").textContent = "checked in " + r.seconds + " s";
     lastCheck = r.check;
     showCheck();
+    renderPRTGraphs();
   } catch (e) {
     $("status").textContent = "";
     showMessages([{ cls: "err", text: "Check failed: " + e.message }], true);
@@ -787,7 +1144,7 @@ function showCheck() {
   for (const [name, v] of Object.entries(lastCheck.inputs)) {
     const inp = (result.inputs || []).find((i) => i.name === name) || {};
     for (const el of document.querySelectorAll(`.stack-validation[data-input="${CSS.escape(name)}"]`)) {
-      if (v.state === "invalid") el.innerHTML = '<span class="val-bad">invalid input (does not parse)</span>';
+      if (v.state === "invalid") el.innerHTML = `<span class="val-bad">${inp.type === "matrix" ? "invalid input (incomplete or does not parse)" : "invalid input (does not parse)"}</span>`;
       else if (v.state === "valid" && inp.showvalidation !== "0" && inp.type !== "string") el.innerHTML = `<span class="val-ok">${esc(v.tex || "")}</span>`;
       else el.innerHTML = "";
     }
@@ -809,12 +1166,42 @@ function showCheck() {
   }
   if (window.MathJax && MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, $("qtext")]);
 }
+// model answer as a student would type it (as STACK shows it): stackunits(8, cm) -> 8*cm; with a
+// decimal comma, decimals get a comma and the list separator becomes ";" (the input processing
+// turns them back, as STACK does)
+function unStackunits(v) {
+  let out = "", i = 0;
+  for (;;) {
+    const k = v.indexOf("stackunits(", i);
+    if (k < 0 || /[A-Za-z0-9_]/.test(v[k - 1] || "")) return out + v.slice(i);
+    let depth = 0, j = k + 10, parts = [], cur = "";
+    for (; j < v.length; j++) {
+      const c = v[j];
+      if (c === "(" || c === "[") { if (depth++ === 0) continue; }
+      else if (c === ")" || c === "]") { if (--depth === 0) break; }
+      else if (c === "," && depth === 1) { parts.push(cur); cur = ""; continue; }
+      cur += c;
+    }
+    parts.push(cur);
+    if (parts.length !== 2) return out + v.slice(i);
+    const num = unStackunits(parts[0].trim()), unit = parts[1].trim();
+    out += v.slice(i, k) + (/^[-+]?[\w.]+$/.test(num) ? num : "(" + num + ")") + "*" + unit;
+    i = j + 1;
+  }
+}
+function studentSyntax(v) {
+  v = unStackunits(v);
+  if ((result.decimals || ".") === ",") v = v.replace(/,/g, ";").replace(/(\d)\.(\d)/g, "$1,$2");
+  return v;
+}
 function fillModelAnswers() {
   if (!result) return;
   for (const inp of result.inputs || []) {
     let v = inp.tans_raw;
     if (v == null) continue;
     if (inp.type === "string" || inp.type === "notes") { try { v = JSON.parse(v); } catch (e) { /* not a string literal */ } }
+    else if (inp.type === "matrix") { const mc = matrixModelCells(inp); if (!mc) continue; v = JSON.stringify(mc.map((r) => r.map(studentSyntax))); }
+    else v = studentSyntax(v);
     inputValues[inp.name] = v;
   }
   lastCheck = null;
@@ -844,6 +1231,7 @@ function renderReview() {
       <span>${esc(f.title)}</span><span class="lvl">${f.level}${f.rejected ? ", rejected" : ""}${f.fixable ? "" : ", no automatic fix"}</span>
       ${f.wiki ? `<a class="lvl" href="${esc(f.wiki)}" target="_blank" rel="noopener">wiki</a>` : ""}</label>
     <div class="msg">${esc(f.message)}</div>
+    ${f.image ? `<img class="rvimg" src="${esc(f.image)}" alt="${esc(f.target)}">` : ""}
     ${f.preview ? `<pre>${esc(f.preview)}</pre>` : ""}</div>`).join("") || '<p class="hint">Nothing to report.</p>';
   $("reviewBtns").hidden = !review.some((f) => f.fixable);
 }
@@ -860,6 +1248,7 @@ async function applyReview(rejectRest) {
     if (backup) backedUp.add(file.path);
     file.rev = r.rev;
     fillEditor(r.fields);
+    showHistory(r.history);
     review = r.findings; renderReview();
     showMessages([{ cls: "info", text: `Applied ${r.applied.length} fix(es)` + (rejectRest ? `, rejected ${reject.length}.` : ".") }]);
     evaluate(false);
@@ -879,6 +1268,7 @@ async function inputOp(body) {
     const r = await postJSON("/api/q/input", Object.assign({ path: file.path, index: qindex, rev: file.rev, backup }, body));
     if (backup) backedUp.add(file.path);
     file.rev = r.rev;
+    showHistory(r.history);
     return r;
   } catch (e) {
     if (e.conflict) { conflict = true; showConflict(); }
@@ -891,34 +1281,69 @@ function openInputDialog() {
   if (!file || qindex === null) return;
   $("inName").value = ""; $("inTans").value = ""; $("inTans").placeholder = "same as name"; $("inTol").value = "0.005";
   $("inInfo").textContent = "";
+  for (const id of ["inLabel", "inUnit", "inComp"]) $(id).value = "";
   updateInputDialog();
-  $("inputDialog").showModal();
+  $("inVars").innerHTML = [...new Set(questionVariableNames())].sort().map((v) => `<option value="${esc(v)}">`).join("");
+  $("inputDialog").returnValue = "";
+  if (!$("inputDialog").open) $("inputDialog").show();
   $("inName").focus();
 }
-function updateInputDialog() {
-  const n = $("inName").value.trim(), kind = $("inKind").value;
-  $("inTolRow").hidden = kind === "expression";
-  $("inTans").placeholder = n || "same as name";
-  // assigned in the last evaluation, or in the question variables as they are now
+const MATRIX_KINDS = ["matrix", "matrixexpr"];
+// names assigned in the last evaluation, or in the question variables as they are now
+function questionVariableNames() {
   const names = (result && result.variables || []).map((v) => v.name);
   const qv = editors.questionvariables ? editors.questionvariables.get() : "";
   for (const m of qv.matchAll(/(^|[;$])\s*([A-Za-z_%][A-Za-z0-9_%]*)\s*:(?!=)/g)) names.push(m[2]);
+  return names;
+}
+function updateInputDialog() {
+  const n = $("inName").value.trim(), kind = $("inKind").value, isMatrix = MATRIX_KINDS.includes(kind);
+  $("inTolRow").hidden = kind === "expression" || kind === "matrixexpr";
+  $("inMatrix").hidden = !isMatrix;
+  $("inTans").placeholder = n || "same as name";
+  const names = questionVariableNames();
   const tans = $("inTans").value.trim() || n;
+  const isVar = /^[A-Za-z][A-Za-z0-9_]*$/.test(tans), missing = isVar && !names.includes(tans);
+  $("inSizeRow").hidden = !(isMatrix && missing);
   const lines = [];
-  if (n) lines.push(`creates input S_${n}, PRT ${n}, and [[input:S_${n}]] [[validation:S_${n}]] [[feedback:${n}]] at the cursor in the question text`);
-  if (n && /^[A-Za-z][A-Za-z0-9_]*$/.test(tans) && !names.includes(tans))
+  // an existing input or PRT of that name: the server would refuse it
+  const clash = n && ((saved.inputs || []).some((i) => i.name === "S_" + n) || (saved.prts || []).some((p) => p.name === n));
+  if (clash) lines.push(`<span class="bad">There is already an input S_${esc(n)} or a PRT ${esc(n)}: choose another name.</span>`);
+  if (n && !clash && isMatrix) lines.push(`creates input S_${n}, PRT ${n}, and a table row (label | matrix | unit | validation) with [[feedback:${n}]] below it at the cursor in the question text`);
+  else if (n && !clash) lines.push(`creates input S_${n}, PRT ${n}, and [[input:S_${n}]] [[validation:S_${n}]] [[feedback:${n}]] at the cursor in the question text`);
+  if (n && isMatrix && missing) lines.push(`${tans} is not (yet) a question variable: a ${$("inRows").value}×${$("inCols").value} placeholder matrix is added to the question variables (the size of the model answer sets the size of the input)`);
+  else if (n && missing)
     lines.push(`note: ${tans} is not (yet) a question variable` + (kind === "units" ? " - for this type it must include the unit, e.g. " + tans + ": 720*N;" : ""));
-  $("inInfo").textContent = lines.join("\n");
-  $("inOk").disabled = !/^[A-Za-z][A-Za-z0-9_]*$/.test(n);
+  $("inInfo").innerHTML = lines.map((l) => l.startsWith("<span") ? l : esc(l)).join("\n");
+  $("inOk").disabled = !/^[A-Za-z][A-Za-z0-9_]*$/.test(n) || clash;
+}
+// a matrix input renders as a block, so label, input, unit and validation go into one table row
+// (wiki "Matrix input"); the feedback follows below the table. Blank lines around it, so that
+// Markdown takes it as an HTML block and leaves the \( ... \) of the label alone.
+function matrixInputText(name) {
+  const label = $("inLabel").value.trim() || name, unit = $("inUnit").value.trim();
+  return `\n\n<table><tbody><tr><td>\\(${label}=\\)</td><td>[[input:S_${name}]]</td>` +
+    (unit ? `<td>\\(\\,\\mathrm{${unit}}\\)</td>` : "") +
+    `<td>[[validation:S_${name}]]</td></tr></tbody></table>\n<p>[[feedback:${name}]]</p>\n\n`;
 }
 async function createInput() {
-  const name = $("inName").value.trim(), kind = $("inKind").value;
-  const r = await inputOp({ op: "add", name, kind, tans: $("inTans").value.trim(), tol: $("inTol").value.trim() || "0.005" });
+  const name = $("inName").value.trim(), kind = $("inKind").value, isMatrix = MATRIX_KINDS.includes(kind);
+  const tans = $("inTans").value.trim() || name;
+  if (isMatrix && /^[A-Za-z][A-Za-z0-9_]*$/.test(tans) && !questionVariableNames().includes(tans)) {
+    // placeholder model answer of the requested size, to be replaced by the author
+    const rows = Math.max(1, Math.min(9, parseInt($("inRows").value, 10) || 1));
+    const cols = Math.max(1, Math.min(9, parseInt($("inCols").value, 10) || 1));
+    const row = "[" + Array(cols).fill("0").join(", ") + "]";
+    const ed = editors.questionvariables, qv = ed.get();
+    ed.set(qv + (qv && !qv.endsWith("\n") ? "\n" : "") + `${tans}: matrix(${Array(rows).fill(row).join(", ")}); /* model answer of S_${name} (placeholder) */\n`);
+  }
+  const r = await inputOp({ op: "add", name, kind, tans: $("inTans").value.trim(), tol: $("inTol").value.trim() || "0.005",
+    labels: isMatrix ? $("inComp").value.trim() : "" });
   if (!r) return;
   saved.inputs = r.fields.inputs; saved.prts = r.fields.prts;
   renderInputEditor(saved.inputs); renderPRTs(saved.prts);
   // placeholders at the cursor of the question text; saved by the autosave
-  editors.questiontext.insert(`[[input:S_${name}]] [[validation:S_${name}]] [[feedback:${name}]]`);
+  editors.questiontext.insert(isMatrix ? matrixInputText(name) : `[[input:S_${name}]] [[validation:S_${name}]] [[feedback:${name}]]`);
   showMessages([{ cls: "info", text: `Created input S_${name} and PRT ${name}.` }]);
   await save();
   evaluate(false);
@@ -950,11 +1375,96 @@ function setTab(t) {
   $("qgrid").classList.toggle("tab-edit", t === "edit"); $("qgrid").classList.toggle("tab-preview", t === "preview");
   if (t === "edit" || WIDE.matches) refreshEditors();
   if (previewVisible() && previewPending && result) render();
+  spyJump();
 }
 WIDE.addEventListener("change", () => setTab(tab));
 function measureHeader() { document.documentElement.style.setProperty("--hdr", document.querySelector("header").offsetHeight + "px"); }
 window.addEventListener("resize", measureHeader);
+if (window.ResizeObserver) new ResizeObserver(measureHeader).observe(document.querySelector("header"));   // the header wraps when its selects fill
 measureHeader();
+// ---------------------------------------------------------------- jump navigation
+// Buttons for the sections of the editor and the preview, as a bar on top of each column or as
+// rails beside them (editor rail left, preview rail right; on narrow screens both rails stay
+// visible and switch between Edit and Preview). A click scrolls the column to the section and
+// opens it if it is collapsed; the section at the top of the column is highlighted.
+const JUMPS = {
+  edit: [["Review", () => $("reviewBox")], ["Variables", () => document.querySelector('#editView [data-field="questionvariables"]').previousElementSibling],
+    ["Text", () => $("addInput").closest("label")], ["Inputs", () => $("inputEd").previousElementSibling],
+    ["Options", () => $("optBox")], ["General FB", () => document.querySelector('#editView [data-field="generalfeedback"]').closest("details")],
+    ["Specific FB", () => document.querySelector('#editView [data-field="specificfeedback"]').closest("details")],
+    ["Note", () => document.querySelector('#editView [data-field="questionnote"]').closest("details")], ["PRTs", () => $("prtBox")]],
+  preview: [["Question", () => $("previewView").closest("section")], ["General FB", () => $("gfbBox")], ["Note", () => $("qnote").previousElementSibling],
+    ["Messages", () => $("messages").closest("section")], ["Inputs", () => $("inputs").closest("section")],
+    ["PRT graphs", () => $("prtGraph").closest("section")], ["Variables", () => $("vars").closest("section")]],
+};
+function jumpTargets(col) {
+  const out = JUMPS[col].map(([label, f]) => ({ label, el: f() }));
+  if (col === "edit") for (const card of document.querySelectorAll("#prtView .prt"))
+    out.push({ label: card.dataset.prt, el: card, sub: true });
+  return out.filter((t) => t.el);
+}
+function renderJumpNav() {
+  for (const [col, ids] of [["edit", ["barEdit", "railEdit"]], ["preview", ["barPreview", "railPreview"]]]) {
+    const targets = jumpTargets(col);
+    for (const t of targets) t.el.dataset.jump = t.label;
+    for (const id of ids) {
+      $(id).innerHTML = targets.map((t, i) => `<button type="button" class="${t.sub ? "sub" : ""}" data-i="${i}" title="${t.sub ? "PRT " : ""}${esc(t.label)}">${esc(t.label)}</button>`).join("");
+      for (const b of $(id).querySelectorAll("button")) b.addEventListener("click", () => jumpTo(col, targets[+b.dataset.i].el));
+    }
+  }
+  spyJump();
+}
+function jumpTo(col, el) {
+  if (!WIDE.matches && tab !== col) setTab(col);
+  for (let d = el.closest("details"); d; d = d.parentElement.closest("details")) d.open = true;
+  if (el.tagName === "DETAILS") el.open = true;
+  requestAnimationFrame(() => {
+    // scroll only the column (wide) or the page (narrow); scrollIntoView would also move the page
+    const margin = parseFloat(getComputedStyle(el).scrollMarginTop) || 0;
+    if (WIDE.matches) {
+      const colEl = $(col === "edit" ? "editCol" : "previewCol");
+      colEl.scrollTop += el.getBoundingClientRect().top - colEl.getBoundingClientRect().top - margin;
+      window.scrollTo(0, 0);
+    } else window.scrollBy(0, el.getBoundingClientRect().top - margin);
+    spyJump();
+  });
+}
+function spyJump() {
+  for (const [col, colEl, ids] of [["edit", $("editCol"), ["barEdit", "railEdit"]], ["preview", $("previewCol"), ["barPreview", "railPreview"]]]) {
+    if (colEl.offsetParent === null) { for (const id of ids) $(id).querySelectorAll("button").forEach((b) => b.classList.remove("on")); continue; }
+    const top = (WIDE.matches ? colEl.getBoundingClientRect().top : document.querySelector("header").offsetHeight) + 48;
+    const targets = jumpTargets(col);
+    let cur = -1;
+    targets.forEach((t, i) => { if (t.el.offsetParent !== null && t.el.getBoundingClientRect().top <= top) cur = i; });
+    if (cur < 0) cur = 0;
+    // a PRT card highlights both its own button and "PRTs"
+    const prtsIdx = targets.findIndex((t) => t.label === "PRTs" && !t.sub);
+    for (const id of ids) $(id).querySelectorAll("button").forEach((b, i) =>
+      b.classList.toggle("on", i === cur || !!(targets[cur] && targets[cur].sub && i === prtsIdx)));
+  }
+}
+for (const id of ["editCol", "previewCol"]) $(id).addEventListener("scroll", () => requestAnimationFrame(spyJump), { passive: true });
+window.addEventListener("scroll", () => requestAnimationFrame(spyJump), { passive: true });
+// top: a bar above each column; outer/inner/left/right: rails beside the columns
+const NAV_MODES = ["top", "outer", "inner", "left", "right"];
+const RAIL_UP = { outer: [true, false], inner: [false, true], left: [true, true], right: [false, false] };   // [editor, preview] reads bottom-up
+function setNavMode(mode) {
+  if (!NAV_MODES.includes(mode)) mode = mode === "side" ? "outer" : "top";
+  const g = $("qgrid");
+  g.classList.toggle("side", mode !== "top");
+  for (const m of NAV_MODES) g.classList.toggle("r-" + m, m === mode);
+  const up = RAIL_UP[mode] || [false, false];
+  $("railEdit").classList.toggle("up", up[0]); $("railPreview").classList.toggle("up", up[1]);
+  $("toggleNav").textContent = "Sections: " + mode;
+  store(QSTORE_KEY, { nav: mode });
+  refreshEditors();
+  spyJump();
+}
+$("toggleNav").addEventListener("click", () => {
+  const cur = NAV_MODES.find((m) => $("qgrid").classList.contains("r-" + m)) || "top";
+  setNavMode(NAV_MODES[(NAV_MODES.indexOf(cur) + 1) % NAV_MODES.length]);
+});
+
 function toggleFiles(hide) {
   const h = hide === undefined ? !$("qgrid").classList.contains("nofiles") : hide;
   $("qgrid").classList.toggle("nofiles", h);
@@ -1021,6 +1531,11 @@ function restore(text, tag, store) {
 
 // castext output (already evaluated by Maxima) -> HTML with slots for graphics and inputs
 function toHTML(text, format, blocks) {
+  // images embedded in the question file (<file> elements, referenced as @@PLUGINFILE@@/name)
+  text = String(text || "").replace(/@@PLUGINFILE@@\/([^"'()\s<>]+)/g, (m, n) => {
+    const f = (result && result.files) || {};
+    return f[decodeURIComponent(n)] || f[n] || m;
+  });
   let t = protect(text || "", /\[\[\s*jsxgraph\b[^\]]*\]\][\s\S]*?\[\[\/jsxgraph\]\]/g, "JSX", blocks);
   if (format === "markdown" && window.marked) {
     // As STACK ([[demarkdown]]): the whole text goes through Markdown, backslash escapes
@@ -1039,6 +1554,7 @@ function toHTML(text, format, blocks) {
   t = t.replace(/@@JSX(\d+)@@/g, (m, i) => `<span class="jsx-slot" data-jsx="${i}"></span>`);
   t = t.replace(/\[\[\s*input:([A-Za-z0-9_]+)\s*\]\]/g, (m, n) => {
     const inp = (result.inputs || []).find((x) => x.name === n) || {};
+    if (inp.type === "matrix") return matrixInputHTML(inp);
     const box = parseInt(inp.boxsize, 10) || 15;   // STACK: width (boxsize * 0.9 + 0.1) em, size boxsize * 1.1
     const opts = String(inp.options || "").split(",").map((o) => o.trim().toLowerCase());
     const cls = "stack-input" + (opts.includes("monospace") ? " mono" : "") + (opts.includes("align:right") ? " right" : "");
@@ -1052,9 +1568,54 @@ function toHTML(text, format, blocks) {
   return t;
 }
 
+// Matrix input (STACK type "matrix"): one text field per cell, the grid size is that of the
+// model answer (evaluated on the server: inp.mcells). The value kept in inputValues and sent to
+// "Check" is the JSON list of rows of cell texts; the server builds matrix([...],...) from it.
+// Rows of cell texts of a matrix input's model answer: from the server (mcells) or, as a
+// fallback, split from the model answer text "matrix([a,b],[c,d])".
+function matrixModelCells(inp) {
+  if (inp.mcells) return inp.mcells;
+  const t = String(inp.tans_raw || "").trim();
+  const m = /^matrix\s*\((.*)\)$/s.exec(t);
+  if (!m) return null;
+  const split = (str) => {     // top level commas only
+    const out = []; let depth = 0, cur = "";
+    for (const ch of str) {
+      if ("([{".includes(ch)) depth++;
+      if (")]}".includes(ch)) depth--;
+      if (ch === "," && depth === 0) { out.push(cur.trim()); cur = ""; } else cur += ch;
+    }
+    if (cur.trim()) out.push(cur.trim());
+    return out;
+  };
+  const rows = split(m[1]).map((r) => /^\[(.*)\]$/s.exec(r)).filter(Boolean).map((r) => split(r[1]));
+  return rows.length ? rows : null;
+}
+function matrixInputHTML(inp) {
+  const cells = matrixModelCells(inp) || [[""]];
+  const parens = ((saved && saved.options) || {}).matrixparens ?? "[";
+  const cls = { "[": "paren-sq", "(": "paren-round", "{": "paren-round", "|": "paren-bar" }[parens] || "";
+  const box = parseInt(inp.boxsize, 10) || 5;
+  const cols = Math.max(...cells.map((r) => r.length), 1);
+  const items = cells.map((r, i) => r.map((c, j) =>
+    `<input class="stack-input matrix-cell" data-input="${esc(inp.name)}" data-r="${i}" data-c="${j}" size="${box}" spellcheck="false">`).join("")).join("");
+  return `<span class="stack-matrix ${cls}" style="grid-template-columns: repeat(${cols}, auto)">${items}</span>`;
+}
+function matrixCellsValue(name) {
+  const rows = [];
+  for (const el of document.querySelectorAll(`input.matrix-cell[data-input="${CSS.escape(name)}"]`)) {
+    const r = +el.dataset.r, c = +el.dataset.c;
+    (rows[r] = rows[r] || [])[c] = el.value;
+  }
+  return JSON.stringify(rows.map((r) => Array.from(r, (x) => x ?? "")));
+}
+function matrixCell(value, r, c) {
+  try { const rows = JSON.parse(value || "[]"); return (rows[r] && rows[r][c]) ?? ""; } catch (e) { return ""; }
+}
+
 function setInputValue(name, value) {
   inputValues[name] = value;
-  for (const el of document.querySelectorAll(`input.stack-input[data-input="${CSS.escape(name)}"]`)) if (el.value !== value) el.value = value;
+  for (const el of document.querySelectorAll(`input.stack-input[data-input="${CSS.escape(name)}"]:not(.matrix-cell)`)) if (el.value !== value) el.value = value;
   const cell = document.querySelector(`#inputs [data-current="${CSS.escape(name)}"]`);
   if (cell) cell.textContent = value;
 }
@@ -1063,6 +1624,11 @@ async function renderInto(container, text, format) {
   const blocks = [];
   container.innerHTML = toHTML(text, format, blocks);
   for (const el of container.querySelectorAll("input.stack-input")) {
+    if (el.classList.contains("matrix-cell")) {
+      el.value = matrixCell(inputValues[el.dataset.input], +el.dataset.r, +el.dataset.c);
+      el.addEventListener("input", () => setInputValue(el.dataset.input, matrixCellsValue(el.dataset.input)));
+      continue;
+    }
     el.value = inputValues[el.dataset.input] || el.dataset.initial || "";
     el.addEventListener("input", () => setInputValue(el.dataset.input, el.value));
   }
@@ -1102,7 +1668,7 @@ function render(keepValues) {
   $("qmeta").innerHTML = [
     `format: ${esc(fmt)}`,
     `seed: ${result.seed}`, `language shown: ${esc(result.picked ? result.picked[lang] || "none" : lang)}`,
-    `PRTs: ${(result.prts || []).map((p) => esc(p.name)).join(", ") || "-"}`,
+    `PRTs: ${byTextOrder(result.prts || [], "feedback").map((p) => esc(p.name)).join(", ") || "-"}`,
   ].map((x) => `<span>${x}</span>`).join("");
   renderInto($("qtext"), pick("questiontext"), fmt);
   renderInto($("gfb"), pick("generalfeedback"), (result.formats || {}).generalfeedback || "html");
@@ -1125,7 +1691,7 @@ function renderVariables() {
 
 function renderInputs() {
   const tb = $("inputs").querySelector("tbody");
-  tb.innerHTML = "<tr><th>Input</th><th>Model answer / current</th></tr>" + (result.inputs || []).map((i) =>
+  tb.innerHTML = "<tr><th>Input</th><th>Model answer / current</th></tr>" + byTextOrder(result.inputs || [], "input").map((i) =>
     `<tr><td class="n">${esc(i.name)}<br><span class="hint">${esc(i.type)}</span></td>
       <td>${i.tans_tex && i.tans_tex.length < 400 ? esc(i.tans_tex) : ""}<code class="raw" title="model answer (tans: ${esc(i.tans)}), click to expand">${esc(i.tans_raw ?? i.tans)}</code>
       <code class="raw" style="color:var(--ink)" data-current="${esc(i.name)}" title="current value"></code></td></tr>`).join("");
@@ -1187,6 +1753,8 @@ async function start() {
   setLang(q.lang || "de");
   setTab(q.tab || "edit");
   if (q.hideFiles) toggleFiles(true);
+  setNavMode(q.nav || "top");
+  renderJumpNav();
   $("status").textContent = "repository: " + config.repo_path;
   await loadFolders();
   if (q.path) openFile(q.path, q.index);
@@ -1263,11 +1831,12 @@ $("simpToggle").addEventListener("click", () => {
   if (el) setOption("questionsimplify", el.value === "0" ? "1" : "0");
 });
 $("toggleFiles").addEventListener("click", () => toggleFiles());
-for (const id of ["inName", "inTans", "inKind"]) $(id).addEventListener("input", updateInputDialog);
-for (const id of ["inName", "inTans", "inTol"]) $(id).addEventListener("keydown", (e) => {   // Enter = Create
+for (const id of ["inName", "inTans", "inKind", "inRows", "inCols"]) $(id).addEventListener("input", updateInputDialog);
+for (const id of ["inName", "inTans", "inTol", "inLabel", "inUnit", "inComp"]) $(id).addEventListener("keydown", (e) => {   // Enter = Create
   if (e.key === "Enter") { e.preventDefault(); if (!$("inOk").disabled) $("inputDialog").close("ok"); }
 });
 $("inputDialog").addEventListener("close", () => { if ($("inputDialog").returnValue === "ok") createInput(); });
+$("inputDialog").addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); $("inputDialog").close(""); } });
 $("varFilter").addEventListener("input", () => result && renderVariables());
 for (const sel of document.querySelectorAll("#editView [data-format]")) sel.addEventListener("change", () => setDirty(true));
 document.addEventListener("keydown", (e) => {

@@ -1,0 +1,109 @@
+/* ============================================================================
+   Tests for fb_system(names, sys, env, hint) and fb_reactions(obj, f, m),
+   derived from the wiki pages "fb_system()" and "fb_reactions()".
+   Scenes: obj_bodies (wall 15 and rope 7 are the environment, cut free in
+   case "cut"; the disk 14 is the system), obj_loads (hidden line load 10 with
+   the active force R on it).
+   fb_system(): the system elements must be shown, the environment elements
+   must not; as the other feedback functions, the text starts with <br>, the
+   hint follows after one space.
+   ============================================================================ */
+
+n_bodies: scene_names("obj_bodies", "init");
+n_cut: scene_names("obj_bodies", "cut");
+
+/* ---- environment (wall, rope) still shown ---- */
+fb_check(fb_system(n_bodies, [14], [15, 7], ""), false,
+  "<br>Die Systemgrenzen stimmen nicht.",
+  "<br>The system boundaries are incorrect.",
+  "fb_system env shown");
+
+/* ---- environment cut free (both "hide"), system shown ---- */
+fb_check(fb_system(n_cut, [14], [15, 7], ""), true,
+  "<br>Die Systemgrenzen stimmen.",
+  "<br>The system boundaries are correct.",
+  "fb_system env cut free");
+
+/* ---- one environment element (circle 3, "show" in case cut) still shown, with hint ---- */
+fb_check(fb_system(n_cut, [14], [15, 7, 3], "Der Kreis gehört zur Umgebung."), false,
+  "<br>Die Systemgrenzen stimmen nicht. Der Kreis gehört zur Umgebung.",
+  "<br>The system boundaries are incorrect. Der Kreis gehört zur Umgebung.",
+  "fb_system hint appended");
+
+/* ---- a hint starting with a space (as in older questions) gives one space only ---- */
+fb_check(fb_system(n_bodies, [14], [15, 7], " Die Wand gehört zur Umgebung."), false,
+  "<br>Die Systemgrenzen stimmen nicht. Die Wand gehört zur Umgebung.",
+  "<br>The system boundaries are incorrect. Die Wand gehört zur Umgebung.",
+  "fb_system hint with leading space");
+
+/* ---- system element deactivated: wrong (rope 7 is hidden in case cut) ---- */
+fb_check(fb_system(n_cut, [14, 7], [15], ""), false,
+  "<br>Die Systemgrenzen stimmen nicht.",
+  "<br>The system boundaries are incorrect.",
+  "fb_system system element hidden");
+
+/* ---- system entries that are no state (node, point, mass: name or 0) are not checked ---- */
+fb_check(fb_system(["P", 0, "SHOW", "hide"], [1, 2, 3], [4], ""), true,
+  "<br>Die Systemgrenzen stimmen.",
+  "<br>The system boundaries are correct.",
+  "fb_system system entries without state");
+
+/* ---- an environment element carrying loads (names entry is a list) counts as cut free ---- */
+n_loads: scene_names("obj_loads", "init");
+fb_check(fb_system(n_loads, [], [10], ""), true,
+  "<br>Die Systemgrenzen stimmen.",
+  "<br>The system boundaries are correct.",
+  "fb_system env with reaction list");
+
+/* ---- ... but a system element carrying loads has been cut out: wrong ---- */
+fb_check(fb_system(n_loads, [10], [], ""), false,
+  "<br>Die Systemgrenzen stimmen nicht.",
+  "<br>The system boundaries are incorrect.",
+  "fb_system system element with reaction list");
+
+/* ---- the same line load switched to show while R stands on it ---- */
+fb_check(fb_system(scene_names("obj_loads", "q-shown"), [], [10], ""), false,
+  "<br>Die Systemgrenzen stimmen nicht.",
+  "<br>The system boundaries are incorrect.",
+  "fb_system env shown with load on it");
+
+/* ---- states: SHOW and show count as shown; hide, HIDE and the legacy locked do not ---- */
+fb_check(fb_system(["SHOW", "SHOW"], [1], [2], ""), false,
+  "<br>Die Systemgrenzen stimmen nicht.",
+  "<br>The system boundaries are incorrect.",
+  "fb_system env SHOW");
+fb_check(fb_system(["SHOW", "hide", "HIDE", "locked"], [1], [2, 3, 4], ""), true,
+  "<br>Die Systemgrenzen stimmen.",
+  "<br>The system boundaries are correct.",
+  "fb_system env hide/HIDE/locked");
+
+/* ============================================================================
+   fb_reactions(obj, f, m): counts active forces without a space in the name
+   (resultants of line loads such as "3 q_0 a" are not reactions) and active
+   moments. Scene obj_loads: active forces F_2 and R, active moment M_a;
+   F_1, F_3 (silent), F_4 (dotted) and M are not active.
+   ============================================================================ */
+o_loads: scene_obj("obj_loads", "init");
+
+fb_check(fb_reactions(o_loads, 2, 1), true,
+  "Die Zahl der Reaktionen stimmt.",
+  "The number of reactions is correct.",
+  "fb_reactions correct");
+fb_check(fb_reactions(o_loads, 3, 1), false,
+  "Die Zahl der Reaktionskräfte stimmt nicht.",
+  "The number of reaction forces is incorrect.",
+  "fb_reactions force count wrong");
+fb_check(fb_reactions(o_loads, 2, 0), false,
+  "Die Zahl der Reaktionsmomente stimmt nicht.",
+  "The number of reaction moments is incorrect.",
+  "fb_reactions moment count wrong");
+fb_check(fb_reactions(o_loads, 0, 2), false,
+  "Die Zahl der Reaktionskräfte stimmt nicht.<br>Die Zahl der Reaktionsmomente stimmt nicht.",
+  "The number of reaction forces is incorrect.<br>The number of reaction moments is incorrect.",
+  "fb_reactions both counts wrong");
+fb_check(fb_reactions([["force", "3 q_0 a", [0, 0], [0, 1], 10, "active"],
+                       ["force", "A", [0, 0], [1, 0], 10, "active"],
+                       ["force", "B", [0, 0], [1, 0], 10, "locked"]], 1, 0), true,
+  "Die Zahl der Reaktionen stimmt.",
+  "The number of reactions is correct.",
+  "fb_reactions resultant (name with space) and locked force not counted");

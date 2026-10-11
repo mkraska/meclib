@@ -95,6 +95,15 @@ def _set_node_format(q, prt, node_index, branch, fmt):
     return q[:m.start()] + p + q[m.end():]
 
 
+def _set_node_text(q, prt, node_index, tag, value):
+    m = _named(q, "prt", prt)
+    nodes = _blocks(m.group(0), "node")
+    n = nodes[node_index]
+    block = qfile._replace_text_child(n.group(0), tag, value, qfile._newline(q))[0]
+    p = m.group(0)[:n.start()] + block + m.group(0)[n.end():]
+    return q[:m.start()] + p + q[m.end():]
+
+
 def _set_text(q, tag, value):
     return qfile._replace_text_child(q, tag, value, qfile._newline(q))[0]
 
@@ -482,8 +491,290 @@ def r_locked(Q_):
     return out
 
 
+# Math delimiters by text format. HTML: \( \) \[ \]. Markdown: the strict form \\\( (escaped
+# backslash and escaped bracket, which Markdown can never take for a link or the like), except
+# inside block-level HTML, which Markdown passes through unchanged: there \( as in HTML.
+# Only complete pairs are changed (as MathJax pairs them); [[jsxgraph]] blocks and CAS parts
+# are left alone.
+MATH_DELIM = re.compile(r"(?<!\\)(\\{1,3})([()\[\]])")
+PROTECTED = re.compile(r"\[\[\s*jsxgraph\b.*?\[\[\s*/jsxgraph\s*\]\]|\[\[\s*comment\s*\]\].*?\[\[\s*/comment\s*\]\]"
+                       r"|\{@.*?@\}|\{#.*?#\}", re.S | re.I)
+MD_BLOCK_TAGS = ("p", "div", "table", "ul", "ol", "dl", "pre", "blockquote", "form", "fieldset", "center",
+                 "section", "figure", "details", "h1", "h2", "h3", "h4", "h5", "h6", "hr")
+MD_BLOCK_START = re.compile(r"[ ]{0,3}(?:\[\[[^\]]*\]\]\s*)*<(%s)\b" % "|".join(MD_BLOCK_TAGS), re.I)
+
+
+def _md_html_blocks(text):
+    """Spans of block-level HTML in a Markdown text (as Markdown Extra: from a line starting with a
+    block tag to its matching closing tag; void or unclosed: to the next blank line)."""
+    spans, pos, lines = [], 0, text.split("\n")
+    starts = []
+    for line in lines:
+        starts.append(pos)
+        pos += len(line) + 1
+    i = 0
+    while i < len(lines):
+        m = MD_BLOCK_START.match(lines[i])
+        if not m:
+            i += 1
+            continue
+        tag = m.group(1).lower()
+        start, depth, j, end = starts[i], 0, i, None
+        opening, closing = re.compile(r"<%s\b" % tag, re.I), re.compile(r"</%s\s*>" % tag, re.I)
+        while j < len(lines) and tag != "hr":
+            depth += len(opening.findall(lines[j])) - len(closing.findall(lines[j]))
+            if depth <= 0:
+                end = starts[j] + len(lines[j])
+                break
+            j += 1
+        if end is None:          # void tag or not closed: up to the next blank line
+            j = i
+            while j < len(lines) and lines[j].strip():
+                j += 1
+            end = starts[j - 1] + len(lines[j - 1])
+        spans.append((start, end))
+        i = j + 1
+    return spans
+
+
+def fix_math_delimiters(text, fmt):
+    """Returns (new text, {change: count}) with the delimiters in the form the format needs."""
+    protected = [m.span() for m in PROTECTED.finditer(text)]
+    html_blocks = _md_html_blocks(text) if fmt == "markdown" else []
+    inside = lambda pos, spans: any(a <= pos < b for a, b in spans)
+    pairs, opener = [], None
+    for m in MATH_DELIM.finditer(text):
+        if inside(m.start(), protected):
+            continue
+        br = m.group(2)
+        if opener is None:
+            if br in "([":
+                opener = m
+        elif br == {"(": ")", "[": "]"}[opener.group(2)]:
+            pairs += [opener, m]
+            opener = None
+    changes, out, last = {}, [], 0
+    for m in pairs:
+        want = 3 if fmt == "markdown" and not inside(m.start(), html_blocks) else 1
+        n = len(m.group(1))
+        if n == want:
+            continue
+        if m.group(2) in "([":       # counted per pair: \\( ... \\) → \\\( ... \\\)
+            close = {"(": ")", "[": "]"}[m.group(2)]
+            key = "%s%s ... %s%s → %s%s ... %s%s" % ("\\" * n, m.group(2), "\\" * n, close,
+                                                   "\\" * want, m.group(2), "\\" * want, close)
+            changes[key] = changes.get(key, 0) + 1
+        out.append(text[last:m.start()] + "\\" * want + m.group(2))
+        last = m.end()
+    return "".join(out) + text[last:], changes
+
+
+def r_math_delimiters(Q_):
+    out = []
+    places = [(f, Q_.data.get(f) or "", Q_.data["formats"].get(f, "html"), None)
+              for f in ("questiontext", "generalfeedback", "specificfeedback", "questionnote")]
+    for prt in Q_.prts:
+        for k, node in enumerate(prt["nodes"]):
+            for br in ("true", "false"):
+                places.append(("PRT %s node %d %s" % (prt["name"], k + 1, br), node.get(br + "feedback") or "",
+                               node.get(br + "format") or "html", (prt["name"], k, br)))
+    for where, text, fmt, node in places:
+        fmt = "markdown" if fmt == "markdown" else "html"
+        new, changes = fix_math_delimiters(text, fmt)
+        if not changes:
+            continue
+
+        def fix(q, where=where, fmt=fmt, node=node):
+            if node is None:
+                return _set_text(q, where, fix_math_delimiters(Q(q).data.get(where) or "", fmt)[0])
+            P, k, br = node
+            prt = next(p for p in Q(q).prts if p["name"] == P)
+            return _set_node_text(q, P, k, br + "feedback",
+                                  fix_math_delimiters(prt["nodes"][k].get(br + "feedback") or "", fmt)[0])
+        rule = ("Markdown: \\\\\\( ... \\\\\\) in text, \\( ... \\) inside HTML blocks such as <p> or <table>"
+                if fmt == "markdown" else "HTML: \\( ... \\)")
+        out.append(F("text.math-delimiters", where, "recommended", "Math delimiters",
+                     "%s (%s): %s. %s." % (where, fmt, ", ".join("%d× %s" % (c, k) for k, c in changes.items()), rule),
+                     fix))
+    return out
+
+
+# Matrix inputs (wiki "Matrix input", "Matrix Feedback"): a table row label | input | validation
+# with the feedback below, and element-wise feedback with fb_unit_matrix() / fb_vars_matrix().
+MATRIX_NUMERIC_TESTS = ("NumRelative", "NumAbsolute", "UnitsRelative", "UnitsStrictRelative", "UnitsAbsolute",
+                        "UnitsStrictAbsolute", "NumSigFigs", "NumDecPlaces")
+
+
+def _matrix_paragraph(text, name):
+    """<p>label [[input:name]] [[validation:name]] [[feedback:X]]</p> (feedback optional)."""
+    return re.search(r"<p>(?P<label>(?:(?!</?p\b|\[\[)[^\n])*?)\s*\[\[\s*input:%s\s*\]\]\s*\[\[\s*validation:%s\s*\]\]"
+                     r"\s*(?P<fb>\[\[\s*feedback:\w+\s*\]\])?\s*</p>" % (re.escape(name), re.escape(name)), text)
+
+
+def _in_table(text, name):
+    pos = text.find("[[input:%s]]" % name)
+    if pos < 0:
+        return False
+    start = text.rfind("<table", 0, pos)
+    return start >= 0 and text.rfind("</table>", 0, pos) < start
+
+
+def _matrix_table(m, name):
+    label = m.group("label").strip()
+    row = ("<td>%s</td>" % label if label else "") + "<td>[[input:%s]]</td><td>[[validation:%s]]</td>" % (name, name)
+    out = "<table><tbody><tr>%s</tr></tbody></table>" % row
+    if m.group("fb"):
+        out += "\n<p>%s</p>" % m.group("fb").strip()
+    return out
+
+
+# a meclib call in old per-component feedback, optionally with a label: <br>\(x\): {@fb_unit(...)@}
+MATRIX_FB_CALL = re.compile(r"(?:<br\s*/?>\s*)?(?:[^<{\n]{0,40}?:\s*)?\{@\s*fb_\w+\(.*?\)\s*@\}", re.S)
+MATRIX_LABEL = re.compile(r"^\s*(?:<br\s*/?>)?\s*\\\(\s*([A-Za-z][A-Za-z0-9_]*)\s*\\\)\s*:")
+
+
+def _old_labels(text):
+    """Labels of old per-component feedback as a label argument: ['N, 'Q_y]; "" if there are none,
+    if they are x, y, z (the default) or not all simple symbols."""
+    labels = []
+    for m in MATRIX_FB_CALL.finditer(text):
+        lm = MATRIX_LABEL.match(m.group(0))
+        if not lm:     # label as 4th argument of fb_vars: fb_vars(S[1,1], T[1,1], [], "<br>\\(x\\):")
+            args = _call_args(m.group(0), "fb_vars") or []
+            lab = args[3].strip('"').replace("\\\\", "\\") if len(args) > 3 else ""
+            lm = MATRIX_LABEL.match(lab)
+        if not lm:
+            return ""
+        labels.append(lm.group(1))
+    if not labels or labels == ["x", "y", "z"][:len(labels)]:
+        return ""
+    return ", [" + ", ".join("'" + x for x in labels) + "]"
+
+
+def _call_args(text, fname):
+    m = re.search(r"\b%s\s*\(" % fname, text)
+    return split_args(text[m.end():]) if m else None
+
+
+def r_matrix_inputs(Q_):
+    out = []
+    for inp in Q_.inputs:
+        if inp["type"] != "matrix":
+            continue
+        N = inp["name"]
+        # --- layout
+        if not _in_table(Q_.qtext, N):
+            m = _matrix_paragraph(Q_.qtext, N)
+            if m:
+                def fix(q, N=N):
+                    text = Q(q).qtext
+                    m = _matrix_paragraph(text, N)
+                    if not m:
+                        raise ValueError("the paragraph of %s has changed" % N)
+                    return _set_text(q, "questiontext", text[:m.start()] + _matrix_table(m, N) + text[m.end():])
+                out.append(F("matrix.layout", N, "recommended", "Layout of a matrix input",
+                             "Input %s (matrix): STACK shows a matrix input as a block of its own, so the label, the "
+                             "matrix and the validation do not stand side by side in a paragraph. Put them into a table "
+                             "row, the feedback below it." % N, fix, WIKI + "Matrix-input"))
+            else:
+                out.append(F("matrix.layout", N, "hint", "Layout of a matrix input",
+                             "Input %s (matrix) is not in a table row label | input | validation; this layout is not "
+                             "converted automatically." % N, None, WIKI + "Matrix-input"))
+        # --- feedback
+        P = N[2:] if N.startswith("S_") else N
+        prt = next((p for p in Q_.prts if p["name"] == P), None)
+        if prt is None or re.search(r"fb_(unit|vars)_matrix\s*\(", prt["feedbackvariables"]):
+            continue
+        T = (inp.get("tans") or "").strip()
+        nodes = prt["nodes"]
+        texts = [n.get(br + "feedback") or "" for n in nodes for br in ("true", "false")]
+        rest = [re.sub(MATRIX_FB_CALL.pattern + r"|<br\s*/?>|\s", "", t, flags=re.S) for t in texts]
+        fv_names = set(re.findall(r"\b(txt|isOK)\s*:", prt["feedbackvariables"]))
+        node = nodes[0] if nodes else {}
+        numeric = (node.get("answertest") in MATRIX_NUMERIC_TESTS or any("fb_unit(" in t for t in texts)
+                   or "toList" in (node.get("sans") or "") + prt["feedbackvariables"])
+        problem = ("it has %d nodes" % len(nodes) if len(nodes) != 1 else
+                   "its feedback contains more than meclib function calls" if any(rest) else
+                   "its feedback variables already use txt or isOK" if fv_names else
+                   "the input has no model answer" if not T else "")
+        if problem:
+            out.append(F("matrix.feedback", P, "hint", "Element-wise feedback for a matrix input",
+                         "PRT %s (matrix input %s): convert it to %s by hand, %s." % (
+                             P, N, "fb_unit_matrix()" if numeric else "fb_vars_matrix()", problem),
+                         None, WIKI + "Matrix-Feedback"))
+            continue
+        allfb = " ".join(texts)
+        if numeric:
+            tol = (node.get("testoptions") or "").strip() if node.get("answertest", "").endswith("Relative") else ""
+            if not tol:
+                a = _call_args(allfb, "fb_unit")
+                tol = a[2] if a and len(a) > 2 and a[2].strip() not in ("0", "0.0") else TARGET_TOLERANCE
+            call = "[txt, isOK]: fb_unit_matrix(%s, %s, %s%s);" % (N, T, tol, _old_labels(node.get("falsefeedback") or ""))
+        else:
+            a = _call_args(allfb, "fb_vars")
+            call = "txt: fb_vars_matrix(%s, %s, %s%s);" % (N, T, a[2] if a and len(a) > 2 and a[2].startswith("[") else "[]",
+                                                           _old_labels(node.get("falsefeedback") or ""))
+
+        def fix(q, P=P, N=N, T=T, call=call, numeric=numeric):
+            prt = next(p for p in Q(q).prts if p["name"] == P)
+            fv = prt["feedbackvariables"]
+            if numeric:     # the toList() helper of the old pattern is no longer needed
+                fv = re.sub(r"^\s*toList\s*\(\s*\w+\s*\)\s*:=.*?;[ \t]*\n?", "", fv, flags=re.M)
+            fv = (fv.rstrip() + "\n" if fv.strip() else "") + call
+            m = _named(q, "prt", P)
+            block = qfile._replace_text_child(m.group(0), "feedbackvariables", fv, qfile._newline(q))[0]
+            q = q[:m.start()] + block + q[m.end():]
+            if numeric:
+                for tag, v in (("answertest", "AlgEquiv"), ("sans", "isOK"), ("tans", "true"), ("testoptions", "")):
+                    q = _set_node(q, P, 0, tag, v)
+            q = _set_node(q, P, 0, "quiet", "1")
+            for br in ("true", "false"):
+                q = _set_node_text(q, P, 0, br + "feedback", "{@txt@}")
+            return q
+        out.append(F("matrix.feedback", P, "recommended", "Element-wise feedback for a matrix input",
+                     "PRT %s (matrix input %s): add  %s  to the feedback variables; feedback {@txt@} in both "
+                     "branches, quiet%s. Labels: %s." % (
+                         P, N, call, "; answer test AlgEquiv, isOK = true" if numeric else "",
+                         "taken from the old feedback" if "['" in call else
+                         "x-, y-, z-component (vectors) or row/column; others as last argument, e.g. ['x_A, 'y_A]"),
+                     fix, WIKI + "Matrix-Feedback"))
+    return out
+
+
+# Files embedded in the question (<file> elements of its texts) that no text references as
+# @@PLUGINFILE@@/name - typically leftovers of earlier versions edited in Moodle. Shown with the
+# image; the fix removes them (all <file> elements of that name in the question).
+def r_unused_files(Q_):
+    import urllib.parse
+    used = set()
+    for t in Q_.el.iter("text"):
+        for m in re.finditer(r"@@PLUGINFILE@@/([^\"'()\s<>]+)", t.text or ""):
+            used.add(urllib.parse.unquote(m.group(1)))
+    files = {}
+    for f in Q_.el.iter("file"):
+        name = f.get("name") or ""
+        if name and name not in used:
+            files.setdefault(name, []).append(f)
+    out = []
+    for name, els in files.items():
+        data = "".join((els[0].text or "").split())
+        ext = name.rsplit(".", 1)[-1].lower()
+        mime = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "gif": "image/gif",
+                "svg": "image/svg+xml", "webp": "image/webp"}.get(ext)
+
+        def fix(q, name=name):
+            return qfile._remove_block(q, r'<file name="%s"[^>]*>.*?</file>' % re.escape(name))
+        f = F("files.unused", name, "recommended", "Unused embedded file",
+              "%s (%d kB%s) is stored in the question but no text shows it - probably left over from an earlier "
+              "version. Remove it." % (name, len(data) * 3 // 4 // 1024,
+                                       ", %d copies" % len(els) if len(els) > 1 else ""), fix)
+        f["image"] = "data:%s;base64,%s" % (mime, data) if mime and data else ""
+        out.append(f)
+    return out
+
+
 RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_graphic_inputs, r_input_settings, r_prts,
-         r_grade, r_literal_index, r_tans_copy]
+         r_grade, r_literal_index, r_tans_copy, r_math_delimiters, r_matrix_inputs, r_unused_files]
 
 
 # ---------------------------------------------------------------------- metadata in the description
@@ -550,7 +841,8 @@ def findings(block):
         f["preview"] = ""
         if f["fix"]:
             try:
-                f["preview"] = _preview(block, f["fix"](block))
+                new = f["fix"](block)
+                f["preview"] = "" if f.get("image") else _preview(block, new)   # an image instead of base64 lines
             except Exception as err:
                 f["fix"] = None
                 f["message"] += " (no automatic fix: %s)" % err

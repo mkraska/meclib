@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>// started by the server (?start): continue on the page used last; then remember this page
+try { const last = localStorage.getItem("meclib-last-page");
+  if (/[?&]start\b/.test(location.search) && last && last !== "index.html") location.replace(last);
+  else localStorage.setItem("meclib-last-page", "index.html"); } catch (e) { /* no storage */ }</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>meclib workbench - Graphic</title>
 <link rel="stylesheet" href="style.css">

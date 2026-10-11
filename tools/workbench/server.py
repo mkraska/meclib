@@ -99,6 +99,7 @@ import scenes_to_maxima  # noqa: E402  (fixture generator, same folder)
 import stack_question  # noqa: E402
 import qfile  # noqa: E402
 import rules  # noqa: E402
+import history  # noqa: E402
 from maxima_session import MaximaSession, MaximaError  # noqa: E402
 
 INBOX = CACHE / "questions"      # copies of files dropped onto the page
@@ -414,17 +415,32 @@ class Handler(SimpleHTTPRequestHandler):
                 text, rev = qfile.read_file(target)
                 fields = qfile.question_fields(text, int(req["index"]))
                 STATE.touch(str(target), int(req["index"]), fields["name"])
-                return self.send_json({"path": str(target), "rev": rev, "fields": fields})
+                return self.send_json({"path": str(target), "rev": rev, "fields": fields,
+                                       "history": history.status(target, int(req["index"]))})
             if path == "/api/q/save":
                 target = allowed_path(cfg, req["path"])
-                result = qfile.save_changes(target, int(req["index"]), req.get("changes", {}), req.get("rev"),
+                index = int(req["index"])
+                old, _ = qfile.read_file(target)
+                result = qfile.save_changes(target, index, req.get("changes", {}), req.get("rev"),
                                             bool(req.get("backup")))
+                if result["saved"]:
+                    history.record(target, old, qfile.read_file(target)[0], index, "edit: " + ", ".join(
+                        sorted(set(re.sub(r":.*", "", c) for c in result["changed"]))))
+                result["history"] = history.status(target, index)
                 return self.send_json(result)
+            if path in ("/api/q/undo", "/api/q/redo"):
+                target = allowed_path(cfg, req["path"])
+                index = int(req["index"])
+                new, label = history.step(target, index, req.get("rev"), path.rsplit("/", 1)[1])
+                return self.send_json({"rev": qfile.revision(new), "label": label,
+                                       "fields": qfile.question_fields(new, index),
+                                       "history": history.status(target, index)})
             if path in ("/api/q/eval", "/api/q/check"):
                 target = allowed_path(cfg, req["path"])
                 text, _ = qfile.read_file(target)
                 index, src = int(req["index"]), req.get("src", "local")
-                data = stack_question.question_data(stack_question.question_element(text, index))
+                qel = stack_question.question_element(text, index)
+                data = stack_question.question_data(qel)
                 entry = POOL.get("%s:%d:%s" % (target, index, src), cfg.get("maxima"))
                 resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
                 answers = req.get("answers") if path == "/api/q/check" else None
@@ -433,7 +449,8 @@ class Handler(SimpleHTTPRequestHandler):
                 result.update({"name": data["name"], "format": data["formats"]["questiontext"],
                                "formats": data["formats"], "prts": data["prts"],
                                "seeds": data["seeds"], "decimals": data["decimals"],
-                               "simplify": data["questionsimplify"], "maxima_start": round(entry[0].started, 1)})
+                               "simplify": data["questionsimplify"], "maxima_start": round(entry[0].started, 1),
+                               "files": stack_question.embedded_files(qel)})
                 return self.send_json(result)
             if path == "/api/q/new":
                 block = qfile.question_from_template(req.get("name") or "New meclib question",
@@ -464,9 +481,11 @@ class Handler(SimpleHTTPRequestHandler):
                 index = int(req["index"])
                 new, applied = rules.apply(text, index, req.get("apply") or [], req.get("reject") or [])
                 rev = qfile.write_file(target, new, rev, bool(req.get("backup")))
+                history.record(target, text, new, index, "review: " + ", ".join(applied or ["rejected proposals"]))
                 a, b, _ = qfile.question_span(new, index)
                 return self.send_json({"rev": rev, "applied": applied, "fields": qfile.question_fields(new, index),
-                                       "findings": rules.public(rules.findings(new[a:b]))})
+                                       "findings": rules.public(rules.findings(new[a:b])),
+                                       "history": history.status(target, index)})
             if path == "/api/q/input":
                 target = allowed_path(cfg, req["path"])
                 text, rev = qfile.read_file(target)
@@ -475,13 +494,29 @@ class Handler(SimpleHTTPRequestHandler):
                 index = int(req["index"])
                 if req.get("op") == "add":
                     new, iname, pname = qfile.add_input(text, index, req.get("name", ""), req.get("kind", ""),
-                                                        req.get("tans") or None, req.get("tol") or "0.005")
+                                                        req.get("tans") or None, req.get("tol") or "0.005",
+                                                        req.get("labels") or "")
+                    label = "input %s and PRT %s added" % (iname, pname)
                 elif req.get("op") == "delete":
                     new = qfile.delete_input(text, index, req["input"], req.get("prt") or None)
+                    label = "input %s deleted" % req["input"] + (" with PRT %s" % req["prt"] if req.get("prt") else "")
                 else:
                     raise ValueError("unknown op")
                 rev = qfile.write_file(target, new, rev, bool(req.get("backup")))
-                return self.send_json({"rev": rev, "fields": qfile.question_fields(new, index)})
+                history.record(target, text, new, index, label)
+                return self.send_json({"rev": rev, "fields": qfile.question_fields(new, index),
+                                       "history": history.status(target, index)})
+            if path == "/api/q/prt":
+                target = allowed_path(cfg, req["path"])
+                text, rev = qfile.read_file(target)
+                if req.get("rev") and req["rev"] != rev:
+                    raise qfile.ConflictError("the file was changed outside the workbench")
+                index = int(req["index"])
+                new, label = qfile.prt_op(text, index, req)
+                rev = qfile.write_file(target, new, rev, bool(req.get("backup")))
+                history.record(target, text, new, index, label)
+                return self.send_json({"rev": rev, "label": label, "fields": qfile.question_fields(new, index),
+                                       "history": history.status(target, index)})
             if path == "/api/q/duplicate":
                 target = allowed_path(cfg, req["path"])
                 text, rev = qfile.read_file(target)
@@ -673,8 +708,8 @@ def main():
     print("meclib workbench running at %s  (repository: %s)" % (url, REPO))
     regenerate_fixtures()
     print("Stop with Ctrl+C or by closing this window.")
-    if not args.no_browser:
-        threading.Timer(0.5, lambda: webbrowser.open(url)).start()
+    if not args.no_browser:     # ?start: the page continues on the page used last (Graphic, Questions, Tests)
+        threading.Timer(0.5, lambda: webbrowser.open(url + "?start")).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
