@@ -10,6 +10,13 @@ The set of objects is created with sketches of mechanical systems in mind (suppo
 
 In STACK 4.4, Meclib can be dynamically inserted using an  `[[include /]]` text block.
 
+## Meclib Workbench
+
+For tryout use the [[Meclib Workbench]]. It requires a local clone of this repository and a local Maxima installation. The workbench includes a rich editor for STACK questions with fast preview including CAStext and Mathjax rendering.
+
+<img width="300" alt="grafik" src="https://github.com/user-attachments/assets/e3618b8b-673d-4024-b502-65592a2f469d" />
+
+
 Documentation: see [Wiki](https://github.com/mkraska/meclib/wiki).
 
 ## Reference
