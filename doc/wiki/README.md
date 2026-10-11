@@ -16,5 +16,6 @@ Delete a file here once its content is in the wiki.
 | fb_vars_matrix().md | `fb_vars_matrix()` (new page) | new |
 | Matrix input.md | `Matrix input` | `array{cc}` for two columns (was `{c}`); links to the new functions |
 | Matrix Feedback.md | `Matrix Feedback` | rewritten for `fb_unit_matrix()` / `fb_vars_matrix()`; the `toList`/NumRelative construction kept as a note on older questions |
+| Dynamic intersection of two line2p obbjects.md | `Dynamic intersection of two "line2p" obbjects` | explanation of the `targets` list corrected; note on the line2p fix of meclib 2026 10 11 |
 | Meclib Workbench.md | `Meclib Workbench` | PRT editor with graphs and undo/redo (PRTs were read only) |
 | (none) | `"fix"` | delete the page: it is an orphaned overview from 2022 (no object "fix" exists, nothing links to it); the overview is the page "List of Objects" |

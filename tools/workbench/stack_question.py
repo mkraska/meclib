@@ -150,6 +150,43 @@ def question_data(q):
 NEW_STATEMENT = re.compile(r"\s*[A-Za-z_%][A-Za-z0-9_%]*\s*(:|\()")
 
 
+def insert_missing_semicolons(src):
+    """src with a ; inserted wherever split_statements() assumes a missing statement separator
+    (right after the last code character of the statement, before a trailing comment).
+    Returns (new src, [line numbers of the statements that got a ;])."""
+    ins, lines, i, n = [], [], 0, len(src)
+    in_str, depth, last_code, has_code = False, 0, None, False
+    while i < n:
+        c = src[i]
+        if in_str:
+            if c == "\\" and i + 1 < n:
+                last_code = i + 1; i += 2; continue
+            if c == '"':
+                in_str = False
+            last_code = i; i += 1; continue
+        if src.startswith("/*", i):
+            end = src.find("*/", i + 2)
+            i = n if end < 0 else end + 2; continue
+        if c in ";$":
+            depth, has_code, last_code = 0, False, None; i += 1; continue
+        if c == "\n" and depth == 0 and has_code and NEW_STATEMENT.match(src, i + 1):
+            ins.append(last_code + 1)
+            lines.append(src.count("\n", 0, last_code) + 1)
+            has_code, last_code = False, None; i += 1; continue
+        if not c.isspace():
+            has_code, last_code = True, i
+        if c == '"':
+            in_str = True
+        elif c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth = max(0, depth - 1)
+        i += 1
+    for k in reversed(ins):
+        src = src[:k] + ";" + src[k:]
+    return src, lines
+
+
 def split_statements(src):
     """Splits Maxima source at ; and $ outside strings and /* comments */. Returns
     [(statement, line, inserted)] - line of the statement's first code character; inserted

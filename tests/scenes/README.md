@@ -30,6 +30,12 @@ One JSON file per scene, `<scene>.json`:
       "state": [ ... ],           optional: objects input the graphic starts
                                   from (e.g. after an interaction); without
                                   it, the case tests initdata itself
+      "drags": [ [[x1,y1], [x2,y2]], ... ],
+                                  optional: points dragged (pointer down at
+                                  [x1,y1], moves, up at [x2,y2], board
+                                  coordinates) after meclib has started and
+                                  before objects and names are recorded - for
+                                  behaviour that only shows when dragging
       "expected": { "names": "...", "objects": [ ... ] },
       "recorded": { "meclib": "...", "jsxgraph": "..." }
     }
@@ -68,3 +74,4 @@ or renaming a case that is in use does.
 | `fb_bar_name` | demo question "fb_bar_name() unit test" | `test_fb_bar_name.mac` |
 | `fb_bar` | demo question "QA 05 fb_bar" (objects 14-17: work in progress on the two-sided bar cut) | `test_fb_bar.mac` |
 | `fb_q` | demo question "QA 04a fb_q unit test part 1" (initdata evaluated once with Maxima) | `test_fb_q.mac` |
+| `line2p_intersections` | TM3 06 T07: intersections of two line2p in `targets` (wiki "Dynamic intersection of two line2p objects"); the cases drag the control points as a student did - before meclib 2026 10 11 a control point stuck on the intersection of its own line (off-grid coordinates, console errors) | - |

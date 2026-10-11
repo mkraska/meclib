@@ -2,3 +2,5 @@
 .cache/
 vendor/
 workbench_config.local.json
+# compiled Python modules
+__pycache__/

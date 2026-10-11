@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2026 10 10";
+const versionText= "JXG "+JXG.version+" Meclib 2026 10 11";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -1238,6 +1238,16 @@ class line2p {
       highlight:true, highlightStrokeColor:highlightColor, 
       name:data[1],withLabel:true});
     for (let pt of [this.p1, this.p2]) {	pt.scale = [this.f,this.f] }
+    // While a control point is dragged, it neither glides on nor snaps to elements that depend on
+    // this line's own points (e.g. intersections with this line, which questions add to targets so
+    // that a crosshair snaps to them): the point would follow a point that it moves itself and
+    // stick at off-grid positions. Determined on each drag, since such elements can be created
+    // after the line.
+    const own = (t) => { const e = board.select(t); return e && e.ancestors && (e.ancestors[this.p1.id] || e.ancestors[this.p2.id]) };
+    for (let pt of [this.p1, this.p2]) {
+      pt.on("down", () => pt.setAttribute({ attractors: targets.filter(t => !own(t)),
+        ignoredSnapToPoints: board.objectsList.filter(o => JXG.isPoint(o) && own(o)) }))
+    }
     this.p1.on("up", update );
     this.p2.on("up", update );
     // if required, add normal

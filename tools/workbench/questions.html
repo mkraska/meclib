@@ -107,6 +107,9 @@
   .folder.cur > summary { color: var(--accent); }
   .folder .tools { display: flex; gap: 6px; margin: 4px 0 0 14px; }
   .recent li { font-size: 12px; }
+  .qlist.files li.subdir { color: var(--muted); font-size: 11.5px; cursor: default; padding-top: 4px; }
+  .qlist.files li.subdir:hover { background: none; }
+  .qlist.files li.insub { padding-left: 14px; }
   .recent li .path { display: block; color: var(--muted); font-size: 11px; font-family: var(--mono); word-break: break-all; }
   .btnrow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
   #qtext, #gfb, #qnote { line-height: 1.5; overflow-x: auto; }
@@ -480,12 +483,16 @@ async function loadFolders() {
   try { data = await (await fetch("/api/q/folders")).json(); } catch (e) { return; }
   folderList = data.folders;
   const box = $("folders"); box.innerHTML = "";
+  // short folder names (full path as tooltip): the last part, or the last two where that is ambiguous
+  const parts = (p) => String(p).split(/[\\/]/).filter(Boolean);
+  const short = (p, n) => parts(p).slice(-n).join("/");
+  const shortName = (p) => data.folders.filter((x) => short(x.path, 1) === short(p, 1)).length > 1 ? short(p, 2) : short(p, 1);
   const openFolders = stored(QSTORE_KEY).openFolders;   // undefined: all folders open except the inbox
   for (const d of data.folders) {
     const det = document.createElement("details");
     det.className = "folder" + (d.path === currentFolder ? " cur" : "");
     det.open = openFolders ? openFolders.includes(d.path) : d.source !== "inbox";
-    const label = d.source === "inbox" ? "workbench inbox (copies of dropped files)" : d.path;
+    const label = d.source === "inbox" ? "workbench inbox (copies of dropped files)" : shortName(d.path);
     det.innerHTML = `<summary title="${esc(d.path)}">${esc(label)} <span class="src">${d.source === "config" ? "(config)" : ""}${d.exists ? "" : " - not found"}</span></summary>`;
     det.addEventListener("toggle", () => {
       const list = new Set(stored(QSTORE_KEY).openFolders || [...document.querySelectorAll(".folder[open] > summary")].map((x) => x.title));
@@ -494,8 +501,19 @@ async function loadFolders() {
       if (det.open) setFolder(d.path);
     });
     const ul = document.createElement("ul"); ul.className = "qlist files";
+    let lastSub = "";
     for (const f of d.files) {
-      const li = document.createElement("li"); li.textContent = f;
+      // files in subfolders (e.g. split by category): the subfolder once as a heading, files indented
+      const cut = f.lastIndexOf("/"), sub = cut < 0 ? "" : f.slice(0, cut);
+      if (sub && sub !== lastSub) {
+        const h = document.createElement("li"); h.className = "subdir"; h.textContent = sub + "/"; h.title = d.path + "/" + sub;
+        ul.appendChild(h);
+      }
+      lastSub = sub;
+      const li = document.createElement("li");
+      li.textContent = f.slice(cut + 1);
+      if (sub) li.classList.add("insub");
+      li.title = d.path + "/" + f;
       const full = d.path + "/" + f;
       if (file && samePath(file.path, full)) li.classList.add("sel");
       li.addEventListener("click", () => { setFolder(d.path); openFile(full); });
@@ -515,7 +533,8 @@ async function loadFolders() {
   const rec = $("recent"); rec.innerHTML = "";
   for (const r of data.recent.slice(0, 10)) {
     const li = document.createElement("li");
-    li.innerHTML = `${esc(r.name || baseName(r.path))}<span class="path">${esc(r.path)}</span>`;
+    li.innerHTML = `${esc(r.name || baseName(r.path))}<span class="path">${esc(short(r.path, 3))}</span>`;
+    li.title = r.path;
     li.addEventListener("click", () => openFile(r.path, r.index));
     rec.appendChild(li);
   }
@@ -549,7 +568,9 @@ async function openFile(path, index) {
 function showFile(data) {
   file = { path: data.path, rev: data.rev, questions: data.questions };
   store(QSTORE_KEY, { path: data.path });
-  $("fileName").textContent = data.path;
+  // the file with its folder (full path as tooltip)
+  $("fileName").textContent = String(data.path).split(/[\\/]/).filter(Boolean).slice(-2).join("/");
+  $("fileName").title = data.path;
   $("qtools").hidden = false;
   const list = $("qlist"); list.innerHTML = "";
   let lastCat = null;
@@ -1891,10 +1912,16 @@ $("toGraphic").addEventListener("click", async () => {
 });
 $("split").addEventListener("click", async () => {
   if (!file || !(await flush())) return;
+  const stackQs = file.questions.filter((q) => q.type === "stack");
+  if (!confirm(`Split into ${stackQs.length} file(s), one per STACK question, in a folder per category?\n` +
+    `The original file is renamed to ${baseName(file.path)}.orig (kept as a backup, no longer listed).`)) return;
+  const k = stackQs.findIndex((q) => q.index === qindex);
   try {
     const r = await postJSON("/api/q/split", { path: file.path });
-    showMessages([{ cls: "info", text: `${r.files.length} STACK question(s) written to ${r.folder}` }]);
-    loadFolders();
+    file = null; qindex = null; saved = null;
+    await openFile(r.files[Math.max(k, 0)]);     // the question that was open, now in its own file
+    fileMsg(`${r.files.length} STACK question(s) written to ${r.folders.map(baseName).join(", ")}; ` +
+      `the original is now ${baseName(r.original)}.`, "info");
   } catch (e) { showMessages([{ cls: "err", text: e.message }]); }
 });
 for (const id of ["src", "jsx", "mathjax"]) $(id).addEventListener("change", () => {

@@ -91,8 +91,17 @@ STACK questions can be opened). **New question** appends a question from the
 template, **Duplicate** inserts a copy (name + " (copy)", idnumber cleared)
 right after the selected one, **Save as ...** writes the selected question
 into a new file in a folder chosen in the folder dialog, **Split file**
-writes one file per STACK question into a folder named like the file (one
-question per file, as qbank_gitsync keeps them).
+writes one file per STACK question (one question per file, as qbank_gitsync
+keeps them), named after the question, into a folder per category next to the
+file: the category path below "top" (`$module$/top/06 Kinematik` ->
+`06 Kinematik/`, subcategories as subfolders). The files contain no category
+entry ("import as new version" accepts exactly one `<question>` element, and a
+category entry counts as one); for a plain import choose the category in
+Moodle's import form. The original file is renamed to
+`<name>.xml.orig` (kept as a backup, no longer listed), and the question that
+was open is opened from its new file. The files column shows folders by
+their last name (full path as tooltip) and files in subfolders under the
+subfolder name.
 
 **Layout**: on wide screens (from 1400 px) the editor and the preview stand
 side by side, equally wide, each column scrolling by itself; Messages, inputs
@@ -312,6 +321,12 @@ Unused embedded files (`files.unused`): files stored in the question (`<file>`
 elements of its texts) that no text shows as `@@PLUGINFILE@@/name` - usually
 leftovers of earlier versions edited in Moodle. The review shows the image;
 the fix removes all copies of that file from the question.
+
+Missing `;` in Maxima code (`maxima.semicolon`): where a line ends a complete
+statement and the next line starts an assignment or call, STACK assumes a
+missing `;` (the preview reports it in the messages). The fix writes the `;`
+into the question variables or the PRT's feedback variables, right after the
+statement (before a trailing comment).
 
 **Snippet ...** inserts a text snippet at the cursor of the field last
 edited: the interactive and the fixed [[jsxgraph]] block, the empty

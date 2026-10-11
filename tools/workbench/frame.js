@@ -96,7 +96,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
   // ---------------------------------------------------------------- frame document
   // stack_js is replaced by a small local stand-in that creates the same hidden proxy inputs
   // (id = input name, value + data-stack-input-* attributes) and reports changes to the page.
-  function frameBridge(token, initialValues, dataset) {
+  function frameBridge(token, initialValues, dataset, drags) {
     return `
 (function () {
   const TOKEN = ${token};
@@ -144,12 +144,41 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
     resize_containing_frame(w, h) { post({ type: "resize", width: w, height: h }); },
     get_content() { return Promise.resolve(null); }
   };
-  window.__tryout_done = () => post({ type: "done" });
+  // test cases can drag points before the result is recorded: [[from], [to]] in board
+  // coordinates, performed with pointer events as by a user (down on the point, moves, up)
+  const DRAGS = ${JSON.stringify(drags || [])};
+  const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+  async function performDrags() {
+    const board = Object.values(JXG.boards)[0];
+    const box = board.containerObj.getBoundingClientRect();
+    const at = (xy) => { const c = new JXG.Coords(JXG.COORDS_BY_USER, xy, board).scrCoords; return [box.left + c[1], box.top + c[2]]; };
+    const ev = (type, x, y, target) => target.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, pointerId: 1,
+      pointerType: "mouse", isPrimary: true, button: 0, buttons: type === "pointerup" ? 0 : 1, bubbles: true, cancelable: true }));
+    for (const [from, to] of DRAGS) {
+      const [x0, y0] = at(from), [x1, y1] = at(to);
+      // JSXGraph listens for moves on the board container and skips moves that follow each
+      // other too quickly, so the last move is repeated after a pause before releasing
+      const box2 = board.containerObj;
+      ev("pointerdown", x0, y0, document.elementFromPoint(x0, y0) || box2);
+      for (let k = 1; k <= 12; k++) { ev("pointermove", x0 + (x1 - x0) * k / 12, y0 + (y1 - y0) * k / 12, box2); await pause(20); }
+      await pause(60);
+      ev("pointermove", x1, y1, box2);
+      await pause(60);
+      ev("pointerup", x1, y1, box2);
+      await pause(100);
+    }
+  }
+  window.__tryout_done = async () => {
+    if (DRAGS.length) {
+      try { await performDrags(); } catch (e) { console.error("drags: " + e.message); }
+    }
+    post({ type: "done" });
+  };
 })();`;
   }
 
   function buildFrameDoc(opts) {
-    const { token, jsx, mathjaxUrl, block, initText, decsep, startState, meclibSource } = opts;
+    const { token, jsx, mathjaxUrl, block, initText, decsep, startState, meclibSource, drags } = opts;
     const unknown = [];
     let body = block.body.replace(/\{#\s*([^#]*?)\s*#\}/g, (m, name) => {
       if (name === "init") return JSON.stringify(initText);
@@ -174,7 +203,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
     const wrapClose = inputNames.length ? "\n});" : "";
 
     return `<!doctype html><html><head><meta charset="utf-8">
-<script>${frameBridge(token, initial, dataset)}<\/script>
+<script>${frameBridge(token, initial, dataset, drags)}<\/script>
 <script type="text/x-mathjax-config">MathJax.Hub.Config({messageStyle: "none"});<\/script>
 <script src="${mathjaxUrl}"><\/script>
 <link rel="stylesheet" href="${jsx.css}">
@@ -208,7 +237,8 @@ ${body}
   // there, e.g. because of an error. The frame stays live afterwards; onInput/onConsole keep
   // reporting interactions until stop() is called or the next graphic is rendered.
   // opts: container, config, jsxKey, mathjaxKey, meclibSource, initText, blockText, decsep,
-  //       startState, onConsole(level, text), onInput(varName, value, inputName), onResize(w, h),
+  //       startState, drags ([[from], [to]] in board coordinates, performed before "done"),
+  //       onConsole(level, text), onInput(varName, value, inputName), onResize(w, h),
   //       scale (thumbnail factor, default 1), timeout (ms, default 60000 - a scene with many
   //       line loads can take several seconds to initialise)
   function run(opts) {
@@ -218,7 +248,7 @@ ${body}
     const mathjax = opts.config.mathjax[opts.mathjaxKey] || Object.values(opts.config.mathjax)[0];
     const doc = buildFrameDoc({
       token, block, initText: opts.initText, decsep: opts.decsep || ".",
-      startState: opts.startState || "", meclibSource: opts.meclibSource,
+      startState: opts.startState || "", meclibSource: opts.meclibSource, drags: opts.drags,
       jsx: { js: resolveUrl(jsxEntry.js), css: resolveUrl(jsxEntry.css) },
       mathjaxUrl: resolveUrl(mathjax),
     });
