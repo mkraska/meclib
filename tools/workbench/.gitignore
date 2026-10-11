@@ -1,0 +1,4 @@
+# local caches and per-machine settings of the workbench server
+.cache/
+vendor/
+workbench_config.local.json

@@ -947,15 +947,23 @@ fb_force(%_o, %_name, %_point, %_dir, %_toldeg, %_toldist, %_description):=block
 
 /* https://github.com/mkraska/meclib/wiki/fb_system() */
 /* %_names[%_i] is either a state string ("show"/"hide"/"SHOW"/"HIDE") or, once loads have been
-   matched to the object, a list of load indices - stringp() guards sdowncase() against the latter. */
+   matched to the object, a list of load indices - stringp() guards sdowncase() against the latter.
+   The system elements (%_sys) must be shown ("show"/"SHOW"); entries that are no state at all
+   (e.g. the name of a node or point) are not checked. The environment elements (%_env) must not
+   be shown: "hide"/"HIDE", a list of matched loads, or the legacy "locked".
+   As the other feedback functions, the text starts with <br>; the hint is appended after one
+   space (leading spaces of the hint are dropped). */
 fb_system(%_names, %_sys, %_env, %_hint):=block(
-  [%_i, %_str_ok: castext("[[lang code='de']]Die Systemgrenzen stimmen. [[/lang]][[lang code='en,other']]The system boundaries are correct. [[/lang]]"),
-        %_str_wrong: castext("[[lang code='de']]Die Systemgrenzen stimmen nicht. [[/lang]][[lang code='en,other']]The system boundaries are incorrect. [[/lang]]"),
-        %_fb, %_fbfalse],
-  %_fb: [%_str_ok, true],
-  %_fbfalse: [sconcat(%_str_wrong, %_hint), false],
-  for %_i in %_env do if (stringp(%_names[%_i]) and sdowncase(%_names[%_i]) = "show") then %_fb: %_fbfalse,
-  return(%_fb)
+  [%_i, %_s, %_OK: true,
+   %_str_ok: castext("<br>[[lang code='de']]Die Systemgrenzen stimmen.[[/lang]][[lang code='en,other']]The system boundaries are correct.[[/lang]]"),
+   %_str_wrong: castext("<br>[[lang code='de']]Die Systemgrenzen stimmen nicht.[[/lang]][[lang code='en,other']]The system boundaries are incorrect.[[/lang]]")],
+  for %_i in %_env do if (stringp(%_names[%_i]) and sdowncase(%_names[%_i]) = "show") then %_OK: false,
+  for %_i in %_sys do (
+    %_s: %_names[%_i],
+    if listp(%_s) or (stringp(%_s) and sdowncase(%_s) = "hide") then %_OK: false),
+  if %_OK then return([%_str_ok, true]),
+  %_hint: striml(" ", %_hint),
+  return([if %_hint = "" then %_str_wrong else sconcat(%_str_wrong, " ", %_hint), false])
 );
 
 /* https://github.com/mkraska/meclib/wiki/MatchByParallel%28%29 */

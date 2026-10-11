@@ -1,0 +1,1907 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>try { localStorage.setItem("meclib-last-page", "questions.html"); } catch (e) { /* no storage */ }</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meclib workbench - Questions</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  /* wide screens: files | editor | preview (editor and preview equally wide); narrow screens:
+     files | editor or preview (tabs in the header). The files column can be collapsed. */
+  main.qgrid { grid-template-columns: minmax(230px, 290px) minmax(0, 1fr) minmax(0, 1fr); }
+  main.qgrid.nofiles { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  main.qgrid.nofiles #filesCol { display: none; }
+  .tabs { display: none; }
+  /* wide: each column scrolls by itself below the header, so the preview stays in view while editing */
+  @media (min-width: 1400px) {
+    main.qgrid { height: calc(100vh - var(--hdr, 52px)); padding-bottom: 0; }
+    #filesCol, #editCol, #previewCol { overflow: auto; min-height: 0; padding-bottom: 16px; }
+  }
+  @media (max-width: 1399px) {
+    main.qgrid, main.qgrid.nofiles { grid-template-columns: minmax(230px, 290px) minmax(0, 1fr); }
+    main.qgrid.nofiles { grid-template-columns: minmax(0, 1fr); }
+    .tabs { display: flex; }
+    main.qgrid.tab-edit #previewCol, main.qgrid.tab-preview #editCol { display: none; }
+  }
+  @media (max-width: 800px) { main.qgrid, main.qgrid.nofiles { grid-template-columns: minmax(0, 1fr); } }
+  /* jump navigation: a bar at the top of each column ("top") or a narrow rail beside it ("side");
+     rails: editor rail left of the editor, preview rail right of the preview */
+  nav.jump { display: flex; gap: 3px; font-size: 11.5px; }
+  nav.jump button { font-size: 11.5px; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
+  nav.jump button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  nav.jump button.sub { font-family: var(--mono); color: var(--muted); }
+  nav.jump button.sub.on { color: var(--accent-ink); }
+  nav.jump.top { flex-wrap: wrap; position: sticky; top: 0; z-index: 1; background: var(--bg);
+    padding: 4px 0 6px; margin-bottom: 4px; }
+  nav.jump.side { flex-direction: column; overflow-y: auto; min-height: 0; }
+  nav.jump.side button { writing-mode: vertical-rl; padding: 6px 1px; }
+  /* arrangement of the rails: outer (editor rail left, preview rail right), inner (both between
+     the columns), left, right; a rail on the left reads bottom-up, on the right top-down */
+  nav.jump.side.up button { transform: rotate(180deg); }
+  main.qgrid.side { --rail: 24px; column-gap: 8px; }
+  main.qgrid.side #railEdit { grid-area: re; } main.qgrid.side #railPreview { grid-area: rp; }
+  main.qgrid.side #filesCol { grid-area: files; } main.qgrid.side #editCol { grid-area: edit; } main.qgrid.side #previewCol { grid-area: prev; }
+  main.qgrid.side.r-outer { grid-template-columns: minmax(230px, 290px) var(--rail) minmax(0, 1fr) minmax(0, 1fr) var(--rail); grid-template-areas: "files re edit prev rp"; }
+  main.qgrid.side.r-inner { grid-template-columns: minmax(230px, 290px) minmax(0, 1fr) var(--rail) var(--rail) minmax(0, 1fr); grid-template-areas: "files edit re rp prev"; }
+  main.qgrid.side.r-left { grid-template-columns: minmax(230px, 290px) var(--rail) var(--rail) minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "files re rp edit prev"; }
+  main.qgrid.side.r-right { grid-template-columns: minmax(230px, 290px) minmax(0, 1fr) minmax(0, 1fr) var(--rail) var(--rail); grid-template-areas: "files edit prev re rp"; }
+  main.qgrid.side.nofiles.r-outer { grid-template-columns: var(--rail) minmax(0, 1fr) minmax(0, 1fr) var(--rail); grid-template-areas: "re edit prev rp"; }
+  main.qgrid.side.nofiles.r-inner { grid-template-columns: minmax(0, 1fr) var(--rail) var(--rail) minmax(0, 1fr); grid-template-areas: "edit re rp prev"; }
+  main.qgrid.side.nofiles.r-left { grid-template-columns: var(--rail) var(--rail) minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "re rp edit prev"; }
+  main.qgrid.side.nofiles.r-right { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--rail) var(--rail); grid-template-areas: "edit prev re rp"; }
+  main.qgrid.side.r-outer #editCol, main.qgrid.side.r-left #editCol, main.qgrid.side.r-right #editCol { margin-right: 8px; }
+  @media (max-width: 1399px) {     /* one column: outer and inner keep a rail on each side */
+    main.qgrid.side #previewCol { grid-area: edit; }
+    main.qgrid.side.r-outer, main.qgrid.side.r-inner { grid-template-columns: minmax(230px, 290px) var(--rail) minmax(0, 1fr) var(--rail); grid-template-areas: "files re edit rp"; }
+    main.qgrid.side.r-left { grid-template-columns: minmax(230px, 290px) var(--rail) var(--rail) minmax(0, 1fr); grid-template-areas: "files re rp edit"; }
+    main.qgrid.side.r-right { grid-template-columns: minmax(230px, 290px) minmax(0, 1fr) var(--rail) var(--rail); grid-template-areas: "files edit re rp"; }
+    main.qgrid.side.nofiles.r-outer, main.qgrid.side.nofiles.r-inner { grid-template-columns: var(--rail) minmax(0, 1fr) var(--rail); grid-template-areas: "re edit rp"; }
+    main.qgrid.side.nofiles.r-left { grid-template-columns: var(--rail) var(--rail) minmax(0, 1fr); grid-template-areas: "re rp edit"; }
+    main.qgrid.side.nofiles.r-right { grid-template-columns: minmax(0, 1fr) var(--rail) var(--rail); grid-template-areas: "edit re rp"; }
+    main.qgrid.side #editCol { margin-right: 0; }
+    main.qgrid.side.r-inner #railEdit button { transform: rotate(180deg); }   /* inner = outer here: left rail bottom-up */
+    main.qgrid.side.r-inner #railPreview button { transform: none; }
+    nav.jump.top { top: var(--hdr, 52px); }          /* the page scrolls under the sticky header */
+    #editCol [data-jump], #previewCol [data-jump], #prtView .prt { scroll-margin-top: calc(var(--hdr, 52px) + 36px); }
+    main.qgrid.side #editCol [data-jump], main.qgrid.side #previewCol [data-jump], main.qgrid.side #prtView .prt { scroll-margin-top: calc(var(--hdr, 52px) + 6px); }
+    main.qgrid.side nav.jump.side { position: sticky; top: calc(var(--hdr, 52px) + 8px); align-self: start; max-height: calc(100vh - var(--hdr, 52px) - 24px); }
+  }
+  @media (max-width: 800px) {
+    main.qgrid.side #filesCol { display: none; }
+    main.qgrid.side.r-outer, main.qgrid.side.r-inner, main.qgrid.side.nofiles.r-outer, main.qgrid.side.nofiles.r-inner { grid-template-columns: var(--rail) minmax(0, 1fr) var(--rail); grid-template-areas: "re edit rp"; }
+    main.qgrid.side.r-left, main.qgrid.side.nofiles.r-left { grid-template-columns: var(--rail) var(--rail) minmax(0, 1fr); grid-template-areas: "re rp edit"; }
+    main.qgrid.side.r-right, main.qgrid.side.nofiles.r-right { grid-template-columns: minmax(0, 1fr) var(--rail) var(--rail); grid-template-areas: "edit re rp"; }
+  }
+  main.qgrid:not(.side) nav.jump.side, main.qgrid.side nav.jump.top { display: none; }
+  @media (min-width: 1400px) {
+    #editCol [data-jump], #previewCol [data-jump], #prtView .prt { scroll-margin-top: 36px; }
+    main.qgrid.side #editCol [data-jump], main.qgrid.side #previewCol [data-jump], main.qgrid.side #prtView .prt { scroll-margin-top: 6px; }
+  }
+  .langs { display: inline-flex; }
+  .langs button { border-radius: 0; }
+  .langs button:first-child { border-radius: 4px 0 0 4px; }
+  .langs button:last-child { border-radius: 0 4px 4px 0; border-left: 0; }
+  button.dec { font-family: var(--mono); font-size: 13px; }
+  button.dec b { font-size: 18px; line-height: 10px; color: inherit; }
+  #simpToggle.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .opts { display: grid; grid-template-columns: max-content 1fr max-content 1fr; gap: 4px 10px; align-items: center; margin-top: 6px; font-size: 12.5px; }
+  .opts label { color: var(--muted); }
+  .opts select, .opts input { font-size: 12.5px; padding: 1px 3px; }
+  #qtitle { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-transform: inherit;
+            letter-spacing: inherit; cursor: pointer; text-align: left; }
+  #qtitle:hover { color: var(--accent); text-decoration: underline dotted; }
+  #toggleFiles { font-size: 12px; padding: 2px 8px; }
+  #drop { border: 2px dashed var(--line); border-radius: 6px; padding: 8px; text-align: center; color: var(--muted); font-size: 12.5px; cursor: pointer; }
+  #drop.over { border-color: var(--accent); color: var(--accent); }
+  .qlist { list-style: none; margin: 4px 0 0; padding: 0; max-height: 360px; overflow: auto; }
+  .qlist li { padding: 3px 6px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  .qlist li:hover { background: #eef2f7; }
+  .qlist li.sel { background: #e3ecf6; font-weight: 600; }
+  .qlist li.other { color: var(--muted); cursor: default; font-style: italic; }
+  .qlist li .cat { display: block; color: var(--muted); font-size: 11px; font-weight: normal; }
+  .files li { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+  .folder { margin-top: 8px; }
+  .folder > summary { font-size: 12px; word-break: break-all; }
+  .folder > summary .src { font-size: 11px; color: var(--muted); }
+  .folder.cur > summary { color: var(--accent); }
+  .folder .tools { display: flex; gap: 6px; margin: 4px 0 0 14px; }
+  .recent li { font-size: 12px; }
+  .recent li .path { display: block; color: var(--muted); font-size: 11px; font-family: var(--mono); word-break: break-all; }
+  .btnrow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  #qtext, #gfb, #qnote { line-height: 1.5; overflow-x: auto; }
+  #qtext img { max-width: 100%; }
+  .formulation { background: #e7f3f5; border-radius: 4px; padding: 10px 14px; }
+  /* as in STACK: page font, width (boxsize * 0.9 + 0.1) em set on the element; options "monospace", "align:right" */
+  input.stack-input { font: inherit; padding: 2px 4px; border: 1px solid #9aa; border-radius: 3px; max-width: 100%; box-sizing: content-box; }
+  input.stack-input.mono { font-family: var(--mono); }
+  input.stack-input.right { text-align: right; }
+  /* matrix input as in STACK (styles.css): grid of cells in brackets after the option matrixparens */
+  /* a grid of spans, not a table (a table inside a paragraph would end it); on a line of its own
+     like in Moodle, where STACK's <div> ends the paragraph */
+  .stack-matrix { display: grid; width: max-content; gap: 2px; padding: 0.5em; margin: 0.2em 0; }
+  .stack-matrix.paren-sq { background-image: linear-gradient(#000, #000), linear-gradient(#000, #000), linear-gradient(#000, #000), linear-gradient(#000, #000);
+    background-repeat: no-repeat; background-size: 8px 2px; background-position: top left, top right, bottom left, bottom right;
+    border: solid #000; border-width: 0 2px; }
+  .stack-matrix.paren-round { border-left: 2px solid #000; border-right: 2px solid #000; border-radius: 1em; }
+  .stack-matrix.paren-bar { border-left: 2px solid #000; border-right: 2px solid #000; }
+  input.stack-input.matrix-cell { width: auto; }
+  .stack-validation { font-size: 12px; color: var(--muted); margin-left: 6px; }
+  .stack-prt .prtfb { color: var(--ink); font-size: 14px; }
+  .stack-prt .prtinfo { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; font-size: 11.5px; color: var(--muted); }
+  .stack-prt.score-1 { border-left-color: #4c9a52; }
+  .stack-prt.score-0 { border-left-color: #c0504d; }
+  .stack-prt.score-p { border-left-color: #d8a23a; }
+  .stack-prt .prterr { color: var(--err); font-size: 12px; white-space: pre-wrap; }
+  .stack-validation .val-ok { color: var(--ink); }
+  .stack-validation .val-bad { color: var(--err); }
+  .stack-prt { margin: 6px 0; padding: 4px 8px; border-left: 3px solid #c9d6e3; color: var(--muted); font-size: 12.5px; background: #f6f8fa; }
+  .jsx-slot { display: inline-block; }
+  table.vars { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  table.vars td, table.vars th { border-bottom: 1px solid #ecece7; padding: 3px 4px; vertical-align: top; text-align: left; }
+  table.vars th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  table.vars td.n { font-family: var(--mono); white-space: nowrap; }
+  table.vars code.raw { display: block; max-height: 4.5em; overflow: hidden; word-break: break-all; font-size: 11.5px; color: var(--muted); cursor: pointer; }
+  table.vars code.raw.open { max-height: none; }
+  .msg { font-size: 12.5px; margin: 4px 0; padding: 4px 6px; border-radius: 4px; white-space: pre-wrap; }
+  .msg.err { background: #fbf1f0; color: var(--err); }
+  .msg.warn { background: #fbf6ea; color: var(--warn); }
+  .msg.info { background: #f3f3ef; color: var(--muted); }
+  .msg button { margin: 4px 6px 0 0; }
+  .langs button.on, .tabs button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  #seed { width: 7em; }
+  .meta { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; margin-bottom: 8px; }
+  .tabs { gap: 4px; align-items: center; }
+  #savestate { font-size: 12px; color: var(--muted); margin-left: 8px; text-transform: none; letter-spacing: 0; font-weight: normal; }
+  #savestate.dirty { color: var(--warn); }
+  #savestate.conflict, #savestate.failed { color: var(--err); font-weight: 600; }
+  .ed label.f { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12.5px; margin: 10px 0 3px; }
+  .ed label.f select { font-size: 12px; padding: 1px 3px; }
+  .ed textarea { min-height: 4em; tab-size: 2; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ed .CodeMirror { height: 160px; min-height: 3em; border: 1px solid var(--line); border-radius: 4px; background: #fcfcfa;
+                    font-family: var(--mono); font-size: 12.5px; line-height: 1.45; }
+  .ed .CodeMirror-gutters { background: #f3f3ef; border-right: 1px solid #e6e6e0; }
+  .ed .CodeMirror-linenumber { color: #a5a59e; }
+  .ed .CodeMirror-scroll { min-height: 3em; }
+  /* the editors keep their height; drag the lower right corner to change it */
+  .ed .CodeMirror.cm-resizable { resize: vertical; overflow: hidden; }
+  .cm-s-default .cm-comment { color: #7a7a72; font-style: italic; }
+  .cm-s-default .cm-string { color: #a33a1e; }
+  .cm-s-default .cm-number, .cm-s-default .cm-atom { color: #116644; }
+  .cm-s-default .cm-keyword { color: #7a1fa2; font-weight: 600; }
+  .cm-s-default .cm-def { color: #1f5f99; font-weight: 600; }
+  .cm-s-default .cm-variable-2 { color: #00607a; }
+  .cm-s-default .cm-meta { color: #b06000; font-weight: 600; }
+  .cm-s-default .cm-def-op { color: #1f5f99; font-weight: 600; }
+  .cm-s-default .cm-tag { color: #6b6b66; }
+  .cm-castext-delim { color: #b06000; font-weight: 600; }
+  .cm-castext-cas { background: #fff4df; }
+  .cm-castext-block { color: #1f5f99; font-weight: 600; }
+  .cm-castext-slot { color: #fff; background: #5b8fbf; border-radius: 3px; }
+  .cm-castext-math-delim { color: #116644; font-weight: 600; }
+  .cm-castext-math { color: #116644; }
+  .cm-castext-latex { color: #0b7a4f; font-weight: 600; }
+  .cm-flash-line { background: #fde9b8; }
+  #snippetDialog { border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; width: min(460px, 92vw); }
+  #snippetDialog::backdrop { background: rgba(0, 0, 0, .15); }
+  #snippetList li .pv { display: block; font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* not modal: the editor stays usable (look up variable names) while the dialog is open */
+  #inputDialog { border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; width: min(460px, 92vw);
+    position: fixed; inset: 64px 16px auto auto; margin: 0; z-index: 50; box-shadow: 0 6px 24px rgba(0, 0, 0, .18); }
+  #inInfo .bad { color: #b3261e; font-weight: 600; }
+  table.inp button.del { color: var(--err); }
+  .msg.goto { cursor: pointer; }
+  .msg.goto:hover { text-decoration: underline; }
+  .ed input.name { width: 100%; font-weight: 600; }
+  .ed details { margin-top: 10px; }
+  /* review findings */
+  #reviewBox > summary .cnt { font-weight: 600; margin-left: 4px; }
+  #reviewBox > summary .cnt.open { color: var(--err); }
+  .rv { border-left: 3px solid #ccc; padding: 3px 0 3px 8px; margin: 6px 0; font-size: 12.5px; }
+  .rv.required { border-color: var(--err); }
+  .rv.recommended { border-color: #d39b00; }
+  .rv.rejected { opacity: 0.55; }
+  .rv label { display: flex; gap: 6px; align-items: baseline; font-weight: 600; }
+  .rv .lvl { font-weight: 400; color: var(--muted); font-size: 11.5px; }
+  .rv .msg { margin: 2px 0 0 22px; }
+  .rv pre { margin: 3px 0 0 22px; font-size: 11.5px; background: #f6f6f2; padding: 3px 5px; white-space: pre-wrap; max-height: 12em; overflow: auto; }
+  table.inp { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  table.inp th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11.5px; padding: 2px 3px; }
+  table.inp td { padding: 2px 3px; vertical-align: top; }
+  table.inp td.n { font-family: var(--mono); padding-top: 5px; }
+  table.inp input[type=text], table.inp select { width: 100%; font-family: var(--mono); font-size: 12px; }
+  table.inp tr.more td { padding-bottom: 8px; border-bottom: 1px solid #ecece7; }
+  .prt { border: 1px solid #ecece7; border-radius: 4px; padding: 6px 8px; margin: 8px 0; }
+  .prt h3 { font-size: 13px; margin: 0 0 4px; }
+  .prt pre { font-family: var(--mono); font-size: 12px; background: #f6f6f3; padding: 4px 6px; margin: 4px 0; white-space: pre-wrap; }
+  .prt table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  .prt td, .prt th { border-bottom: 1px solid #ecece7; padding: 2px 4px; text-align: left; vertical-align: top; }
+  .prt th { color: var(--muted); font-weight: 600; }
+  .prt td code { font-size: 11.5px; }
+  /* PRT editor */
+  .prt .prthead { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 12px; margin-bottom: 4px; }
+  .prt .prthead b { font-size: 13px; margin-right: 4px; }
+  .prt .prthead .spacer { flex: 1; }
+  .prt textarea, .prt input[type=text], .prt select { font-size: 12px; }
+  .prt textarea { width: 100%; box-sizing: border-box; font-family: var(--mono); resize: vertical; }
+  .prt .lbl { color: var(--muted); font-size: 11.5px; margin: 4px 0 1px; }
+  .prt .node { border-left: 3px solid #d9d9d2; padding: 4px 0 4px 8px; margin: 8px 0; }
+  .prt .node.flash { border-left-color: var(--accent); background: #f3f7fb; }
+  .prt .nodehead { display: flex; gap: 6px; align-items: center; font-size: 12px; }
+  .prt .nodehead input { flex: 1; }
+  .prt .test { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 3px 6px; align-items: center; font-size: 12px; margin: 4px 0; }
+  .prt .test input { width: 100%; box-sizing: border-box; font-family: var(--mono); }
+  .prt .branches { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .prt .branch { font-size: 12px; border-top: 2px solid; padding-top: 3px; }
+  .prt .branch.true { border-color: #3a8a4f; } .prt .branch.false { border-color: #b3261e; }
+  .prt .branch .row { display: flex; flex-wrap: wrap; gap: 3px 6px; align-items: center; margin: 2px 0; }
+  .prt .branch input.num { width: 4.5em; } .prt .branch input.note { flex: 1; min-width: 6em; font-family: var(--mono); }
+  #prtGraph svg { display: block; margin: 4px 0 10px; }
+  .rvimg { display: block; max-width: 260px; max-height: 200px; margin: 4px 0; border: 1px solid var(--line); }
+  #prtGraph .gtitle { font-size: 12px; font-weight: 600; }
+  #prtGraph .gwarn { font-size: 12px; color: #b3261e; }
+</style>
+</head>
+<body>
+<header>
+  <h1>meclib workbench</h1>
+  <nav class="pages"><a href="index.html">Graphic</a> · <b>Questions</b> · <a href="tests.html">Tests</a></nav>
+  <label>meclib <select id="src"></select></label>
+  <label>JSXGraph <select id="jsx"></select></label>
+  <label>MathJax <select id="mathjax"></select></label>
+  <label>Variant (seed) <input type="text" id="seed" value="1" spellcheck="false"></label>
+  <button id="newSeed" title="random seed">↻</button>
+  <button id="evaluate" class="primary" title="save and evaluate (Ctrl+Enter)">Evaluate</button>
+  <span class="tabs"><button id="tab-edit" class="small" title="Ctrl+Shift+Enter switches">Edit</button><button id="tab-preview" class="small" title="Ctrl+Shift+Enter switches">Preview</button></span>
+  <span id="savestate"></span>
+  <button id="toggleFiles" title="show/hide the files column">Files ◂</button>
+  <button id="toggleNav" title="section buttons: top (bar above each column), outer, inner, left, right (rails beside the columns) - click to switch">Sections: top</button>
+  <div id="status">connecting to server ...</div>
+</header>
+
+<main class="qgrid" id="qgrid">
+  <aside id="filesCol">
+    <section>
+      <h2>Files</h2>
+      <div id="drop">Drop a Moodle XML file here or click<br><span id="dropTarget" class="hint"></span></div>
+      <input type="file" id="file" accept=".xml" hidden>
+      <div id="folders"></div>
+      <div class="btnrow">
+        <button id="pickFolder" class="small" title="choose a folder in the system's folder dialog">Add folder ...</button>
+      </div>
+      <div class="btnrow">
+        <input type="text" id="newFolder" placeholder="or paste a folder path" spellcheck="false" style="flex:1;min-width:0">
+        <button id="addFolder" class="small">Add</button>
+      </div>
+      <div id="fileMsg"></div>
+      <details id="recentBox" style="margin-top:8px"><summary>Recently opened</summary><ul id="recent" class="qlist recent"></ul></details>
+    </section>
+    <section>
+      <h2>Questions</h2>
+      <div id="fileName" class="hint">-</div>
+      <ul id="qlist" class="qlist"></ul>
+      <div class="btnrow" id="qtools" hidden>
+        <button id="newQ" class="small" title="append a new meclib question (template) to this file">New question</button>
+        <button id="dupQ" class="small" title="copy of the selected question, right after it">Duplicate</button>
+        <button id="saveAs" class="small" title="the selected question as a new file">Save as ...</button>
+        <button id="split" class="small" title="one file per STACK question, in a folder next to this file">Split file</button>
+      </div>
+    </section>
+  </aside>
+
+  <nav id="railEdit" class="jump side" aria-label="editor sections"></nav>
+  <div id="editCol">
+    <nav id="barEdit" class="jump top" aria-label="editor sections"></nav>
+    <section>
+      <h2><button type="button" id="qtitle" title="rename the question">Question</button><span class="spacer"></span>
+        <button id="undoBtn" class="small" disabled title="nothing to undo">↶ Undo</button>
+        <button id="redoBtn" class="small" disabled title="nothing to redo">↷ Redo</button>
+        <button id="snippetBtn" class="small" title="insert a text snippet at the cursor (templates/snippets/)">Snippet ...</button>
+        <button id="toGraphic" class="small" title="open the question's graphic (first [[jsxgraph]] block, evaluated initdata) on the Graphic page">Graphic ↗</button></h2>
+      <div id="conflict"></div>
+      <div id="editView" class="ed">
+        <input type="hidden" data-field="name">
+        <details id="reviewBox"><summary>Review <span id="reviewCount" class="cnt"></span></summary>
+          <div id="reviewView"></div>
+          <div class="btnrow" id="reviewBtns" hidden>
+            <button id="reviewApply" class="small primary" title="apply the checked fixes">Apply selected</button>
+            <button id="reviewApplyReject" class="small" title="apply the checked fixes and record the other proposals as rejected (in the question description)">Apply selected, reject the rest</button>
+          </div>
+          <p class="hint">Conventions for meclib questions (rules.py). Rejected proposals are recorded in the
+            question description (internal field) and shown greyed.</p>
+        </details>
+        <label class="f">Question variables</label>
+        <textarea data-field="questionvariables" rows="12" spellcheck="false"></textarea>
+        <label class="f">Question text <select data-format="questiontext"></select>
+          <button type="button" id="addInput" class="small" title="new input with its PRT; the placeholders are inserted at the cursor">Input ...</button></label>
+        <textarea data-field="questiontext" rows="14" spellcheck="false"></textarea>
+        <h2 style="margin-top:14px">Inputs</h2>
+        <table class="inp" id="inputEd"></table>
+        <details id="optBox"><summary>Question options</summary><div id="optEd" class="opts"></div></details>
+        <details><summary>General feedback</summary>
+          <label class="f">format <select data-format="generalfeedback"></select></label>
+          <textarea data-field="generalfeedback" rows="8" spellcheck="false"></textarea></details>
+        <details><summary>Specific feedback</summary>
+          <label class="f">format <select data-format="specificfeedback"></select></label>
+          <textarea data-field="specificfeedback" rows="4" spellcheck="false"></textarea></details>
+        <details><summary>Question note</summary>
+          <label class="f">format <select data-format="questionnote"></select></label>
+          <textarea data-field="questionnote" rows="2" spellcheck="false"></textarea></details>
+        <details id="prtBox"><summary>Potential response trees</summary><div id="prtView"></div>
+          <button type="button" id="addPrt" class="small" title="new PRT without an input (e.g. a further check of a graphic); [[feedback:..]] goes to the cursor in the question text">+ PRT ...</button></details>
+        <p class="hint">Changes are saved to the file automatically (a copy of the file as it was when
+          opened: <code>.bak</code> next to it). Ctrl+Enter: save, evaluate and update the preview.</p>
+      </div>
+    </section>
+  </div>
+
+  <div id="previewCol">
+    <nav id="barPreview" class="jump top" aria-label="preview sections"></nav>
+    <section>
+      <h2>Preview<span class="spacer"></span>
+        <span class="langs" title="language of the [[lang]] blocks"><button id="lang-de" class="small">de</button><button id="lang-en" class="small">en</button></span>
+        <span class="langs" title="decimal separator (question option, saved in the file)"><button id="dec-point" class="small dec">0<b>.</b>5</button><button id="dec-comma" class="small dec">0<b>,</b>5</button></span>
+        <button id="simpToggle" class="small" title="simplify (question option, saved in the file)">simp</button>
+        <button id="fillBtn" class="small" title="fill in the model answers (the graphic starts from the model answer of its objects input)">Model answers</button>
+        <button id="checkBtn" class="small primary" title="evaluate the PRTs with the current answers (Alt+Enter)">Check</button></h2>
+      <div id="previewView">
+        <div id="qmeta" class="meta"></div>
+        <div id="qtext" class="formulation"><p class="hint">Open a file and choose a STACK question.</p></div>
+        <details id="gfbBox" style="margin-top:12px"><summary>General feedback</summary><div id="gfb"></div></details>
+        <h2 style="margin-top:12px">Question note</h2>
+        <div id="qnote" class="hint"></div>
+      </div>
+    </section>
+    <section>
+      <h2>Messages</h2>
+      <div id="messages"><p class="hint">-</p></div>
+    </section>
+    <section>
+      <h2>Inputs and model answers</h2>
+      <table class="vars" id="inputs"><tbody></tbody></table>
+    </section>
+    <section>
+      <h2>PRT graphs</h2>
+      <div id="prtGraph"><p class="hint">-</p></div>
+    </section>
+    <section>
+      <h2>Question variables<span class="spacer"></span><input type="text" id="varFilter" placeholder="filter" style="width:8em"></h2>
+      <table class="vars" id="vars"><tbody></tbody></table>
+    </section>
+  </div>
+  <nav id="railPreview" class="jump side" aria-label="preview sections"></nav>
+</main>
+<dialog id="snippetDialog">
+  <form method="dialog">
+    <h3 style="margin:0 0 8px">Insert snippet</h3>
+    <ul id="snippetList" class="qlist" style="max-height:50vh"></ul>
+    <p class="hint">Inserted at the cursor of the field last edited (question text if none). The snippets are the
+      files in <code>tools/workbench/templates/snippets/</code>.</p>
+    <div class="form-row" style="justify-content:flex-end"><button value="cancel">Cancel</button></div>
+  </form>
+</dialog>
+
+<dialog id="inputDialog">
+  <form method="dialog">
+    <h3 style="margin:0 0 8px">New input</h3>
+    <div class="form-row"><label style="width:8em">Name</label><input type="text" id="inName" placeholder="e.g. FA" spellcheck="false"></div>
+    <div class="form-row"><label style="width:8em">Type</label>
+      <select id="inKind">
+        <option value="units">number with unit (fb_unit)</option>
+        <option value="number">number without unit (fb_unit)</option>
+        <option value="expression">expression (fb_vars)</option>
+        <option value="matrix">vector / matrix of numbers (fb_unit_matrix)</option>
+        <option value="matrixexpr">vector / matrix of expressions (fb_vars_matrix)</option>
+      </select></div>
+    <div class="form-row"><label style="width:8em">Model answer</label><input type="text" id="inTans" spellcheck="false" list="inVars"></div>
+    <datalist id="inVars"></datalist>
+    <div id="inMatrix">
+      <div class="form-row"><label style="width:8em">Label</label><input type="text" id="inLabel" spellcheck="false" placeholder="LaTeX left of the matrix, e.g. \underline x_{M,1}"></div>
+      <div class="form-row"><label style="width:8em">Unit</label><input type="text" id="inUnit" spellcheck="false" placeholder="optional, e.g. m/s (shown as text right of the matrix)"></div>
+      <div class="form-row"><label style="width:8em">Components</label><input type="text" id="inComp" spellcheck="false" placeholder="empty: x-, y-, z-component; index: Element 1, 2, ...; or x_A, y_A"></div>
+      <div class="form-row" id="inSizeRow"><label style="width:8em">Size</label><input type="number" id="inRows" min="1" max="9" value="2" style="max-width:4em;flex:0"> ×
+        <input type="number" id="inCols" min="1" max="9" value="1" style="max-width:4em;flex:0"> <span class="hint">rows × columns, for the new question variable</span></div>
+    </div>
+    <div class="form-row" id="inTolRow"><label style="width:8em">Rel. tolerance</label><input type="text" id="inTol" value="0.005" spellcheck="false" style="max-width:6em;flex:0"></div>
+    <p class="hint" id="inInfo" style="white-space:pre-wrap"></p>
+    <div class="form-row" style="justify-content:flex-end">
+      <button value="cancel">Cancel</button><button value="ok" class="primary" id="inOk">Create</button>
+    </div>
+  </form>
+</dialog>
+<script src="frame.js"></script>
+<script src="editor.js"></script>
+<script>
+"use strict";
+const F = MeclibFrame;
+const $ = (id) => document.getElementById(id);
+const STORE_KEY = "meclib-tryout-v1";       // shared with the other pages: source, JSXGraph, MathJax (name kept from the former "tryout")
+const QSTORE_KEY = "meclib-question-v2";    // this page: last file/question, language, tab
+const FORMATS = ["markdown", "html", "moodle_auto_format", "plain_text"];
+const TEXT_FIELDS = ["questiontext", "generalfeedback", "specificfeedback", "questionnote"];
+const INPUT_TYPES = ["algebraic", "numerical", "units", "string", "matrix", "varmatrix", "singlechar", "boolean",
+  "dropdown", "checkbox", "radio", "textarea", "equiv", "notes", "geogebra", "parsons"];
+const AUTOSAVE_MS = 1500;
+
+let config = null, result = null, lang = "de", tab = "edit";
+let file = null;            // {path, rev, questions}
+let qindex = null;          // selected question (index in the file)
+let saved = null;           // fields as last saved/loaded
+let dirty = false, saveTimer = null, saving = null, conflict = false;
+let currentFolder = null;   // folder for dropped files and new files
+const backedUp = new Set(); // files with a .bak made in this page session
+let frames = [];            // live graphics of the current rendering
+const editors = {};         // data-field -> MeclibEditor field (CodeMirror or plain text field)
+const inputValues = {};     // input name -> current value
+
+function esc(s) { return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function stored(key) { try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { return {}; } }
+function store(key, patch) {
+  try { localStorage.setItem(key, JSON.stringify(Object.assign(stored(key), patch))); } catch (e) { /* ignore */ }
+}
+function fillSelect(sel, entries, wanted) {
+  sel.innerHTML = "";
+  for (const [value, label] of entries) {
+    const o = document.createElement("option"); o.value = value; o.textContent = label; sel.appendChild(o);
+  }
+  if (wanted !== undefined && entries.some(([v]) => v === wanted)) sel.value = wanted;
+}
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script"); s.src = src; s.onload = resolve; s.onerror = () => reject(new Error("could not load " + src));
+    document.head.appendChild(s);
+  });
+}
+async function postJSON(url, body, raw) {
+  const resp = await fetch(url, { method: "POST", headers: Object.assign({ "X-Workbench": "1" }, raw ? raw.headers : { "Content-Type": "application/json" }),
+    body: raw ? raw.body : JSON.stringify(body), keepalive: url === "/api/q/save" });
+  const data = await resp.json();
+  if (!resp.ok || data.error) { const e = new Error(data.error || resp.statusText); e.conflict = !!data.conflict; throw e; }
+  return data;
+}
+function baseName(p) { return String(p).split(/[\\/]/).pop(); }
+function dirName(p) { const s = String(p); const i = Math.max(s.lastIndexOf("/"), s.lastIndexOf("\\")); return i > 0 ? s.slice(0, i) : s; }
+
+// ---------------------------------------------------------------- folders and files
+let folderList = [];   // [{path, source, files}] as last loaded
+// initial folder of the "Save as" dialog: the folder of the open file, unless that is the inbox;
+// then the folder of the last "Save as" (if still listed), else the first own question folder
+function saveAsFolder() {
+  const own = folderList.filter((d) => d.source !== "inbox");
+  const inbox = folderList.find((d) => d.source === "inbox");
+  const here = dirName(file.path);
+  if (!inbox || !samePath(here, inbox.path)) return here;
+  const last = stored(QSTORE_KEY).saveFolder;
+  if (last && own.some((d) => samePath(d.path, last))) return last;
+  return own.length ? own[0].path : "";
+}
+async function loadFolders() {
+  let data;
+  try { data = await (await fetch("/api/q/folders")).json(); } catch (e) { return; }
+  folderList = data.folders;
+  const box = $("folders"); box.innerHTML = "";
+  const openFolders = stored(QSTORE_KEY).openFolders;   // undefined: all folders open except the inbox
+  for (const d of data.folders) {
+    const det = document.createElement("details");
+    det.className = "folder" + (d.path === currentFolder ? " cur" : "");
+    det.open = openFolders ? openFolders.includes(d.path) : d.source !== "inbox";
+    const label = d.source === "inbox" ? "workbench inbox (copies of dropped files)" : d.path;
+    det.innerHTML = `<summary title="${esc(d.path)}">${esc(label)} <span class="src">${d.source === "config" ? "(config)" : ""}${d.exists ? "" : " - not found"}</span></summary>`;
+    det.addEventListener("toggle", () => {
+      const list = new Set(stored(QSTORE_KEY).openFolders || [...document.querySelectorAll(".folder[open] > summary")].map((x) => x.title));
+      if (det.open) list.add(d.path); else list.delete(d.path);
+      store(QSTORE_KEY, { openFolders: [...list] });
+      if (det.open) setFolder(d.path);
+    });
+    const ul = document.createElement("ul"); ul.className = "qlist files";
+    for (const f of d.files) {
+      const li = document.createElement("li"); li.textContent = f;
+      const full = d.path + "/" + f;
+      if (file && samePath(file.path, full)) li.classList.add("sel");
+      li.addEventListener("click", () => { setFolder(d.path); openFile(full); });
+      ul.appendChild(li);
+    }
+    if (!d.files.length) ul.innerHTML = '<li class="other">no .xml files</li>';
+    det.appendChild(ul);
+    const tools = document.createElement("div"); tools.className = "tools";
+    tools.innerHTML = '<button class="small" data-a="newfile">New file</button>' +
+      (d.source === "added" ? '<button class="small" data-a="remove" title="remove from this list (the folder stays on disk)">Remove</button>' : "");
+    tools.querySelector('[data-a="newfile"]').addEventListener("click", () => newFile(d.path));
+    const rm = tools.querySelector('[data-a="remove"]');
+    if (rm) rm.addEventListener("click", async () => { await postJSON("/api/q/folders", { remove: d.path }); loadFolders(); });
+    det.appendChild(tools);
+    box.appendChild(det);
+  }
+  const rec = $("recent"); rec.innerHTML = "";
+  for (const r of data.recent.slice(0, 10)) {
+    const li = document.createElement("li");
+    li.innerHTML = `${esc(r.name || baseName(r.path))}<span class="path">${esc(r.path)}</span>`;
+    li.addEventListener("click", () => openFile(r.path, r.index));
+    rec.appendChild(li);
+  }
+  if (!currentFolder && data.folders.length) setFolder(data.folders[0].path, true);
+}
+function samePath(a, b) { return String(a).replace(/\\/g, "/").toLowerCase() === String(b).replace(/\\/g, "/").toLowerCase(); }
+function setFolder(path, quiet) {
+  currentFolder = path;
+  $("dropTarget").textContent = "copied into " + path;
+  if (!quiet) for (const det of document.querySelectorAll(".folder")) det.classList.toggle("cur", det.querySelector("summary").title === path);
+}
+
+// errors and notes of the Files section are shown there (the Messages column is about the question)
+function fileMsg(text, cls) {
+  const box = $("fileMsg"); box.innerHTML = "";
+  if (text) { const d = document.createElement("div"); d.className = "msg " + (cls || "err"); d.textContent = text; box.appendChild(d); }
+}
+
+async function openFile(path, index) {
+  if (!(await flush())) return;
+  try {
+    const data = await postJSON("/api/q/open", { path });
+    showFile(data);
+    const stackQs = data.questions.filter((q) => q.type === "stack");
+    if (index !== undefined && index !== null && data.questions.some((q) => q.index === index)) selectQuestion(index);
+    else if (stackQs.length === 1) selectQuestion(stackQs[0].index);
+    loadFolders();
+  } catch (e) { fileMsg("Could not open " + path + ": " + e.message); }
+}
+
+function showFile(data) {
+  file = { path: data.path, rev: data.rev, questions: data.questions };
+  store(QSTORE_KEY, { path: data.path });
+  $("fileName").textContent = data.path;
+  $("qtools").hidden = false;
+  const list = $("qlist"); list.innerHTML = "";
+  let lastCat = null;
+  for (const q of data.questions) {
+    const li = document.createElement("li");
+    const cat = q.category ? q.category.replace(/^\$(course|system|module)\$\/top\/?/, "") : "";
+    li.innerHTML = esc(q.name) + (cat && cat !== lastCat ? `<span class="cat">${esc(cat)}</span>` : "");
+    lastCat = cat;
+    if (q.type !== "stack") { li.className = "other"; li.title = "type " + q.type + " - only STACK questions can be opened"; }
+    else li.addEventListener("click", () => selectQuestion(q.index));
+    li.dataset.index = q.index;
+    list.appendChild(li);
+  }
+  markSelected();
+}
+function markSelected() {
+  for (const li of $("qlist").children) li.classList.toggle("sel", Number(li.dataset.index) === qindex);
+}
+
+async function uploadFile(f) {
+  const text = await f.text();
+  try {
+    const r = await postJSON("/api/q/upload", null, { headers: { "Content-Type": "application/xml",
+      "X-File-Name": encodeURIComponent(f.name), "X-Folder": encodeURIComponent(currentFolder || "") }, body: text });
+    fileMsg("Copy of " + f.name + " saved as\n" + r.path, "info");
+    await openFile(r.path);
+  } catch (e) { fileMsg("Could not read " + f.name + ": " + e.message); }
+}
+
+async function newFile(folder) {
+  const name = prompt("Name of the new question (the file gets the same name):", "New meclib question");
+  if (!name) return;
+  if (!(await flush())) return;
+  try {
+    const r = await postJSON("/api/q/new", { folder, name });
+    fileMsg(""); showFile(r); selectQuestion(r.index); setTab("edit"); loadFolders();
+  } catch (e) { fileMsg("New file in " + folder + ": " + e.message); }
+}
+
+// ---------------------------------------------------------------- question selection and editor
+async function selectQuestion(index) {
+  if (!(await flush())) return;
+  if ($("inputDialog").open) $("inputDialog").close("");   // it belongs to the question it was opened for
+  qindex = index; markSelected();
+  store(QSTORE_KEY, { path: file.path, index });
+  result = null; conflict = false; $("conflict").innerHTML = "";
+  try {
+    const r = await postJSON("/api/q/question", { path: file.path, index });
+    file.rev = r.rev;
+    fillEditor(r.fields);
+    showHistory(r.history);
+  } catch (e) { showMessages([{ cls: "err", text: e.message }]); return; }
+  loadReview();
+  evaluate(true);
+}
+
+// ---------------------------------------------------------------- undo / redo (history.py)
+// The server keeps versions of the question edited last (.workbench-history next to the file);
+// text fields have their own undo (Ctrl+Z inside the field) as well.
+function showHistory(h) {
+  h = h || {};
+  for (const [id, dir, label] of [["undoBtn", "undo", h.undo], ["redoBtn", "redo", h.redo]]) {
+    $(id).disabled = !label;
+    $(id).title = label ? `${dir}: ${label}` + (h[dir + "_count"] > 1 ? ` (${h[dir + "_count"]} steps)` : "") : `nothing to ${dir}`;
+  }
+}
+async function historyStep(dir) {
+  if (!file || qindex === null || !(await flush())) return;
+  try {
+    const r = await postJSON("/api/q/" + dir, { path: file.path, index: qindex, rev: file.rev });
+    file.rev = r.rev;
+    fillEditor(r.fields);
+    showHistory(r.history);
+    showMessages([{ cls: "info", text: (dir === "undo" ? "Undone: " : "Redone: ") + r.label }]);
+    loadReview();
+    evaluate(false);
+  } catch (e) {
+    if (e.conflict) { conflict = true; showConflict(); }
+    else showMessages([{ cls: "err", text: e.message }]);
+  }
+}
+$("undoBtn").addEventListener("click", () => historyStep("undo"));
+$("redoBtn").addEventListener("click", () => historyStep("redo"));
+
+function fillEditor(fields) {
+  saved = JSON.parse(JSON.stringify(fields));
+  $("qtitle").textContent = fields.name;
+  for (const [k, ed] of Object.entries(editors)) ed.set(fields[k] ?? "");
+  for (const sel of document.querySelectorAll("#editView [data-format]")) {
+    const cur = fields[sel.dataset.format + "_format"] || "html";
+    fillSelect(sel, (FORMATS.includes(cur) ? FORMATS : [cur, ...FORMATS]).map((f) => [f, f]), cur);
+  }
+  for (const d of document.querySelectorAll("#editView details")) {
+    const ta = d.querySelector("textarea[data-field]");
+    if (ta && (fields[ta.dataset.field] || "").trim()) d.open = true;
+  }
+  renderInputEditor(fields.inputs || []);
+  renderOptions(fields.options || {});
+  renderPRTs(fields.prts || []);
+  refreshEditors();
+  setDirty(false);
+}
+
+const INPUT_MAIN = [["type", "type"], ["tans", "model answer"], ["boxsize", "size"], ["mustverify", "verify"], ["showvalidation", "validation"]];
+const INPUT_MORE = [["options", "options"], ["syntaxhint", "syntax hint"], ["forbidwords", "forbidden words"], ["allowwords", "allowed words"],
+  ["insertstars", "insert stars"], ["forbidfloat", "forbid float"], ["requirelowestterms", "lowest terms"], ["checkanswertype", "check type"],
+  ["strictsyntax", "strict syntax"], ["syntaxattribute", "hint attribute"]];
+// inputs and PRTs are listed in the order of their first [[input:..]] / [[feedback:..]] tag in the
+// question text, then the specific feedback; anything not placed keeps its XML order at the end
+function textOrder() {
+  const txt = (k) => (editors[k] ? editors[k].get() : saved[k]) || "";
+  return txt("questiontext") + "\n" + txt("specificfeedback");
+}
+function byTextOrder(list, tag) {
+  const t = textOrder(), pos = (n) => { const i = t.indexOf(`[[${tag}:${n}]]`); return i < 0 ? Infinity : i; };
+  return list.map((x, k) => [pos(x.name), k, x]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map((e) => e[2]);
+}
+function renderInputEditor(inputs) {
+  inputs = byTextOrder(inputs, "input");
+  const t = $("inputEd");
+  if (!inputs.length) { t.innerHTML = '<tr><td class="hint">no inputs</td></tr>'; return; }
+  let h = "<tr><th>name</th>" + INPUT_MAIN.map(([, l]) => `<th>${l}</th>`).join("") + "<th></th></tr>";
+  for (const inp of inputs) {
+    h += `<tr data-input="${esc(inp.name)}"><td class="n">${esc(inp.name)}</td>`;
+    for (const [k] of INPUT_MAIN) {
+      if (k === "type") {
+        const types = INPUT_TYPES.includes(inp.type) ? INPUT_TYPES : [inp.type, ...INPUT_TYPES];
+        h += `<td><select data-ik="type">${types.map((x) => `<option${x === inp.type ? " selected" : ""}>${esc(x)}</option>`).join("")}</select></td>`;
+      } else if (k === "mustverify" || k === "showvalidation") {
+        const opts = k === "mustverify" ? [["1", "yes"], ["0", "no"]] : [["1", "yes"], ["2", "yes, no vars"], ["3", "compact"], ["0", "no"]];
+        h += `<td><select data-ik="${k}">${opts.map(([v, l]) => `<option value="${v}"${v === inp[k] ? " selected" : ""}>${l}</option>`).join("")}</select></td>`;
+      } else {
+        h += `<td><input type="text" data-ik="${k}" value="${esc(inp[k])}" spellcheck="false"${k === "boxsize" ? ' style="width:4em"' : ""}></td>`;
+      }
+    }
+    h += `<td><button type="button" class="small del" data-del="${esc(inp.name)}" title="delete this input">✕</button></td>`;
+    h += `</tr><tr class="more" data-input="${esc(inp.name)}"><td></td><td colspan="${INPUT_MAIN.length + 1}"><details><summary>more</summary>` +
+      INPUT_MORE.map(([k, l]) => `<div class="form-row"><label style="width:9em">${l}</label><input type="text" data-ik="${k}" value="${esc(inp[k])}" spellcheck="false"></div>`).join("") +
+      "</details></td></tr>";
+  }
+  t.innerHTML = h;
+  for (const el of t.querySelectorAll("[data-ik]")) el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => setDirty(true));
+  for (const b of t.querySelectorAll("[data-del]")) b.addEventListener("click", () => deleteInput(b.dataset.del));
+}
+
+// node names in the XML count from 0, STACK's editing form and answer notes from 1
+function nodeNo(name) { const n = parseInt(name, 10); return Number.isNaN(n) ? name : String(n + 1); }
+// question options: [key, label, values (with labels) or null for free text]
+const OPTION_FIELDS = [
+  ["decimals", "decimal separator", [[".", "point ."], [",", "comma ,"]]],
+  ["multiplicationsign", "multiplication sign", [["dot", "dot"], ["cross", "cross"], ["onum", "number only"], ["none", "none"], ["space", "space"]]],
+  ["questionsimplify", "simplify", [["1", "yes"], ["0", "no"]]],
+  ["scientificnotation", "scientific notation", [["*10", "*10"], ["E", "E"]]],
+  ["assumepositive", "assume positive", [["0", "no"], ["1", "yes"]]],
+  ["assumereal", "assume real", [["0", "no"], ["1", "yes"]]],
+  ["sqrtsign", "surd for sqrt", [["1", "yes"], ["0", "no"]]],
+  ["complexno", "sqrt(-1)", [["i", "i"], ["j", "j"], ["symi", "symbol i"], ["symj", "symbol j"]]],
+  ["inversetrig", "inverse trig", [["cos-1", "cos⁻¹(x)"], ["acos", "acos(x)"], ["arccos", "arccos(x)"], ["arsinh", "arccos(x), arsinh(x)"]]],
+  ["logicsymbol", "logic symbols", [["lang", "language"], ["symbol", "symbols"]]],
+  ["matrixparens", "matrix parentheses", [["[", "["], ["(", "("], ["", "none"], ["{", "{"], ["|", "|"]]],
+  ["defaultgrade", "default mark", null], ["penalty", "penalty", null], ["idnumber", "ID number", null],
+];
+function renderOptions(opts) {
+  const box = $("optEd");
+  box.innerHTML = OPTION_FIELDS.map(([k, label, vals]) => {
+    const cur = opts[k] ?? "";
+    const ctl = vals
+      ? `<select data-opt="${k}">${(vals.some(([v]) => v === cur) ? vals : [[cur, cur], ...vals]).map(([v, l]) => `<option value="${esc(v)}"${v === cur ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`
+      : `<input type="text" data-opt="${k}" value="${esc(cur)}" spellcheck="false">`;
+    return `<label>${esc(label)}</label>${ctl}`;
+  }).join("");
+  for (const el of box.querySelectorAll("[data-opt]")) el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => { setDirty(true); showOptionButtons(); });
+  showOptionButtons();
+}
+// the option buttons in the preview header show the editor's values and change them
+function showOptionButtons() {
+  const get = (k) => { const el = document.querySelector(`#optEd [data-opt="${k}"]`); return el ? el.value : null; };
+  $("dec-point").classList.toggle("on", get("decimals") === ".");
+  $("dec-comma").classList.toggle("on", get("decimals") === ",");
+  $("simpToggle").classList.toggle("on", get("questionsimplify") === "1");
+  $("simpToggle").textContent = "simp " + (get("questionsimplify") === "0" ? "off" : "on");
+}
+async function setOption(k, v) {
+  const el = document.querySelector(`#optEd [data-opt="${k}"]`);
+  if (!el || !file || qindex === null || el.value === v) return;
+  el.value = v; showOptionButtons();
+  setDirty(true);
+  if (await save()) evaluate(false);
+}
+
+// ---------------------------------------------------------------- PRT editor
+const ANSWER_TESTS = ["AlgEquiv", "AlgEquivNouns", "CasEqual", "EqualComAss", "EqualComAssRules", "SameType", "SubstEquiv",
+  "SysEquiv", "Sets", "Equiv", "EquivFirst", "Expanded", "FacForm", "SingleFrac", "PartFrac", "CompSquare", "LowestTerms",
+  "PropLogic", "Int", "Diff", "GT", "GTE", "NumRelative", "NumAbsolute", "NumSigFigs", "NumDecPlaces", "NumDecPlacesWrong",
+  "UnitsRelative", "UnitsStrictRelative", "UnitsAbsolute", "UnitsStrictAbsolute", "UnitsSigFigs", "UnitsStrictSigFigs",
+  "String", "StringSloppy", "Levenshtein", "SRegExp", "Validator"];
+const FEEDBACK_STYLES = [["0", "formative"], ["1", "standard"], ["2", "compact"], ["3", "symbolic only"]];
+const opt = (list, cur) => (list.some(([v]) => v === cur) ? list : [[cur, cur], ...list])
+  .map(([v, l]) => `<option value="${esc(v)}"${v === cur ? " selected" : ""}>${esc(l)}</option>`).join("");
+const rowsFor = (t, min) => Math.max(min, Math.min(14, String(t || "").split("\n").length + 1));
+function renderPRTs(prts) {
+  prts = byTextOrder(prts, "feedback");
+  const box = $("prtView");
+  if (!prts.length) { box.innerHTML = '<p class="hint">no PRTs</p>'; renderPRTGraphs(); return; }
+  box.innerHTML = prts.map((p) => {
+    const targets = (cur) => opt([["-1", "end"], ...p.nodes.map((n) => [n.name, "node " + nodeNo(n.name)])], cur);
+    const branch = (n, br) => `<div class="branch ${br}">
+        <div class="row"><b>${br}</b>
+          <select data-nk="${br}scoremode" title="score mode">${opt([["=", "="], ["+", "+"], ["-", "−"]], n[br + "scoremode"])}</select>
+          <input type="text" class="num" data-nk="${br}score" value="${esc(n[br + "score"])}" title="score">
+          penalty <input type="text" class="num" data-nk="${br}penalty" value="${esc(n[br + "penalty"])}" placeholder="default">
+          → <select data-nk="${br}nextnode">${targets(n[br + "nextnode"])}</select>
+          <button type="button" class="small" data-op="add-node" data-branch="${br}" title="new node after this branch">+ node</button></div>
+        <div class="row">note <input type="text" class="note" data-nk="${br}answernote" value="${esc(n[br + "answernote"])}"></div>
+        <div class="lbl">feedback <select data-nk="${br}feedback_format">${opt(FORMATS.map((f) => [f, f]), n[br + "feedback_format"])}</select></div>
+        <textarea data-nk="${br}feedback" rows="${rowsFor(n[br + "feedback"], 2)}" spellcheck="false">${esc(n[br + "feedback"])}</textarea></div>`;
+    return `<div class="prt" data-prt="${esc(p.name)}">
+      <div class="prthead"><b>${esc(p.name)}</b>
+        value <input type="text" class="num" data-pk="value" value="${esc(p.value)}" style="width:6em">
+        simplify <select data-pk="autosimplify">${opt([["1", "yes"], ["0", "no"]], p.autosimplify)}</select>
+        feedback style <select data-pk="feedbackstyle">${opt(FEEDBACK_STYLES, p.feedbackstyle)}</select>
+        <span class="spacer"></span>
+        <button type="button" class="small del" data-op="delete-prt" title="delete this PRT and its [[feedback:..]]">✕ PRT</button></div>
+      <div class="lbl">feedback variables</div>
+      <textarea data-pk="feedbackvariables" rows="${rowsFor(p.feedbackvariables, 2)}" spellcheck="false">${esc(p.feedbackvariables)}</textarea>
+      ${p.nodes.map((n) => `<div class="node" data-node="${esc(n.name)}" id="${esc("node-" + p.name + "-" + n.name)}">
+        <div class="nodehead"><b>Node ${esc(nodeNo(n.name))}</b>
+          <input type="text" data-nk="description" value="${esc(n.description)}" placeholder="description">
+          <button type="button" class="small del" data-op="delete-node" title="delete this node (branches leading to it end the PRT)">✕</button></div>
+        <div class="test">
+          <span>test</span><select data-nk="answertest">${opt(ANSWER_TESTS.map((t) => [t, t]), n.answertest)}</select>
+          <span>options</span><input type="text" data-nk="testoptions" value="${esc(n.testoptions)}">
+          <span>SAns</span><input type="text" data-nk="sans" value="${esc(n.sans)}" spellcheck="false">
+          <span>TAns</span><input type="text" data-nk="tans" value="${esc(n.tans)}" spellcheck="false">
+          <span>quiet</span><select data-nk="quiet">${opt([["0", "no"], ["1", "yes"]], n.quiet)}</select></div>
+        <div class="branches">${branch(n, "true")}${branch(n, "false")}</div></div>`).join("")}
+      <button type="button" class="small" data-op="add-node" title="new node, not linked yet">+ Node</button></div>`;
+  }).join("");
+  for (const el of box.querySelectorAll("[data-pk], [data-nk]")) {
+    el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+      setDirty(true);
+      if (/nextnode$/.test(el.dataset.nk || "")) renderPRTGraphs();
+    });
+  }
+  for (const b of box.querySelectorAll("[data-op]")) {
+    const prt = b.closest(".prt").dataset.prt, node = b.closest(".node");
+    b.addEventListener("click", () => {
+      const op = b.dataset.op;
+      if (op === "delete-prt") {
+        if (confirm(`Delete PRT ${prt} with its [[feedback:${prt}]] and expected test results?`)) prtOp({ op, name: prt });
+      } else if (op === "delete-node") {
+        if (confirm(`Delete node ${nodeNo(node.dataset.node)} of PRT ${prt}? Branches leading to it will end the PRT.`))
+          prtOp({ op, prt, node: node.dataset.node });
+      } else prtOp({ op, prt, from: node ? node.dataset.node : null, branch: b.dataset.branch || null });
+    });
+  }
+  renderPRTGraphs();
+  if (typeof renderJumpNav === "function" && $("barEdit")) renderJumpNav();
+}
+// the PRTs as currently in the editor (saved state with the edits in the fields)
+function editedPRTs() {
+  return (saved && saved.prts || []).map((p) => {
+    const card = document.querySelector(`#prtView .prt[data-prt="${CSS.escape(p.name)}"]`);
+    const q = JSON.parse(JSON.stringify(p));
+    if (!card) return q;
+    for (const el of card.querySelectorAll("[data-pk]")) q[el.dataset.pk] = el.value;
+    for (const n of q.nodes) {
+      const nd = card.querySelector(`.node[data-node="${CSS.escape(n.name)}"]`);
+      if (nd) for (const el of nd.querySelectorAll("[data-nk]")) n[el.dataset.nk] = el.value;
+    }
+    return q;
+  });
+}
+function prtChanges() {
+  const out = [];
+  for (const [i, q] of editedPRTs().entries()) {
+    const p = saved.prts[i], pc = { name: p.name }, nodes = [];
+    for (const k of ["value", "autosimplify", "feedbackstyle", "feedbackvariables"]) if ((p[k] ?? "") !== q[k]) pc[k] = q[k];
+    for (const [j, n] of q.nodes.entries()) {
+      const o = p.nodes[j], nc = { name: n.name };
+      for (const k of Object.keys(n)) if (k !== "name" && (o[k] ?? "") !== n[k]) nc[k] = n[k];
+      for (const br of ["true", "false"]) {     // text and format of a branch go together
+        if ((br + "feedback" in nc) || (br + "feedback_format" in nc)) { nc[br + "feedback"] = n[br + "feedback"]; nc[br + "feedback_format"] = n[br + "feedback_format"]; }
+      }
+      if (Object.keys(nc).length > 1) nodes.push(nc);
+    }
+    if (nodes.length) pc.nodes = nodes;
+    if (Object.keys(pc).length > 1) out.push(pc);
+  }
+  return out;
+}
+async function prtOp(body) {
+  if (!file || qindex === null || !(await flush())) return null;
+  const backup = !backedUp.has(file.path);
+  try {
+    const r = await postJSON("/api/q/prt", Object.assign({ path: file.path, index: qindex, rev: file.rev, backup }, body));
+    if (backup) backedUp.add(file.path);
+    file.rev = r.rev;
+    fillEditor(r.fields);
+    showHistory(r.history);
+    showMessages([{ cls: "info", text: r.label + "." }]);
+    loadReview();
+    evaluate(false);
+    return r;
+  } catch (e) {
+    if (e.conflict) { conflict = true; showConflict(); }
+    else showMessages([{ cls: "err", text: e.message }]);
+    return null;
+  }
+}
+$("addPrt").addEventListener("click", async () => {
+  const name = (prompt("Name of the new PRT (e.g. sys2):") || "").trim();
+  if (!name) return;
+  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(name)) { showMessages([{ cls: "err", text: "PRT name: a letter, then letters, digits or _" }]); return; }
+  if ((saved.prts || []).some((p) => p.name === name)) { showMessages([{ cls: "err", text: `There is already a PRT ${name}.` }]); return; }
+  editors.questiontext.insert(`[[feedback:${name}]]`);     // at the cursor; saved before the PRT is added
+  setDirty(true);
+  await prtOp({ op: "add-prt", name });
+});
+
+// ---------------------------------------------------------------- PRT graphs (right column)
+// Nodes in layers by their longest distance from the first node (the one no branch leads to,
+// as in STACK); green: true branch, red: false branch; a branch ending the PRT shows its score.
+// After "Check" the branches taken (by their answer notes) are drawn bold.
+function prtGraphSVG(p, taken) {
+  const names = p.nodes.map((n) => n.name), byName = Object.fromEntries(p.nodes.map((n) => [n.name, n]));
+  const targets = new Set(p.nodes.flatMap((n) => [n.truenextnode, n.falsenextnode]));
+  const root = names.find((n) => !targets.has(n)) ?? names[0];
+  const warn = [];
+  for (const n of p.nodes) for (const br of ["true", "false"]) {
+    const t = n[br + "nextnode"];
+    if (t !== "-1" && !byName[t]) warn.push(`node ${nodeNo(n.name)} ${br}: leads to a missing node ${t}`);
+  }
+  // longest-path layering from the root; a cycle is reported
+  const depth = {}, onStack = new Set();
+  let cyclic = false;
+  const visit = (n, d) => {
+    if (onStack.has(n)) { cyclic = true; return; }
+    if (depth[n] !== undefined && depth[n] >= d) return;
+    depth[n] = d; onStack.add(n);
+    for (const br of ["true", "false"]) { const t = byName[n][br + "nextnode"]; if (byName[t]) visit(t, d + 1); }
+    onStack.delete(n);
+  };
+  if (root !== undefined) visit(root, 0);
+  if (cyclic) warn.push("the branches form a loop - STACK does not accept this");
+  const unreached = names.filter((n) => depth[n] === undefined);
+  if (unreached.length) warn.push("not reachable from node " + nodeNo(root) + ": node " + unreached.map(nodeNo).join(", "));
+  let maxD = Math.max(0, ...Object.values(depth));
+  unreached.forEach((n) => { depth[n] = ++maxD; });
+  const layers = [];
+  for (const n of names) (layers[depth[n]] = layers[depth[n]] || []).push(n);
+  const W = 260, dy = 58, r = 13, pos = {};
+  layers.forEach((l, d) => l.forEach((n, i) => { pos[n] = [W * (i + 1) / (l.length + 1), 22 + d * dy]; }));
+  const H = 22 + layers.length * dy + 4;
+  let svg = "";
+  for (const n of names) {
+    const [x, y] = pos[n];
+    for (const [k, br] of [[-1, "true"], [1, "false"]]) {
+      const t = byName[n][br + "nextnode"], col = br === "true" ? "#3a8a4f" : "#b3261e";
+      const bold = taken.has(byName[n][br + "answernote"]) ? 3.2 : 1.3;
+      if (byName[t]) {
+        const [tx, ty] = pos[t], skip = Math.round((ty - y) / dy) - 1;
+        // an edge across layers bends sideways (true left, false right), so it does not run through other nodes
+        const cx = (x + tx) / 2 + k * 45 * Math.max(0, skip), cy = (y + ty) / 2;
+        svg += `<path d="M${x + k * 6},${y + r - 2} Q${cx},${cy} ${tx + (skip > 0 ? k * 6 : 0)},${ty - r}" fill="none" stroke="${col}" stroke-width="${bold}" marker-end="url(#ah)"/>`;
+      } else {
+        const ex = x + k * 30, ey = y + 34, sc = byName[n][br + "scoremode"] + byName[n][br + "score"];
+        svg += `<line x1="${x + k * 6}" y1="${y + r - 2}" x2="${ex}" y2="${ey - 8}" stroke="${col}" stroke-width="${bold}"/>` +
+          `<text x="${ex}" y="${ey + 2}" font-size="10.5" text-anchor="middle" fill="${col}">${esc(sc)}</text>`;
+      }
+    }
+  }
+  for (const n of names) {
+    const [x, y] = pos[n], nd = byName[n];
+    svg += `<g class="gnode" data-node="${esc(n)}" style="cursor:pointer"><title>${esc(nd.answertest + "(" + nd.sans + ", " + nd.tans + ")")}</title>` +
+      `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" stroke="#555"/>` +
+      `<text x="${x}" y="${y + 4}" font-size="12" text-anchor="middle">${esc(nodeNo(n))}</text>` +
+      `<text x="${x + r + 3}" y="${y - 6}" font-size="10" fill="#777">${esc(nd.answertest)}</text></g>`;
+  }
+  return { svg: `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#777"/></marker></defs>${svg}</svg>`, warn };
+}
+function renderPRTGraphs() {
+  const box = $("prtGraph");
+  if (!box) return;
+  const prts = byTextOrder(editedPRTs(), "feedback");
+  if (!prts.length) { box.innerHTML = '<p class="hint">-</p>'; return; }
+  box.innerHTML = prts.map((p) => {
+    const notes = lastCheck && lastCheck.prts && lastCheck.prts[p.name] ? String(lastCheck.prts[p.name].notes || "") : "";
+    const { svg, warn } = prtGraphSVG(p, new Set(notes.split("|").map((x) => x.trim()).filter(Boolean)));
+    return `<div data-prt="${esc(p.name)}"><div class="gtitle">${esc(p.name)}</div>${warn.map((w) => `<div class="gwarn">${esc(w)}</div>`).join("")}${svg}</div>`;
+  }).join("");
+  for (const g of box.querySelectorAll(".gnode")) g.addEventListener("click", () => {
+    const P = g.closest("[data-prt]").dataset.prt, el = document.getElementById("node-" + P + "-" + g.dataset.node);
+    if (!el) return;
+    setTab("edit"); $("prtBox").open = true;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1500);
+  });
+}
+
+function collectChanges() {
+  // only what differs from the last saved state
+  const ch = {};
+  for (const [k, ed] of Object.entries(editors)) {
+    const v = ed.get();
+    if ((saved[k] ?? "") !== v) ch[k] = v;
+  }
+  for (const sel of document.querySelectorAll("#editView [data-format]")) {
+    const k = sel.dataset.format + "_format";
+    if ((saved[k] || "html") !== sel.value) ch[k] = sel.value;
+  }
+  const inputs = [];
+  for (const inp of saved.inputs || []) {
+    const diff = {};
+    for (const el of document.querySelectorAll(`#inputEd [data-input="${CSS.escape(inp.name)}"] [data-ik]`)) {
+      if ((inp[el.dataset.ik] ?? "") !== el.value) diff[el.dataset.ik] = el.value;
+    }
+    if (Object.keys(diff).length) inputs.push(Object.assign({ name: inp.name }, diff));
+  }
+  if (inputs.length) ch.inputs = inputs;
+  const opts = {};
+  for (const el of document.querySelectorAll("#optEd [data-opt]")) {
+    if (((saved.options || {})[el.dataset.opt] ?? "") !== el.value) opts[el.dataset.opt] = el.value;
+  }
+  if (Object.keys(opts).length) ch.options = opts;
+  const prts = saved.prts ? prtChanges() : [];
+  if (prts.length) ch.prts = prts;
+  return ch;
+}
+
+function setDirty(d) {
+  dirty = d;
+  clearTimeout(saveTimer);
+  if (d) saveTimer = setTimeout(() => save(), AUTOSAVE_MS);
+  showSaveState();
+}
+function showSaveState(text, cls) {
+  const el = $("savestate");
+  el.className = cls || (conflict ? "conflict" : dirty ? "dirty" : "");
+  el.textContent = text || (conflict ? "not saved - file changed on disk" : dirty ? "unsaved changes" : (saved && saved.savedAt ? "saved " + saved.savedAt : ""));
+}
+
+async function save(force) {
+  if (!file || qindex === null || !saved) return true;
+  if (saving) await saving;
+  if (conflict && !force) return false;
+  const changes = collectChanges();
+  if (!Object.keys(changes).length) { dirty = false; showSaveState(); return true; }
+  clearTimeout(saveTimer);
+  const backup = !backedUp.has(file.path);
+  showSaveState("saving ...", "dirty");
+  saving = (async () => {
+    try {
+      const r = await postJSON("/api/q/save", { path: file.path, index: qindex, rev: file.rev, changes, backup });
+      if (backup) backedUp.add(file.path);
+      file.rev = r.rev;
+      showHistory(r.history);
+      // the state that was sent is now the saved state
+      for (const [k, v] of Object.entries(changes)) {
+        if (k === "inputs") for (const d of v) Object.assign(saved.inputs.find((i) => i.name === d.name), d);
+        else if (k === "prts") for (const pc of v) {
+          const p = saved.prts.find((x) => x.name === pc.name);
+          for (const [f, val] of Object.entries(pc)) if (f !== "nodes" && f !== "name") p[f] = val;
+          for (const nc of pc.nodes || []) Object.assign(p.nodes.find((n) => n.name === nc.name), nc);
+        }
+        else if (k === "options") Object.assign(saved.options, v);
+        else saved[k] = v;
+      }
+      const now = new Date(); saved.savedAt = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+      if (changes.name !== undefined) { $("qtitle").textContent = changes.name; const q = file.questions.find((x) => x.index === qindex); if (q) { q.name = changes.name; showFile(file); } }
+      conflict = false; $("conflict").innerHTML = "";
+      loadReview();
+      dirty = Object.keys(collectChanges()).length > 0;
+      if (dirty) setDirty(true); else showSaveState();
+      return true;
+    } catch (e) {
+      if (e.conflict) { conflict = true; showConflict(); }
+      else { showSaveState("not saved: " + e.message, "failed"); }
+      return false;
+    } finally { saving = null; }
+  })();
+  return saving;
+}
+async function flush() {
+  if (saving) await saving;
+  if (!dirty && !conflict) return true;
+  const ok = await save();
+  if (!ok && conflict) return confirm("The file was changed outside the workbench and your edits are not saved.\nDiscard your edits?");
+  return ok;
+}
+
+function showConflict() {
+  showSaveState();
+  const box = $("conflict");
+  box.innerHTML = `<div class="msg err">The file was changed on disk (outside the workbench) since it was opened here. Your edits are not saved yet.<br>
+    <button class="small" data-a="reload">Reload from disk (discard my edits)</button>
+    <button class="small" data-a="overwrite">Apply my edits to the file on disk</button></div>`;
+  box.querySelector('[data-a="reload"]').addEventListener("click", () => { conflict = false; dirty = false; selectQuestion(qindex); });
+  box.querySelector('[data-a="overwrite"]').addEventListener("click", async () => {
+    // keep only the user's edits: load the disk version, then apply the edits on top of it
+    const edits = collectChanges();
+    const r = await postJSON("/api/q/question", { path: file.path, index: qindex });
+    file.rev = r.rev; conflict = false; $("conflict").innerHTML = "";
+    fillEditor(r.fields);
+    applyToEditor(edits);
+    await save();
+  });
+}
+
+function applyToEditor(edits) {
+  for (const [k, v] of Object.entries(edits)) {
+    if (k === "options") {
+      for (const [ok, ov] of Object.entries(v)) { const el = document.querySelector(`#optEd [data-opt="${ok}"]`); if (el) el.value = ov; }
+    } else if (k === "inputs") {
+      for (const d of v) for (const [ik, iv] of Object.entries(d)) {
+        if (ik === "name") continue;
+        const el = document.querySelector(`#inputEd [data-input="${CSS.escape(d.name)}"] [data-ik="${ik}"]`);
+        if (el) el.value = iv;
+      }
+    } else if (k.endsWith("_format")) {
+      const sel = document.querySelector(`#editView [data-format="${k.slice(0, -7)}"]`);
+      if (sel) sel.value = v;
+    } else {
+      if (editors[k]) editors[k].set(v);
+    }
+  }
+  setDirty(true);
+}
+
+function autoGrow(ta) {
+  ta.style.height = "auto";
+  ta.style.height = Math.min(Math.max(ta.scrollHeight + 4, 60), 700) + "px";
+}
+function refreshEditors() {
+  for (const ed of Object.values(editors)) ed.refresh();
+  for (const ta of document.querySelectorAll("#editView textarea")) if (ta.style.display !== "none") autoGrow(ta);
+}
+// the editor fields: Maxima for the question variables, castext for the texts, plain for the name
+function initEditors() {
+  for (const el of document.querySelectorAll("#editView [data-field]")) {
+    const k = el.dataset.field;
+    if (el.tagName !== "TEXTAREA") {
+      el.addEventListener("input", () => setDirty(true));
+      editors[k] = { get: () => el.value, set: (v) => { el.value = v; }, refresh: () => {}, focusLine: () => el.focus() };
+      continue;
+    }
+    const DEFAULT_H = { questionvariables: 320, questiontext: 420, generalfeedback: 240, specificfeedback: 120, questionnote: 80 };
+    const heights = stored(QSTORE_KEY).heights || {};
+    const ed = MeclibEditor.field(el, k === "questionvariables" ? "maxima" : "castext", () => setDirty(true), {
+      height: heights[k] || DEFAULT_H[k] || 160,
+      onResize: (h) => store(QSTORE_KEY, { heights: Object.assign(stored(QSTORE_KEY).heights || {}, { [k]: h }) }),
+    });
+    if (ed.plain) {
+      el.addEventListener("input", () => autoGrow(el));
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Tab" && !e.shiftKey && !e.ctrlKey && !e.altKey) {   // two spaces instead of leaving the field
+          e.preventDefault();
+          document.execCommand("insertText", false, "  ");
+        }
+      });
+    }
+    if (ed.cm) ed.cm.on("focus", () => { lastEditor = k; });
+    else el.addEventListener("focus", () => { lastEditor = k; });
+    editors[k] = ed;
+  }
+  for (const d of document.querySelectorAll("#editView details")) d.addEventListener("toggle", () => { if (d.open) refreshEditors(); });
+}
+// ---------------------------------------------------------------- Check (PRT evaluation)
+async function check() {
+  if (!file || qindex === null || !result) return;
+  if (!(await flush()) && conflict) return;
+  const answers = {};
+  for (const inp of result.inputs || []) answers[inp.name] = inputValues[inp.name] ?? "";
+  $("status").textContent = "checking ...";
+  $("checkBtn").disabled = true;
+  try {
+    const seed = parseInt($("seed").value, 10) || 1;
+    const r = await postJSON("/api/q/check", { path: file.path, index: qindex, seed, src: $("src").value, answers });
+    $("status").textContent = "checked in " + r.seconds + " s";
+    lastCheck = r.check;
+    showCheck();
+    renderPRTGraphs();
+  } catch (e) {
+    $("status").textContent = "";
+    showMessages([{ cls: "err", text: "Check failed: " + e.message }], true);
+  } finally { $("checkBtn").disabled = false; }
+}
+let lastCheck = null;
+function showCheck() {
+  if (!lastCheck) return;
+  // validation next to the inputs
+  for (const [name, v] of Object.entries(lastCheck.inputs)) {
+    const inp = (result.inputs || []).find((i) => i.name === name) || {};
+    for (const el of document.querySelectorAll(`.stack-validation[data-input="${CSS.escape(name)}"]`)) {
+      if (v.state === "invalid") el.innerHTML = `<span class="val-bad">${inp.type === "matrix" ? "invalid input (incomplete or does not parse)" : "invalid input (does not parse)"}</span>`;
+      else if (v.state === "valid" && inp.showvalidation !== "0" && inp.type !== "string") el.innerHTML = `<span class="val-ok">${esc(v.tex || "")}</span>`;
+      else el.innerHTML = "";
+    }
+  }
+  for (const [name, p] of Object.entries(lastCheck.prts)) {
+    for (const el of document.querySelectorAll(`.stack-prt[data-prt="${CSS.escape(name)}"]`)) {
+      el.className = "stack-prt";
+      if (p.skipped) { el.innerHTML = `<span class="hint">PRT <b>${esc(name)}</b>: ${esc(p.skipped)}</span>`; continue; }
+      const score = parseFloat(p.score), value = parseFloat(p.value) || 1;
+      el.classList.add(score >= 0.999 ? "score-1" : score <= 0.001 ? "score-0" : "score-p");
+      const fb = (p.feedback[lang] || []).map(([fmt, text]) => toHTML(text || "", fmt, [])).join("");
+      el.innerHTML = `<div class="prtfb">${fb || '<span class="hint">(no feedback text)</span>'}</div>` +
+        (p.testfeedback.length ? `<div class="hint">answer test: ${esc(p.testfeedback.join(" "))}</div>` : "") +
+        (p.errors.length ? `<div class="prterr">${esc(p.errors.join("\n"))}</div>` : "") +
+        `<div class="prtinfo"><span>PRT <b>${esc(name)}</b></span><span>score ${esc(p.score)}</span>` +
+        `<span>mark ${(score * value).toFixed(2).replace(/\.?0+$/, "")} / ${value.toString()}</span><span>penalty ${esc(p.penalty)}</span>` +
+        `<span>notes: ${esc(p.notes || "-")}</span></div>`;
+    }
+  }
+  if (window.MathJax && MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, $("qtext")]);
+}
+// model answer as a student would type it (as STACK shows it): stackunits(8, cm) -> 8*cm; with a
+// decimal comma, decimals get a comma and the list separator becomes ";" (the input processing
+// turns them back, as STACK does)
+function unStackunits(v) {
+  let out = "", i = 0;
+  for (;;) {
+    const k = v.indexOf("stackunits(", i);
+    if (k < 0 || /[A-Za-z0-9_]/.test(v[k - 1] || "")) return out + v.slice(i);
+    let depth = 0, j = k + 10, parts = [], cur = "";
+    for (; j < v.length; j++) {
+      const c = v[j];
+      if (c === "(" || c === "[") { if (depth++ === 0) continue; }
+      else if (c === ")" || c === "]") { if (--depth === 0) break; }
+      else if (c === "," && depth === 1) { parts.push(cur); cur = ""; continue; }
+      cur += c;
+    }
+    parts.push(cur);
+    if (parts.length !== 2) return out + v.slice(i);
+    const num = unStackunits(parts[0].trim()), unit = parts[1].trim();
+    out += v.slice(i, k) + (/^[-+]?[\w.]+$/.test(num) ? num : "(" + num + ")") + "*" + unit;
+    i = j + 1;
+  }
+}
+function studentSyntax(v) {
+  v = unStackunits(v);
+  if ((result.decimals || ".") === ",") v = v.replace(/,/g, ";").replace(/(\d)\.(\d)/g, "$1,$2");
+  return v;
+}
+function fillModelAnswers() {
+  if (!result) return;
+  for (const inp of result.inputs || []) {
+    let v = inp.tans_raw;
+    if (v == null) continue;
+    if (inp.type === "string" || inp.type === "notes") { try { v = JSON.parse(v); } catch (e) { /* not a string literal */ } }
+    else if (inp.type === "matrix") { const mc = matrixModelCells(inp); if (!mc) continue; v = JSON.stringify(mc.map((r) => r.map(studentSyntax))); }
+    else v = studentSyntax(v);
+    inputValues[inp.name] = v;
+  }
+  lastCheck = null;
+  render(true);
+}
+
+// ---------------------------------------------------------------- review (rules.py)
+let review = [];
+const LEVEL_ORDER = { required: 0, recommended: 1, hint: 2 };
+async function loadReview() {
+  if (!file || qindex === null) return;
+  const at = [file.path, qindex];
+  try {
+    const r = await postJSON("/api/q/review", { path: file.path, index: qindex });
+    if (!file || file.path !== at[0] || qindex !== at[1]) return;
+    review = r.findings;
+  } catch (e) { review = []; }
+  renderReview();
+}
+function renderReview() {
+  const open = review.filter((f) => !f.rejected && f.level !== "hint");
+  $("reviewCount").textContent = review.length ? `(${open.length} open, ${review.length} in all)` : "(no findings)";
+  $("reviewCount").classList.toggle("open", open.length > 0);
+  const list = [...review].sort((a, b) => (a.rejected - b.rejected) || (LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]));
+  $("reviewView").innerHTML = list.map((f) => `<div class="rv ${f.level}${f.rejected ? " rejected" : ""}">
+    <label><input type="checkbox" data-key="${esc(f.key)}"${f.fixable ? "" : " disabled"}${f.fixable && f.default && !f.rejected ? " checked" : ""}>
+      <span>${esc(f.title)}</span><span class="lvl">${f.level}${f.rejected ? ", rejected" : ""}${f.fixable ? "" : ", no automatic fix"}</span>
+      ${f.wiki ? `<a class="lvl" href="${esc(f.wiki)}" target="_blank" rel="noopener">wiki</a>` : ""}</label>
+    <div class="msg">${esc(f.message)}</div>
+    ${f.image ? `<img class="rvimg" src="${esc(f.image)}" alt="${esc(f.target)}">` : ""}
+    ${f.preview ? `<pre>${esc(f.preview)}</pre>` : ""}</div>`).join("") || '<p class="hint">Nothing to report.</p>';
+  $("reviewBtns").hidden = !review.some((f) => f.fixable);
+}
+async function applyReview(rejectRest) {
+  if (!file || qindex === null || !(await flush())) return;
+  const boxes = [...document.querySelectorAll("#reviewView input[data-key]:not(:disabled)")];
+  const apply = boxes.filter((b) => b.checked).map((b) => b.dataset.key);
+  const reject = rejectRest ? boxes.filter((b) => !b.checked).map((b) => b.dataset.key)
+    : review.filter((f) => f.rejected && !apply.includes(f.key)).map((f) => f.key);
+  if (!apply.length && !rejectRest) { showMessages([{ cls: "warn", text: "Nothing selected." }]); return; }
+  const backup = !backedUp.has(file.path);
+  try {
+    const r = await postJSON("/api/q/review-apply", { path: file.path, index: qindex, rev: file.rev, apply, reject, backup });
+    if (backup) backedUp.add(file.path);
+    file.rev = r.rev;
+    fillEditor(r.fields);
+    showHistory(r.history);
+    review = r.findings; renderReview();
+    showMessages([{ cls: "info", text: `Applied ${r.applied.length} fix(es)` + (rejectRest ? `, rejected ${reject.length}.` : ".") }]);
+    evaluate(false);
+  } catch (e) {
+    if (e.conflict) { conflict = true; showConflict(); }
+    else showMessages([{ cls: "err", text: e.message }]);
+  }
+}
+$("reviewApply").addEventListener("click", () => applyReview(false));
+$("reviewApplyReject").addEventListener("click", () => applyReview(true));
+
+// ---------------------------------------------------------------- inputs with their PRTs
+async function inputOp(body) {
+  if (!(await flush())) return null;
+  const backup = !backedUp.has(file.path);
+  try {
+    const r = await postJSON("/api/q/input", Object.assign({ path: file.path, index: qindex, rev: file.rev, backup }, body));
+    if (backup) backedUp.add(file.path);
+    file.rev = r.rev;
+    showHistory(r.history);
+    return r;
+  } catch (e) {
+    if (e.conflict) { conflict = true; showConflict(); }
+    else showMessages([{ cls: "err", text: e.message }]);
+    return null;
+  }
+}
+
+function openInputDialog() {
+  if (!file || qindex === null) return;
+  $("inName").value = ""; $("inTans").value = ""; $("inTans").placeholder = "same as name"; $("inTol").value = "0.005";
+  $("inInfo").textContent = "";
+  for (const id of ["inLabel", "inUnit", "inComp"]) $(id).value = "";
+  updateInputDialog();
+  $("inVars").innerHTML = [...new Set(questionVariableNames())].sort().map((v) => `<option value="${esc(v)}">`).join("");
+  $("inputDialog").returnValue = "";
+  if (!$("inputDialog").open) $("inputDialog").show();
+  $("inName").focus();
+}
+const MATRIX_KINDS = ["matrix", "matrixexpr"];
+// names assigned in the last evaluation, or in the question variables as they are now
+function questionVariableNames() {
+  const names = (result && result.variables || []).map((v) => v.name);
+  const qv = editors.questionvariables ? editors.questionvariables.get() : "";
+  for (const m of qv.matchAll(/(^|[;$])\s*([A-Za-z_%][A-Za-z0-9_%]*)\s*:(?!=)/g)) names.push(m[2]);
+  return names;
+}
+function updateInputDialog() {
+  const n = $("inName").value.trim(), kind = $("inKind").value, isMatrix = MATRIX_KINDS.includes(kind);
+  $("inTolRow").hidden = kind === "expression" || kind === "matrixexpr";
+  $("inMatrix").hidden = !isMatrix;
+  $("inTans").placeholder = n || "same as name";
+  const names = questionVariableNames();
+  const tans = $("inTans").value.trim() || n;
+  const isVar = /^[A-Za-z][A-Za-z0-9_]*$/.test(tans), missing = isVar && !names.includes(tans);
+  $("inSizeRow").hidden = !(isMatrix && missing);
+  const lines = [];
+  // an existing input or PRT of that name: the server would refuse it
+  const clash = n && ((saved.inputs || []).some((i) => i.name === "S_" + n) || (saved.prts || []).some((p) => p.name === n));
+  if (clash) lines.push(`<span class="bad">There is already an input S_${esc(n)} or a PRT ${esc(n)}: choose another name.</span>`);
+  if (n && !clash && isMatrix) lines.push(`creates input S_${n}, PRT ${n}, and a table row (label | matrix | unit | validation) with [[feedback:${n}]] below it at the cursor in the question text`);
+  else if (n && !clash) lines.push(`creates input S_${n}, PRT ${n}, and [[input:S_${n}]] [[validation:S_${n}]] [[feedback:${n}]] at the cursor in the question text`);
+  if (n && isMatrix && missing) lines.push(`${tans} is not (yet) a question variable: a ${$("inRows").value}×${$("inCols").value} placeholder matrix is added to the question variables (the size of the model answer sets the size of the input)`);
+  else if (n && missing)
+    lines.push(`note: ${tans} is not (yet) a question variable` + (kind === "units" ? " - for this type it must include the unit, e.g. " + tans + ": 720*N;" : ""));
+  $("inInfo").innerHTML = lines.map((l) => l.startsWith("<span") ? l : esc(l)).join("\n");
+  $("inOk").disabled = !/^[A-Za-z][A-Za-z0-9_]*$/.test(n) || clash;
+}
+// a matrix input renders as a block, so label, input, unit and validation go into one table row
+// (wiki "Matrix input"); the feedback follows below the table. Blank lines around it, so that
+// Markdown takes it as an HTML block and leaves the \( ... \) of the label alone.
+function matrixInputText(name) {
+  const label = $("inLabel").value.trim() || name, unit = $("inUnit").value.trim();
+  return `\n\n<table><tbody><tr><td>\\(${label}=\\)</td><td>[[input:S_${name}]]</td>` +
+    (unit ? `<td>\\(\\,\\mathrm{${unit}}\\)</td>` : "") +
+    `<td>[[validation:S_${name}]]</td></tr></tbody></table>\n<p>[[feedback:${name}]]</p>\n\n`;
+}
+async function createInput() {
+  const name = $("inName").value.trim(), kind = $("inKind").value, isMatrix = MATRIX_KINDS.includes(kind);
+  const tans = $("inTans").value.trim() || name;
+  if (isMatrix && /^[A-Za-z][A-Za-z0-9_]*$/.test(tans) && !questionVariableNames().includes(tans)) {
+    // placeholder model answer of the requested size, to be replaced by the author
+    const rows = Math.max(1, Math.min(9, parseInt($("inRows").value, 10) || 1));
+    const cols = Math.max(1, Math.min(9, parseInt($("inCols").value, 10) || 1));
+    const row = "[" + Array(cols).fill("0").join(", ") + "]";
+    const ed = editors.questionvariables, qv = ed.get();
+    ed.set(qv + (qv && !qv.endsWith("\n") ? "\n" : "") + `${tans}: matrix(${Array(rows).fill(row).join(", ")}); /* model answer of S_${name} (placeholder) */\n`);
+  }
+  const r = await inputOp({ op: "add", name, kind, tans: $("inTans").value.trim(), tol: $("inTol").value.trim() || "0.005",
+    labels: isMatrix ? $("inComp").value.trim() : "" });
+  if (!r) return;
+  saved.inputs = r.fields.inputs; saved.prts = r.fields.prts;
+  renderInputEditor(saved.inputs); renderPRTs(saved.prts);
+  // placeholders at the cursor of the question text; saved by the autosave
+  editors.questiontext.insert(isMatrix ? matrixInputText(name) : `[[input:S_${name}]] [[validation:S_${name}]] [[feedback:${name}]]`);
+  showMessages([{ cls: "info", text: `Created input S_${name} and PRT ${name}.` }]);
+  await save();
+  evaluate(false);
+}
+async function deleteInput(iname) {
+  const prtName = iname.replace(/^S_/, "");
+  const hasPrt = (saved.prts || []).some((p) => p.name === prtName) && prtName !== iname;
+  if (!confirm(`Delete input ${iname} and its placeholders in the text?`)) return;
+  const withPrt = hasPrt && confirm(`Also delete PRT ${prtName} and its [[feedback:${prtName}]]?`);
+  const r = await inputOp({ op: "delete", input: iname, prt: withPrt ? prtName : "" });
+  if (!r) return;
+  fillEditor(r.fields);
+  showMessages([{ cls: "info", text: `Deleted input ${iname}` + (withPrt ? ` and PRT ${prtName}` : "") + "." }]);
+  evaluate(false);
+}
+
+function gotoLine(field, line) {
+  if (!editors[field]) return;
+  setTab("edit");
+  editors[field].focusLine(line);
+}
+
+// side by side on wide screens, tabs (Edit / Preview) on narrow ones
+const WIDE = window.matchMedia("(min-width: 1400px)");
+function previewVisible() { return WIDE.matches || tab === "preview"; }
+function setTab(t) {
+  tab = t; store(QSTORE_KEY, { tab: t });
+  $("tab-edit").classList.toggle("on", t === "edit"); $("tab-preview").classList.toggle("on", t === "preview");
+  $("qgrid").classList.toggle("tab-edit", t === "edit"); $("qgrid").classList.toggle("tab-preview", t === "preview");
+  if (t === "edit" || WIDE.matches) refreshEditors();
+  if (previewVisible() && previewPending && result) render();
+  spyJump();
+}
+WIDE.addEventListener("change", () => setTab(tab));
+function measureHeader() { document.documentElement.style.setProperty("--hdr", document.querySelector("header").offsetHeight + "px"); }
+window.addEventListener("resize", measureHeader);
+if (window.ResizeObserver) new ResizeObserver(measureHeader).observe(document.querySelector("header"));   // the header wraps when its selects fill
+measureHeader();
+// ---------------------------------------------------------------- jump navigation
+// Buttons for the sections of the editor and the preview, as a bar on top of each column or as
+// rails beside them (editor rail left, preview rail right; on narrow screens both rails stay
+// visible and switch between Edit and Preview). A click scrolls the column to the section and
+// opens it if it is collapsed; the section at the top of the column is highlighted.
+const JUMPS = {
+  edit: [["Review", () => $("reviewBox")], ["Variables", () => document.querySelector('#editView [data-field="questionvariables"]').previousElementSibling],
+    ["Text", () => $("addInput").closest("label")], ["Inputs", () => $("inputEd").previousElementSibling],
+    ["Options", () => $("optBox")], ["General FB", () => document.querySelector('#editView [data-field="generalfeedback"]').closest("details")],
+    ["Specific FB", () => document.querySelector('#editView [data-field="specificfeedback"]').closest("details")],
+    ["Note", () => document.querySelector('#editView [data-field="questionnote"]').closest("details")], ["PRTs", () => $("prtBox")]],
+  preview: [["Question", () => $("previewView").closest("section")], ["General FB", () => $("gfbBox")], ["Note", () => $("qnote").previousElementSibling],
+    ["Messages", () => $("messages").closest("section")], ["Inputs", () => $("inputs").closest("section")],
+    ["PRT graphs", () => $("prtGraph").closest("section")], ["Variables", () => $("vars").closest("section")]],
+};
+function jumpTargets(col) {
+  const out = JUMPS[col].map(([label, f]) => ({ label, el: f() }));
+  if (col === "edit") for (const card of document.querySelectorAll("#prtView .prt"))
+    out.push({ label: card.dataset.prt, el: card, sub: true });
+  return out.filter((t) => t.el);
+}
+function renderJumpNav() {
+  for (const [col, ids] of [["edit", ["barEdit", "railEdit"]], ["preview", ["barPreview", "railPreview"]]]) {
+    const targets = jumpTargets(col);
+    for (const t of targets) t.el.dataset.jump = t.label;
+    for (const id of ids) {
+      $(id).innerHTML = targets.map((t, i) => `<button type="button" class="${t.sub ? "sub" : ""}" data-i="${i}" title="${t.sub ? "PRT " : ""}${esc(t.label)}">${esc(t.label)}</button>`).join("");
+      for (const b of $(id).querySelectorAll("button")) b.addEventListener("click", () => jumpTo(col, targets[+b.dataset.i].el));
+    }
+  }
+  spyJump();
+}
+function jumpTo(col, el) {
+  if (!WIDE.matches && tab !== col) setTab(col);
+  for (let d = el.closest("details"); d; d = d.parentElement.closest("details")) d.open = true;
+  if (el.tagName === "DETAILS") el.open = true;
+  requestAnimationFrame(() => {
+    // scroll only the column (wide) or the page (narrow); scrollIntoView would also move the page
+    const margin = parseFloat(getComputedStyle(el).scrollMarginTop) || 0;
+    if (WIDE.matches) {
+      const colEl = $(col === "edit" ? "editCol" : "previewCol");
+      colEl.scrollTop += el.getBoundingClientRect().top - colEl.getBoundingClientRect().top - margin;
+      window.scrollTo(0, 0);
+    } else window.scrollBy(0, el.getBoundingClientRect().top - margin);
+    spyJump();
+  });
+}
+function spyJump() {
+  for (const [col, colEl, ids] of [["edit", $("editCol"), ["barEdit", "railEdit"]], ["preview", $("previewCol"), ["barPreview", "railPreview"]]]) {
+    if (colEl.offsetParent === null) { for (const id of ids) $(id).querySelectorAll("button").forEach((b) => b.classList.remove("on")); continue; }
+    const top = (WIDE.matches ? colEl.getBoundingClientRect().top : document.querySelector("header").offsetHeight) + 48;
+    const targets = jumpTargets(col);
+    let cur = -1;
+    targets.forEach((t, i) => { if (t.el.offsetParent !== null && t.el.getBoundingClientRect().top <= top) cur = i; });
+    if (cur < 0) cur = 0;
+    // a PRT card highlights both its own button and "PRTs"
+    const prtsIdx = targets.findIndex((t) => t.label === "PRTs" && !t.sub);
+    for (const id of ids) $(id).querySelectorAll("button").forEach((b, i) =>
+      b.classList.toggle("on", i === cur || !!(targets[cur] && targets[cur].sub && i === prtsIdx)));
+  }
+}
+for (const id of ["editCol", "previewCol"]) $(id).addEventListener("scroll", () => requestAnimationFrame(spyJump), { passive: true });
+window.addEventListener("scroll", () => requestAnimationFrame(spyJump), { passive: true });
+// top: a bar above each column; outer/inner/left/right: rails beside the columns
+const NAV_MODES = ["top", "outer", "inner", "left", "right"];
+const RAIL_UP = { outer: [true, false], inner: [false, true], left: [true, true], right: [false, false] };   // [editor, preview] reads bottom-up
+function setNavMode(mode) {
+  if (!NAV_MODES.includes(mode)) mode = mode === "side" ? "outer" : "top";
+  const g = $("qgrid");
+  g.classList.toggle("side", mode !== "top");
+  for (const m of NAV_MODES) g.classList.toggle("r-" + m, m === mode);
+  const up = RAIL_UP[mode] || [false, false];
+  $("railEdit").classList.toggle("up", up[0]); $("railPreview").classList.toggle("up", up[1]);
+  $("toggleNav").textContent = "Sections: " + mode;
+  store(QSTORE_KEY, { nav: mode });
+  refreshEditors();
+  spyJump();
+}
+$("toggleNav").addEventListener("click", () => {
+  const cur = NAV_MODES.find((m) => $("qgrid").classList.contains("r-" + m)) || "top";
+  setNavMode(NAV_MODES[(NAV_MODES.indexOf(cur) + 1) % NAV_MODES.length]);
+});
+
+function toggleFiles(hide) {
+  const h = hide === undefined ? !$("qgrid").classList.contains("nofiles") : hide;
+  $("qgrid").classList.toggle("nofiles", h);
+  $("toggleFiles").textContent = h ? "Files ▸" : "Files ◂";
+  store(QSTORE_KEY, { hideFiles: h });
+  refreshEditors();
+}
+
+// ---------------------------------------------------------------- snippets
+let snippets = null, lastEditor = "questiontext";
+async function openSnippets() {
+  if (!snippets) {
+    try { snippets = await (await fetch("/api/snippets")).json(); } catch (e) { snippets = []; }
+  }
+  const ul = $("snippetList"); ul.innerHTML = "";
+  for (const sn of snippets) {
+    const li = document.createElement("li");
+    li.innerHTML = `${esc(sn.name)}<span class="pv">${esc(sn.text.split("\n").find((l) => l.trim()) || "")}</span>`;
+    li.addEventListener("click", () => {
+      $("snippetDialog").close();
+      const ed = editors[lastEditor] || editors.questiontext;
+      if (!ed || !file) return;
+      if (lastEditor !== "questiontext" && lastEditor !== "questionvariables") {
+        const d = document.querySelector(`#editView textarea[data-field="${lastEditor}"]`)?.closest("details");
+        if (d) d.open = true;
+      }
+      ed.insert(sn.text);
+    });
+    ul.appendChild(li);
+  }
+  if (!snippets.length) ul.innerHTML = '<li class="other">no snippets found</li>';
+  $("snippetDialog").showModal();
+}
+
+// ---------------------------------------------------------------- evaluation
+async function evaluate(firstTime) {
+  if (!file || qindex === null) return;
+  if (!(await flush()) && conflict) return;
+  $("status").textContent = "evaluating (the first evaluation starts Maxima, a few seconds) ...";
+  $("evaluate").disabled = true;
+  try {
+    const seed = parseInt($("seed").value, 10) || 1;
+    result = await postJSON("/api/q/eval", { path: file.path, index: qindex, seed, src: $("src").value });
+    if (firstTime && result.seeds && result.seeds.length && !$("seed").dataset.userSet) {
+      // first deployed variant of the question, if it has any
+      const s0 = parseInt(result.seeds[0], 10);
+      if (s0 && s0 !== seed) { $("seed").value = s0; $("evaluate").disabled = false; return evaluate(false); }
+    }
+    $("status").textContent = "evaluated in " + result.seconds + " s (Maxima start " + result.maxima_start + " s)";
+    render();
+  } catch (e) {
+    $("status").textContent = "";
+    showMessages([{ cls: "err", text: "Evaluation failed: " + e.message }]);
+  } finally { $("evaluate").disabled = false; }
+}
+
+// ---------------------------------------------------------------- rendering
+function protect(text, regex, tag, store) {
+  return text.replace(regex, (m) => { store.push(m); return "@@" + tag + (store.length - 1) + "@@"; });
+}
+function restore(text, tag, store) {
+  return text.replace(new RegExp("@@" + tag + "(\\d+)@@", "g"), (m, i) => store[+i]);
+}
+
+// castext output (already evaluated by Maxima) -> HTML with slots for graphics and inputs
+function toHTML(text, format, blocks) {
+  // images embedded in the question file (<file> elements, referenced as @@PLUGINFILE@@/name)
+  text = String(text || "").replace(/@@PLUGINFILE@@\/([^"'()\s<>]+)/g, (m, n) => {
+    const f = (result && result.files) || {};
+    return f[decodeURIComponent(n)] || f[n] || m;
+  });
+  let t = protect(text || "", /\[\[\s*jsxgraph\b[^\]]*\]\][\s\S]*?\[\[\/jsxgraph\]\]/g, "JSX", blocks);
+  if (format === "markdown" && window.marked) {
+    // As STACK ([[demarkdown]]): the whole text goes through Markdown, backslash escapes
+    // included - so math is written \\( ... \\) and {@...@} arrives escaped for Markdown -
+    // then the entities of \ ( ) [ ] { } _ are turned back into characters for MathJax.
+    // Input placeholders are kept away from Markdown (underscores in input names).
+    const ph = [];
+    t = protect(t, /\[\[\s*(input|validation|feedback):[A-Za-z0-9_]+\s*\]\]/g, "PH", ph);
+    t = window.marked.parse(t);
+    t = t.replace(/&#92;/g, "\\").replace(/&#40;/g, "(").replace(/&#91;/g, "[").replace(/&#123;/g, "{")
+         .replace(/&#41;/g, ")").replace(/&#93;/g, "]").replace(/&#125;/g, "}").replace(/&#95;/g, "_");
+    t = restore(t, "PH", ph);
+  } else if (format === "moodle_auto_format" || format === "plain_text") {
+    t = t.replace(/\n/g, "<br>\n");
+  }
+  t = t.replace(/@@JSX(\d+)@@/g, (m, i) => `<span class="jsx-slot" data-jsx="${i}"></span>`);
+  t = t.replace(/\[\[\s*input:([A-Za-z0-9_]+)\s*\]\]/g, (m, n) => {
+    const inp = (result.inputs || []).find((x) => x.name === n) || {};
+    if (inp.type === "matrix") return matrixInputHTML(inp);
+    const box = parseInt(inp.boxsize, 10) || 15;   // STACK: width (boxsize * 0.9 + 0.1) em, size boxsize * 1.1
+    const opts = String(inp.options || "").split(",").map((o) => o.trim().toLowerCase());
+    const cls = "stack-input" + (opts.includes("monospace") ? " mono" : "") + (opts.includes("align:right") ? " right" : "");
+    const hint = (lang === "en" ? inp.hint_en : inp.hint_de) ?? inp.syntaxhint ?? "";   // syntax hints are castext
+    // syntaxattribute 1: the hint is a placeholder, 0: initial value of the field (STACK)
+    return `<input class="${cls}" data-input="${esc(n)}" size="${Math.round(box * 1.1)}" style="width:${box * 0.9 + 0.1}em" ${inp.syntaxattribute === "0" ? "data-initial" : "placeholder"}="${esc(hint)}" spellcheck="false">`;
+  });
+  t = t.replace(/\[\[\s*validation:([A-Za-z0-9_]+)\s*\]\]/g, (m, n) => `<span class="stack-validation" data-input="${esc(n)}"></span>`);
+  t = t.replace(/\[\[\s*feedback:([A-Za-z0-9_]+)\s*\]\]/g, (m, n) =>
+    `<div class="stack-prt" data-prt="${esc(n)}"><span class="hint">PRT <b>${esc(n)}</b> - "Check" shows the feedback here</span></div>`);
+  return t;
+}
+
+// Matrix input (STACK type "matrix"): one text field per cell, the grid size is that of the
+// model answer (evaluated on the server: inp.mcells). The value kept in inputValues and sent to
+// "Check" is the JSON list of rows of cell texts; the server builds matrix([...],...) from it.
+// Rows of cell texts of a matrix input's model answer: from the server (mcells) or, as a
+// fallback, split from the model answer text "matrix([a,b],[c,d])".
+function matrixModelCells(inp) {
+  if (inp.mcells) return inp.mcells;
+  const t = String(inp.tans_raw || "").trim();
+  const m = /^matrix\s*\((.*)\)$/s.exec(t);
+  if (!m) return null;
+  const split = (str) => {     // top level commas only
+    const out = []; let depth = 0, cur = "";
+    for (const ch of str) {
+      if ("([{".includes(ch)) depth++;
+      if (")]}".includes(ch)) depth--;
+      if (ch === "," && depth === 0) { out.push(cur.trim()); cur = ""; } else cur += ch;
+    }
+    if (cur.trim()) out.push(cur.trim());
+    return out;
+  };
+  const rows = split(m[1]).map((r) => /^\[(.*)\]$/s.exec(r)).filter(Boolean).map((r) => split(r[1]));
+  return rows.length ? rows : null;
+}
+function matrixInputHTML(inp) {
+  const cells = matrixModelCells(inp) || [[""]];
+  const parens = ((saved && saved.options) || {}).matrixparens ?? "[";
+  const cls = { "[": "paren-sq", "(": "paren-round", "{": "paren-round", "|": "paren-bar" }[parens] || "";
+  const box = parseInt(inp.boxsize, 10) || 5;
+  const cols = Math.max(...cells.map((r) => r.length), 1);
+  const items = cells.map((r, i) => r.map((c, j) =>
+    `<input class="stack-input matrix-cell" data-input="${esc(inp.name)}" data-r="${i}" data-c="${j}" size="${box}" spellcheck="false">`).join("")).join("");
+  return `<span class="stack-matrix ${cls}" style="grid-template-columns: repeat(${cols}, auto)">${items}</span>`;
+}
+function matrixCellsValue(name) {
+  const rows = [];
+  for (const el of document.querySelectorAll(`input.matrix-cell[data-input="${CSS.escape(name)}"]`)) {
+    const r = +el.dataset.r, c = +el.dataset.c;
+    (rows[r] = rows[r] || [])[c] = el.value;
+  }
+  return JSON.stringify(rows.map((r) => Array.from(r, (x) => x ?? "")));
+}
+function matrixCell(value, r, c) {
+  try { const rows = JSON.parse(value || "[]"); return (rows[r] && rows[r][c]) ?? ""; } catch (e) { return ""; }
+}
+
+function setInputValue(name, value) {
+  inputValues[name] = value;
+  for (const el of document.querySelectorAll(`input.stack-input[data-input="${CSS.escape(name)}"]:not(.matrix-cell)`)) if (el.value !== value) el.value = value;
+  const cell = document.querySelector(`#inputs [data-current="${CSS.escape(name)}"]`);
+  if (cell) cell.textContent = value;
+}
+
+async function renderInto(container, text, format) {
+  const blocks = [];
+  container.innerHTML = toHTML(text, format, blocks);
+  for (const el of container.querySelectorAll("input.stack-input")) {
+    if (el.classList.contains("matrix-cell")) {
+      el.value = matrixCell(inputValues[el.dataset.input], +el.dataset.r, +el.dataset.c);
+      el.addEventListener("input", () => setInputValue(el.dataset.input, matrixCellsValue(el.dataset.input)));
+      continue;
+    }
+    el.value = inputValues[el.dataset.input] || el.dataset.initial || "";
+    el.addEventListener("input", () => setInputValue(el.dataset.input, el.value));
+  }
+  if (window.MathJax && MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, container]);
+  if (!blocks.length) return;
+  let src;
+  try { src = await F.loadMeclib($("src").value); }
+  catch (e) { showMessages([{ cls: "err", text: e.message }], true); return; }
+  for (const slot of container.querySelectorAll(".jsx-slot")) {
+    // the graphic starts from the current value of its objects input (e.g. after "Model answers")
+    const ref = /input-ref-([A-Za-z0-9_]+)\s*=\s*["']stateRef["']/.exec(blocks[+slot.dataset.jsx]);
+    const startState = ref ? inputValues[ref[1]] || "" : "";
+    try {
+      const handle = F.run({
+        startState,
+        container: slot, config, jsxKey: $("jsx").value, mathjaxKey: $("mathjax").value,
+        meclibSource: src.text, initText: "", blockText: blocks[+slot.dataset.jsx], decsep: result.decimals || ".",
+        onInput: (varName, value, inputName) => setInputValue(inputName, value),
+        onConsole: (level, text) => { if (level === "error") showMessages([{ cls: "err", text: "graphic: " + text }], true); },
+      });
+      frames.push(handle);
+    } catch (e) { showMessages([{ cls: "err", text: "graphic: " + e.message }], true); }
+  }
+}
+
+let previewPending = false;   // the preview is rendered when it is shown (graphics need a visible frame)
+function render(keepValues) {
+  renderVariables(); renderInputs(); renderMessages();
+  if (!previewVisible()) { previewPending = true; return; }
+  previewPending = false;
+  for (const h of frames) h.stop();
+  frames = [];
+  if (!keepValues) { for (const k of Object.keys(inputValues)) delete inputValues[k]; lastCheck = null; }
+  const texts = result.texts || {};
+  const pick = (key) => (texts[key] ? texts[key][lang] : "") || "";
+  const fmt = result.format || "html";
+  $("qmeta").innerHTML = [
+    `format: ${esc(fmt)}`,
+    `seed: ${result.seed}`, `language shown: ${esc(result.picked ? result.picked[lang] || "none" : lang)}`,
+    `PRTs: ${byTextOrder(result.prts || [], "feedback").map((p) => esc(p.name)).join(", ") || "-"}`,
+  ].map((x) => `<span>${x}</span>`).join("");
+  renderInto($("qtext"), pick("questiontext"), fmt);
+  renderInto($("gfb"), pick("generalfeedback"), (result.formats || {}).generalfeedback || "html");
+  if (pick("questionnote")) renderInto($("qnote"), pick("questionnote"), (result.formats || {}).questionnote || "html");
+  else $("qnote").textContent = "-";
+  renderInputs();
+  if (lastCheck) showCheck();
+}
+
+function renderVariables() {
+  const tb = $("vars").querySelector("tbody");
+  const f = $("varFilter").value.trim().toLowerCase();
+  tb.innerHTML = "<tr><th>Name</th><th>Value</th></tr>" + (result.variables || [])
+    .filter((v) => !f || v.name.toLowerCase().includes(f))
+    .map((v) => `<tr><td class="n">${esc(v.name)}</td><td>${v.tex && v.tex.length < 600 ? esc(v.tex) : ""}
+      <code class="raw" title="click to expand">${esc(v.raw ?? "(error)")}</code></td></tr>`).join("");
+  for (const c of tb.querySelectorAll("code.raw")) c.addEventListener("click", () => c.classList.toggle("open"));
+  if (window.MathJax && MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, tb]);
+}
+
+function renderInputs() {
+  const tb = $("inputs").querySelector("tbody");
+  tb.innerHTML = "<tr><th>Input</th><th>Model answer / current</th></tr>" + byTextOrder(result.inputs || [], "input").map((i) =>
+    `<tr><td class="n">${esc(i.name)}<br><span class="hint">${esc(i.type)}</span></td>
+      <td>${i.tans_tex && i.tans_tex.length < 400 ? esc(i.tans_tex) : ""}<code class="raw" title="model answer (tans: ${esc(i.tans)}), click to expand">${esc(i.tans_raw ?? i.tans)}</code>
+      <code class="raw" style="color:var(--ink)" data-current="${esc(i.name)}" title="current value"></code></td></tr>`).join("");
+  for (const c of tb.querySelectorAll("code.raw")) c.addEventListener("click", () => c.classList.toggle("open"));
+  for (const c of tb.querySelectorAll("[data-current]")) c.textContent = inputValues[c.dataset.current] || "";
+  if (window.MathJax && MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, tb]);
+}
+
+function renderMessages() {
+  const msgs = [];
+  for (const s of result.statements || []) {
+    if (s.note) msgs.push({ cls: "warn", text: `question variables, line ${s.line}: ${s.note}`, line: s.line });
+    else if (s.error) msgs.push({ cls: "err", text: `question variables, line ${s.line}: ${s.source}\n${s.error}`, line: s.line });
+    else if (s.output) msgs.push({ cls: "info", text: `question variables, line ${s.line} printed:\n${s.output}` });
+  }
+  for (const [k, v] of Object.entries(result.castext_errors || {})) msgs.push({ cls: "err", text: `${k}: ${v}` });
+  if (!result.languages || !result.languages.length)
+    msgs.push({ cls: "warn", text: "The question text has no [[lang]] block, so STACK sets no language: [[lang]] blocks (e.g. in the meclib feedback functions' texts) stay empty - as in Moodle." });
+  for (const inc of result.includes || []) msgs.push({ cls: "info", text: `stack_include ${inc}\n→ follows the meclib source selector (${$("src").value})` });
+  showMessages(msgs.length ? msgs : [{ cls: "info", text: "no messages" }]);
+}
+
+function showMessages(list, append) {
+  const box = $("messages");
+  if (!append) box.innerHTML = "";
+  for (const m of list) {
+    const d = document.createElement("div"); d.className = "msg " + m.cls; d.textContent = m.text;
+    if (m.line) { d.classList.add("goto"); d.title = "go to line " + m.line; d.addEventListener("click", () => gotoLine("questionvariables", m.line)); }
+    box.appendChild(d);
+  }
+}
+
+function setLang(l) {
+  lang = l; store(QSTORE_KEY, { lang: l });
+  $("lang-de").classList.toggle("on", l === "de"); $("lang-en").classList.toggle("on", l === "en");
+  if (result) render(true);   // keeps the answers (and the state of the graphic) and the check result
+}
+
+// ---------------------------------------------------------------- wiring
+async function start() {
+  try { config = await (await fetch("/api/config")).json(); }
+  catch (e) { $("status").textContent = "Server not reachable - start it with start_workbench.bat (or python server.py)."; return; }
+  const savedSel = stored(STORE_KEY);
+  const srcEntries = [["local", "local working copy (" + (config.local_branch || "?") + ")"]];
+  for (const [key, branch] of Object.entries(config.branches)) srcEntries.push([key, "GitHub " + key + " (" + branch + ")"]);
+  fillSelect($("src"), srcEntries, savedSel.src);
+  fillSelect($("jsx"), Object.keys(config.jsxgraph).map((k) => [k, k]), savedSel.jsx);
+  fillSelect($("mathjax"), Object.keys(config.mathjax).map((k) => [k, k]), savedSel.mathjax);
+  const mj = document.createElement("script"); mj.type = "text/x-mathjax-config";
+  mj.text = 'MathJax.Hub.Config({messageStyle: "none", tex2jax: {inlineMath: [["\\\\(","\\\\)"]], displayMath: [["\\\\[","\\\\]"]], processEscapes: true}});';
+  document.head.appendChild(mj);
+  const loads = [loadScript(F.resolveUrl(config.mathjax[$("mathjax").value]))];
+  if (config.markdown) loads.push(loadScript(F.resolveUrl(config.markdown)));
+  try { await Promise.all(loads); } catch (e) { showMessages([{ cls: "warn", text: e.message }]); }
+  try { await MeclibEditor.load(config.codemirror && F.resolveUrl(config.codemirror)); }
+  catch (e) { showMessages([{ cls: "warn", text: "Code editor not available (plain text fields instead): " + e.message }], true); }
+  initEditors();
+  const q = stored(QSTORE_KEY);
+  setLang(q.lang || "de");
+  setTab(q.tab || "edit");
+  if (q.hideFiles) toggleFiles(true);
+  setNavMode(q.nav || "top");
+  renderJumpNav();
+  $("status").textContent = "repository: " + config.repo_path;
+  await loadFolders();
+  if (q.path) openFile(q.path, q.index);
+}
+
+$("drop").addEventListener("click", () => $("file").click());
+$("file").addEventListener("change", () => { if ($("file").files[0]) uploadFile($("file").files[0]); $("file").value = ""; });
+$("drop").addEventListener("dragover", (e) => { e.preventDefault(); $("drop").classList.add("over"); });
+$("drop").addEventListener("dragleave", () => $("drop").classList.remove("over"));
+$("drop").addEventListener("drop", (e) => {
+  e.preventDefault(); $("drop").classList.remove("over");
+  if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]);
+});
+// the folder dialog is shown by the server (a browser page cannot learn folder paths)
+async function pickFolder(title, initial) {
+  fileMsg("Choose the folder in the dialog (it may open behind the browser window) ...", "info");
+  try { const r = await postJSON("/api/pick-folder", { title, initial: initial || "" }); fileMsg(""); return r.path || null; }
+  catch (e) { fileMsg(e.message); return null; }
+}
+async function addFolder(p) {
+  const clean = p.trim().replace(/^["']|["']$/g, "");
+  const before = [...document.querySelectorAll(".folder > summary")].map((x) => x.title);
+  try {
+    const r = await postJSON("/api/q/folders", { add: clean });
+    const added = r.folders.find((d) => samePath(d.path, clean)) || r.folders.find((d) => !before.some((b) => samePath(b, d.path)));
+    $("newFolder").value = "";
+    if (!added) { fileMsg("Folder added: " + clean, "info"); loadFolders(); return; }
+    const known = before.some((b) => samePath(b, added.path));
+    // show the folder opened and highlighted
+    const open = new Set(stored(QSTORE_KEY).openFolders || before);
+    open.add(added.path); store(QSTORE_KEY, { openFolders: [...open] });
+    setFolder(added.path);
+    await loadFolders();
+    fileMsg((known ? "Already in the list: " : "Folder added: ") + added.path +
+      (added.files.length ? "" : "\nIt has no .xml files yet - \"New file\" below the folder creates one with a first question."), "info");
+    const det = [...document.querySelectorAll(".folder")].find((d) => samePath(d.querySelector("summary").title, added.path));
+    if (det) det.scrollIntoView({ block: "nearest" });
+  } catch (e) { fileMsg(e.message.replace(/^ValueError: /, "")); }
+}
+$("addFolder").addEventListener("click", async () => {
+  const p = $("newFolder").value.trim();
+  if (p) addFolder(p);
+  else { const picked = await pickFolder("Add a question folder", currentFolder); if (picked) addFolder(picked); }
+});
+$("pickFolder").addEventListener("click", async () => {
+  const picked = await pickFolder("Add a question folder", currentFolder);
+  if (picked) addFolder(picked);
+});
+$("newFolder").addEventListener("keydown", (e) => { if (e.key === "Enter") $("addFolder").click(); });
+$("evaluate").addEventListener("click", () => evaluate(false));
+$("seed").addEventListener("change", () => { $("seed").dataset.userSet = "1"; evaluate(false); });
+$("newSeed").addEventListener("click", () => { $("seed").value = 1 + Math.floor(Math.random() * 999999999); $("seed").dataset.userSet = "1"; evaluate(false); });
+$("lang-de").addEventListener("click", () => setLang("de"));
+$("lang-en").addEventListener("click", () => setLang("en"));
+$("tab-edit").addEventListener("click", () => setTab("edit"));
+$("tab-preview").addEventListener("click", () => setTab("preview"));
+$("addInput").addEventListener("click", openInputDialog);
+$("snippetBtn").addEventListener("click", openSnippets);
+$("checkBtn").addEventListener("click", check);
+$("fillBtn").addEventListener("click", fillModelAnswers);
+$("qtitle").addEventListener("click", () => {
+  if (!file || qindex === null) return;
+  const el = document.querySelector('#editView [data-field="name"]');
+  const name = prompt("Name of the question:", el.value);
+  if (name === null || !name.trim() || name.trim() === el.value) return;
+  el.value = name.trim();
+  $("qtitle").textContent = el.value;
+  setDirty(true);
+});
+$("dec-point").addEventListener("click", () => setOption("decimals", "."));
+$("dec-comma").addEventListener("click", () => setOption("decimals", ","));
+$("simpToggle").addEventListener("click", () => {
+  const el = document.querySelector('#optEd [data-opt="questionsimplify"]');
+  if (el) setOption("questionsimplify", el.value === "0" ? "1" : "0");
+});
+$("toggleFiles").addEventListener("click", () => toggleFiles());
+for (const id of ["inName", "inTans", "inKind", "inRows", "inCols"]) $(id).addEventListener("input", updateInputDialog);
+for (const id of ["inName", "inTans", "inTol", "inLabel", "inUnit", "inComp"]) $(id).addEventListener("keydown", (e) => {   // Enter = Create
+  if (e.key === "Enter") { e.preventDefault(); if (!$("inOk").disabled) $("inputDialog").close("ok"); }
+});
+$("inputDialog").addEventListener("close", () => { if ($("inputDialog").returnValue === "ok") createInput(); });
+$("inputDialog").addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); $("inputDialog").close(""); } });
+$("varFilter").addEventListener("input", () => result && renderVariables());
+for (const sel of document.querySelectorAll("#editView [data-format]")) sel.addEventListener("change", () => setDirty(true));
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.altKey && !e.ctrlKey) { e.preventDefault(); check(); return; }
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.shiftKey) { e.preventDefault(); setTab(tab === "edit" ? "preview" : "edit"); return; }
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); evaluate(false); }
+  if (e.key === "s" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); save(); }
+});
+window.addEventListener("beforeunload", (e) => {
+  if (dirty || conflict) { save(); e.preventDefault(); e.returnValue = ""; }
+});
+$("newQ").addEventListener("click", async () => {
+  const name = prompt("Name of the new question:", "New meclib question");
+  if (!name || !(await flush())) return;
+  try { const r = await postJSON("/api/q/new", { path: file.path, rev: file.rev, name }); showFile(r); selectQuestion(r.index); setTab("edit"); }
+  catch (e) { showMessages([{ cls: "err", text: e.message }]); }
+});
+$("dupQ").addEventListener("click", async () => {
+  if (qindex === null || !(await flush())) return;
+  try { const r = await postJSON("/api/q/duplicate", { path: file.path, index: qindex, rev: file.rev }); showFile(r); selectQuestion(r.index); }
+  catch (e) { showMessages([{ cls: "err", text: e.message }]); }
+});
+$("saveAs").addEventListener("click", async () => {
+  if (qindex === null || !(await flush())) return;
+  const q = file.questions.find((x) => x.index === qindex);
+  const folder = await pickFolder("Save the question in folder ...", saveAsFolder());
+  if (!folder) return;
+  store(QSTORE_KEY, { saveFolder: folder });
+  const name = prompt("File name for this question (in " + folder + "):", q ? q.name : "question");
+  if (!name) return;
+  try { const r = await postJSON("/api/q/saveas", { path: file.path, index: qindex, folder, filename: name }); loadFolders(); showMessages([{ cls: "info", text: "Saved as " + r.path }]); openFile(r.path); }
+  catch (e) { showMessages([{ cls: "err", text: e.message }]); }
+});
+$("toGraphic").addEventListener("click", async () => {
+  if (!result || !saved) { showMessages([{ cls: "warn", text: "Evaluate the question first." }]); return; }
+  if (!(await flush())) return;
+  const m = /\[\[\s*jsxgraph\b[\s\S]*?\[\[\/jsxgraph\]\]/.exec(saved.questiontext || "");
+  if (!m) { showMessages([{ cls: "warn", text: "The question text has no [[jsxgraph]] block." }]); return; }
+  let block = m[0];
+  const refs = [...block.matchAll(/\{#\s*([A-Za-z_%][A-Za-z0-9_%]*)\s*#\}/g)].map((x) => x[1]).filter((n) => n !== "stackfltsep");
+  const v = refs.length ? (result.variables || []).find((x) => x.name === refs[0]) : null;
+  if (!v || !v.raw) { showMessages([{ cls: "warn", text: "No evaluated variable for {#" + (refs[0] || "?") + "#} in the [[jsxgraph]] block." }]); return; }
+  let objects;
+  try { objects = JSON.parse(JSON.parse(v.raw)); }        // Maxima string literal -> JSON text -> list
+  catch (e) { showMessages([{ cls: "err", text: refs[0] + " is not a JSON string (stackjson_stringify): " + e.message }]); return; }
+  block = block.replace(new RegExp("\\{#\\s*" + refs[0] + "\\s*#\\}", "g"), "{#init#}");
+  const rest = [...new Set(block.match(/\{[#@][\s\S]*?[#@]\}/g) || [])].filter((x) => !/^\{#\s*(init|stackfltsep)\s*#\}$/.test(x));
+  store(STORE_KEY, { init: F.formatObjects(objects), block, decsep: result.decimals || ".", startState: "" });
+  localStorage.setItem("meclib-graphic-from", JSON.stringify({ name: saved.name, path: file.path, seed: result.seed,
+    note: rest.length ? "Other injections in the block are not evaluated there: " + rest.join(", ") : "" }));
+  location.href = "index.html";
+});
+$("split").addEventListener("click", async () => {
+  if (!file || !(await flush())) return;
+  try {
+    const r = await postJSON("/api/q/split", { path: file.path });
+    showMessages([{ cls: "info", text: `${r.files.length} STACK question(s) written to ${r.folder}` }]);
+    loadFolders();
+  } catch (e) { showMessages([{ cls: "err", text: e.message }]); }
+});
+for (const id of ["src", "jsx", "mathjax"]) $(id).addEventListener("change", () => {
+  store(STORE_KEY, { [id]: $(id).value });
+  if (id === "src") evaluate(false); else if (result) render();
+});
+start();
+</script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+/* ============================================================================
+   Tests for fb_unit_matrix(S, T, tol, [labels]) and fb_vars_matrix(S, T, [vars, labels, tol])
+   (fb_value.mac): element-wise fb_unit()/fb_vars() feedback for matrix inputs.
+   Only elements with a message appear, each as "<br>label:" + the element's message.
+   fb_unit_matrix() returns [text, isOK] (fb_check), fb_vars_matrix() text only (fb_check_str).
+   The element messages themselves are covered by test_fb_unit.mac / test_fb_vars.mac.
+   ============================================================================ */
+
+/* question variables with the same names as the labels must not leak into the labels */
+x: 17$ y: 18$ x_A: 5$ y_A: 6$
+
+/* ---- fb_unit_matrix: default labels ---- */
+fb_check(fb_unit_matrix(matrix([1.0],[2.0]), matrix([1.0],[2.0]), 0.005),
+  true, "", "", "fb_unit_matrix: all elements correct -> no text");
+
+fb_check(fb_unit_matrix(matrix([1.0],[2.001]), matrix([1.0],[2.0]), 0.005),
+  true, "", "", "fb_unit_matrix: within tolerance -> no text");
+
+fb_check(fb_unit_matrix(matrix([1.0],[2.5]), matrix([1.0],[2.0]), 0.005),
+  false,
+  "<br>\\({y}\\)-Komponente:&nbsp;Der Betrag ist um mindestens 20% zu gro&szlig;.",
+  "<br>\\({y}\\)-component:&nbsp;The value is too large by at least 20%.",
+  "fb_unit_matrix: column vector, xyz labels (x, y bound)");
+
+fb_check(fb_unit_matrix(matrix([-1.0, 2.0, 3.0]), matrix([1.0, 2.0, 3.0]), 0.005),
+  false,
+  "<br>\\({x}\\)-Komponente:&nbsp;Pr&uuml;fen Sie das Vorzeichen.",
+  "<br>\\({x}\\)-component:&nbsp;Check the sign.",
+  "fb_unit_matrix: row vector, xyz labels");
+
+fb_check(fb_unit_matrix(matrix([1],[2],[3],[5]), matrix([1],[2],[3],[4]), 0.005),
+  false,
+  "<br>Element 4:&nbsp;Der Betrag ist um mindestens 20% zu gro&szlig;.",
+  "<br>Element 4:&nbsp;The value is too large by at least 20%.",
+  "fb_unit_matrix: vector longer than 3 -> Element i");
+
+fb_check(fb_unit_matrix(matrix([1.0],[2.5]), matrix([1.0],[2.0]), 0.005, "index"),
+  false,
+  "<br>Element 2:&nbsp;Der Betrag ist um mindestens 20% zu gro&szlig;.",
+  "<br>Element 2:&nbsp;The value is too large by at least 20%.",
+  "fb_unit_matrix: index labels");
+
+fb_check(fb_unit_matrix(matrix([1.0, 3],[2.5, 4]), matrix([1.0, 3],[2.0, -4]), 0.005),
+  false,
+  "<br>Zeile 2, Spalte 1:&nbsp;Der Betrag ist um mindestens 20% zu gro&szlig;.<br>Zeile 2, Spalte 2:&nbsp;Pr&uuml;fen Sie das Vorzeichen.",
+  "<br>Row 2, column 1:&nbsp;The value is too large by at least 20%.<br>Row 2, column 2:&nbsp;Check the sign.",
+  "fb_unit_matrix: 2x2 matrix, row/column labels, two messages");
+
+/* ---- fb_unit_matrix: label lists ---- */
+fb_check(fb_unit_matrix(matrix([1.0],[2.5]), matrix([1.0],[2.0]), 0.005, ['x_A, 'y_A]),
+  false,
+  "<br>\\({{y}_{A}}\\):&nbsp;Der Betrag ist um mindestens 20% zu gro&szlig;.",
+  "<br>\\({{y}_{A}}\\):&nbsp;The value is too large by at least 20%.",
+  "fb_unit_matrix: quoted symbol labels (x_A, y_A bound)");
+
+fb_check(fb_unit_matrix(matrix([1.0],[2.5]), matrix([1.0],[2.0]), 0.005, ["links", "rechts"]),
+  false,
+  "<br>rechts:&nbsp;Der Betrag ist um mindestens 20% zu gro&szlig;.",
+  "<br>rechts:&nbsp;The value is too large by at least 20%.",
+  "fb_unit_matrix: string labels");
+
+/* ---- fb_unit_matrix: lists are taken as column vectors ---- */
+fb_check(fb_unit_matrix([1.0, 2.5], [1.0, 2.0], 0.005),
+  false,
+  "<br>\\({y}\\)-Komponente:&nbsp;Der Betrag ist um mindestens 20% zu gro&szlig;.",
+  "<br>\\({y}\\)-component:&nbsp;The value is too large by at least 20%.",
+  "fb_unit_matrix: lists as column vectors");
+
+/* ---- fb_unit_matrix: shape errors ---- */
+fb_check(fb_unit_matrix(matrix([1],[2]), matrix([1, 2]), 0.005),
+  false,
+  "<br>Die Matrix hat nicht die erwartete Gr&ouml;&szlig;e.",
+  "<br>The matrix does not have the expected size.",
+  "fb_unit_matrix: size mismatch");
+
+fb_check(fb_unit_matrix(3, matrix([1, 2]), 0.005),
+  false,
+  "<br>Die Eingabe ist keine Matrix.",
+  "<br>The input is not a matrix.",
+  "fb_unit_matrix: not a matrix");
+
+/* ---- fb_unit_matrix: debug shows in-tolerance deviations but keeps the flag ---- */
+block([debug: true],
+  fb_check(fb_unit_matrix(matrix([1.0],[2.002]), matrix([1.0],[2.0]), 0.005),
+    true,
+    "<br>\\({x}\\)-Komponente:&nbsp;Abweichung: \\({0}\\)% (display because debug=true. Would be empty otherwise.)<br>\\({y}\\)-Komponente:&nbsp;Abweichung: \\({0.1}\\)% (display because debug=true. Would be empty otherwise.)",
+    "<br>\\({x}\\)-component:&nbsp;Deviation: \\({0}\\)% (display because debug=true. Would be empty otherwise.)<br>\\({y}\\)-component:&nbsp;Deviation: \\({0.1}\\)% (display because debug=true. Would be empty otherwise.)",
+    "fb_unit_matrix: debug true, flag still true")
+)$
+
+/* ---- fb_vars_matrix ---- */
+fb_check_str(fb_vars_matrix(matrix([a],[c+d]), matrix([a],[c+d])),
+  "", "", "fb_vars_matrix: correct -> no text");
+
+fb_check_str(fb_vars_matrix(matrix([a+b],[c]), matrix([a],[c+d])),
+  "<br>\\({x}\\)-Komponente:&nbsp;Unerwartete Variable \\({b}\\).<br>\\({y}\\)-Komponente:&nbsp;Fehlende Variable \\({d}\\) (<code>d</code>).",
+  "<br>\\({x}\\)-component:&nbsp;Unexpected variable \\({b}\\).<br>\\({y}\\)-component:&nbsp;Missing variable \\({d}\\) (<code>d</code>).",
+  "fb_vars_matrix: extra and missing variables, xyz labels");
+
+fb_check_str(fb_vars_matrix(matrix([a+b],[c]), matrix([a],[c+d]), [], "index"),
+  "<br>Element 1:&nbsp;Unerwartete Variable \\({b}\\).<br>Element 2:&nbsp;Fehlende Variable \\({d}\\) (<code>d</code>).",
+  "<br>Element 1:&nbsp;Unexpected variable \\({b}\\).<br>Element 2:&nbsp;Missing variable \\({d}\\) (<code>d</code>).",
+  "fb_vars_matrix: index labels");
+
+fb_check_str(fb_vars_matrix(matrix([2*a+b],[c]), matrix([a+b],[c]), [a]),
+  "<br>\\({x}\\)-Komponente:&nbsp;Pr&uuml;fen Sie den Term mit \\({a}\\).",
+  "<br>\\({x}\\)-component:&nbsp;Check the term with \\({a}\\).",
+  "fb_vars_matrix: term check with vars list");
+
+fb_check_str(fb_vars_matrix(matrix([a],[c]), matrix([a, c])),
+  "<br>Die Matrix hat nicht die erwartete Gr&ouml;&szlig;e.",
+  "<br>The matrix does not have the expected size.",
+  "fb_vars_matrix: size mismatch");
+
+kill(x, y, x_A, y_A)$

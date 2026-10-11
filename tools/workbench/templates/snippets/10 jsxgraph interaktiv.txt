@@ -1,0 +1,11 @@
+<p hidden>[[input:objects]] [[validation:objects]]</p>
+<p hidden>[[input:names]] [[validation:names]] </p>
+<div style="float:right; margin: 0 0 0.5em 1.5em;">
+[[jsxgraph width='500px' height='400px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
+var mode  = "STACK";
+const initstring = {#init#};
+const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0], 
+  anchorX:'left', anchorY:'middle'}};
+// End of STACK header
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
+[[/jsxgraph]]</div>

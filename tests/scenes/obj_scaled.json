@@ -1,0 +1,50 @@
+{
+  "title": "Interactive objects on a scaled grid (wiki examples of circle2p, line2p, spline, crosshair)",
+  "notes": "Grid scaling [10,10]: control points of circle2p, line2p and crosshair are given and returned in scaled units.",
+  "initdata": [
+    ["grid", "x", "y", -3, 4, -2, 3, 60, [10, 10], [0, 0]],
+    ["circle2p", "P_1", "P_2", [-20, -10], [0, 10]],
+    ["line2p", "g", [10, 5], [30, 10], "n"],
+    ["spline", "", [1, -1.5], [0, 1], [2, 1], [0.5, 0], [0.5, 1], "", "active"],
+    ["crosshair", "", [-2, 2], [0, 0], [10, 10], [1, 1]]
+  ],
+  "cases": [
+    {
+      "id": "init",
+      "label": "as specified",
+      "expected": {
+        "names": "[0,[[-20,-10],[0,10]],[[10,5],[30,10]],-0.50000*x^3+2.00000*x^2-2.00000*x+1.00000,[-20,20]]",
+        "objects": [
+          ["grid", "x", "y", -3, 4, -2, 3, 60, [10, 10], [0, 0]],
+          ["circle2p", "P_1", "P_2", [-20, -10], [0, 10], 10],
+          ["line2p", "g", [10, 5], [30, 10], "n"],
+          ["spline", "", [1, -1.5], [0, 1], [2, 1], [0.5, 0], [0.5, 1], "", "active"],
+          ["crosshair", "", [-2, 2], [0, 0], [10, 10], [1, 1]]
+        ]
+      },
+      "recorded": {"meclib": "2026 10 09 (local)", "jsxgraph": "STACK 4.13.1 bundled (JSXGraph 1.12.2)"}
+    },
+    {
+      "id": "line-moved",
+      "label": "line2p control points moved",
+      "state": [
+        ["grid", "x", "y", -3, 4, -2, 3, 60, [10, 10], [0, 0]],
+        ["circle2p", "P_1", "P_2", [-20, -10], [0, 10]],
+        ["line2p", "g", [0, 0], [20, 20], "n"],
+        ["spline", "", [1, -1.5], [0, 1], [2, 1], [0.5, 0], [0.5, 1], "", "active"],
+        ["crosshair", "", [-2, 2], [0, 0], [10, 10], [1, 1]]
+      ],
+      "expected": {
+        "names": "[0,[[-20,-10],[0,10]],[[0,0],[20,20]],-0.50000*x^3+2.00000*x^2-2.00000*x+1.00000,[-20,20]]",
+        "objects": [
+          ["grid", "x", "y", -3, 4, -2, 3, 60, [10, 10], [0, 0]],
+          ["circle2p", "P_1", "P_2", [-20, -10], [0, 10], 10],
+          ["line2p", "g", [0, 0], [20, 20], "n"],
+          ["spline", "", [1, -1.5], [0, 1], [2, 1], [0.5, 0], [0.5, 1], "", "active"],
+          ["crosshair", "", [-2, 2], [0, 0], [10, 10], [1, 1]]
+        ]
+      },
+      "recorded": {"meclib": "2026 10 09 (local)", "jsxgraph": "STACK 4.13.1 bundled (JSXGraph 1.12.2)"}
+    }
+  ]
+}

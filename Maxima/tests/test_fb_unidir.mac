@@ -1,29 +1,18 @@
 /* ============================================================================
-   Tests for fb_unidir(). Fixture ported from the hand-verified demo
-   question "fb_unidir() unit test.xml" (demo_questions/) - same initdata/
-   names1 object set, same DE expected text (confirmed against that
-   question's PRTs); EN text added here from fb_unidir()'s current
+   Tests for fb_unidir(). Scene ported from the hand-verified demo
+   question "fb_unidir() unit test.xml" (demo_questions/): same initdata,
+   meclib's names identical to names1 there, same DE expected text
+   (confirmed against that question's PRTs); EN text added here from fb_unidir()'s current
    bilingual source, which didn't exist when that XML was authored.
    Unlike fb_fix1/12/123/13, fb_unidir() does NOT prepend "<br>" to its
    description, and its own str_not_deactivated has no leading space -
    so it does NOT show the double-space finding noted in test_fb_fix1.mac.
    ============================================================================ */
 
-o_unidir: [
-  [ "grid", "", "", -1,10,-2,4,40],
-  [ "bar", "2", [0,0], [0,2], "show"],
-  [ "force", "S_3", [0,0], [0,-1], 1, "active"],
-  [ "bar", "4", [1,0], [1,2], "hide"],
-  [ "bar", "5", [2,0], [2,2], "hide"],
-  [ "force", "S_6", [2,0], [2,-1], 1, "active"],
-  [ "moment", "M_7", [2,2], [1.5,2.5], [2.5,2.5], "active"],
-  [ "bar", "8", [3,0], [2,2], "hide"],
-  [ "bar", "9", [4,0], [4,2], "hide"],
-  [ "force", "S_10", [4,0.5], [4.5,-0.5], 1, "active"],
-  [ "bar", "11", [5,0], [5,2], "hide"],
-  [ "force", "SK_12", [5,0.5], [5,-0.5], 1, "active"]
-];
-n_unidir: [0,"show",S_3,"hide",[6,7],S_6,M_7,[7],[10],S_10,[12],SK_12];
+/* Scene "fb_unidir" (tests/scenes/fb_unidir.json): the objects and names meclib
+   actually produces for this initdata, untouched graphic - no longer hand-written. */
+o_unidir: scene_obj("fb_unidir", "init");
+n_unidir: scene_names("fb_unidir", "init");
 
 /* ---- dev diagnostics: object 3 (a "force") is not an unidirectional support ---- */
 fb_check(fb_unidir(o_unidir, n_unidir, 3, "force \\(S_3\\): "), false,

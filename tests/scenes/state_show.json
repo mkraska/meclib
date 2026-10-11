@@ -1,0 +1,36 @@
+{
+  "title": "Fixed objects in state SHOW (replacement for the legacy state locked)",
+  "notes": "Regression test for the review rule state.locked (tools/workbench/rules.py, SHOW_TESTED): every object type in this scene may have \"locked\" replaced by \"SHOW\". Checked 2026-10-09: the graphic of each type is the same with locked and SHOW, no object can be switched by double click; fb_system() counts only SHOW/show (locked is legacy).",
+  "initdata": [
+    ["grid", "", "", -1, 11, -1, 5, 40],
+    ["beam", "", [0, 0], [4, 0], 0.15, "SHOW"],
+    ["q", "q_0", "q_1", [0, 0.3], [4, 0.3], 0.7, 1.0, 0, "SHOW"],
+    ["fix12", "A", [0, 0], 0, "SHOW"],
+    ["fix1", "B", [4, 0], 0, "SHOW"],
+    ["bar", "S", [4, 0], [6, 2], "SHOW"],
+    ["fix123", "C", [6, 2], 0, "SHOW"],
+    ["force", "F", [2, 4], [2, 2.5], 1, "SHOW"],
+    ["moment", "M", [8, 1], [7.5, 1.5], [8.5, 1.5], "SHOW"]
+  ],
+  "cases": [
+    {
+      "id": "init",
+      "label": "all objects SHOW",
+      "expected": {
+        "names": "[0,\"SHOW\",\"SHOW\",\"SHOW\",\"SHOW\",\"SHOW\",\"SHOW\",F,M]",
+        "objects": [
+          ["grid", "", "", -1, 11, -1, 5, 40],
+          ["beam", "", [0, 0], [4, 0], 0.15, "SHOW"],
+          ["q", "q_0", "q_1", [0, 0.3], [4, 0.3], 0.7, 1, 0, "SHOW"],
+          ["fix12", "A", [0, 0], 0, "SHOW"],
+          ["fix1", "B", [4, 0], 0, "SHOW"],
+          ["bar", "S", [4, 0], [6, 2], "SHOW"],
+          ["fix123", "C", [6, 2], 0, "SHOW"],
+          ["force", "F", [2, 4], [2, 2.5], 1, "SHOW"],
+          ["moment", "M", [8, 1], [7.5, 1.5], [8.5, 1.5], "SHOW"]
+        ]
+      },
+      "recorded": {"meclib": "2026 10 09 (local)", "jsxgraph": "STACK 4.13.1 bundled (JSXGraph 1.12.2)"}
+    }
+  ]
+}

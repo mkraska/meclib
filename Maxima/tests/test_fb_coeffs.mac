@@ -27,8 +27,8 @@ fb_check(fb_coeffs(2.0*a+3.0*b, 2.0*a+3.0*b, 0.01, "AB: "), true,
 
 /* ---- variable-set mismatch delegates to fb_vars() ---- */
 fb_check(fb_coeffs(2.0*a, 2.0*a+3.0*b, 0.01, "AB: "), false,
-  "AB: &nbsp;Fehlende Variable b (<code>b</code>).",
-  "AB: &nbsp;Missing variable b (<code>b</code>).",
+  "AB: &nbsp;Fehlende Variable \\({b}\\) (<code>b</code>).",
+  "AB: &nbsp;Missing variable \\({b}\\) (<code>b</code>).",
   "fb_coeffs: variable-set mismatch (missing)");
 
 /* ---- one coefficient numerically wrong (b: 5.0 vs 3.0) ---- */

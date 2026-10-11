@@ -26,14 +26,14 @@ n_dir: [0, 0, 0, F_A, F_B, F_C, 0];
 
 /* ---- single contributor (singular) ---- */
 fb_check(fb_dir(o_dir, n_dir, [[3, "in 2-Richtung"]], 0.1), true,
-  "F_B hat Anteile in 2-Richtung.",
-  "F_B has components in 2-Richtung.",
+  "\\({{F}_{B}}\\) hat Anteile in 2-Richtung.",
+  "\\({{F}_{B}}\\) has components in 2-Richtung.",
   "fb_dir single contributor (singular)");
 
 /* ---- two contributors (plural) ---- */
 fb_check(fb_dir(o_dir, n_dir, [[2, "in 1-Richtung"]], 0.1), true,
-  "F_A, F_C haben Anteile in 1-Richtung.",
-  "F_A, F_C have components in 1-Richtung.",
+  "\\({{F}_{A}}\\), \\({{F}_{C}}\\) haben Anteile in 1-Richtung.",
+  "\\({{F}_{A}}\\), \\({{F}_{C}}\\) have components in 1-Richtung.",
   "fb_dir two contributors (plural)");
 
 /* ---- no contributor (tolerance set above every possible coefficient) ---- */
@@ -44,8 +44,8 @@ fb_check(fb_dir(o_dir, n_dir, [[3, "in 2-Richtung"]], 2.0), true,
 
 /* ---- two non-parallel directions: both reported, flag stays true ---- */
 fb_check(fb_dir(o_dir, n_dir, [[2, "in 1-Richtung"],[3, "in 2-Richtung"]], 0.1), true,
-  "F_A, F_C haben Anteile in 1-Richtung.<br>F_B hat Anteile in 2-Richtung.",
-  "F_A, F_C have components in 1-Richtung.<br>F_B has components in 2-Richtung.",
+  "\\({{F}_{A}}\\), \\({{F}_{C}}\\) haben Anteile in 1-Richtung.<br>\\({{F}_{B}}\\) hat Anteile in 2-Richtung.",
+  "\\({{F}_{A}}\\), \\({{F}_{C}}\\) have components in 1-Richtung.<br>\\({{F}_{B}}\\) has components in 2-Richtung.",
   "fb_dir two non-parallel directions");
 
 /* ---- two parallel directions: warning prepended, flag false ----
@@ -53,6 +53,6 @@ fb_check(fb_dir(o_dir, n_dir, [[2, "in 1-Richtung"],[3, "in 2-Richtung"]], 0.1),
    parallel - the per-direction contributor sentences are still appended
    afterwards (same contributor set for both, since both point the same way). */
 fb_check(fb_dir(o_dir, n_dir, [[2, "in 1-Richtung"],[7, "in 3-Richtung"]], 0.1), false,
-  "Die gewählten Richtungen sind parallel. Damit liefern die beiden Gleichgewichtsbedingungen keine voneinander unabhängigen Gleichungen.<br>F_A, F_C haben Anteile in 1-Richtung.<br>F_A, F_C haben Anteile in 3-Richtung.",
-  "The chosen directions are parallel. The two equilibrium conditions would then not provide independent equations.<br>F_A, F_C have components in 1-Richtung.<br>F_A, F_C have components in 3-Richtung.",
+  "Die gewählten Richtungen sind parallel. Damit liefern die beiden Gleichgewichtsbedingungen keine voneinander unabhängigen Gleichungen.<br>\\({{F}_{A}}\\), \\({{F}_{C}}\\) haben Anteile in 1-Richtung.<br>\\({{F}_{A}}\\), \\({{F}_{C}}\\) haben Anteile in 3-Richtung.",
+  "The chosen directions are parallel. The two equilibrium conditions would then not provide independent equations.<br>\\({{F}_{A}}\\), \\({{F}_{C}}\\) have components in 1-Richtung.<br>\\({{F}_{A}}\\), \\({{F}_{C}}\\) have components in 3-Richtung.",
   "fb_dir two parallel directions");

@@ -1,0 +1,42 @@
+{
+  "title": "fb_unidir() unit test scene",
+  "notes": "Ported from demo_questions/fb_unidir() unit test.xml (initdata, expected names = names1 of that question). Feedback expectations of its PRTs: Maxima/tests/test_fb_unidir.mac.",
+  "initdata": [
+    ["grid", "", "", -1, 10, -2, 4, 40],
+    ["bar", "2", [0, 0], [0, 2], "show"],
+    ["force", "S_3", [0, 0], [0, -1], 1, "active"],
+    ["bar", "4", [1, 0], [1, 2], "hide"],
+    ["bar", "5", [2, 0], [2, 2], "hide"],
+    ["force", "S_6", [2, 0], [2, -1], 1, "active"],
+    ["moment", "M_7", [2, 2], [1.5, 2.5], [2.5, 2.5], "active"],
+    ["bar", "8", [3, 0], [2, 2], "hide"],
+    ["bar", "9", [4, 0], [4, 2], "hide"],
+    ["force", "S_10", [4, 0.5], [4.5, -0.5], 1, "active"],
+    ["bar", "11", [5, 0], [5, 2], "hide"],
+    ["force", "SK_12", [5, 0.5], [5, -0.5], 1, "active"]
+  ],
+  "cases": [
+    {
+      "id": "init",
+      "label": "untouched graphic (as in the unit test question)",
+      "expected": {
+        "names": "[0,\"show\",S_3,\"hide\",[6,7],S_6,M_7,[7],[10],S_10,[12],SK_12]",
+        "objects": [
+          ["grid", "", "", -1, 10, -2, 4, 40],
+          ["bar", "2", [0, 0], [0, 2], "show"],
+          ["force", "S_3", [0, 0], [0, -1], 1, "active"],
+          ["bar", "4", [1, 0], [1, 2], "hide"],
+          ["bar", "5", [2, 0], [2, 2], "hide"],
+          ["force", "S_6", [2, 0], [2, -1], 1, "active"],
+          ["moment", "M_7", [2, 2], [1.5, 2.5], [2.5, 2.5], "active"],
+          ["bar", "8", [3, 0], [2, 2], "hide"],
+          ["bar", "9", [4, 0], [4, 2], "hide"],
+          ["force", "S_10", [4, 0.5], [4.5, -0.5], 1, "active"],
+          ["bar", "11", [5, 0], [5, 2], "hide"],
+          ["force", "SK_12", [5, 0.5], [5, -0.5], 1, "active"]
+        ]
+      },
+      "recorded": {"meclib": "2026 09 26 (local)", "jsxgraph": "STACK 4.13.1 bundled (JSXGraph 1.12.2)"}
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "title": "fb_bar() unit test scene (QA 05)",
+  "notes": "Ported from demo_questions/QA 05 fb_bar.xml. WORK IN PROGRESS: objects 14-17 (bars 10 and 11 with forces S_10/S_11 at their common node [6,2]) belong to the development of the two-sided bar cut (action-reaction pair at both bar ends); names1 of the XML only covered objects 1-13, the expected names here are meclib's actual output for all 17 objects.",
+  "initdata": [
+    ["grid", "", "", -1, 10, -2, 4, 40],
+    ["bar", "", [0, 0], [0, 2], "hide"],
+    ["force", "S_3", [0, 0], [0, -1], 1, "active"],
+    ["bar", "4", [1, 0], [1, 2], "show"],
+    ["bar", "5", [2, 0], [2, 2], "hide"],
+    ["bar", "6", [3, 0], [3, 2], "hide"],
+    ["force", "S_7", [3, 0.5], [3, -0.5], 1, "active"],
+    ["bar", "8", [4, 0], [4, 2], "hide"],
+    ["force", "S_8", [4, 0.5], [4.5, -0.5], 1, "active"],
+    ["bar", "9", [5, 0], [5, 2], "hide"],
+    ["node", "A", [5, 0]],
+    ["force", "S_9", [5, 0.5], [5, -0.5], 1, "active"],
+    ["force", "S_11", [4, 1.5], [4, 2.5], 1, "active"],
+    ["bar", "10", [6, 0], [6, 2], "hide"],
+    ["bar", "11", [7, 0], [6, 2], "hide"],
+    ["force", "S_10", [6, 2], [6.5, 1], 1, "active"],
+    ["force", "S_11", [6, 2], [6, 1], 1, "active"]
+  ],
+  "cases": [
+    {
+      "id": "init",
+      "label": "untouched graphic (as in the unit test question)",
+      "expected": {
+        "names": "[0,[3],S_3,\"show\",\"hide\",[7],S_7,[9,13],S_8,[12],\"A\",S_9,S_11,[16,17],[16,17],S_10,S_11]",
+        "objects": [
+          ["grid", "", "", -1, 10, -2, 4, 40],
+          ["bar", "", [0, 0], [0, 2], "hide"],
+          ["force", "S_3", [0, 0], [0, -1], 1, "active"],
+          ["bar", "4", [1, 0], [1, 2], "show"],
+          ["bar", "5", [2, 0], [2, 2], "hide"],
+          ["bar", "6", [3, 0], [3, 2], "hide"],
+          ["force", "S_7", [3, 0.5], [3, -0.5], 1, "active"],
+          ["bar", "8", [4, 0], [4, 2], "hide"],
+          ["force", "S_8", [4, 0.5], [4.5, -0.5], 1, "active"],
+          ["bar", "9", [5, 0], [5, 2], "hide"],
+          ["node", "A", [5, 0]],
+          ["force", "S_9", [5, 0.5], [5, -0.5], 1, "active"],
+          ["force", "S_11", [4, 1.5], [4, 2.5], 1, "active"],
+          ["bar", "10", [6, 0], [6, 2], "hide"],
+          ["bar", "11", [7, 0], [6, 2], "hide"],
+          ["force", "S_10", [6, 2], [6.500000000000001, 0.9999999999999982], 1, "active"],
+          ["force", "S_11", [6, 2], [6, 1], 1, "active"]
+        ]
+      },
+      "recorded": {"meclib": "2026 09 26 (local)", "jsxgraph": "STACK 4.13.1 bundled (JSXGraph 1.12.2)"}
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-Overview */ 
-fb_value_version: "2026 10 07";
+fb_value_version: "2026 10 11";
 
 /* https://github.com/mkraska/meclib/wiki/deg2rad */
 /* Substitutes any use of the "deg" marker in expr with its numeric value (pi/180), for use right
@@ -230,6 +230,79 @@ fb_coeffs(%_sans, %_tans, %_tol, %_description):=block(
 fb_number(%_sans, %_tans, %_tol) := fb_unit(%_sans, %_tans, %_tol);
 /* this should return true if the check passes, false otherwise */
 fb_numberOK(%_snum, %_tnum, %_tol):=stringp(fb_number(%_snum, %_tnum, %_tol));
+
+/* https://github.com/mkraska/meclib/wiki/fb_unit_matrix() */
+/* Element-wise feedback for matrix (vector) answers. fb_unit_matrix() checks every element
+   with fb_unit() and returns [text, isOK]: isOK is true iff every element is within the
+   tolerance, so it is a complete numeric check. fb_vars_matrix() checks every element with
+   fb_vars() and returns text only, like fb_vars() itself (no message does not prove
+   equivalence). In both, only elements with a message appear, each as "<br>label: message".
+   Labels (row by row):
+     "xyz" (default)  x-/y-/z-Komponente for vectors with up to 3 elements
+     "index"          Element 1, Element 2, ... for vectors
+     a list           ['x_A, 'y_A] (symbols or expressions, shown as formulas; quote them so
+                      that question variables of the same name are not substituted) or strings
+   Matrices that are not vectors always get "Zeile i, Spalte j" unless a list is given.
+   A list given instead of a matrix is taken as a column vector. */
+fb_matrix_label(%_i, %_j, %_n, %_m, %_labels) := block([%_k, %_lab, %_c],
+  %_k: (%_i - 1)*%_m + %_j,
+  if matrixp(%_labels) then %_labels: flatten(args(%_labels)),
+  if listp(%_labels) and %_k <= length(%_labels) then (
+    %_lab: %_labels[%_k],
+    return(castext("<br>{@%_lab@}:"))
+  ),
+  if %_n = 1 or %_m = 1 then (
+    if %_labels # "index" and %_n*%_m <= 3 then (
+      %_c: ['x, 'y, 'z][%_k],
+      return(castext("<br>{@%_c@}[[lang code='de']]-Komponente:[[/lang]][[lang code='en,other']]-component:[[/lang]]"))
+    ),
+    return(castext("<br>Element {#%_k#}:"))
+  ),
+  castext("<br>[[lang code='de']]Zeile {#%_i#}, Spalte {#%_j#}:[[/lang]][[lang code='en,other']]Row {#%_i#}, column {#%_j#}:[[/lang]]")
+);
+/* common checks: returns "" or the message for non-matrix or differently sized answers */
+fb_matrix_shape(%_sans, %_tans) := block(
+  [str_not_matrix: castext("<br>[[lang code='de']]Die Eingabe ist keine Matrix.[[/lang]][[lang code='en,other']]The input is not a matrix.[[/lang]]"),
+   str_size: castext("<br>[[lang code='de']]Die Matrix hat nicht die erwartete Gr&ouml;&szlig;e.[[/lang]][[lang code='en,other']]The matrix does not have the expected size.[[/lang]]")],
+  if not matrixp(%_sans) then return(str_not_matrix),
+  if matrix_size(%_sans) # matrix_size(%_tans) then return(str_size),
+  ""
+);
+fb_unit_matrix(%_sans, %_tans, %_tol, [%_opt]) := block(
+  [%_labels, %_txt: "", %_ok: true, %_n, %_m, %_r, %_r0, %_shape],
+  %_labels: if length(%_opt) > 0 then %_opt[1] else "xyz",
+  if listp(%_sans) then %_sans: transpose(matrix(%_sans)),
+  if listp(%_tans) then %_tans: transpose(matrix(%_tans)),
+  %_shape: fb_matrix_shape(%_sans, %_tans),
+  if %_shape # "" then return([%_shape, false]),
+  [%_n, %_m]: matrix_size(%_tans),
+  for %_i thru %_n do for %_j thru %_m do (
+    /* the flag must not depend on debug, which makes fb_unit() report in-tolerance values too */
+    %_r0: block([debug: false], fb_unit(%_sans[%_i, %_j], %_tans[%_i, %_j], %_tol)),
+    if %_r0 # "" then %_ok: false,
+    %_r: if debug = true then fb_unit(%_sans[%_i, %_j], %_tans[%_i, %_j], %_tol) else %_r0,
+    if %_r # "" then
+      %_txt: castext_concat(%_txt, castext_concat(fb_matrix_label(%_i, %_j, %_n, %_m, %_labels), %_r))
+  ),
+  [%_txt, %_ok]
+);
+fb_vars_matrix(%_sans, %_tans, [%_opt]) := block(
+  [%_vars, %_labels, %_tol, %_txt: "", %_n, %_m, %_r, %_shape],
+  %_vars: if length(%_opt) > 0 then %_opt[1] else [],
+  %_labels: if length(%_opt) > 1 then %_opt[2] else "xyz",
+  %_tol: if length(%_opt) > 2 then %_opt[3] else 0,
+  if listp(%_sans) then %_sans: transpose(matrix(%_sans)),
+  if listp(%_tans) then %_tans: transpose(matrix(%_tans)),
+  %_shape: fb_matrix_shape(%_sans, %_tans),
+  if %_shape # "" then return(%_shape),
+  [%_n, %_m]: matrix_size(%_tans),
+  for %_i thru %_n do for %_j thru %_m do (
+    %_r: fb_vars(%_sans[%_i, %_j], %_tans[%_i, %_j], %_vars, "", %_tol),
+    if %_r # "" then
+      %_txt: castext_concat(%_txt, castext_concat(fb_matrix_label(%_i, %_j, %_n, %_m, %_labels), %_r))
+  ),
+  %_txt
+);
 
 /* https://github.com/mkraska/meclib/wiki/fb_dim */
 fb_dim(%_res, %_vars, %_dims):=rat(subst(map("=", %_vars, map("*", %_vars, %_dims)),%_res)/%_res);
