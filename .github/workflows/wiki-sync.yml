@@ -6,7 +6,7 @@ name: Wiki sync
 on:
   push:
     branches: [dev2026]
-    paths: ["doc/wiki/**", "tools/wiki_sync.py"]
+    paths: ["doc/wiki/**", "tools/wiki_sync.py", ".github/workflows/wiki-sync.yml"]
   workflow_dispatch:
 permissions:
   contents: write
