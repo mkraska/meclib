@@ -21,3 +21,5 @@ Normal line with thin hatching at left side, specified by start and end point.
   [ "label", "2", [2,1.8] ]
 ]
 ```
+
+If you want to use contact with a wall in a free body diagram, then use the [["contact"]] object.

@@ -20,7 +20,8 @@
     }
   },
   "mathjax": {
-    "MathJax 2.7.9 (Moodle default)": "https://cdn.jsdelivr.net/npm/mathjax@2.7.9/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
+    "MathJax 2.7.9 (Moodle default)": "https://cdn.jsdelivr.net/npm/mathjax@2.7.9/MathJax.js?config=TeX-AMS-MML_HTMLorMML",
+    "MathJax 3.2.2 (Moodle 5 default)": "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js?config=TeX-AMS-MML_HTMLorMML"
   },
   "proxy_allowed_prefixes": [
     "https://raw.githubusercontent.com/maths/moodle-qtype_stack/",

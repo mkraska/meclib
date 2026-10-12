@@ -1,0 +1,65 @@
+/* ============================================================================
+   Tests for fb_fbd(): system boundaries, names, number of drawn loads.
+   ============================================================================ */
+
+/* beam (system, 1), floor and step (environment, 2, 3), contacts A and B (4, 5),
+   given weight G (locked), drawn reactions N_A, N_B, R_B */
+o_fb: [["polygon","",[0,0],[1,0],[1,1],"show"],
+       ["wall","Boden",[5,0],[0,0],45,"hide"],
+       ["wall","Stufe",[0,2],[-3,2],45,"hide"],
+       ["contact","",[3,0],[0,-1],"Boden","hide"],
+       ["contact","",[0,2],[-2,-3],"Stufe","hide"],
+       ["force","G",[1,1],[1,0],5],
+       ["force","N_A",[3,-1],[3,0],"active"],
+       ["force","N_B",[-1,1],[0,2],"active"],
+       ["force","R_B",[0,2],[-1,3],"active"]];
+n_fb: ["show", "hide", "hide", [7], [8,9], G, N_A, N_B, R_B];
+fb_opts: [sys = [1], env = [2,3], forces = 3, moments = 0];
+
+fb_check(firstn(fb_fbd(o_fb, n_fb, fb_opts), 2), true,
+  "<br>Geprüft und in Ordnung: Systemgrenzen, Namen, Anzahl der Reaktionen.",
+  "<br>Checked and correct: system boundaries, names, number of reactions.",
+  "fb_fbd all correct");
+fb_check(["", is(third(fb_fbd(o_fb, n_fb, fb_opts)) = [true, true, true])], true, "", "", "fb_fbd parts all true");
+
+/* only the names checked (no options) */
+fb_check(firstn(fb_fbd(o_fb, n_fb, []), 2), true,
+  "<br>Geprüft und in Ordnung: Namen.", "<br>Checked and correct: names.", "fb_fbd names only");
+
+/* system boundaries wrong, with hint; parts */
+n_fb2: ["show", "show", "hide", [7], [8,9], G, N_A, N_B, R_B];
+r_fb2: fb_fbd(o_fb, n_fb2, [sys = [1], env = [2,3], hint = "Boden und Stufe gehören zur Umgebung."]);
+fb_check(firstn(r_fb2, 2), false,
+  "<br>Die Systemgrenzen stimmen nicht. Boden und Stufe gehören zur Umgebung.",
+  "<br>The system boundaries are incorrect. Boden und Stufe gehören zur Umgebung.",
+  "fb_fbd system wrong");
+fb_check(["", is(third(r_fb2) = [false, true, true])], true, "", "", "fb_fbd parts system wrong");
+
+/* the same name at both contacts, a reaction named like the weight, a reserved symbol, wrong counts */
+o_fb3: copylist(o_fb);
+o_fb3[7]: ["force","N",[3,-1],[3,0],"active"];
+o_fb3[8]: ["force","N",[-1,1],[0,2],"active"];
+o_fb3[9]: ["force","G",[0,2],[-1,3],"active"];
+r_fb3: fb_fbd(o_fb3, n_fb, [forces = 4, moments = 0]);
+fb_check(firstn(r_fb3, 2), false,
+  "<br>Der Name \\(G\\) ist schon vergeben (vorgegebene Last oder Größe der Aufgabe). Wählen Sie für die Reaktion einen anderen Namen.<br>Der Name \\(N\\) wird für mehrere Reaktionen verwendet. Reaktionen brauchen verschiedene Namen.<br>Die Zahl der Reaktionskräfte stimmt nicht.",
+  "<br>The name \\(G\\) is already taken (a given load or a quantity of the problem). Choose another name for the reaction.<br>The name \\(N\\) is used for more than one reaction. Reactions need different names.<br>The number of reaction forces is incorrect.",
+  "fb_fbd names and count wrong");
+fb_check(["", is(third(r_fb3) = [true, false, false])], true, "", "", "fb_fbd parts names and count wrong");
+
+/* reserved symbols, name form, missing name */
+o_fb4: copylist(o_fb);
+o_fb4[7]: ["force","a",[3,-1],[3,0],"active"];
+o_fb4[8]: ["force","NB",[-1,1],[0,2],"active"];
+o_fb4[9]: ["force","",[0,2],[-1,3],"active"];
+fb_check(firstn(fb_fbd(o_fb4, n_fb, [reserved = [a, b, h, alpha], nameform = true]), 2), false,
+  "<br>Eine gezeichnete Kraft oder ein Moment hat keinen Namen.<br>Der Name \\(a\\) ist schon vergeben (vorgegebene Last oder Größe der Aufgabe). Wählen Sie für die Reaktion einen anderen Namen.<br>\\(NB\\): Physikalische Größen immer nur mit einem Buchstaben und eventuell Index schreiben, z.B. <code>F_1</code>.",
+  "<br>A force or moment you drew has no name.<br>The name \\(a\\) is already taken (a given load or a quantity of the problem). Choose another name for the reaction.<br>\\(NB\\): always name physical quantities with a single letter and, if needed, an index, e.g. <code>F_1</code>.",
+  "fb_fbd reserved, form, missing name");
+
+/* given loads may share a name; a moment counted; resultants of line loads not counted */
+o_fb5: append(o_fb, [["force","G",[2,1],[2,0],5], ["moment","M_A",[3,0],[4,0],[3,1],"active"], ["force","R q",[1,1],[1,0],"active"]]);
+fb_check(firstn(fb_fbd(o_fb5, append(n_fb, [G, M_A, R]), [forces = 3, moments = 1]), 2), true,
+  "<br>Geprüft und in Ordnung: Namen, Anzahl der Reaktionen.",
+  "<br>Checked and correct: names, number of reactions.",
+  "fb_fbd given loads, moment, resultant");

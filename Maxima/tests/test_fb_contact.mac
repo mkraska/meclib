@@ -115,3 +115,187 @@ fb_check(fb_contact(o_badref, n_ok, 1, "Kontakt A: "), false,
   "Kontakt A: fb_contact(): referenced object 'Nonexistent' not found or ambiguous.",
   "Kontakt A: fb_contact(): referenced object 'Nonexistent' not found or ambiguous.",
   "fb_contact dev: unresolved targetRef");
+
+/* ============================================================================
+   Rough contact: optional arguments [friction, normal names, friction names]
+   Floor contact at the origin (outward direction [0,-1]), floor deactivated.
+   ============================================================================ */
+o_st: [["contact","",[0,0],[0,-1],2,"hide"],
+       ["wall","Boden",[0,0],[1,0],45,"hide"],
+       ["force","N_A",[0,0],[0,1],"active"],
+       ["force","R_A",[0,0],[1,0],"active"]];
+n_st: [[3,4], 2, "N_A", "R_A"];
+
+/* ---- static friction, no names: normal + tangential force ---- */
+fb_check(fb_contact(o_st, n_st, 1, "Kontakt A: ", "static"), true,
+  "Kontakt A: Reaktionen \\(N_A\\) und \\(R_A\\) gefunden.",
+  "Kontakt A: Reactions \\(N_A\\) and \\(R_A\\) found.",
+  "fb_contact static ok");
+
+/* ---- static friction, sense of the friction force is arbitrary ---- */
+o_st2: [["contact","",[0,0],[0,-1],2,"hide"],
+        ["wall","Boden",[0,0],[1,0],45,"hide"],
+        ["force","N_A",[0,0],[0,1],"active"],
+        ["force","R_A",[0,0],[-1,0],"active"]];
+fb_check(fb_contact(o_st2, n_st, 1, "Kontakt A: ", "static"), true,
+  "Kontakt A: Reaktionen \\(N_A\\) und \\(R_A\\) gefunden.",
+  "Kontakt A: Reactions \\(N_A\\) and \\(R_A\\) found.",
+  "fb_contact static ok, other sense");
+
+/* ---- static friction, friction force missing ---- */
+n_st_nofr: [[3], 2, "N_A", "R_A"];
+fb_check(fb_contact(o_st, n_st_nofr, 1, "Kontakt A: ", "static"), false,
+  "Kontakt A: Keine Haftkraft gefunden.",
+  "Kontakt A: No friction force found.",
+  "fb_contact static no friction force");
+
+/* ---- kinetic friction, friction force missing ("Reibkraft" instead of "Haftkraft") ---- */
+fb_check(fb_contact(o_st, n_st_nofr, 1, "Kontakt A: ", [1,0]), false,
+  "Kontakt A: Keine Reibkraft gefunden.",
+  "Kontakt A: No friction force found.",
+  "fb_contact kinetic no friction force");
+
+/* ---- static friction, no names: a force that is neither normal nor tangential ---- */
+o_st_incl: [["contact","",[0,0],[0,-1],2,"hide"],
+            ["wall","Boden",[0,0],[1,0],45,"hide"],
+            ["force","F",[0,0],[2,1],"active"]];
+n_st_incl: [[3], 2, "F"];
+fb_check(fb_contact(o_st_incl, n_st_incl, 1, "Kontakt A: ", "static"), false,
+  "Kontakt A: Die Reaktion \\(F\\) weicht um 27° von der Tangente ab.",
+  "Kontakt A: Reaction \\(F\\) deviates by 27° from the tangent.",
+  "fb_contact static inclined force");
+
+/* ---- static friction, normal force pulls ---- */
+o_st_pull: [["contact","",[0,0],[0,-1],2,"hide"],
+            ["wall","Boden",[0,0],[1,0],45,"hide"],
+            ["force","N_A",[0,0],[0,-1],"active"],
+            ["force","R_A",[0,0],[1,0],"active"]];
+fb_check(fb_contact(o_st_pull, n_st, 1, "Kontakt A: ", "static"), false,
+  "Kontakt A: Die Normalkraft \\(N_A\\) muss eine Druckkraft sein.",
+  "Kontakt A: Normal force \\(N_A\\) must be a compressive force.",
+  "fb_contact static normal force pulls");
+
+/* ---- kinetic friction, velocity as a vector: friction along the velocity is wrong ---- */
+fb_check(fb_contact(o_st, n_st, 1, "Kontakt A: ", [2,0]), false,
+  "Kontakt A: Die Reibkraft \\(R_A\\) muss der Gleitbewegung entgegen wirken.",
+  "Kontakt A: Friction force \\(R_A\\) must act against the sliding motion.",
+  "fb_contact kinetic vector wrong sense");
+fb_check(fb_contact(o_st, n_st, 1, "Kontakt A: ", [-2,0.5]), true,
+  "Kontakt A: Reaktionen \\(N_A\\) und \\(R_A\\) gefunden.",
+  "Kontakt A: Reactions \\(N_A\\) and \\(R_A\\) found.",
+  "fb_contact kinetic vector ok");
+
+/* ---- kinetic friction, velocity given by a "disp" object ---- */
+o_kin: [["contact","",[0,0],[0,-1],2,"hide"],
+        ["wall","Boden",[0,0],[1,0],45,"hide"],
+        ["force","N_A",[0,0],[0,1],"active"],
+        ["force","R_A",[0,0],[1,0],"active"],
+        ["disp","v_A",[0,0],0,1,2]];
+n_kin: [[3,4], 2, "N_A", "R_A", "v_A"];
+fb_check(fb_contact(o_kin, n_kin, 1, "Kontakt A: ", "v_A"), false,
+  "Kontakt A: Die Reibkraft \\(R_A\\) muss entgegen \\(v_A\\) wirken.",
+  "Kontakt A: Friction force \\(R_A\\) must act against \\(v_A\\).",
+  "fb_contact kinetic disp wrong sense");
+o_kin2: [["contact","",[0,0],[0,-1],2,"hide"],
+         ["wall","Boden",[0,0],[1,0],45,"hide"],
+         ["force","N_A",[0,0],[0,1],"active"],
+         ["force","R_A",[0,0],[1,0],"active"],
+         ["disp","v_A",[0,0],180,1,2]];
+fb_check(fb_contact(o_kin2, n_kin, 1, "Kontakt A: ", "v_A"), true,
+  "Kontakt A: Reaktionen \\(N_A\\) und \\(R_A\\) gefunden.",
+  "Kontakt A: Reactions \\(N_A\\) and \\(R_A\\) found.",
+  "fb_contact kinetic disp ok");
+
+/* ---- names given: other forces at the point (a weight) are ignored if listed ---- */
+o_named: [["contact","",[0,0],[0,-1],2,"hide"],
+          ["wall","Boden",[0,0],[1,0],45,"hide"],
+          ["force","N_A",[0,0],[0,1],"active"],
+          ["force","R_A",[0,0],[1,0],"active"],
+          ["force","G",[0,1],[0,0],"active"]];
+n_named: [[3,4,5], 2, "N_A", "R_A", "G"];
+fb_check(fb_contact(o_named, n_named, 1, "Kontakt A: ", "static", "N_A", ["R_A"], ["G"]), true,
+  "Kontakt A: Reaktionen \\(N_A\\) und \\(R_A\\) gefunden.",
+  "Kontakt A: Reactions \\(N_A\\) and \\(R_A\\) found.",
+  "fb_contact named, weight ignored");
+
+/* ---- ... and commented as a probable reaction with a wrong name if not listed ---- */
+fb_check(fb_contact(o_named, n_named, 1, "Kontakt A: ", "static", "N_A", ["R_A"]), false,
+  "Kontakt A: Die Kraft \\(G\\) wirkt normal zur Berührfläche. Als Normalkraft erwartet: \\(N_A\\).",
+  "Kontakt A: Force \\(G\\) acts normal to the contact surface. Expected normal force: \\(N_A\\).",
+  "fb_contact named, weight not ignored");
+
+/* ---- names given, smooth contact: a tangential force is not admissible ---- */
+fb_check(fb_contact(o_named, n_named, 1, "Kontakt A: ", "", ["N_A"], [], ["G"]), false,
+  "Kontakt A: Die Kraft \\(R_A\\) wirkt tangential zur Berührfläche. Der Kontakt ist glatt.",
+  "Kontakt A: Force \\(R_A\\) acts tangential to the contact surface. The contact is smooth.",
+  "fb_contact named smooth, tangential force");
+fb_check(fb_contact(o_named, n_named, 1, "Kontakt A: ", "", ["N_A"], [], ["G", "R_A"]), true,
+  "Kontakt A: Reaktion \\(N_A\\) gefunden.",
+  "Kontakt A: Reaction \\(N_A\\) found.",
+  "fb_contact named smooth");
+
+/* ---- names given, normal force named differently (names may be CAS symbols) ---- */
+n_named_N: [[3,4,5], 2, N, R_A, G];
+fb_check(fb_contact(o_named, n_named_N, 1, "Kontakt A: ", "static", ["N_A","N_1"], ["R_A"], ["G"]), false,
+  "Kontakt A: Die Kraft \\(N\\) wirkt normal zur Berührfläche. Als Normalkraft erwartet: \\(N_A\\) oder \\(N_1\\).",
+  "Kontakt A: Force \\(N\\) acts normal to the contact surface. Expected normal force: \\(N_A\\) or \\(N_1\\).",
+  "fb_contact named, normal force not found");
+
+/* ---- names given, friction force not tangential ---- */
+o_named_bad: [["contact","",[0,0],[0,-1],2,"hide"],
+              ["wall","Boden",[0,0],[1,0],45,"hide"],
+              ["force","N_A",[0,0],[0,1],"active"],
+              ["force","R_A",[0,0],[2,1],"active"]];
+fb_check(fb_contact(o_named_bad, n_st, 1, "Kontakt A: ", "static", ["N_A"], ["R_A"]), false,
+  "Kontakt A: Die Haftkraft \\(R_A\\) weicht um 27° von der Tangente ab.",
+  "Kontakt A: Friction force \\(R_A\\) deviates by 27° from the tangent.",
+  "fb_contact named, friction not tangential");
+
+/* ---- names given, normal force slightly inclined: angle to the normal ---- */
+o_named_tilt: [["contact","",[0,0],[0,-1],2,"hide"],
+               ["wall","Boden",[0,0],[1,0],45,"hide"],
+               ["force","N_A",[0,0],[0.2,1],"active"],
+               ["force","R_A",[0,0],[1,0],"active"]];
+fb_check(fb_contact(o_named_tilt, n_st, 1, "Kontakt A: ", "static", ["N_A"], ["R_A"]), false,
+  "Kontakt A: Die Normalkraft \\(N_A\\) weicht um 11° von der Normalen ab.",
+  "Kontakt A: Normal force \\(N_A\\) deviates by 11° from the normal.",
+  "fb_contact named, normal force inclined");
+
+/* ---- names given, an oblique force with another name ---- */
+o_named_obl: [["contact","",[0,0],[0,-1],2,"hide"],
+              ["wall","Boden",[0,0],[1,0],45,"hide"],
+              ["force","N_A",[0,0],[0,1],"active"],
+              ["force","R_A",[0,0],[1,0],"active"],
+              ["force","F",[0,0],[2,1],"active"]];
+n_named_obl: [[3,4,5], 2, "N_A", "R_A", "F"];
+fb_check(fb_contact(o_named_obl, n_named_obl, 1, "Kontakt A: ", "static", ["N_A"], ["R_A"]), false,
+  "Kontakt A: Die Kraft \\(F\\) weicht um 27° von der Tangente ab. Als Reaktionen erwartet: \\(N_A\\) (normal), \\(R_A\\) (tangential).",
+  "Kontakt A: Force \\(F\\) deviates by 27° from the tangent. Expected reactions: \\(N_A\\) (normal), \\(R_A\\) (tangential).",
+  "fb_contact named, oblique foreign force");
+
+/* ---- inclined contact (bar on a corner): normal [-3,-2]/|..|, sliding along [2,-3] ---- */
+o_corner: [["contact","",[0,2],[-3,-2],[2,3],"hide"],
+           ["wall","",[0,2],[-2,2],45,"hide"],
+           ["wall","",[0,2],[0,0],-45,"hide"],
+           ["force","N_B",[-3,0],[0,2],"active"],
+           ["force","R_B",[0,2],[-2,5],"active"],
+           ["disp","v_B",[0,2],atan2(-3,2)*180/%pi,1,2]];
+n_corner: [[4,5], "", "", "N_B", "R_B", "v_B"];
+fb_check(fb_contact(o_corner, n_corner, 1, "Kontakt B: ", "v_B", "N_B", "R_B"), true,
+  "Kontakt B: Reaktionen \\(N_B\\) und \\(R_B\\) gefunden.",
+  "Kontakt B: Reactions \\(N_B\\) and \\(R_B\\) found.",
+  "fb_contact corner kinetic ok");
+
+/* ---- dev diagnostics ---- */
+fb_check(fb_contact(o_st, n_st, 1, "Kontakt A: ", "v_X"), false,
+  "Kontakt A: fb_contact(): disp object 'v_X' not found or ambiguous.",
+  "Kontakt A: fb_contact(): disp object 'v_X' not found or ambiguous.",
+  "fb_contact dev: disp not found");
+fb_check(fb_contact(o_st, n_st, 1, "Kontakt A: ", [0,1]), false,
+  "Kontakt A: fb_contact(): the velocity has no tangential component.",
+  "Kontakt A: fb_contact(): the velocity has no tangential component.",
+  "fb_contact dev: velocity normal");
+fb_check(fb_contact(o_st, n_st, 1, "Kontakt A: ", "static", ["N_A"]), false,
+  "Kontakt A: fb_contact(): names of the friction force missing.",
+  "Kontakt A: fb_contact(): names of the friction force missing.",
+  "fb_contact dev: friction names missing");

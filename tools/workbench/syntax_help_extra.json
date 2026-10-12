@@ -1,0 +1,312 @@
+{
+ "note": "Entries written by hand, merged by build_help.py into syntax_help.json (they win over generated entries of the same name). kind: meclib, object, stack, maxima. args: argument names as shown; argdocs (optional): {arg: text}.",
+ "entries": [
+  {
+   "name": "stack_include",
+   "kind": "stack",
+   "sig": "stack_include(\"url\")",
+   "args": [
+    "\"url\""
+   ],
+   "text": "Includes Maxima code from a URL into the question variables when the question is compiled (e.g. meclib's fb_fbd.mac and fb_value.mac from GitHub). Only allowed sources work on a STACK server.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Inclusions/"
+  },
+  {
+   "name": "castext",
+   "kind": "stack",
+   "sig": "castext(\"text\")",
+   "args": [
+    "\"text\""
+   ],
+   "text": "A castext literal inside Maxima code: the string is compiled like question text, so {@...@} and [[lang]] blocks work in it. Only literal strings are allowed.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/CASText/"
+  },
+  {
+   "name": "makelist",
+   "kind": "maxima",
+   "sig": "makelist(expr, i, i_0, i_1)",
+   "args": [
+    "expr",
+    "i",
+    "i_0",
+    "i_1"
+   ],
+   "text": "List of the values of expr for i from i_0 to i_1 (also makelist(expr, x, list)).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-makelist"
+  },
+  {
+   "name": "sublist",
+   "kind": "maxima",
+   "sig": "sublist(list, p)",
+   "args": [
+    "list",
+    "p"
+   ],
+   "text": "Elements of list for which the predicate p is true.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sublist"
+  },
+  {
+   "name": "sublist_indices",
+   "kind": "maxima",
+   "sig": "sublist_indices(list, p)",
+   "args": [
+    "list",
+    "p"
+   ],
+   "text": "Indices of the elements of list for which the predicate p is true.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sublist_indices"
+  },
+  {
+   "name": "map",
+   "kind": "maxima",
+   "sig": "map(f, list)",
+   "args": [
+    "f",
+    "list"
+   ],
+   "text": "Applies f to every element of list.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-map"
+  },
+  {
+   "name": "lambda",
+   "kind": "maxima",
+   "sig": "lambda([x_1, ..., x_n], expr_1, ..., expr_n)",
+   "args": [
+    "[x_1, ..., x_n]",
+    "expr_1, ..., expr_n"
+   ],
+   "text": "Anonymous function, e.g. lambda([x], x^2).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-lambda"
+  },
+  {
+   "name": "block",
+   "kind": "maxima",
+   "sig": "block([v_1, ..., v_m], expr_1, ..., expr_n)",
+   "args": [
+    "[v_1, ..., v_m]",
+    "expr_1, ..., expr_n"
+   ],
+   "text": "Evaluates the expressions in turn with local variables v_1 ... v_m; the value is the last expression (or the argument of return).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-block"
+  },
+  {
+   "name": "subst",
+   "kind": "maxima",
+   "sig": "subst(a, b, expr)",
+   "args": [
+    "a",
+    "b",
+    "expr"
+   ],
+   "text": "Substitutes a for b in expr; also subst([b_1 = a_1, ...], expr).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-subst"
+  },
+  {
+   "name": "ev",
+   "kind": "maxima",
+   "sig": "ev(expr, arg_1, ..., arg_n)",
+   "args": [
+    "expr",
+    "arg_1, ..., arg_n"
+   ],
+   "text": "Evaluates expr in the environment of the arguments, e.g. ev(expr, x = 2) or ev(expr, simp).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-ev"
+  },
+  {
+   "name": "ratsimp",
+   "kind": "maxima",
+   "sig": "ratsimp(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Simplifies a rational expression (a common test whether a difference is zero).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-ratsimp"
+  },
+  {
+   "name": "trigsimp",
+   "kind": "maxima",
+   "sig": "trigsimp(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Simplifies with sin^2+cos^2=1 and related identities.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-trigsimp"
+  },
+  {
+   "name": "float",
+   "kind": "maxima",
+   "sig": "float(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Converts numbers in expr to floating point.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-float"
+  },
+  {
+   "name": "round",
+   "kind": "maxima",
+   "sig": "round(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Nearest integer.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-round"
+  },
+  {
+   "name": "length",
+   "kind": "maxima",
+   "sig": "length(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Number of elements of a list (or of the arguments of an expression).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-length"
+  },
+  {
+   "name": "append",
+   "kind": "maxima",
+   "sig": "append(list_1, list_2, ...)",
+   "args": [
+    "list_1",
+    "list_2, ..."
+   ],
+   "text": "Joins lists.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-append"
+  },
+  {
+   "name": "endcons",
+   "kind": "maxima",
+   "sig": "endcons(expr, list)",
+   "args": [
+    "expr",
+    "list"
+   ],
+   "text": "List with expr added at the end.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-endcons"
+  },
+  {
+   "name": "cons",
+   "kind": "maxima",
+   "sig": "cons(expr, list)",
+   "args": [
+    "expr",
+    "list"
+   ],
+   "text": "List with expr added at the front.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-cons"
+  },
+  {
+   "name": "first",
+   "kind": "maxima",
+   "sig": "first(list)",
+   "args": [
+    "list"
+   ],
+   "text": "First element (also second ... tenth, last).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-first"
+  },
+  {
+   "name": "rest",
+   "kind": "maxima",
+   "sig": "rest(list, n)",
+   "args": [
+    "list",
+    "n"
+   ],
+   "text": "list without its first n elements (n < 0: without its last -n elements).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-rest"
+  },
+  {
+   "name": "listp",
+   "kind": "maxima",
+   "sig": "listp(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "true if expr is a list.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-listp"
+  },
+  {
+   "name": "stringp",
+   "kind": "maxima",
+   "sig": "stringp(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "true if expr is a string.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-stringp"
+  },
+  {
+   "name": "sconcat",
+   "kind": "maxima",
+   "sig": "sconcat(arg_1, arg_2, ...)",
+   "args": [
+    "arg_1",
+    "arg_2, ..."
+   ],
+   "text": "Concatenates its arguments to a string.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sconcat"
+  },
+  {
+   "name": "string",
+   "kind": "maxima",
+   "sig": "string(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Expression -> string, as it would be typed.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-string"
+  },
+  {
+   "name": "is",
+   "kind": "maxima",
+   "sig": "is(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Evaluates a predicate to true or false.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-is"
+  },
+  {
+   "name": "solve",
+   "kind": "maxima",
+   "sig": "solve(eqs, vars)",
+   "args": [
+    "eqs",
+    "vars"
+   ],
+   "text": "Solves equations, e.g. solve([x+y=1, x-y=0], [x, y]).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-solve"
+  },
+  {
+   "name": "rand",
+   "kind": "maxima",
+   "sig": "rand(n)",
+   "args": [
+    "n"
+   ],
+   "text": "Random number (STACK: repeatable for the variant); rand(5) gives 0 ... 4, rand([a,b,c]) an element.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-rand"
+  },
+  {
+   "name": "stackjson_parse",
+   "kind": "stack",
+   "sig": "stackjson_parse(\"json\")",
+   "args": [
+    "\"json\""
+   ],
+   "text": "Parses a JSON string into a Maxima structure (lists, strings, numbers); meclib questions use it for the objects input: obj: stackjson_parse(objects).",
+   "url": "https://docs.stack-assessment.org/en/Authoring/JSON/"
+  },
+  {
+   "name": "stackjson_stringify",
+   "kind": "stack",
+   "sig": "stackjson_stringify(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Converts a Maxima list structure into a JSON string; meclib questions use it for the graphic's initial objects: init: stackjson_stringify(initdata).",
+   "url": "https://docs.stack-assessment.org/en/Authoring/JSON/"
+  }
+ ]
+}

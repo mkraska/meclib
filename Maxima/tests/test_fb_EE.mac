@@ -1,0 +1,42 @@
+/* ============================================================================
+   Tests for fb_EE(): one equation of equilibrium against sumF() / sumM() of the
+   sketch. Uses the scene of test_sum_xyM.mac (bar on a floor and an edge,
+   tan(alpha) = 2/3).
+   ============================================================================ */
+
+ee_opt: [subst = [alpha = atan(2/3)]];
+ee_Fx: sumF(o_sx, n_sx, [1,0], [contacts = [1,2]]);
+ee_Fy: sumF(o_sx, n_sx, [0,1], [contacts = [1,2]]);
+ee_M: sumM(o_sx, n_sx, [3,0], a, [contacts = [1,2], at = [[6, [xg, yg]]]]);
+
+/* right: empty text */
+fb_check(fb_EE(N_B*sin(alpha) - R_B*cos(alpha), ee_Fx, ee_opt), true, "", "", "fb_EE x right");
+fb_check(fb_EE(N_A + N_B*cos(alpha) + R_B*sin(alpha) - G, ee_Fy, ee_opt), true, "", "", "fb_EE y right");
+fb_check(fb_EE(-2*a*N_B/sin(alpha) - G*(xg - 3*a), ee_M, ee_opt), true, "", "", "fb_EE M right");
+/* numbers of the sketch instead of alpha */
+fb_check(fb_EE((2*N_B - 3*R_B)/sqrt(13), ee_Fx, ee_opt), true, "", "", "fb_EE numbers of the sketch");
+/* [S], [T] as S, T */
+fb_check(fb_EE([N_B*sin(alpha) - R_B*cos(alpha)], [ee_Fx], ee_opt), true, "", "", "fb_EE one-element lists");
+
+/* sign of the whole sum, by kind */
+fb_check(fb_EE(-(N_A + N_B*cos(alpha) + R_B*sin(alpha) - G), ee_Fy, append(ee_opt, [kind = "y"])), false,
+  "<br>Zählen Sie Kräfte in positiver \\(y\\)-Richtung positiv.",
+  "<br>Count forces in the positive \\(y\\) direction as positive.", "fb_EE sign y");
+fb_check(fb_EE(2*a*N_B/sin(alpha) + G*(xg - 3*a), ee_M, append(ee_opt, [kind = "M", title = "\\Sigma M_P"])), false,
+  "<br>\\(\\Sigma M_P\\): Zählen Sie Momente gegen den Uhrzeigersinn positiv.",
+  "<br>\\(\\Sigma M_P\\): Count counterclockwise moments as positive.", "fb_EE sign M with title");
+fb_check(fb_EE(-(N_B*sin(alpha) - R_B*cos(alpha)), ee_Fx, ee_opt), false,
+  "<br>Das Vorzeichen der Summe stimmt nicht. Prüfen Sie die Zählrichtung.",
+  "<br>The sign of the sum is wrong. Check the counting direction.", "fb_EE sign without kind");
+
+/* a name that is not in the sketch */
+ee_T4: sumF(o_sx, [[3], [4,5], N_A, N, R_B, G], [1,0], [contacts = [1,2]]);
+fb_check(fb_EE(N_B*sin(alpha) - R_B*cos(alpha), ee_T4, ee_opt), false,
+  "<br>&nbsp;Unerwartete Variable \\({{N}_{B}}\\).&nbsp;Fehlende Variable \\({N}\\) (<code>N</code>).",
+  "<br>&nbsp;Unexpected variable \\({{N}_{B}}\\).&nbsp;Missing variable \\({N}\\) (<code>N</code>).",
+  "fb_EE renamed force");
+/* a wrong term (variables right) */
+fb_check(fb_EE(N_A + N_B*cos(alpha) + R_B*sin(alpha) + G, ee_Fy, ee_opt), false,
+  "<br>&nbsp;Pr&uuml;fen Sie den Term mit \\({G}\\).", "<br>&nbsp;Check the term with \\({G}\\).", "fb_EE wrong term");
+/* several equations: refused */
+fb_check(["", is(second(fb_EE([1, 2], [1, 2])) = false)], true, "", "", "fb_EE refuses lists");

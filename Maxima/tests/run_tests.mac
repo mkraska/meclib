@@ -30,7 +30,9 @@ block([%_hits, %_dir],
     print("       It is part of the meclib repository - check your working copy (see ../../config/README.md)."),
     error("STACK Maxima library missing")
   ),
-  %_dir: substring(%_hits[1], 1, slength(%_hits[1]) - slength("stackmaxima.mac") + 1),
+  /* the newest version (folder names are STACK's numeric plugin versions), as in the workbench */
+  %_hits: sort(%_hits),
+  %_dir: substring(last(%_hits), 1, slength(last(%_hits)) - slength("stackmaxima.mac") + 1),
   print(sconcat("[ using STACK-Maxima library from ", %_dir, " ]")),
   file_search_maxima: cons(sconcat(%_dir, "###.{mac,mc}"), file_search_maxima),
   file_search_maxima: cons(sconcat(%_dir, "contrib/###.{mac,mc}"), file_search_maxima),
@@ -74,5 +76,11 @@ load("test_fb_system.mac")$
 load("test_fb_name.mac")$
 load("test_fb_spline.mac")$
 load("test_fb_matrix.mac")$
+load("test_fb_unique_names.mac")$
+load("test_fb_contact_reactions.mac")$
+load("test_fb_fbd.mac")$
+load("test_sum_xyM.mac")$
+load("test_fb_EE.mac")$
+load("test_fb_objects.mac")$
 
 s_test_summary()$

@@ -49,7 +49,9 @@ installed Maxima version against that release's supported range.
 
 **Filled manually for now.** There's no fetch-it-yourself script yet - a
 version is just a plain copy of that GitHub subtree, placed by hand (or by
-Claude, on request). A setup script/website that lets you pick a target
+Claude, on request); the steps are on the wiki page "Testing a new STACK
+version". With several versions here, the workbench and the offline tests use
+the newest one. A setup script/website that lets you pick a target
 STACK version and populates this automatically is a planned enhancement,
 not yet built.
 
