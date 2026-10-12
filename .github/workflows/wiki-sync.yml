@@ -1,0 +1,25 @@
+# Publishes the wiki drafts in doc/wiki to the meclib wiki (see tools/wiki_sync.py).
+# Runs on every push to dev2026 that changes doc/wiki, and by hand (Actions -> Wiki sync -> Run).
+# A page edited on GitHub since its draft was made is not overwritten; the run then fails and
+# lists it, so that the edit can be merged into the draft first.
+name: Wiki sync
+on:
+  push:
+    branches: [dev2026]
+    paths: ["doc/wiki/**", "tools/wiki_sync.py"]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: wiki-sync
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clone the wiki
+        run: git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git" "$RUNNER_TEMP/wiki"
+      - name: Publish the drafts
+        run: |
+          git -C "$RUNNER_TEMP/wiki" config user.name "meclib wiki sync"
+          git -C "$RUNNER_TEMP/wiki" config user.email "actions@users.noreply.github.com"
+          python3 tools/wiki_sync.py --wiki "$RUNNER_TEMP/wiki" --push
