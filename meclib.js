@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2026 10 10";
+const versionText= "JXG "+JXG.version+" Meclib 2026 10 12";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -422,7 +422,7 @@ class contact {
   constructor(data) {
     this.d = data.slice(0);
     this.ref = data[4];                 // name (string) or 1-based index (number), like Maxima
-    this.len = data.length > 5 && data[5] ? data[5] : 1;
+    this.len = data.length > 5 && data[5] ? data[5] : 3;   // 3 grid units: 1.5 on each side for a force
     this.vis = data.length > 6 ? !!data[6] : true;
     this.state = "show";                // placeholder, synced from the reference in update()
     const [x, y] = data[2];
@@ -1058,7 +1058,10 @@ class forceGen {
       p2.setAttribute({name:toTEX(document.getElementById(fid).value) })});
     vec.on('up', function(e) {
       //only generate force if distance is sufficient to not create overlapping objects
-      if (ref1.Dist(this.point1)+ref2.Dist(this.point2) >dx) {
+      //and if it has a name (otherwise the name field is marked)
+      const moved = ref1.Dist(this.point1)+ref2.Dist(this.point2) >dx;
+      if (moved && !genNameOK(fid)) {}
+      else if (moved) {
       	objects.push(new force(["force", document.getElementById(fid).value, 
           XY(p1), XY(p2), 10, "active"] ));
         // generate new unique force name
@@ -1199,6 +1202,131 @@ class label {
   name(){  return "0" }
 }
 
+// label with a leader line, e.g. a friction coefficient pointing at a rough surface
+// [ "description", "label", [x1, y1], [x2, y2], gap, startgap ]
+// The label is centered at [x2, y2]. The line starts at [x1, y1] (or startgap pixels from it) and
+// ends gap pixels (default 4) before the label's bounding box, so it never touches the text.
+class description {
+  constructor(data) {
+    this.d = data;
+    this.gap = data.length > 4 && data[4] != null ? data[4] : 4;
+    this.gap1 = data.length > 5 && data[5] != null ? data[5] : 0;
+    const [x1, y1] = data[2], [x2, y2] = data[3];
+    this.tex = toTEX(data[1]);
+    this.text = board.create('text', [x2, y2, this.tex], {anchorX: 'middle', anchorY: 'middle',
+      fixed: true, highlight: false, display: 'html'});
+    this.size = labelSize(this.text, this.tex);   // estimate first, measured once MathJax is done
+    // end points of the visible part of the line, in board coordinates
+    const ends = () => {
+      const ux = board.unitX, uy = board.unitY;
+      let dx = (x1 - x2) * ux, dy = (y1 - y2) * uy;          // label center -> start, in px
+      const L = Math.hypot(dx, dy);
+      if (L == 0) { return null }
+      dx /= L; dy /= L;
+      const [w, h] = this.size;
+      const t = Math.min(Math.abs(dx) > 1e-9 ? w / 2 / Math.abs(dx) : Infinity,
+                         Math.abs(dy) > 1e-9 ? h / 2 / Math.abs(dy) : Infinity) + this.gap;
+      const t1 = L - this.gap1;
+      if (t >= t1) { return null }                       // label covers the whole line
+      return [x2 + dx * t / ux, y2 + dy * t / uy, x2 + dx * t1 / ux, y2 + dy * t1 / uy];
+    };
+    this.line = board.create('curve', [[], []], {strokeColor: 'black', strokeWidth: 1, highlight: false});
+    this.line.updateDataArray = function () {
+      const e = ends();
+      this.dataX = e ? [e[0], e[2]] : []; this.dataY = e ? [e[1], e[3]] : [];
+    };
+    this.obj = [this.text, this.line];
+    // MathJax typesets asynchronously: measure the rendered label until its size is stable
+    whenTypeset(this.text, () => { this.size = labelSize(this.text, this.tex); board.update() });
+  }
+  data() { return this.d }
+  name() { return '"' + this.d[1] + '"' }
+}
+
+// Size [width, height] in pixels of a text element's label. Measured from the rendered element
+// once MathJax has typeset it, otherwise estimated from the TeX source (estimateTexSize).
+// Meant as the common basis for placing labels next to lines and arrows.
+function labelSize(el, tex) {
+  const n = el && el.rendNode;
+  if (n && isTypeset(n)) {
+    const r = n.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) { return [r.width, r.height] }
+  }
+  const fs = el && el.visProp && el.visProp.fontsize ? el.visProp.fontsize : 12;
+  return estimateTexSize(tex ?? (n ? n.textContent : ""), fs);
+}
+
+// true if the element contains no raw TeX any more (MathJax 2 or 3 has replaced it)
+function isTypeset(node) {
+  if (node.querySelector('mjx-container, .MathJax, .MathJax_CHTML, .MathJax_SVG')) { return true }
+  return !/\\\(|\\\[/.test(node.textContent);
+}
+
+// calls fn once the element is typeset and its size no longer changes (polls for up to 5 s)
+function whenTypeset(el, fn) {
+  let last = "", tries = 0;
+  const check = () => {
+    const n = el.rendNode;
+    if (n && isTypeset(n)) {
+      const r = n.getBoundingClientRect(), key = r.width.toFixed(1) + "x" + r.height.toFixed(1);
+      if (key == last && r.width > 0) { fn(); return }
+      last = key;
+    }
+    if (++tries < 50) { setTimeout(check, 100) }
+  };
+  setTimeout(check, 50);
+}
+
+// Rough size [width, height] in pixels of a TeX formula (with or without \( \)) at font size fs:
+// letters and digits 0.55 em, relations (=, <, >) 1.3 em and + - 1 em including their spacing,
+// punctuation 0.3 em, commands like \mu 0.6 em, sub- and superscripts 70 % wide and 0.15 em
+// higher, \frac 70 % wide and 1.6 lines high. MathJax renders about 20 % larger than the font.
+// Rather too large than too small: a leader line then stops a little early instead of touching.
+function estimateTexSize(tex, fs) {
+  const em = fs * 1.2;
+  let s = String(tex).replace(/^\s*\\\(|\\\)\s*$/g, "").replace(/^\s*\\\[|\\\]\s*$/g, "");
+  let i = 0;
+  // parses until the end or a closing brace; returns [width, height] in em
+  function seq() {
+    let w = 0, h = 1.1, sub = false, sup = false;
+    while (i < s.length && s[i] != "}") {
+      const [tw, th] = token();
+      w += tw.w; h = Math.max(h, th);
+      if (tw.sub) { sub = true } if (tw.sup) { sup = true }
+    }
+    return [w, h + (sub ? 0.15 : 0) + (sup ? 0.15 : 0)];
+  }
+  function group() {                       // {...} or a single token
+    if (s[i] == "{") { i++; const r = seq(); if (s[i] == "}") { i++ } return r }
+    const [t, h] = token(); return [t.w, h];
+  }
+  function token() {
+    const c = s[i];
+    if (c == "{") { const [w, h] = group(); return [{w}, h] }
+    if (c == "_" || c == "^") { i++; const [w, h] = group(); return [{w: 0.7 * w, sub: c == "_", sup: c == "^"}, 1.1] }
+    if (c == "\\") {
+      const m = /^\\([a-zA-Z]+|.)/.exec(s.slice(i)); i += m[0].length;
+      const cmd = m[1];
+      if (cmd == "frac") { const [a, ha] = group(), [b, hb] = group(); return [{w: 0.7 * Math.max(a, b) + 0.2}, 0.8 * (ha + hb)] }
+      if (["text", "mathrm", "mathit", "mathbf", "operatorname", "boldsymbol", "vec", "bar", "hat", "dot", "overline"].includes(cmd)) {
+        const [w, h] = group(); return [{w}, h + (["vec", "bar", "hat", "dot", "overline"].includes(cmd) ? 0.2 : 0)] }
+      if ([";", ":", ",", "!", " "].includes(cmd)) { return [{w: {";": 0.28, ":": 0.22, ",": 0.17, "!": -0.17, " ": 0.25}[cmd]}, 1.1] }
+      if (cmd == "quad") { return [{w: 1}, 1.1] }
+      if (cmd == "qquad") { return [{w: 2}, 1.1] }
+      if (["left", "right"].includes(cmd)) { return [{w: 0}, 1.1] }
+      return [{w: 0.6}, 1.1];                 // \mu, \alpha, \cdot, ...
+    }
+    i++;
+    if (/\s/.test(c)) { return [{w: 0}, 1.1] }
+    if ("=<>".includes(c)) { return [{w: 1.3}, 1.1] }
+    if ("+-".includes(c)) { return [{w: 1}, 1.1] }
+    if (".,;:!'|()[]".includes(c)) { return [{w: 0.3}, 1.1] }
+    return [{w: 0.55}, 1.1];
+  }
+  const [w, h] = seq();
+  return [w * em, h * em];
+}
+
 // line between along x and y data vectors with optional dash style, thickness and color
 // [ "line", "color", [x1, x2,...], [y1, y2,...] ,dash, th ]
 class line {
@@ -1238,6 +1366,16 @@ class line2p {
       highlight:true, highlightStrokeColor:highlightColor, 
       name:data[1],withLabel:true});
     for (let pt of [this.p1, this.p2]) {	pt.scale = [this.f,this.f] }
+    // While a control point is dragged, it neither glides on nor snaps to elements that depend on
+    // this line's own points (e.g. intersections with this line, which questions add to targets so
+    // that a crosshair snaps to them): the point would follow a point that it moves itself and
+    // stick at off-grid positions. Determined on each drag, since such elements can be created
+    // after the line.
+    const own = (t) => { const e = board.select(t); return e && e.ancestors && (e.ancestors[this.p1.id] || e.ancestors[this.p2.id]) };
+    for (let pt of [this.p1, this.p2]) {
+      pt.on("down", () => pt.setAttribute({ attractors: targets.filter(t => !own(t)),
+        ignoredSnapToPoints: board.objectsList.filter(o => JXG.isPoint(o) && own(o)) }))
+    }
     this.p1.on("up", update );
     this.p2.on("up", update );
     // if required, add normal
@@ -1350,8 +1488,11 @@ class momentGen {
     document.getElementById(mid).value = cleanupName(document.getElementById(mid).value)
       p3.setAttribute({name:toTEX(document.getElementById(mid).value )})});
     arc.on('up', function(e) {
-      //only generate force if distance is sufficient to not create overlapping objects
-      if (ref2.Dist(p2) >dx) {
+      //only generate moment if distance is sufficient to not create overlapping objects
+      //and if it has a name (otherwise the name field is marked)
+      const moved = ref2.Dist(p2) >dx;
+      if (moved && !genNameOK(mid)) {}
+      else if (moved) {
         objects.push(new moment(["moment", document.getElementById(mid).value, 
           XY(p1), XY(p2), XY(p3), "active"] ));
         // generate new unique moment name
@@ -1905,6 +2046,7 @@ function init() {
       case "crosshair":	objects.push(new crosshair(m)); break;
       case "dashpot":	objects.push(new dashpot(m)); break;
       case "dim": 	objects.push(new dim(m)); break;
+      case "description": objects.push(new description(m)); break;
       case "dir": 	objects.push(new dir(m)); break;
       case "disp": 	objects.push(new disp(m)); break;
       case "fix1": 	objects.push(new fix1(m)); break;
@@ -2036,6 +2178,17 @@ function toTEX(str) {
 // makes sure that a name consists of a single character with or without subscript. 
 // If there is more than one character before the end or before the first subscript, then the name is modified.
 // https://jsfiddle.net/0pzeu68g/1/
+// forceGen, momentGen: true if the name field holds a name; otherwise the field is outlined
+// in red for a moment and gets the focus, and no load is created
+function genNameOK(id) {
+  const el = document.getElementById(id);
+  if (!el) return true;
+  if (el.value.trim() !== "") return true;
+  el.style.outline = "2px solid #c00";
+  el.focus();
+  setTimeout(function() { el.style.outline = ""; }, 1500);
+  return false;
+}
 function cleanupName(str) {
   let strList = str.split(/\s+|\*/);
   let out =""

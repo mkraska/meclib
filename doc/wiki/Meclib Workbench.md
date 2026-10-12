@@ -31,8 +31,9 @@ Paste an object list (`initdata`), choose the meclib.js version (local working c
 ### Questions
 
 - **Files:** add your question folders (folder dialog or pasted path), drop Moodle XML files onto the page, create new files and questions from the meclib template, duplicate questions, save single questions as new files, split multi-question files.
-- **Editor:** question variables and texts with syntax highlighting (Maxima, castext, JSXGraph), inputs table, question options, potential response trees (with a graph of each tree and undo/redo of all changes), text snippets (e.g. the `[[jsxgraph]]` block, operating hints for free-body diagrams), and a dialog that creates an input together with a matching PRT (number with unit, number, expression) using the meclib feedback functions.
-- **Preview:** the question as students see it, with working graphics, German/English, decimal point or comma, and simplification on/off. **Model answers** fills in the model answers, **Check** evaluates the PRTs with the current answers and shows feedback, score, penalty and answer notes.
+- **Editor:** question variables, texts and PRT fields with syntax highlighting (Maxima, castext, JSXGraph) and syntax help (signature box with argument descriptions and a link to the wiki or the STACK documentation, F1, autocomplete of meclib and STACK functions and meclib objects, castext snippets for math delimiters, `{@ @}`, blocks, inputs and PRTs, closing brackets), inputs table, question options, potential response trees (with a graph of each tree and undo/redo of all changes), text snippets (e.g. the `[[jsxgraph]]` block, operating hints for free-body diagrams), and a dialog that creates an input together with a matching PRT (number with unit, number, expression) using the meclib feedback functions.
+- **Preview:** the question as students see it, with working graphics, German/English, decimal point or comma, and simplification on/off. **TAns** fills in the model answers, **Check** evaluates the PRTs with the current answers and shows feedback, score, penalty and answer notes. After an edit the answers (and the state of the graphic) are kept and checked again, so the effect of a PRT change is visible at once; **Restart** clears them. MathJax 2.7.9 or 3.2.2 (Moodle 5) can be chosen.
+- **Side bars:** editor and preview each have a bar beside them with their buttons (undo/redo, snippets, Check, model answers, ...) and jump buttons to their sections; `⋯` sets the side of the bar and the editor settings.
 - **Review:** checks the question against the conventions for meclib questions (style guide, wiki pages of the feedback functions) and offers fixes with a preview, to be accepted or rejected per item — useful when updating older questions. Rejected proposals are recorded in the internal question description.
 - **Saving:** every change is written into the XML file after a short pause (with a `.bak` copy of the file as it was when opened). Import the file into Moodle with *Import → Moodle XML* or *Import as new version*.
 
@@ -50,6 +51,24 @@ The regression scenes of meclib (`tests/scenes/`): run all cases, compare the ac
 | Offline Maxima tests of the feedback functions | [Maxima/tests/README.md](https://github.com/mkraska/meclib/blob/dev2026/Maxima/tests/README.md) |
 | Configuration (STACK version, Maxima library, security map) | [config/README.md](https://github.com/mkraska/meclib/blob/dev2026/config/README.md) |
 
+## STACK versions
+
+The workbench and the offline tests use STACK's Maxima library, security map and JSXGraph of one STACK release, kept per version in the repository. See [[Testing a new STACK version]] for what to do when a new release is to be tested.
+
 ## Limitations
 
 The workbench approximates STACK closely, but not completely: STACK's input validation is not reproduced, answer test messages appear as message keys, and `[[jsxgraph]]` blocks inside PRT feedback are not rendered. Check the final question in Moodle before using it with students.
+
+## Planned
+
+- a tree of folders, files and questions with context menus for their actions
+- review of all questions in a folder at once
+- templates for inputs and PRTs from the wiki
+- editor assistants, e.g. `tansdata: copy(initdata)` with index variables, repeated points as variables
+- bulk edits across questions (e.g. unifying the crosshair setup)
+- keeping review rules, syntax help and wiki pages in step (`build_help.py` already lists differences)
+- choosing the STACK version on the pages instead of always the newest one
+- split files compatible with STACK's gitsync (category files, YAML)
+- automatic multilingual castext: de/en versions kept together in `[[lang]]` blocks (not urgent)
+- expected feedback per test case; reference images of test cases (headless run), e.g. for wiki pages
+- converting pixel graphics (hand sketches) into meclib objects on the Graphic page, possibly with AI support (low priority)

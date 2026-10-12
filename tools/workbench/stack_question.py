@@ -30,6 +30,24 @@ CACHE = HERE / ".cache"
 MECLIB_RAW = re.compile(r"^https://raw\.githubusercontent\.com/mkraska/meclib/([^/]+)/(.+)$")
 INCLUDE = re.compile(r'stack_include\(\s*"([^"]+)"\s*\)')
 ASSIGN = re.compile(r"^\s*([A-Za-z_%][A-Za-z0-9_%]*)\s*:(?!=)")
+LISTASSIGN = re.compile(r"^\s*\[([A-Za-z0-9_%,\s]*)\]\s*:(?!=)")
+
+
+ANYASSIGN = re.compile(r"(?<![A-Za-z0-9_%])([A-Za-z_%][A-Za-z0-9_%]*)\s*:(?!=)")
+
+
+def assigned_names(stmt):
+    """Names a statement assigns (feedback variables): "a: ...", "[a, b]: ..." and assignments
+    inside it, e.g. in if (...) then (ok: false, txt: "...") - strings left out."""
+    out = []
+    m = LISTASSIGN.match(stmt)
+    if m:
+        out += [x.strip() for x in m.group(1).split(",") if re.match(r"^[A-Za-z_%][A-Za-z0-9_%]*$", x.strip())]
+    bare = re.sub(r'"(?:\\.|[^"\\])*"', '""', stmt)
+    for n in ANYASSIGN.findall(bare):
+        if n not in out and not n.startswith("%_"):
+            out.append(n)
+    return out
 FUNDEF = re.compile(r"^\s*([A-Za-z_%][A-Za-z0-9_%]*)\s*\(.*?\)\s*:=", re.S)
 
 
@@ -148,6 +166,43 @@ def question_data(q):
 
 # ---------------------------------------------------------------------- Maxima source handling
 NEW_STATEMENT = re.compile(r"\s*[A-Za-z_%][A-Za-z0-9_%]*\s*(:|\()")
+
+
+def insert_missing_semicolons(src):
+    """src with a ; inserted wherever split_statements() assumes a missing statement separator
+    (right after the last code character of the statement, before a trailing comment).
+    Returns (new src, [line numbers of the statements that got a ;])."""
+    ins, lines, i, n = [], [], 0, len(src)
+    in_str, depth, last_code, has_code = False, 0, None, False
+    while i < n:
+        c = src[i]
+        if in_str:
+            if c == "\\" and i + 1 < n:
+                last_code = i + 1; i += 2; continue
+            if c == '"':
+                in_str = False
+            last_code = i; i += 1; continue
+        if src.startswith("/*", i):
+            end = src.find("*/", i + 2)
+            i = n if end < 0 else end + 2; continue
+        if c in ";$":
+            depth, has_code, last_code = 0, False, None; i += 1; continue
+        if c == "\n" and depth == 0 and has_code and NEW_STATEMENT.match(src, i + 1):
+            ins.append(last_code + 1)
+            lines.append(src.count("\n", 0, last_code) + 1)
+            has_code, last_code = False, None; i += 1; continue
+        if not c.isspace():
+            has_code, last_code = True, i
+        if c == '"':
+            in_str = True
+        elif c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth = max(0, depth - 1)
+        i += 1
+    for k in reversed(ins):
+        src = src[:k] + ";" + src[k:]
+    return src, lines
 
 
 def split_statements(src):
@@ -502,14 +557,38 @@ def prt_required_inputs(prt, input_names):
     return [i for i in input_names if i in used]
 
 
-def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_resolver):
+def tick(label):
+    """Maxima code that records the time at this point (the segment before it is "label")."""
+    return 'meclib_out("tick", sconcat(%s, "|", string(elapsed_real_time())))$' % mstring(label)
+
+
+def timing(results):
+    """[[label, seconds], ...] of the segments between the ticks, in order."""
+    out, last = [], None
+    for t in results.get("tick", []):
+        label, _, val = t.rpartition("|")
+        try:
+            v = float(val)
+        except ValueError:
+            continue
+        if last is not None and label != "start":
+            out.append([label, round(v - last, 3)])
+        last = v
+    return out
+
+
+def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_resolver, others=()):
     """Maxima code evaluating one PRT like STACK's compiled PRT function (stack/prt.class.php):
     feedback variables, then the nodes from the first one along the true/false branches,
     answer test, score and penalty per branch, feedback castext of the branches taken."""
     P = prt["name"]
     tag = re.sub(r"[^A-Za-z0-9]", "_", P)
     v = lambda name: "%%_P_%s_%s" % (tag, name)
-    code = ['print("@@PRT %s@@")$' % P, "simp: %s$" % ("true" if prt["autosimplify"] else "false")]
+    code = ['print("@@PRT %s@@")$' % P]
+    if others:
+        code.append("kill(%s)$" % ",".join(others))
+    code.append("simp: %s$" % ("true" if prt["autosimplify"] else "false"))
+    fvnames = []
     for k, (stmt, line, _ins) in enumerate(split_statements(prt["feedbackvariables"])):
         clean = strip_comments(stmt)
         if not clean.strip():
@@ -518,9 +597,20 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
         if bad:
             code.append('print(%s)$' % mstring("@@PRTERR feedback variables, line %d: %s@@" % (line, forbidden_message(bad))))
             continue
+        for nm in assigned_names(clean):
+            if nm not in fvnames:
+                fvnames.append(nm)
         clean = includes_resolver(clean)
+        code.append('print("@@PRTST@@")$')
         code.append('if errcatch(eval_string(%s)) = [] then print("@@PRTERR feedback variables, line %d@@")$'
                     % (mstring(clean + "$"), line))
+    # values of the feedback variables (as for the question variables), before the nodes run
+    for nm in fvnames:
+        code.append('block([%%_v: errcatch(string(%s)), %%_t: errcatch(fb_tmpl_tostring(%s))],'
+                    ' if %%_v # [] then meclib_out(%s, %%_v[1]), if %%_t # [] then meclib_out(%s, %%_t[1]))$'
+                    % (nm, nm, mstring("prtvar:%s:%s" % (P, nm)), mstring("prttex:%s:%s" % (P, nm))))
+    code.append('print("@@PRTST@@")$')
+    code.append(tick("PRT %s: feedback variables" % P))
     nodes = {n["name"]: n for n in prt["nodes"]}
     targets = {n[b + "nextnode"] for n in prt["nodes"] for b in ("true", "false")}
     roots = [n["name"] for n in prt["nodes"] if n["name"] not in targets]
@@ -537,7 +627,7 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
         if raw_req:
             args.append(mstring(raw_by_input.get(n["sans"].strip(), "")) if n["sans"].strip() in raw_by_input else "false")
         at = "AT%s(%s)" % (n["answertest"], ", ".join(args))
-        body = ["simp: %s" % ("true" if at_simp else "false"),
+        body = ['print("@@PRTST@@")', "simp: %s" % ("true" if at_simp else "false"),
                 "%%_t: errcatch(%s)" % at, "simp: true"]
 
         def branch(b):
@@ -579,6 +669,7 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
                 % (v("fb"), mstring("prt:%s:fbformat" % P), mstring("prt:%s:fb:de" % P), mstring(lang_de),
                    mstring("prt:%s:fb:en" % P), mstring(lang_en)))
     code.append('for %%_f in %s do meclib_out(%s, %%_f)$' % (v("atfb"), mstring("prt:%s:atfb" % P)))
+    code.append(tick("PRT %s: nodes" % P))
     return code
 
 
@@ -597,6 +688,7 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
         code.append("stack_unit_si_declare(true)$")
     code.append("stack_randseed(%d)$" % seed)
     stmt_info = []
+    code.append(tick("start"))
     for k, (stmt, line, inserted) in enumerate(statements):
         clean = strip_comments(stmt)
         if inserted:
@@ -624,12 +716,14 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
         code.append('print("@@QV %d@@")$' % k)
         code.append("%%_r: errcatch(eval_string(%s))$" % mstring(clean + "$"))
         code.append('if %%_r = [] then print("@@QVERR %d@@")$' % k)
+        code.append(tick("question variables, line %d" % line))
     code.append('print("@@QV-END@@")$')
     # values of the assigned variables (raw and as typeset), model answers, castext
     for name in names:
         code.append('block([%%_v: errcatch(string(%s)), %%_t: errcatch(fb_tmpl_tostring(%s))],'
                     ' if %%_v # [] then meclib_out(%s, %%_v[1]), if %%_t # [] then meclib_out(%s, %%_t[1]))$'
                     % (name, name, mstring("var:" + name), mstring("tex:" + name)))
+    code.append(tick("values of the question variables"))
     security = security_findings(data)
     for inp in data["inputs"]:
         tans = inp.get("tans") or ""
@@ -655,6 +749,7 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
                         ' meclib_out(%s, stack_resolve_lang(%%_c[1], %s))))$'
                         % (mstring(hint), mstring("hint:de:" + inp["name"]), mstring(pick_lang("de", langs_q)),
                            mstring("hint:en:" + inp["name"]), mstring(pick_lang("en", langs_q))))
+    code.append(tick("model answers, syntax hints"))
     texts = {"questiontext": data["questiontext"], "generalfeedback": data["generalfeedback"],
              "questionnote": data["questionnote"]}
     langs = languages_used(data["questiontext"])
@@ -671,9 +766,10 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
                     ' meclib_out(%s, stack_resolve_lang(%%_c[1], %s)))$'
                     % (key, mstring(key + ":de"), mstring(pick_lang("de", langs)),
                        mstring(key + ":en"), mstring(pick_lang("en", langs))))
+        code.append(tick(key))
     checked = {}
     if answers is not None:
-        code += answer_code(data, answers, langs, resolver, checked)
+        code += answer_code(data, answers, langs, resolver, checked, names)
     stdout, results = session.run_with_results("\n".join(code))
 
     # attribute Maxima's messages to the statement that produced them
@@ -725,14 +821,14 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
         "languages": langs,
         "picked": {"de": pick_lang("de", langs), "en": pick_lang("en", langs)},
         "check": check_results(checked, results, stdout, data) if answers is not None else None,
+        "timing": timing(results),
         # names to kill before the next evaluation in the same Maxima session
         "kill": names + ([i["name"] for i in data["inputs"]] if answers is not None else []) + (
-            [m.group(1) for p in data["prts"] for st, _l, _i in split_statements(p["feedbackvariables"])
-             for m in [ASSIGN.match(strip_comments(st))] if m] if answers is not None else []),
+            [n for p in data["prts"] for n in fv_names(p)] if answers is not None else []),
     }
 
 
-def answer_code(data, answers, langs, resolver, checked):
+def answer_code(data, answers, langs, resolver, checked, qv_names=()):
     """Code for the student's answers (as STACK: simp:false, then name: value) and the PRTs
     whose inputs are all answered. Fills checked with what is evaluated."""
     names = [i["name"] for i in data["inputs"]]
@@ -759,6 +855,14 @@ def answer_code(data, answers, langs, resolver, checked):
                        mstring("ans:%s:tex" % n), n))
     checked["inputs"] = inputs
     checked["prts"] = {}
+    code.append(tick("answers"))
+    # feedback variables of all PRTs (not question variables or inputs): killed before each PRT,
+    # so that a PRT cannot use what another one computed - in STACK each PRT runs on its own
+    fv_all = []
+    for prt in data["prts"]:
+        for n in fv_names(prt):
+            if n not in fv_all and n not in qv_names and n not in names:
+                fv_all.append(n)
 
     def includes(stmt):
         return INCLUDE.sub(lambda m: "load(%s)" % mpath(resolver.local_file(m.group(1))), stmt)
@@ -771,8 +875,17 @@ def answer_code(data, answers, langs, resolver, checked):
         checked["prts"][prt["name"]] = {"inputs": req}
         # an input that does not parse makes the PRT invalid (reported after the run), as in STACK
         code.append("simp: false$")
-        code += prt_code(prt, raw_by_input, data.get("penalty") or "0.1", pick_lang("de", langs), pick_lang("en", langs), includes)
+        code += prt_code(prt, raw_by_input, data.get("penalty") or "0.1", pick_lang("de", langs), pick_lang("en", langs), includes, fv_all)
     return code
+
+
+def fv_names(prt):
+    out = []
+    for st, _l, _i in split_statements(prt["feedbackvariables"]):
+        for n in assigned_names(strip_comments(st)):
+            if n not in out:
+                out.append(n)
+    return out
 
 
 def check_results(checked, results, stdout, data):
@@ -783,14 +896,22 @@ def check_results(checked, results, stdout, data):
         state = first("ans:%s:state" % n, info["state"]) if info["state"] != "blank" else "blank"
         out["inputs"][n] = {"state": state, "tex": first("ans:%s:tex" % n), "value": info.get("value")}
     errors = {}
-    current = None
+    current, said = None, []
     for line in stdout.splitlines():
         m = re.match(r"\s*@@PRT (.*)@@\s*$", line)
         if m:
-            current = m.group(1); continue
+            current, said = m.group(1), []; continue
+        if re.match(r"\s*@@PRTST@@\s*$", line):
+            said = []; continue
         m = re.match(r"\s*@@PRTERR (.*)@@\s*$", line)
         if m and current:
-            errors.setdefault(current, []).append(m.group(1))
+            # Maxima's own message (printed before the marker), e.g. "apply: subscript must be an integer"
+            msg = " ".join(x.strip() for x in said if x.strip() and not x.strip().startswith("--"))
+            errors.setdefault(current, []).append(m.group(1) + (": " + msg if msg and ":" not in m.group(1) else
+                                                                ("\n" + msg if msg else "")))
+            said = []; continue
+        if current and not line.strip().startswith("@@"):
+            said.append(line)
     prts = {p["name"]: p for p in data["prts"]}
     for name, info in checked["prts"].items():
         if "skipped" in info:
@@ -807,6 +928,8 @@ def check_results(checked, results, stdout, data):
             "testfeedback": [", ".join(re.findall(r"stack_trans\('([^']+)'", t)) or t
                              for t in results.get("prt:%s:atfb" % name, [])],
             "errors": errors.get(name, []),
+            "variables": [{"name": n, "raw": first("prtvar:%s:%s" % (name, n)), "tex": first("prttex:%s:%s" % (name, n))}
+                          for n in fv_names(prts[name])],
         }
         if invalid:
             res = {"skipped": "invalid input: " + ", ".join(invalid)}

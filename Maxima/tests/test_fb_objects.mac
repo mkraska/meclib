@@ -1,0 +1,11 @@
+/* ============================================================================
+   Tests for fb_objects(): the same result as STACK's stackjson_parse().
+   ============================================================================ */
+
+fbo_same(js, label):= fb_check(["", is(fb_objects(js) = stackjson_parse(js))], true, "", "", label)$
+fbo_same("[[\"grid\",\"\",\"\",-4,6,-2,5,40],[\"force\",\"N_A\",[3,-1.2],[3,0],10,\"active\"],[\"angle\",\"\\\\alpha\",[3,0],[2.17,0.55],0.9,33.69]]", "fb_objects meclib objects");
+fbo_same("[1, -2.5e2, 3.25E-1, true, false, null, [], [[3]], 7]", "fb_objects numbers, literals, nesting");
+fbo_same("[\"a\\\"b\\\\c\\nd\\te\", \"\\u00e4x\", \"\"]", "fb_objects escapes");
+fbo_same("[]", "fb_objects empty list");
+fbo_same("[{\"a\": 1}]", "fb_objects JSON object (left to stackjson_parse)");
+fb_check(["", is(fb_objects([1,2]) = [1,2])], true, "", "", "fb_objects not a string");

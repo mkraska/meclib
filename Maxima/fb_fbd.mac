@@ -1,11 +1,49 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-Free-Body-Diagrams */
-/* 2026 10 07 */
+/* 2026 10 12 */
+
+/* https://github.com/mkraska/meclib/wiki/fb_objects() */
+/* fb_objects(objects): the content of the objects input (JSON of meclib's object list) as a
+   Maxima list - the same as STACK's stackjson_parse(objects), but in one pass: stackjson_parse
+   needs time growing with the square of the length (about 1 s for a sketch of 30 objects, in
+   every PRT). JSON objects ({...}) are left to stackjson_parse. */
+fb_objects(%_objects):= block([simp: true, %_st: [[]], %_mode: 0, %_buf: [], %_esc: false, %_u: 0, %_hex: [], %_c, %_top, %_lit: []],
+  /* %_mode 0: between values, 1: in a string, 2: in a number, 3: in a literal (true/false/null) */
+  if not stringp(%_objects) then return(%_objects),
+  if sposition("{", %_objects) # false then return(stackjson_parse(%_objects)),
+  for %_c in append(charlist(%_objects), [" "]) do (
+    if %_mode = 1 then (
+      if %_u > 0 then (%_hex: cons(%_c, %_hex), %_u: %_u - 1,
+        if %_u = 0 then %_buf: cons(unicode(stack_string_hex_to_num(simplode(reverse(%_hex)))), %_buf))
+      else if %_esc then (%_esc: false,
+        if %_c = "u" then (%_u: 4, %_hex: [])
+        else %_buf: cons(if %_c = "n" then ascii(10) else if %_c = "t" then ascii(9) else if %_c = "r" then ascii(13)
+                         else if %_c = "b" then ascii(8) else if %_c = "f" then ascii(12) else %_c, %_buf))
+      else if %_c = "\\" then %_esc: true
+      else if %_c = "\"" then (%_st: cons(cons(simplode(reverse(%_buf)), first(%_st)), rest(%_st)), %_mode: 0)
+      else %_buf: cons(%_c, %_buf))
+    else (
+      /* end of a number or literal */
+      if %_mode = 2 and sposition(%_c, "0123456789.eE+-") = false then (
+        %_st: cons(cons(stack_string_parse_number(simplode(reverse(%_buf))), first(%_st)), rest(%_st)), %_mode: 0),
+      if %_mode = 3 and not alphacharp(%_c) then (
+        %_lit: simplode(reverse(%_buf)),
+        %_st: cons(cons(if %_lit = "true" then true else if %_lit = "false" then false else und, first(%_st)), rest(%_st)),
+        %_mode: 0),
+      if %_mode = 2 or %_mode = 3 then %_buf: cons(%_c, %_buf)
+      else if %_c = "[" then %_st: cons([], %_st)
+      else if %_c = "]" then (%_top: reverse(first(%_st)), %_st: rest(%_st), %_st: cons(cons(%_top, first(%_st)), rest(%_st)))
+      else if %_c = "\"" then (%_mode: 1, %_buf: [])
+      else if %_c = "-" or digitcharp(%_c) then (%_mode: 2, %_buf: [%_c])
+      else if alphacharp(%_c) then (%_mode: 3, %_buf: [%_c]))),
+  if length(%_st) # 1 or length(first(%_st)) # 1 then return(stackjson_parse(%_objects)),   /* not well formed */
+  first(first(%_st))
+);
 
 /* https://github.com/mkraska/meclib/wiki/direction%28%29 */
 direction(o):=block([%_v, a0, le, r1, r2, a1],
   if member(o[1], ["bar", "force", "dashpot", "springt", "springc"]) then return(o[4]-o[3]),
   if member(o[1], ["fix1"]) then return([-sin(o[4]*%pi/180), cos(o[4]*%pi/180)]),
-  if member(o[1], ["fix13", "dir"]) then return([cos(o[4]*%pi/180), sin(o[4]*%pi/180)]),
+  if member(o[1], ["fix13", "dir", "disp"]) then return([cos(o[4]*%pi/180), sin(o[4]*%pi/180)]),
   if member(o[1], ["contact"]) then return(o[4]),
   if member(o[1], ["q"]) then (
     %_v: o[5]-o[4], le: cabs(%_v[1]+%i*%_v[2]), a0: carg(%_v[1]+%i*%_v[2]),
@@ -41,13 +79,60 @@ moment(p, f, fname, rname):=block([vf,vr],
    vf: unitvec(f)*fname,
    vr: round((f[3]-p)*10)/10*rname,
    vr[1]*vf[2]-vr[2]*vf[1]);
-sum_xyM(o,n,p,lu):=block([f: 0,m: 0],
-  for i:1 thru length(o)  do (
-    if (o[i][1]="force") then f: f+n[i]*unitvec(o[i]),
-    if (o[i][1]="force") then m: m+moment(p, o[i], n[i],lu),
-    if (o[i][1]="moment") then m: m+n[i]*msign(o[i])
-  ),
-  [f[1],f[2],m]
+/* Options of sumF(), sumM() (list of name = value, both optional):
+     contacts = [i, ...]  forces found at these "contact" objects get the exact normal or tangent
+                          direction of the contact (sense as drawn) and the contact point as point
+                          of application - a drawn arrow is snapped to 0.1 and only roughly along
+                          the contact; give the contact direction with exact numbers
+     at = [[k, r], ...]   symbolic point of application r (in length units, like p*lu) of load k,
+                          e.g. a centre of gravity that depends on symbols of the problem (sumM)
+   Without options: directions of the arrows (rounded to 0.1), points of the sketch. */
+/* per object: [exact direction or false, point of application or false]; a point is
+   ["grid", [x,y]] (sketch coordinates) or ["len", r] (length units) */
+fb_sum_prep(o, n, %_options):= block([%_get, %_dir, %_pt, %_u, %_uf, %_t, %_d, %_c, %_k, %_e],
+  %_get: lambda([%_key], block([%_v: false],
+    for %_e in %_options do if equationp(%_e) and string(lhs(%_e)) = %_key then %_v: rhs(%_e), %_v)),
+  %_dir: makelist(false, length(o)), %_pt: makelist(false, length(o)),
+  if listp(%_get("contacts")) then for %_c in %_get("contacts") do if listp(n[%_c]) then (
+    %_u: o[%_c][4], %_u: ratsimp(%_u/sqrt(%_u . %_u)), %_uf: float(%_u), %_t: [-%_u[2], %_u[1]],
+    for %_k in n[%_c] do if o[%_k][1] = "force" then (
+      %_d: float(o[%_k][4] - o[%_k][3]), %_d: %_d/sqrt(%_d . %_d),
+      if abs(%_d[1]*%_uf[2] - %_d[2]*%_uf[1]) < 0.05 then %_dir[%_k]: signum(%_d . %_uf)*%_u
+      else if abs(%_d . %_uf) < 0.05 then %_dir[%_k]: signum(%_d . float(%_t))*%_t,
+      if %_dir[%_k] # false then %_pt[%_k]: ["grid", o[%_c][3]])),
+  if listp(%_get("at")) then for %_e in %_get("at") do %_pt[%_e[1]]: ["len", %_e[2]],
+  [%_dir, %_pt]
+);
+
+/* https://github.com/mkraska/meclib/wiki/Sums-of-Forces-and-Moments */
+/* sumF(o, n, d [, options]): sum of all forces projected onto the direction d - a vector, or the
+   index of a "dir" object whose direction is taken. */
+sumF(o, n, d, [%_options]):= block([%_pd, %_f: 0, %_v, i],
+  if integerp(d) then d: direction(o[d]),
+  d: ratsimp(d/sqrt(d . d)),
+  %_pd: fb_sum_prep(o, n, if %_options = [] then [] else %_options[1]),
+  for i: 1 thru length(o) do if o[i][1] = "force" then (
+    %_v: if %_pd[1][i] # false then %_pd[1][i] else unitvec(o[i]),
+    %_f: %_f + n[i]*(%_v . d)),
+  ratsimp(%_f)
+);
+/* sumM(o, n, p, lu [, options]): sum of the moments about p (sketch coordinates) of all forces
+   and moments, counterclockwise positive; lu: length unit of the sketch. */
+sumM(o, n, p, lu, [%_options]):= block([%_pd, %_m: 0, %_v, %_r, i],
+  %_pd: fb_sum_prep(o, n, if %_options = [] then [] else %_options[1]),
+  for i: 1 thru length(o) do (
+    if o[i][1] = "force" then (
+      %_v: if %_pd[1][i] # false then %_pd[1][i] else unitvec(o[i]),
+      if %_pd[2][i] = false then %_m: %_m + moment(p, o[i], n[i], lu)
+      else (
+        %_r: if %_pd[2][i][1] = "len" then %_pd[2][i][2] - p*lu else (%_pd[2][i][2] - p)*lu,
+        %_m: %_m + n[i]*(%_r[1]*%_v[2] - %_r[2]*%_v[1]))),
+    if o[i][1] = "moment" then %_m: %_m + n[i]*msign(o[i])),
+  %_m
+);
+/* legacy: [sum in x, sum in y, moment about p]; takes the options of sumF() and sumM() */
+sum_xyM(o, n, p, lu, [%_options]):= block([%_op: if %_options = [] then [] else %_options[1]],
+  [sumF(o, n, [1,0], %_op), sumF(o, n, [0,1], %_op), sumM(o, n, p, lu, %_op)]
 );
 
 /* https://github.com/mkraska/meclib/wiki/sum_dir%28%29 */
@@ -552,7 +637,7 @@ fb_resolve_ref(%_o, %_ref):=block([%_idx],
    flagged below. (Existing "contact" sketches authored before this convention was fixed may
    have o[4] pointing the other way - into the body - and need their direction negated to keep
    passing this check; see the wiki TODO for fb_contact()/"contact".) */
-fb_contact(%_o, %_n, %_i, %_description):=block(
+fb_contact(%_o, %_n, %_i, %_description, [%_opt]):=block(
     [%_txt: %_description, %_ref, %_j, %_jlist, %_pending, %_names, %_R, %_mn, %_dR, %_dC,
      str_environment: castext("[[lang code='de']]Umgebung[[/lang]][[lang code='en,other']]environment[[/lang]]"),
      str_and: castext("[[lang code='de']] und [[/lang]][[lang code='en,other']] and [[/lang]]"),
@@ -583,6 +668,9 @@ fb_contact(%_o, %_n, %_i, %_description):=block(
       return ([castext_concat(%_txt, castext_concat(simplode(%_names, str_and),
         if length(%_pending) = 1 then str_is_not_deactivated else str_are_not_deactivated)), false])
     ),
+    /* Rough contact or accepted names given: see fb_contact_rough() */
+    if not (%_opt = [] or (length(%_opt) = 1 and member(%_opt[1], ["", "smooth"])))
+      then return(fb_contact_rough(%_o, %_n, %_i, %_txt, %_opt)),
     /* Any reactions found at i? */
     if not listp(%_n[%_i]) or %_n[%_i]=[] then return([castext_concat(%_txt, str_no_reaction), false]),
     /* Exactly 1 reaction found? */
@@ -601,6 +689,179 @@ fb_contact(%_o, %_n, %_i, %_description):=block(
     return([castext_concat(%_txt, sconcat(str_found_pre, %_mn, str_found_post)),true])
 );
 
+/* Optional arguments of fb_contact(): friction, normal names, friction names, ignore names
+   friction: "" or "smooth" - no friction (no tangential reaction allowed)
+             "static"       - static friction: a tangential reaction of either sense
+             [vx, vy]       - kinetic friction, velocity of the body relative to the environment:
+                              the friction force must act against it
+             "v_A"          - kinetic friction, velocity given by the "disp" object of that name
+   normal names, friction names: accepted names (string or list of strings). If given, the forces
+             at the contact with one of these names are its reactions. Other forces at the point are
+             commented as probable reactions with a wrong name (with their direction: normal,
+             tangential, or the angle to the nearer of the two) unless their names are in the
+             ignore list. Without names, every load at the point is a reaction and must be normal
+             or (with friction) tangential.
+   ignore names (4th entry, optional): names of other forces at the point (a weight, member
+             forces, ...) that are not commented.
+   Called by fb_contact() after the contact, its reference and the deactivation are checked;
+   %_txt is the description. Returns [text, isOK]. */
+fb_contact_rough(%_o, %_n, %_i, %_txt, %_opt):=block(
+  [%_fr, %_nn, %_tn, %_named, %_L, %_LN: [], %_LT: [], %_c, %_u, %_t, %_v: false, %_vname: "",
+   %_idx, %_k, %_d, %_msgs: [], %_nm, %_str, %_tex, %_texlist, %_found: [],
+   %_ig, %_LF, %_dn, %_dt, %_deg, %_hintN: false, %_hintT: false, %_fmsgs: [],
+   str_or: castext("[[lang code='de']] oder [[/lang]][[lang code='en,other']] or [[/lang]]"),
+   str_and: castext("[[lang code='de']] und [[/lang]][[lang code='en,other']] and [[/lang]]"),
+   str_must_be_force_pre: castext("[[lang code='de']]Die Reaktion [[/lang]][[lang code='en,other']]Reaction [[/lang]]"),
+   str_must_be_force_post: castext("[[lang code='de']] muss eine Kraft sein.[[/lang]][[lang code='en,other']] must be a force.[[/lang]]"),
+   str_wrong_direction_pre: castext("[[lang code='de']]Die Reaktion [[/lang]][[lang code='en,other']]Reaction [[/lang]]"),
+   str_dev_mid: castext("[[lang code='de']] weicht um [[/lang]][[lang code='en,other']] deviates by [[/lang]]"),
+   str_from_normal: castext("[[lang code='de']]° von der Normalen ab.[[/lang]][[lang code='en,other']]° from the normal.[[/lang]]"),
+   str_from_tangent: castext("[[lang code='de']]° von der Tangente ab.[[/lang]][[lang code='en,other']]° from the tangent.[[/lang]]"),
+   str_force_pre: castext("[[lang code='de']]Die Kraft [[/lang]][[lang code='en,other']]Force [[/lang]]"),
+   str_acts_normal: castext("[[lang code='de']] wirkt normal zur Berührfläche.[[/lang]][[lang code='en,other']] acts normal to the contact surface.[[/lang]]"),
+   str_acts_tangential: castext("[[lang code='de']] wirkt tangential zur Berührfläche.[[/lang]][[lang code='en,other']] acts tangential to the contact surface.[[/lang]]"),
+   str_expected_normal: castext("[[lang code='de']] Als Normalkraft erwartet: [[/lang]][[lang code='en,other']] Expected normal force: [[/lang]]"),
+   str_expected_friction: castext("[[lang code='de']] Als Reibkraft erwartet: [[/lang]][[lang code='en,other']] Expected friction force: [[/lang]]"),
+   str_expected_friction_s: castext("[[lang code='de']] Als Haftkraft erwartet: [[/lang]][[lang code='en,other']] Expected friction force: [[/lang]]"),
+   str_contact_smooth: castext("[[lang code='de']] Der Kontakt ist glatt.[[/lang]][[lang code='en,other']] The contact is smooth.[[/lang]]"),
+   str_expected_reaction: castext("[[lang code='de']] Als Reaktion erwartet: [[/lang]][[lang code='en,other']] Expected reaction: [[/lang]]"),
+   str_expected_reactions: castext("[[lang code='de']] Als Reaktionen erwartet: [[/lang]][[lang code='en,other']] Expected reactions: [[/lang]]"),
+   str_normal_paren: castext("[[lang code='de']] (normal)[[/lang]][[lang code='en,other']] (normal)[[/lang]]"),
+   str_tangential_paren: castext("[[lang code='de']] (tangential)[[/lang]][[lang code='en,other']] (tangential)[[/lang]]"),
+   str_no_normal: castext("[[lang code='de']]Keine Normalkraft gefunden.[[/lang]][[lang code='en,other']]No normal force found.[[/lang]]"),
+   str_no_normal_named_pre: castext("[[lang code='de']]Keine Normalkraft [[/lang]][[lang code='en,other']]No normal force [[/lang]]"),
+   str_no_normal_named_post: castext("[[lang code='de']] gefunden.[[/lang]][[lang code='en,other']] found.[[/lang]]"),
+   str_more_normal: castext("[[lang code='de']]Mehr als eine Normalkraft gefunden.[[/lang]][[lang code='en,other']]More than one normal force found.[[/lang]]"),
+   str_not_normal_pre: castext("[[lang code='de']]Die Normalkraft [[/lang]][[lang code='en,other']]Normal force [[/lang]]"),
+   str_compressive_pre: castext("[[lang code='de']]Die Normalkraft [[/lang]][[lang code='en,other']]Normal force [[/lang]]"),
+   str_compressive_post: castext("[[lang code='de']] muss eine Druckkraft sein.[[/lang]][[lang code='en,other']] must be a compressive force.[[/lang]]"),
+   /* German: "Haftkraft" for static friction, "Reibkraft" for kinetic friction (the _s variants) */
+   str_no_friction: castext("[[lang code='de']]Keine Reibkraft gefunden.[[/lang]][[lang code='en,other']]No friction force found.[[/lang]]"),
+   str_no_friction_s: castext("[[lang code='de']]Keine Haftkraft gefunden.[[/lang]][[lang code='en,other']]No friction force found.[[/lang]]"),
+   str_no_friction_named_pre: castext("[[lang code='de']]Keine Reibkraft [[/lang]][[lang code='en,other']]No friction force [[/lang]]"),
+   str_no_friction_named_pre_s: castext("[[lang code='de']]Keine Haftkraft [[/lang]][[lang code='en,other']]No friction force [[/lang]]"),
+   str_no_friction_named_post: castext("[[lang code='de']] gefunden.[[/lang]][[lang code='en,other']] found.[[/lang]]"),
+   str_more_friction: castext("[[lang code='de']]Mehr als eine Reibkraft gefunden.[[/lang]][[lang code='en,other']]More than one friction force found.[[/lang]]"),
+   str_more_friction_s: castext("[[lang code='de']]Mehr als eine Haftkraft gefunden.[[/lang]][[lang code='en,other']]More than one friction force found.[[/lang]]"),
+   str_not_tangential_pre: castext("[[lang code='de']]Die Reibkraft [[/lang]][[lang code='en,other']]Friction force [[/lang]]"),
+   str_not_tangential_pre_s: castext("[[lang code='de']]Die Haftkraft [[/lang]][[lang code='en,other']]Friction force [[/lang]]"),
+   str_smooth_pre: castext("[[lang code='de']]Der Kontakt ist glatt, die Kraft [[/lang]][[lang code='en,other']]The contact is smooth, force [[/lang]]"),
+   str_smooth_post: castext("[[lang code='de']] ist nicht zulässig.[[/lang]][[lang code='en,other']] is not admissible.[[/lang]]"),
+   str_against_pre: castext("[[lang code='de']]Die Reibkraft [[/lang]][[lang code='en,other']]Friction force [[/lang]]"),
+   str_against_mid: castext("[[lang code='de']] muss entgegen [[/lang]][[lang code='en,other']] must act against [[/lang]]"),
+   str_against_post: castext("[[lang code='de']] wirken.[[/lang]][[lang code='en,other']].[[/lang]]"),
+   str_against_sliding: castext("[[lang code='de']] muss der Gleitbewegung entgegen wirken.[[/lang]][[lang code='en,other']] must act against the sliding motion.[[/lang]]"),
+   str_found_one_pre: castext("[[lang code='de']]Reaktion [[/lang]][[lang code='en,other']]Reaction [[/lang]]"),
+   str_found_two_pre: castext("[[lang code='de']]Reaktionen [[/lang]][[lang code='en,other']]Reactions [[/lang]]"),
+   str_found_post: castext("[[lang code='de']] gefunden.[[/lang]][[lang code='en,other']] found.[[/lang]]")],
+  /* names as plain strings (the names field may hold CAS symbols, see fb_name()) */
+  %_str: lambda([%_x], if stringp(%_x) then %_x else string(%_x)),
+  %_tex: lambda([%_x], sconcat("\\(", %_str(%_x), "\\)")),
+  %_texlist: lambda([%_l], if length(%_l) = 1 then %_tex(%_l[1])
+    else sconcat(simplode(map(%_tex, rest(%_l, -1)), ", "), str_or, %_tex(last(%_l)))),
+  %_nm: lambda([%_k], %_str(%_n[%_k])),
+  %_fr: %_opt[1],
+  if %_fr = "smooth" then %_fr: "",
+  %_nn: if length(%_opt) >= 2 then (if listp(%_opt[2]) then map(%_str, %_opt[2]) else [%_str(%_opt[2])]) else [],
+  %_tn: if length(%_opt) >= 3 then (if listp(%_opt[3]) then map(%_str, %_opt[3]) else [%_str(%_opt[3])]) else [],
+  %_ig: if length(%_opt) >= 4 then (if listp(%_opt[4]) then map(%_str, %_opt[4]) else [%_str(%_opt[4])]) else [],
+  %_named: is(%_nn # []),
+  if %_fr = "static" then (
+    str_no_friction: str_no_friction_s, str_no_friction_named_pre: str_no_friction_named_pre_s,
+    str_more_friction: str_more_friction_s, str_not_tangential_pre: str_not_tangential_pre_s,
+    str_expected_friction: str_expected_friction_s),
+  /* unit normal (outward, see fb_contact()) and unit tangent */
+  %_c: float(direction(%_o[%_i])),
+  %_u: %_c/sqrt(%_c . %_c), %_t: [-%_u[2], %_u[1]],
+  /* angle in degrees between the line of a force and the normal (the tangent: 90 minus it) */
+  %_dn: lambda([%_k], block([%_e: float(direction(%_o[%_k]))],
+    float(acos(min(1, abs(%_e . %_u)/sqrt(%_e . %_e)))*180/%pi))),
+  %_deg: lambda([%_x], string(round(%_x))),
+  /* friction kind: velocity of the body for kinetic friction (developer messages in English) */
+  if listp(%_fr) then %_v: float(%_fr)
+  else if stringp(%_fr) and not member(%_fr, ["", "static"]) then (
+    %_idx: sublist_indices(%_o, lambda([%_x], %_x[1] = "disp" and %_x[2] = %_fr)),
+    if length(%_idx) # 1 then return([sconcat(%_txt, "fb_contact(): disp object '", %_fr, "' not found or ambiguous."), false]),
+    %_v: float(direction(%_o[%_idx[1]])), %_vname: %_fr)
+  else if not stringp(%_fr) then return([sconcat(%_txt, "fb_contact(): invalid friction argument ", string(%_fr), "."), false]),
+  if listp(%_v) and abs(%_v . %_t) < 1e-6*sqrt(%_v . %_v) then
+    return([sconcat(%_txt, "fb_contact(): the velocity has no tangential component."), false]),
+  if %_fr # "" and %_named and %_tn = [] then
+    return([sconcat(%_txt, "fb_contact(): names of the friction force missing."), false]),
+  /* loads at the contact point */
+  %_L: if listp(%_n[%_i]) then %_n[%_i] else [],
+  if %_named then (
+    /* only the forces named as contact reactions count */
+    %_LN: sublist(%_L, lambda([%_k], member(%_nm(%_k), %_nn))),
+    %_LT: sublist(%_L, lambda([%_k], member(%_nm(%_k), %_tn))),
+    for %_k in append(%_LN, %_LT) do if %_o[%_k][1] # "force" then
+      %_msgs: endcons(sconcat(str_must_be_force_pre, %_tex(%_nm(%_k)), str_must_be_force_post), %_msgs),
+    if %_msgs # [] then return([castext_concat(%_txt, simplode(%_msgs, " ")), false]),
+    /* forces at the point with other names (not in the ignore list): probably reactions with a
+       wrong name, commented with their direction */
+    %_LF: sublist(%_L, lambda([%_k], not member(%_nm(%_k), append(%_nn, %_tn, %_ig)))),
+    for %_k in %_LF do (
+      if %_o[%_k][1] # "force" then
+        %_fmsgs: endcons(sconcat(str_must_be_force_pre, %_tex(%_nm(%_k)), str_must_be_force_post), %_fmsgs)
+      else if sin(%_dn(%_k)*%pi/180) < 0.05 then (
+        %_hintN: true,
+        %_fmsgs: endcons(sconcat(str_force_pre, %_tex(%_nm(%_k)), str_acts_normal, str_expected_normal, %_texlist(%_nn), "."), %_fmsgs))
+      else if cos(%_dn(%_k)*%pi/180) < 0.05 then (
+        if %_fr = "" then
+          %_fmsgs: endcons(sconcat(str_force_pre, %_tex(%_nm(%_k)), str_acts_tangential, str_contact_smooth), %_fmsgs)
+        else (%_hintT: true,
+          %_fmsgs: endcons(sconcat(str_force_pre, %_tex(%_nm(%_k)), str_acts_tangential, str_expected_friction, %_texlist(%_tn), "."), %_fmsgs)))
+      else
+        %_fmsgs: endcons(sconcat(str_force_pre, %_tex(%_nm(%_k)), str_dev_mid,
+          if %_dn(%_k) <= 45 then sconcat(%_deg(%_dn(%_k)), str_from_normal) else sconcat(%_deg(90 - %_dn(%_k)), str_from_tangent),
+          if %_fr = "" then sconcat(str_expected_reaction, %_texlist(%_nn), str_normal_paren, ".")
+          else sconcat(str_expected_reactions, %_texlist(%_nn), str_normal_paren, ", ", %_texlist(%_tn), str_tangential_paren, ".")),
+          %_fmsgs)))
+  else (
+    /* every load at the point is a reaction: sort by direction */
+    for %_k in %_L do (
+      if %_o[%_k][1] # "force" then
+        %_msgs: endcons(sconcat(str_must_be_force_pre, %_tex(%_nm(%_k)), str_must_be_force_post), %_msgs)
+      else (
+        %_d: float(direction(%_o[%_k])), %_d: %_d/sqrt(%_d . %_d),
+        if abs(%_d[1]*%_u[2] - %_d[2]*%_u[1]) < 0.05 then %_LN: endcons(%_k, %_LN)
+        else if abs(%_d . %_u) < 0.05 then (
+          if %_fr = "" then %_msgs: endcons(sconcat(str_smooth_pre, %_tex(%_nm(%_k)), str_smooth_post), %_msgs)
+          else %_LT: endcons(%_k, %_LT))
+        else %_msgs: endcons(sconcat(str_wrong_direction_pre, %_tex(%_nm(%_k)), str_dev_mid,
+          if %_dn(%_k) <= 45 then sconcat(%_deg(%_dn(%_k)), str_from_normal) else sconcat(%_deg(90 - %_dn(%_k)), str_from_tangent)), %_msgs))),
+    if %_msgs # [] then return([castext_concat(%_txt, simplode(%_msgs, " ")), false])
+  ),
+  /* normal force */
+  if %_LN = [] then (if not %_hintN then %_msgs: endcons(
+      if %_named then sconcat(str_no_normal_named_pre, %_texlist(%_nn), str_no_normal_named_post) else str_no_normal, %_msgs))
+  else if length(%_LN) > 1 then %_msgs: endcons(str_more_normal, %_msgs)
+  else (
+    %_k: %_LN[1], %_d: float(direction(%_o[%_k])), %_d: %_d/sqrt(%_d . %_d),
+    if abs(%_d[1]*%_u[2] - %_d[2]*%_u[1]) >= 0.05 then
+      %_msgs: endcons(sconcat(str_not_normal_pre, %_tex(%_nm(%_k)), str_dev_mid, %_deg(%_dn(%_k)), str_from_normal), %_msgs)
+    else if %_d . %_u >= 0 then
+      %_msgs: endcons(sconcat(str_compressive_pre, %_tex(%_nm(%_k)), str_compressive_post), %_msgs)
+    else %_found: endcons(%_nm(%_k), %_found)),
+  /* friction force */
+  if %_fr # "" then (
+    if %_LT = [] then (if not %_hintT then %_msgs: endcons(
+        if %_named then sconcat(str_no_friction_named_pre, %_texlist(%_tn), str_no_friction_named_post) else str_no_friction, %_msgs))
+    else if length(%_LT) > 1 then %_msgs: endcons(str_more_friction, %_msgs)
+    else (
+      %_k: %_LT[1], %_d: float(direction(%_o[%_k])), %_d: %_d/sqrt(%_d . %_d),
+      if abs(%_d . %_u) >= 0.05 then
+        %_msgs: endcons(sconcat(str_not_tangential_pre, %_tex(%_nm(%_k)), str_dev_mid, %_deg(90 - %_dn(%_k)), str_from_tangent), %_msgs)
+      else if listp(%_v) and %_d . %_v >= 0 then
+        %_msgs: endcons(if %_vname # "" then sconcat(str_against_pre, %_tex(%_nm(%_k)), str_against_mid, %_tex(%_vname), str_against_post)
+          else sconcat(str_against_pre, %_tex(%_nm(%_k)), str_against_sliding), %_msgs)
+      else %_found: endcons(%_nm(%_k), %_found))),
+  %_msgs: append(%_msgs, %_fmsgs),
+  if %_msgs # [] then return([castext_concat(%_txt, simplode(%_msgs, " ")), false]),
+  [castext_concat(%_txt, sconcat(if length(%_found) = 1 then str_found_one_pre else str_found_two_pre,
+     simplode(map(%_tex, %_found), str_and), str_found_post)), true]
+);
+
 /* https://github.com/mkraska/meclib/wiki/fb_reaction_name */
 /* Returns the name the student assigned to the single reaction force currently matched at
    contact/support index i, or %_default if none, more than one, or a non-force object is found
@@ -613,6 +874,22 @@ fb_reaction_name(%_o, %_n, %_i, %_default):= block([],
   if not listp(%_n[%_i]) or length(%_n[%_i]) # 1 then return(%_default),
   if %_o[%_n[%_i][1]][1] # "force" then return(%_default),
   %_n[%_n[%_i][1]]
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_contact_reactions() */
+/* Names of the reactions the student drew at contact %_i, sorted by direction: [normal name,
+   friction name, direction of the friction force as drawn]; false where none is found (the first
+   of several is taken). Same tolerance as fb_contact(). No feedback - check the contact with
+   fb_contact(). Use it to build reference equations with the student's names. */
+fb_contact_reactions(%_o, %_n, %_i):= block([%_c, %_u, %_d, %_k, %_nn: false, %_tn: false, %_td: false],
+  if not listp(%_n[%_i]) then return([false, false, false]),
+  %_c: float(direction(%_o[%_i])), %_u: %_c/sqrt(%_c . %_c),
+  for %_k in %_n[%_i] do
+    if %_o[%_k][1] = "force" then (
+      %_d: float(direction(%_o[%_k])), %_d: %_d/sqrt(%_d . %_d),
+      if abs(%_d[1]*%_u[2] - %_d[2]*%_u[1]) < 0.05 then (if %_nn = false then %_nn: %_n[%_k])
+      else if abs(%_d . %_u) < 0.05 and %_tn = false then (%_tn: %_n[%_k], %_td: %_d)),
+  [%_nn, %_tn, %_td]
 );
 
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-line-loads */
@@ -870,6 +1147,141 @@ fb_reactions(%_o, %_f, %_m):=block(
     %_txt: simplode(%_msgs, "<br>")
   ),
   [%_txt,%_OK]
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_unique_names() */
+/* Reactions at different supports (or at one support) must not share a name.
+   %_supports: indices of the supports; n[i] lists the objects meclib assigned to support i.
+   One message per repeated name, with the supports where it occurs (if they have names). */
+fb_unique_names(%_o, %_n, %_supports):=block(
+  [%_all: [], %_names, %_where, %_sup, %_msgs: [], %_i, %_k, %_nm,
+   str_dup_pre: castext("[[lang code='de']]Der Name \\([[/lang]][[lang code='en,other']]The name \\([[/lang]]"),
+   str_dup_mid: castext("[[lang code='de']]\\) wird für mehrere Reaktionen verwendet[[/lang]][[lang code='en,other']]\\) is used for more than one reaction[[/lang]]"),
+   str_dup_post: castext("[[lang code='de']]. Reaktionen brauchen verschiedene Namen.[[/lang]][[lang code='en,other']]. Reactions need different names.[[/lang]]")],
+  /* [name, support name] for every reaction found at the given supports */
+  for %_i in %_supports do
+    if listp(%_n[%_i]) then
+      for %_k in %_n[%_i] do
+        if strim(" ", %_o[%_k][2]) # "" then %_all: endcons([%_o[%_k][2], %_o[%_i][2]], %_all),
+  %_names: unique(map(first, %_all)),
+  for %_nm in %_names do (
+    %_where: sublist(%_all, lambda([x], x[1] = %_nm)),
+    /* the supports by name; unnamed ones (e.g. contacts with "" as label) are not listed */
+    %_sup: sublist(unique(map(second, %_where)), lambda([x], stringp(x) and x # "")),
+    if length(%_where) > 1 then
+      %_msgs: endcons(sconcat(str_dup_pre, %_nm, str_dup_mid,
+                        if emptyp(%_sup) then "" else sconcat(" (", simplode(%_sup, ", "), ")"), str_dup_post), %_msgs)
+  ),
+  if emptyp(%_msgs) then ["", true] else [simplode(%_msgs, "<br>"), false]
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_fbd() */
+/* Generic checks of a free-body diagram, everything that does not depend on a single support:
+   system boundaries, names of the loads the student drew, number of forces and moments.
+   %_options: list of options name = value, each optional (a check without its options is left out):
+     sys, env, hint   system boundaries as in fb_system()
+     supports         indices of the supports whose reactions must have different names
+                      (default: all fix1, fix12, fix123, fix13 and contact objects)
+     reserved         further names reactions must not have (e.g. [a, b, h, alpha])
+     nameform         true: the name of each drawn load is one letter with an optional index
+     forces, moments  expected number of drawn forces and moments (as fb_reactions())
+   Drawn loads are the active forces and moments; resultants of line loads (name with a space)
+   are left out. Given loads (not active) may share names, but no drawn load may be named like
+   one of them. Returns [text, ok, [system ok, names ok, number ok]] (true for checks not done);
+   the text lists every problem, or one line naming the checks passed. */
+fb_fbd(%_o, %_n, %_options):= block(
+  [%_get, %_msgs: [], %_okS: true, %_okN: true, %_okC: true, %_done: [], %_drawn, %_given, %_res,
+   %_sup, %_u, %_k, %_nm, %_base, %_fnum, %_mnum,
+   str_sys_wrong: castext("[[lang code='de']]Die Systemgrenzen stimmen nicht.[[/lang]][[lang code='en,other']]The system boundaries are incorrect.[[/lang]]"),
+   str_noname: castext("[[lang code='de']]Eine gezeichnete Kraft oder ein Moment hat keinen Namen.[[/lang]][[lang code='en,other']]A force or moment you drew has no name.[[/lang]]"),
+   str_reserved_pre: castext("[[lang code='de']]Der Name \\([[/lang]][[lang code='en,other']]The name \\([[/lang]]"),
+   str_reserved_post: castext("[[lang code='de']]\\) ist schon vergeben (vorgegebene Last oder Größe der Aufgabe). Wählen Sie für die Reaktion einen anderen Namen.[[/lang]][[lang code='en,other']]\\) is already taken (a given load or a quantity of the problem). Choose another name for the reaction.[[/lang]]"),
+   str_form_post: castext("[[lang code='de']]\\): Physikalische Größen immer nur mit einem Buchstaben und eventuell Index schreiben, z.B. <code>F_1</code>.[[/lang]][[lang code='en,other']]\\): always name physical quantities with a single letter and, if needed, an index, e.g. <code>F_1</code>.[[/lang]]"),
+   str_forces_wrong: castext("[[lang code='de']]Die Zahl der Reaktionskräfte stimmt nicht.[[/lang]][[lang code='en,other']]The number of reaction forces is incorrect.[[/lang]]"),
+   str_moments_wrong: castext("[[lang code='de']]Die Zahl der Reaktionsmomente stimmt nicht.[[/lang]][[lang code='en,other']]The number of reaction moments is incorrect.[[/lang]]"),
+   str_ok_pre: castext("[[lang code='de']]Geprüft und in Ordnung: [[/lang]][[lang code='en,other']]Checked and correct: [[/lang]]"),
+   str_ok_sys: castext("[[lang code='de']]Systemgrenzen[[/lang]][[lang code='en,other']]system boundaries[[/lang]]"),
+   str_ok_names: castext("[[lang code='de']]Namen[[/lang]][[lang code='en,other']]names[[/lang]]"),
+   str_ok_count: castext("[[lang code='de']]Anzahl der Reaktionen[[/lang]][[lang code='en,other']]number of reactions[[/lang]]")],
+  /* option value or false; the name may be given as a symbol or a string */
+  %_get: lambda([%_key], block([%_v: false],
+    for %_e in %_options do if equationp(%_e) and string(lhs(%_e)) = %_key then %_v: rhs(%_e), %_v)),
+  /* loads drawn by the student and given loads */
+  %_drawn: sublist_indices(%_o, lambda([x], member(x[1], ["force", "moment"]) and last(x) = "active"
+    and not sposition(" ", x[2]))),
+  %_given: sublist(map(lambda([x], x[2]), sublist(%_o, lambda([x], member(x[1], ["force", "moment"]) and last(x) # "active"))),
+    lambda([x], stringp(x) and x # "")),
+  /* 1. system boundaries */
+  if %_get("sys") # false or %_get("env") # false then (
+    %_done: endcons(str_ok_sys, %_done),
+    %_okS: second(fb_system(%_n, if listp(%_get("sys")) then %_get("sys") else [],
+                                 if listp(%_get("env")) then %_get("env") else [], "")),
+    if not %_okS then %_msgs: endcons(
+      if stringp(%_get("hint")) and striml(" ", %_get("hint")) # "" then sconcat(str_sys_wrong, " ", striml(" ", %_get("hint"))) else str_sys_wrong,
+      %_msgs)),
+  /* 2. names: missing, taken (given loads, reserved), form, the same at several supports */
+  %_done: endcons(str_ok_names, %_done),
+  if some(lambda([k], strim(" ", %_o[k][2]) = ""), %_drawn) then (%_okN: false, %_msgs: endcons(str_noname, %_msgs)),
+  %_res: append(%_given, map(lambda([x], if stringp(x) then x else string(x)),
+                             if listp(%_get("reserved")) then %_get("reserved") else [])),
+  for %_nm in unique(map(lambda([k], %_o[k][2]), %_drawn)) do
+    if member(%_nm, %_res) then (%_okN: false, %_msgs: endcons(sconcat(str_reserved_pre, %_nm, str_reserved_post), %_msgs)),
+  if %_get("nameform") = true then
+    for %_nm in unique(map(lambda([k], %_o[k][2]), %_drawn)) do (
+      %_base: if sposition("_", %_nm) # false then substring(%_nm, 1, sposition("_", %_nm)) else %_nm,
+      if strim(" ", %_nm) # "" and not (slength(%_base) = 1 and alphacharp(charat(%_base, 1))) then (
+        %_okN: false, %_msgs: endcons(sconcat("\\(", %_nm, str_form_post), %_msgs))),
+  %_sup: if listp(%_get("supports")) then %_get("supports")
+    else sublist_indices(%_o, lambda([x], member(x[1], ["fix1", "fix12", "fix123", "fix13", "contact"]))),
+  %_u: fb_unique_names(%_o, %_n, %_sup),
+  if not second(%_u) then (%_okN: false, %_msgs: endcons(first(%_u), %_msgs)),
+  /* 3. number of drawn forces and moments */
+  if %_get("forces") # false or %_get("moments") # false then (
+    %_done: endcons(str_ok_count, %_done),
+    %_fnum: length(sublist(%_drawn, lambda([k], %_o[k][1] = "force"))),
+    %_mnum: length(sublist(%_drawn, lambda([k], %_o[k][1] = "moment"))),
+    if integerp(%_get("forces")) and %_fnum # %_get("forces") then (%_okC: false, %_msgs: endcons(str_forces_wrong, %_msgs)),
+    if integerp(%_get("moments")) and %_mnum # %_get("moments") then (%_okC: false, %_msgs: endcons(str_moments_wrong, %_msgs))),
+  if emptyp(%_msgs) then [sconcat("<br>", str_ok_pre, simplode(%_done, ", "), "."), true, [true, true, true]]
+  else [sconcat("<br>", simplode(%_msgs, "<br>")), false, [%_okS, %_okN, %_okC]]
+);
+
+/* https://github.com/mkraska/meclib/wiki/fb_EE() */
+/* Feedback on one equation of equilibrium: the student's expression %_S (the sum, "= 0" implied)
+   against the reference %_T, e.g. sumF() or sumM() of the student's own free-body diagram.
+   %_options: list of options name = value, each optional:
+     subst = [alpha = atan(2/3), ...]  applied to both sides before comparing (symbols of the
+                                       problem that stand for numbers of the sketch)
+     kind = "M" or "x", "y", ...       for the hint on a wrong sign of the whole sum: moments
+                                       (counterclockwise) or forces in the direction named
+     title = "\\Sigma F_x"             LaTeX title put in front of a message
+   Needs fb_value.mac (fb_vars()). Returns [text, ok]; the text is empty if the equation is right. */
+fb_EE(%_S, %_T, [%_options]):= block(
+  [%_get, %_sub, %_kind, %_title, %_z, %_msg,
+   str_sign_pre: castext("[[lang code='de']]Zählen Sie Kräfte in positiver \\([[/lang]][[lang code='en,other']]Count forces in the positive \\([[/lang]]"),
+   str_sign_post: castext("[[lang code='de']]\\)-Richtung positiv.[[/lang]][[lang code='en,other']]\\) direction as positive.[[/lang]]"),
+   str_sign_M: castext("[[lang code='de']]Zählen Sie Momente gegen den Uhrzeigersinn positiv.[[/lang]][[lang code='en,other']]Count counterclockwise moments as positive.[[/lang]]"),
+   str_sign: castext("[[lang code='de']]Das Vorzeichen der Summe stimmt nicht. Prüfen Sie die Zählrichtung.[[/lang]][[lang code='en,other']]The sign of the sum is wrong. Check the counting direction.[[/lang]]"),
+   str_wrong: castext("[[lang code='de']]Die Gleichung passt nicht zu Ihrem Freischnitt.[[/lang]][[lang code='en,other']]The equation does not match your free-body diagram.[[/lang]]")],
+  %_options: if %_options = [] then [] else %_options[1],
+  %_get: lambda([%_key], block([%_v: false],
+    for %_e in %_options do if equationp(%_e) and string(lhs(%_e)) = %_key then %_v: rhs(%_e), %_v)),
+  /* one equation per call ([S] and [T] are taken as S and T) */
+  if listp(%_S) and length(%_S) = 1 then %_S: %_S[1],
+  if listp(%_T) and length(%_T) = 1 then %_T: %_T[1],
+  if listp(%_S) or listp(%_T) then return(["fb_EE(): one equation per call", false]),
+  %_sub: if listp(%_get("subst")) then %_get("subst") else [],
+  %_kind: %_get("kind"), %_title: %_get("title"),
+  /* zero after the substitutions? */
+  %_z: lambda([%_e], is(ratsimp(trigsimp(ratsimp(subst(%_sub, %_e)))) = 0)),
+  if %_z(%_S - %_T) then return(["", true]),
+  %_msg: if %_z(%_S + %_T) then (
+      if %_kind = "M" then str_sign_M
+      else if stringp(%_kind) and %_kind # "" then sconcat(str_sign_pre, %_kind, str_sign_post)
+      else str_sign)
+    else block([%_v: fb_vars(ratsimp(subst(%_sub, %_S)), ratsimp(subst(%_sub, %_T)), listofvars(subst(%_sub, %_T)))],
+      if %_v = "" then str_wrong else %_v),
+  [sconcat("<br>", if stringp(%_title) then sconcat("\\(", %_title, "\\): ") else "", %_msg), false]
 );
 
 /* https://github.com/mkraska/meclib/wiki/fb_force() */

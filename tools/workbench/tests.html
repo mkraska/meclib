@@ -133,6 +133,7 @@ function caseRow(scene, i) {
     <td class="label">${esc(c.label)} <code class="cid">${esc(caseId(scene, i))}</code>
       ${c.notes ? `<div class="cnotes">${esc(c.notes)}</div>` : ""}
       ${c.state ? '<div class="cnotes">starts from a stored state</div>' : ""}
+      ${c.drags && c.drags.length ? `<div class="cnotes">${c.drags.length} drag(s): ${esc(c.drags.map((d) => JSON.stringify(d[0]) + "→" + JSON.stringify(d[1])).join(", "))}</div>` : ""}
       ${users.length ? `<div class="cnotes">used by ${users.map(esc).join(", ")}</div>` : ""}</td>
     <td class="thumb"><div class="placeholder"></div></td>
     <td class="names"><span class="lbl">expected</span><code>${esc(c.expected?.names ?? "(none)")}</code>
@@ -171,7 +172,7 @@ async function runOne(scene, i, src) {
       container: thumb, config, jsxKey: $("jsx").value, mathjaxKey: $("mathjax").value,
       meclibSource: src.text, initText: JSON.stringify(scene.initdata),
       blockText: scene.block || F.BLOCK_PRESETS.interactive, decsep: scene.decsep || ".",
-      startState: c.state ? JSON.stringify(c.state) : "", scale: 0.5,
+      startState: c.state ? JSON.stringify(c.state) : "", drags: c.drags || [], scale: 0.5,
     });
   } catch (e) {
     const r = { status: "fail", details: [e.message], warnings: [] };

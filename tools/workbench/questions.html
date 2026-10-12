@@ -25,66 +25,54 @@
     main.qgrid.tab-edit #previewCol, main.qgrid.tab-preview #editCol { display: none; }
   }
   @media (max-width: 800px) { main.qgrid, main.qgrid.nofiles { grid-template-columns: minmax(0, 1fr); } }
-  /* jump navigation: a bar at the top of each column ("top") or a narrow rail beside it ("side");
-     rails: editor rail left of the editor, preview rail right of the preview */
-  nav.jump { display: flex; gap: 3px; font-size: 11.5px; }
-  nav.jump button { font-size: 11.5px; padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
-  nav.jump button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-  nav.jump button.sub { font-family: var(--mono); color: var(--muted); }
-  nav.jump button.sub.on { color: var(--accent-ink); }
-  nav.jump.top { flex-wrap: wrap; position: sticky; top: 0; z-index: 1; background: var(--bg);
-    padding: 4px 0 6px; margin-bottom: 4px; }
-  nav.jump.side { flex-direction: column; overflow-y: auto; min-height: 0; }
-  nav.jump.side button { writing-mode: vertical-rl; padding: 6px 1px; }
-  /* arrangement of the rails: outer (editor rail left, preview rail right), inner (both between
-     the columns), left, right; a rail on the left reads bottom-up, on the right top-down */
-  nav.jump.side.up button { transform: rotate(180deg); }
-  main.qgrid.side { --rail: 24px; column-gap: 8px; }
-  main.qgrid.side #railEdit { grid-area: re; } main.qgrid.side #railPreview { grid-area: rp; }
-  main.qgrid.side #filesCol { grid-area: files; } main.qgrid.side #editCol { grid-area: edit; } main.qgrid.side #previewCol { grid-area: prev; }
-  main.qgrid.side.r-outer { grid-template-columns: minmax(230px, 290px) var(--rail) minmax(0, 1fr) minmax(0, 1fr) var(--rail); grid-template-areas: "files re edit prev rp"; }
-  main.qgrid.side.r-inner { grid-template-columns: minmax(230px, 290px) minmax(0, 1fr) var(--rail) var(--rail) minmax(0, 1fr); grid-template-areas: "files edit re rp prev"; }
-  main.qgrid.side.r-left { grid-template-columns: minmax(230px, 290px) var(--rail) var(--rail) minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "files re rp edit prev"; }
-  main.qgrid.side.r-right { grid-template-columns: minmax(230px, 290px) minmax(0, 1fr) minmax(0, 1fr) var(--rail) var(--rail); grid-template-areas: "files edit prev re rp"; }
-  main.qgrid.side.nofiles.r-outer { grid-template-columns: var(--rail) minmax(0, 1fr) minmax(0, 1fr) var(--rail); grid-template-areas: "re edit prev rp"; }
-  main.qgrid.side.nofiles.r-inner { grid-template-columns: minmax(0, 1fr) var(--rail) var(--rail) minmax(0, 1fr); grid-template-areas: "edit re rp prev"; }
-  main.qgrid.side.nofiles.r-left { grid-template-columns: var(--rail) var(--rail) minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "re rp edit prev"; }
-  main.qgrid.side.nofiles.r-right { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--rail) var(--rail); grid-template-areas: "edit prev re rp"; }
-  main.qgrid.side.r-outer #editCol, main.qgrid.side.r-left #editCol, main.qgrid.side.r-right #editCol { margin-right: 8px; }
-  @media (max-width: 1399px) {     /* one column: outer and inner keep a rail on each side */
-    main.qgrid.side #previewCol { grid-area: edit; }
-    main.qgrid.side.r-outer, main.qgrid.side.r-inner { grid-template-columns: minmax(230px, 290px) var(--rail) minmax(0, 1fr) var(--rail); grid-template-areas: "files re edit rp"; }
-    main.qgrid.side.r-left { grid-template-columns: minmax(230px, 290px) var(--rail) var(--rail) minmax(0, 1fr); grid-template-areas: "files re rp edit"; }
-    main.qgrid.side.r-right { grid-template-columns: minmax(230px, 290px) minmax(0, 1fr) var(--rail) var(--rail); grid-template-areas: "files edit re rp"; }
-    main.qgrid.side.nofiles.r-outer, main.qgrid.side.nofiles.r-inner { grid-template-columns: var(--rail) minmax(0, 1fr) var(--rail); grid-template-areas: "re edit rp"; }
-    main.qgrid.side.nofiles.r-left { grid-template-columns: var(--rail) var(--rail) minmax(0, 1fr); grid-template-areas: "re rp edit"; }
-    main.qgrid.side.nofiles.r-right { grid-template-columns: minmax(0, 1fr) var(--rail) var(--rail); grid-template-areas: "edit re rp"; }
-    main.qgrid.side #editCol { margin-right: 0; }
-    main.qgrid.side.r-inner #railEdit button { transform: rotate(180deg); }   /* inner = outer here: left rail bottom-up */
-    main.qgrid.side.r-inner #railPreview button { transform: none; }
-    nav.jump.top { top: var(--hdr, 52px); }          /* the page scrolls under the sticky header */
-    #editCol [data-jump], #previewCol [data-jump], #prtView .prt { scroll-margin-top: calc(var(--hdr, 52px) + 36px); }
-    main.qgrid.side #editCol [data-jump], main.qgrid.side #previewCol [data-jump], main.qgrid.side #prtView .prt { scroll-margin-top: calc(var(--hdr, 52px) + 6px); }
-    main.qgrid.side nav.jump.side { position: sticky; top: calc(var(--hdr, 52px) + 8px); align-self: start; max-height: calc(100vh - var(--hdr, 52px) - 24px); }
+  /* side bars: one beside the editor and one beside the preview, left or right of its column (set
+     in its ⋯ menu; grid columns set by layout()): the column's actions, then its sections */
+  main.qgrid { column-gap: 10px; }
+  #filesCol { grid-area: files; } #editCol { grid-area: edit; } #previewCol { grid-area: prev; }
+  #sideEdit { grid-area: re; } #sidePreview { grid-area: rp; }
+  .sidebar { width: 84px; display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; align-self: start; min-height: 0;
+    max-height: calc(100vh - var(--hdr, 52px) - 24px); padding-top: 4px; }
+  .sidebar > button, .sidebar .pair button, .sidebar .sbmenu summary { font-size: 11.5px; padding: 2px 5px; border-radius: 3px; }
+  .sidebar > button { width: 100%; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sidebar .pair { display: flex; }
+  .sidebar .pair button { flex: 1; min-width: 0; text-align: center; border-radius: 0; }
+  .sidebar .pair button:first-child { border-radius: 3px 0 0 3px; }
+  .sidebar .pair button:last-child { border-radius: 0 3px 3px 0; border-left: 0; }
+  .sidebar hr { width: 100%; border: 0; border-top: 1px solid var(--line); margin: 3px 0; }
+  nav.jump { display: flex; flex-direction: column; gap: 3px; overflow-y: auto; min-height: 0; flex: 0 1 auto; }
+  nav.jump button { font-size: 11.5px; padding: 1px 5px; border-radius: 3px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; }
+  /* three kinds of buttons in a bar: settings (⋯, grey), actions (white, Update/Check blue),
+     navigation (light blue, the section in view darker) */
+  nav.jump button { background: #e8f0f8; border-color: #d3e1ef; color: #1a4f80; }
+  nav.jump button:hover { border-color: var(--accent); }
+  nav.jump button.on { background: #bcd4ec; border-color: #7fa6cc; color: #0d3a63; font-weight: 600; }
+  nav.jump button.sub { font-family: var(--mono); background: #f2f6fb; color: #4d6f8f; margin-left: 8px; }
+  nav.jump button.sub.on { background: #bcd4ec; border-color: #7fa6cc; color: #0d3a63; }
+  .sbmenu { position: relative; }
+  .sbmenu summary { cursor: pointer; list-style: none; border: 1px solid #cfcfc8; background: #e6e6e1; color: var(--muted); text-align: center; font-weight: bold; letter-spacing: 1px; }
+  .sbmenu summary:hover, .sbmenu[open] summary { background: #d9d9d3; color: var(--ink); }
+  .sbmenu summary::-webkit-details-marker { display: none; }
+  .sbmenu > div { position: absolute; top: calc(100% + 2px); right: 0; z-index: 40; background: #fff; border: 1px solid var(--line); border-radius: 4px;
+    padding: 6px 10px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.12); font-size: 12px; }
+  main.qgrid.sb-edit-left #sideEdit .sbmenu > div, main.qgrid.sb-preview-left #sidePreview .sbmenu > div { right: auto; left: 0; }
+  .sbmenu label { display: block; font-weight: normal; margin: 2px 0; }
+  .sbmenu .sbhead { font-weight: 600; color: var(--muted); margin: 4px 0 2px; }
+  .sbmenu .sbhead:first-child { margin-top: 0; }
+  #editCol [data-jump], #previewCol [data-jump], #prtView .prt { scroll-margin-top: 6px; }
+  @media (max-width: 1399px) {
+    .sidebar { position: sticky; top: calc(var(--hdr, 52px) + 8px); }
+    main.qgrid.tab-edit #sidePreview, main.qgrid.tab-preview #sideEdit { display: none; }
+    #editCol [data-jump], #previewCol [data-jump], #prtView .prt { scroll-margin-top: calc(var(--hdr, 52px) + 6px); }
   }
-  @media (max-width: 800px) {
-    main.qgrid.side #filesCol { display: none; }
-    main.qgrid.side.r-outer, main.qgrid.side.r-inner, main.qgrid.side.nofiles.r-outer, main.qgrid.side.nofiles.r-inner { grid-template-columns: var(--rail) minmax(0, 1fr) var(--rail); grid-template-areas: "re edit rp"; }
-    main.qgrid.side.r-left, main.qgrid.side.nofiles.r-left { grid-template-columns: var(--rail) var(--rail) minmax(0, 1fr); grid-template-areas: "re rp edit"; }
-    main.qgrid.side.r-right, main.qgrid.side.nofiles.r-right { grid-template-columns: minmax(0, 1fr) var(--rail) var(--rail); grid-template-areas: "edit re rp"; }
-  }
-  main.qgrid:not(.side) nav.jump.side, main.qgrid.side nav.jump.top { display: none; }
-  @media (min-width: 1400px) {
-    #editCol [data-jump], #previewCol [data-jump], #prtView .prt { scroll-margin-top: 36px; }
-    main.qgrid.side #editCol [data-jump], main.qgrid.side #previewCol [data-jump], main.qgrid.side #prtView .prt { scroll-margin-top: 6px; }
-  }
+  @media (max-width: 800px) { #filesCol { display: none; } }
   .langs { display: inline-flex; }
   .langs button { border-radius: 0; }
   .langs button:first-child { border-radius: 4px 0 0 4px; }
   .langs button:last-child { border-radius: 0 4px 4px 0; border-left: 0; }
   button.dec { font-family: var(--mono); font-size: 13px; }
   button.dec b { font-size: 18px; line-height: 10px; color: inherit; }
-  #simpToggle.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  /* switches (language, decimal separator, simplify): the chosen state dark grey, not blue like Update/Check */
+  #simpToggle.on, .sidebar .pair button.on { background: #55554f; color: #fff; border-color: #55554f; }
   .opts { display: grid; grid-template-columns: max-content 1fr max-content 1fr; gap: 4px 10px; align-items: center; margin-top: 6px; font-size: 12.5px; }
   .opts label { color: var(--muted); }
   .opts select, .opts input { font-size: 12.5px; padding: 1px 3px; }
@@ -107,10 +95,16 @@
   .folder.cur > summary { color: var(--accent); }
   .folder .tools { display: flex; gap: 6px; margin: 4px 0 0 14px; }
   .recent li { font-size: 12px; }
+  .qlist.files li.subdir { color: var(--muted); font-size: 11.5px; cursor: default; padding-top: 4px; }
+  .qlist.files li.subdir:hover { background: none; }
+  .qlist.files li.insub { padding-left: 14px; }
   .recent li .path { display: block; color: var(--muted); font-size: 11px; font-family: var(--mono); word-break: break-all; }
   .btnrow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
   #qtext, #gfb, #qnote { line-height: 1.5; overflow-x: auto; }
   #qtext img { max-width: 100%; }
+  /* <code> as in Moodle's Boost theme (Bootstrap 5: pink, monospace, 87.5 %); not inside <pre> */
+  :is(#qtext, #gfb, #qnote, .stack-prt .prtfb) code { color: #d63384; font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: .875em; word-wrap: break-word; }
+  :is(#qtext, #gfb, #qnote, .stack-prt .prtfb) pre code { color: inherit; font-size: inherit; }
   .formulation { background: #e7f3f5; border-radius: 4px; padding: 10px 14px; }
   /* as in STACK: page font, width (boxsize * 0.9 + 0.1) em set on the element; options "monospace", "align:right" */
   input.stack-input { font: inherit; padding: 2px 4px; border: 1px solid #9aa; border-radius: 3px; max-width: 100%; box-sizing: content-box; }
@@ -133,6 +127,11 @@
   .stack-prt.score-0 { border-left-color: #c0504d; }
   .stack-prt.score-p { border-left-color: #d8a23a; }
   .stack-prt .prterr { color: var(--err); font-size: 12px; white-space: pre-wrap; }
+  /* variables: question variables or the feedback variables of a PRT (after Check) */
+  .vtabs { display: flex; flex-wrap: wrap; gap: 3px; margin: 0 0 6px; }
+  .vtabs button { font-size: 11.5px; padding: 1px 6px; border-radius: 3px; }
+  .vtabs button.sub { font-family: var(--mono); }
+  .vtabs button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .stack-validation .val-ok { color: var(--ink); }
   .stack-validation .val-bad { color: var(--err); }
   .stack-prt { margin: 6px 0; padding: 4px 8px; border-left: 3px solid #c9d6e3; color: var(--muted); font-size: 12.5px; background: #f6f8fa; }
@@ -182,6 +181,22 @@
   .cm-castext-math { color: #116644; }
   .cm-castext-latex { color: #0b7a4f; font-weight: 600; }
   .cm-flash-line { background: #fde9b8; }
+  /* syntax help box and autocomplete list of the code editors (editor.js) */
+  .meclib-helpbox { position: absolute; z-index: 50; display: none; max-width: 560px; padding: 6px 9px; background: #fffef6;
+    border: 1px solid #d8d2b4; border-radius: 5px; box-shadow: 0 3px 10px rgba(0,0,0,.15); font-size: 12.5px; line-height: 1.4; }
+  .meclib-helpbox .hb-sig { font-family: var(--mono); font-size: 12px; }
+  .meclib-helpbox .hb-sig b { color: #9b2c00; }
+  .meclib-helpbox .hb-opt { color: #777; }
+  .meclib-helpbox .hb-ret { color: #777; }
+  .meclib-helpbox .hb-arg { margin-top: 3px; }
+  .meclib-helpbox .hb-text { margin-top: 3px; color: #333; }
+  .meclib-helpbox code { font-family: var(--mono); font-size: 11.5px; color: #d63384; }
+  .meclib-helpbox .hb-foot { margin-top: 4px; display: flex; gap: 8px; font-size: 11px; color: var(--muted); }
+  .meclib-helpbox .hb-foot a { color: #1a5fb4; }
+  .meclib-helpbox .hb-src { margin-left: auto; }
+  .CodeMirror-hints { font-size: 12px; max-width: 640px; z-index: 60; }
+  .CodeMirror-hint .hs { color: #888; font-size: 11px; } .CodeMirror-hint .hk { color: #aaa; font-size: 10px; margin-left: 6px; }
+  li.CodeMirror-hint-active .hs, li.CodeMirror-hint-active .hk { color: #e8eef8; }
   #snippetDialog { border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; width: min(460px, 92vw); }
   #snippetDialog::backdrop { background: rgba(0, 0, 0, .15); }
   #snippetList li .pv { display: block; font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -225,15 +240,20 @@
   .prt textarea, .prt input[type=text], .prt select { font-size: 12px; }
   .prt textarea { width: 100%; box-sizing: border-box; font-family: var(--mono); resize: vertical; }
   .prt .lbl { color: var(--muted); font-size: 11.5px; margin: 4px 0 1px; }
-  .prt .node { border-left: 3px solid #d9d9d2; padding: 4px 0 4px 8px; margin: 8px 0; }
-  .prt .node.flash { border-left-color: var(--accent); background: #f3f7fb; }
+  .prt { border: 1px solid #b9b9b0; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin: 12px 0; }
+  .prt .prttop { background: #fcefdc; margin: -6px -8px 0; padding: 6px 8px 6px; border-radius: 4px 4px 0 0; border-bottom: 1px solid #ecdcc0; }
+  .prt .node { border: 1px solid #dcdcd5; border-radius: 4px; margin: 8px 0; overflow: hidden; }
+  .prt .node > .nodehead, .prt .node > .test { background: #f1f1ed; margin: 0; padding: 4px 8px; }
+  .prt .node > .test { padding-top: 0; padding-bottom: 6px; }
+  .prt .node.flash { border-color: var(--accent); box-shadow: 0 0 0 2px #cfe0f3; }
+  .prt .node > .branches { gap: 0; }
   .prt .nodehead { display: flex; gap: 6px; align-items: center; font-size: 12px; }
   .prt .nodehead input { flex: 1; }
   .prt .test { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 3px 6px; align-items: center; font-size: 12px; margin: 4px 0; }
   .prt .test input { width: 100%; box-sizing: border-box; font-family: var(--mono); }
   .prt .branches { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .prt .branch { font-size: 12px; border-top: 2px solid; padding-top: 3px; }
-  .prt .branch.true { border-color: #3a8a4f; } .prt .branch.false { border-color: #b3261e; }
+  .prt .branch { font-size: 12px; padding: 4px 8px 6px; }
+  .prt .branch.true { background: #eaf5ec; } .prt .branch.false { background: #fbecea; }
   .prt .branch .row { display: flex; flex-wrap: wrap; gap: 3px 6px; align-items: center; margin: 2px 0; }
   .prt .branch input.num { width: 4.5em; } .prt .branch input.note { flex: 1; min-width: 6em; font-family: var(--mono); }
   #prtGraph svg { display: block; margin: 4px 0 10px; }
@@ -251,11 +271,9 @@
   <label>MathJax <select id="mathjax"></select></label>
   <label>Variant (seed) <input type="text" id="seed" value="1" spellcheck="false"></label>
   <button id="newSeed" title="random seed">↻</button>
-  <button id="evaluate" class="primary" title="save and evaluate (Ctrl+Enter)">Evaluate</button>
   <span class="tabs"><button id="tab-edit" class="small" title="Ctrl+Shift+Enter switches">Edit</button><button id="tab-preview" class="small" title="Ctrl+Shift+Enter switches">Preview</button></span>
   <span id="savestate"></span>
   <button id="toggleFiles" title="show/hide the files column">Files ◂</button>
-  <button id="toggleNav" title="section buttons: top (bar above each column), outer, inner, left, right (rails beside the columns) - click to switch">Sections: top</button>
   <div id="status">connecting to server ...</div>
 </header>
 
@@ -289,15 +307,25 @@
     </section>
   </aside>
 
-  <nav id="railEdit" class="jump side" aria-label="editor sections"></nav>
+  <aside id="sideEdit" class="sidebar" aria-label="editor actions and sections">
+    <details class="sbmenu"><summary title="settings: side of this bar, code editors">⋯</summary><div>
+      <div class="sbhead">This bar</div>
+      <label><input type="radio" name="sideEdit" value="left"> left of the editor</label>
+      <label><input type="radio" name="sideEdit" value="right"> right of the editor</label>
+      <div class="sbhead">Code editors</div>
+      <label><input type="checkbox" id="optAutocomplete"> autocomplete while typing (Ctrl+Space: always)</label>
+      <label><input type="checkbox" id="optCloseBrackets"> add closing brackets</label>
+      <label><input type="checkbox" id="optSemicolon"> add <code>;</code> after <code>:</code> (Maxima)</label>
+      <span class="hint">F1: help on the function at the cursor</span></div></details>
+    <span class="pair"><button id="undoBtn" disabled title="nothing to undo">↶</button><button id="redoBtn" disabled title="nothing to redo">↷</button></span>
+    <button id="snippetBtn" title="insert a text snippet at the cursor (templates/snippets/)">Snippet</button>
+    <button id="toGraphic" title="open the question's graphic (first [[jsxgraph]] block, evaluated initdata) on the Graphic page">Graphic ↗</button>
+    <hr>
+    <nav id="railEdit" class="jump" aria-label="editor sections"></nav>
+  </aside>
   <div id="editCol">
-    <nav id="barEdit" class="jump top" aria-label="editor sections"></nav>
     <section>
-      <h2><button type="button" id="qtitle" title="rename the question">Question</button><span class="spacer"></span>
-        <button id="undoBtn" class="small" disabled title="nothing to undo">↶ Undo</button>
-        <button id="redoBtn" class="small" disabled title="nothing to redo">↷ Redo</button>
-        <button id="snippetBtn" class="small" title="insert a text snippet at the cursor (templates/snippets/)">Snippet ...</button>
-        <button id="toGraphic" class="small" title="open the question's graphic (first [[jsxgraph]] block, evaluated initdata) on the Graphic page">Graphic ↗</button></h2>
+      <h2><button type="button" id="qtitle" title="rename the question">Question</button></h2>
       <div id="conflict"></div>
       <div id="editView" class="ed">
         <input type="hidden" data-field="name">
@@ -335,15 +363,24 @@
     </section>
   </div>
 
+  <aside id="sidePreview" class="sidebar" aria-label="preview actions and sections">
+    <details class="sbmenu"><summary title="settings: side of this bar">⋯</summary><div>
+      <div class="sbhead">This bar</div>
+      <label><input type="radio" name="sidePreview" value="left"> left of the preview</label>
+      <label><input type="radio" name="sidePreview" value="right"> right of the preview</label></div></details>
+    <button id="evaluate" class="primary" title="Ctrl+Enter: save, evaluate the question and update the preview">Update</button>
+    <button id="checkBtn" class="primary" title="evaluate the PRTs with the current answers (Alt+Enter)">Check</button>
+    <button id="fillBtn" title="Model answer: fill in the model answers (the graphic starts from the model answer of its objects input)">TAns</button>
+    <button id="restartBtn" title="clear all answers and the feedback; the graphic starts from its initial state (as Moodle's &quot;Start again&quot;)">Restart</button>
+    <span class="pair" title="language of the [[lang]] blocks"><button id="lang-de">de</button><button id="lang-en">en</button></span>
+    <span class="pair" title="decimal separator (question option, saved in the file)"><button id="dec-point" class="dec">0<b>.</b>5</button><button id="dec-comma" class="dec">0<b>,</b>5</button></span>
+    <button id="simpToggle" title="simplify (question option, saved in the file)">simp</button>
+    <hr>
+    <nav id="railPreview" class="jump" aria-label="preview sections"></nav>
+  </aside>
   <div id="previewCol">
-    <nav id="barPreview" class="jump top" aria-label="preview sections"></nav>
     <section>
-      <h2>Preview<span class="spacer"></span>
-        <span class="langs" title="language of the [[lang]] blocks"><button id="lang-de" class="small">de</button><button id="lang-en" class="small">en</button></span>
-        <span class="langs" title="decimal separator (question option, saved in the file)"><button id="dec-point" class="small dec">0<b>.</b>5</button><button id="dec-comma" class="small dec">0<b>,</b>5</button></span>
-        <button id="simpToggle" class="small" title="simplify (question option, saved in the file)">simp</button>
-        <button id="fillBtn" class="small" title="fill in the model answers (the graphic starts from the model answer of its objects input)">Model answers</button>
-        <button id="checkBtn" class="small primary" title="evaluate the PRTs with the current answers (Alt+Enter)">Check</button></h2>
+      <h2>Preview</h2>
       <div id="previewView">
         <div id="qmeta" class="meta"></div>
         <div id="qtext" class="formulation"><p class="hint">Open a file and choose a STACK question.</p></div>
@@ -365,11 +402,11 @@
       <div id="prtGraph"><p class="hint">-</p></div>
     </section>
     <section>
-      <h2>Question variables<span class="spacer"></span><input type="text" id="varFilter" placeholder="filter" style="width:8em"></h2>
+      <h2><span id="varTitle">Question variables</span><span class="spacer"></span><input type="text" id="varFilter" placeholder="filter" style="width:8em"></h2>
+      <div id="varTabs" class="vtabs"></div>
       <table class="vars" id="vars"><tbody></tbody></table>
     </section>
   </div>
-  <nav id="railPreview" class="jump side" aria-label="preview sections"></nav>
 </main>
 <dialog id="snippetDialog">
   <form method="dialog">
@@ -480,12 +517,16 @@ async function loadFolders() {
   try { data = await (await fetch("/api/q/folders")).json(); } catch (e) { return; }
   folderList = data.folders;
   const box = $("folders"); box.innerHTML = "";
+  // short folder names (full path as tooltip): the last part, or the last two where that is ambiguous
+  const parts = (p) => String(p).split(/[\\/]/).filter(Boolean);
+  const short = (p, n) => parts(p).slice(-n).join("/");
+  const shortName = (p) => data.folders.filter((x) => short(x.path, 1) === short(p, 1)).length > 1 ? short(p, 2) : short(p, 1);
   const openFolders = stored(QSTORE_KEY).openFolders;   // undefined: all folders open except the inbox
   for (const d of data.folders) {
     const det = document.createElement("details");
     det.className = "folder" + (d.path === currentFolder ? " cur" : "");
     det.open = openFolders ? openFolders.includes(d.path) : d.source !== "inbox";
-    const label = d.source === "inbox" ? "workbench inbox (copies of dropped files)" : d.path;
+    const label = d.source === "inbox" ? "workbench inbox (copies of dropped files)" : shortName(d.path);
     det.innerHTML = `<summary title="${esc(d.path)}">${esc(label)} <span class="src">${d.source === "config" ? "(config)" : ""}${d.exists ? "" : " - not found"}</span></summary>`;
     det.addEventListener("toggle", () => {
       const list = new Set(stored(QSTORE_KEY).openFolders || [...document.querySelectorAll(".folder[open] > summary")].map((x) => x.title));
@@ -494,8 +535,19 @@ async function loadFolders() {
       if (det.open) setFolder(d.path);
     });
     const ul = document.createElement("ul"); ul.className = "qlist files";
+    let lastSub = "";
     for (const f of d.files) {
-      const li = document.createElement("li"); li.textContent = f;
+      // files in subfolders (e.g. split by category): the subfolder once as a heading, files indented
+      const cut = f.lastIndexOf("/"), sub = cut < 0 ? "" : f.slice(0, cut);
+      if (sub && sub !== lastSub) {
+        const h = document.createElement("li"); h.className = "subdir"; h.textContent = sub + "/"; h.title = d.path + "/" + sub;
+        ul.appendChild(h);
+      }
+      lastSub = sub;
+      const li = document.createElement("li");
+      li.textContent = f.slice(cut + 1);
+      if (sub) li.classList.add("insub");
+      li.title = d.path + "/" + f;
       const full = d.path + "/" + f;
       if (file && samePath(file.path, full)) li.classList.add("sel");
       li.addEventListener("click", () => { setFolder(d.path); openFile(full); });
@@ -515,7 +567,8 @@ async function loadFolders() {
   const rec = $("recent"); rec.innerHTML = "";
   for (const r of data.recent.slice(0, 10)) {
     const li = document.createElement("li");
-    li.innerHTML = `${esc(r.name || baseName(r.path))}<span class="path">${esc(r.path)}</span>`;
+    li.innerHTML = `${esc(r.name || baseName(r.path))}<span class="path">${esc(short(r.path, 3))}</span>`;
+    li.title = r.path;
     li.addEventListener("click", () => openFile(r.path, r.index));
     rec.appendChild(li);
   }
@@ -549,7 +602,9 @@ async function openFile(path, index) {
 function showFile(data) {
   file = { path: data.path, rev: data.rev, questions: data.questions };
   store(QSTORE_KEY, { path: data.path });
-  $("fileName").textContent = data.path;
+  // the file with its folder (full path as tooltip)
+  $("fileName").textContent = String(data.path).split(/[\\/]/).filter(Boolean).slice(-2).join("/");
+  $("fileName").title = data.path;
   $("qtools").hidden = false;
   const list = $("qlist"); list.innerHTML = "";
   let lastCat = null;
@@ -767,14 +822,14 @@ function renderPRTs(prts) {
         <div class="lbl">feedback <select data-nk="${br}feedback_format">${opt(FORMATS.map((f) => [f, f]), n[br + "feedback_format"])}</select></div>
         <textarea data-nk="${br}feedback" rows="${rowsFor(n[br + "feedback"], 2)}" spellcheck="false">${esc(n[br + "feedback"])}</textarea></div>`;
     return `<div class="prt" data-prt="${esc(p.name)}">
-      <div class="prthead"><b>${esc(p.name)}</b>
+      <div class="prttop"><div class="prthead"><b>${esc(p.name)}</b>
         value <input type="text" class="num" data-pk="value" value="${esc(p.value)}" style="width:6em">
         simplify <select data-pk="autosimplify">${opt([["1", "yes"], ["0", "no"]], p.autosimplify)}</select>
         feedback style <select data-pk="feedbackstyle">${opt(FEEDBACK_STYLES, p.feedbackstyle)}</select>
         <span class="spacer"></span>
         <button type="button" class="small del" data-op="delete-prt" title="delete this PRT and its [[feedback:..]]">✕ PRT</button></div>
       <div class="lbl">feedback variables</div>
-      <textarea data-pk="feedbackvariables" rows="${rowsFor(p.feedbackvariables, 2)}" spellcheck="false">${esc(p.feedbackvariables)}</textarea>
+      <textarea data-pk="feedbackvariables" rows="${rowsFor(p.feedbackvariables, 2)}" spellcheck="false">${esc(p.feedbackvariables)}</textarea></div>
       ${p.nodes.map((n) => `<div class="node" data-node="${esc(n.name)}" id="${esc("node-" + p.name + "-" + n.name)}">
         <div class="nodehead"><b>Node ${esc(nodeNo(n.name))}</b>
           <input type="text" data-nk="description" value="${esc(n.description)}" placeholder="description">
@@ -788,7 +843,9 @@ function renderPRTs(prts) {
         <div class="branches">${branch(n, "true")}${branch(n, "false")}</div></div>`).join("")}
       <button type="button" class="small" data-op="add-node" title="new node, not linked yet">+ Node</button></div>`;
   }).join("");
+  prtEditors = [];
   for (const el of box.querySelectorAll("[data-pk], [data-nk]")) {
+    if (el.tagName === "TEXTAREA" && MeclibEditor.available()) { prtCodeField(el); continue; }
     el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
       setDirty(true);
       if (/nextnode$/.test(el.dataset.nk || "")) renderPRTGraphs();
@@ -807,7 +864,24 @@ function renderPRTs(prts) {
     });
   }
   renderPRTGraphs();
-  if (typeof renderJumpNav === "function" && $("barEdit")) renderJumpNav();
+  if (typeof renderJumpNav === "function" && $("railEdit")) renderJumpNav();
+}
+// Feedback variables (Maxima) and branch feedback (castext) of the PRT editor as code editors
+// with syntax help; the textarea keeps the current text (read by editedPRTs).
+let prtEditors = [];
+function prtCodeField(el) {
+  const maxima = el.dataset.pk === "feedbackvariables";
+  const lines = Math.max(2, Math.min(14, el.value.split("\n").length + 1));
+  let ed = null;
+  ed = MeclibEditor.field(el, maxima ? "maxima" : "castext", () => { if (ed && ed.cm) ed.cm.save(); setDirty(true); }, {
+    height: lines * 17 + 12,
+    context: () => ({
+      format: maxima ? "html" : ((el.closest(".branch") || el.parentNode).querySelector('[data-nk$="feedback_format"]') || {}).value || "html",
+      inputs: ((result && result.inputs) || []).map((i) => i.name).filter((n) => n !== "objects" && n !== "names"),
+      prts: ((result && result.prts) || []).map((p) => p.name),
+    }),
+  });
+  prtEditors.push(ed);
 }
 // the PRTs as currently in the editor (saved state with the edits in the fields)
 function editedPRTs() {
@@ -1085,6 +1159,7 @@ function autoGrow(ta) {
 }
 function refreshEditors() {
   for (const ed of Object.values(editors)) ed.refresh();
+  for (const ed of prtEditors) ed.refresh();
   for (const ta of document.querySelectorAll("#editView textarea")) if (ta.style.display !== "none") autoGrow(ta);
 }
 // the editor fields: Maxima for the question variables, castext for the texts, plain for the name
@@ -1099,6 +1174,11 @@ function initEditors() {
     const DEFAULT_H = { questionvariables: 320, questiontext: 420, generalfeedback: 240, specificfeedback: 120, questionnote: 80 };
     const heights = stored(QSTORE_KEY).heights || {};
     const ed = MeclibEditor.field(el, k === "questionvariables" ? "maxima" : "castext", () => setDirty(true), {
+      context: () => ({
+        format: (document.querySelector(`#editView [data-format="${k}"]`) || {}).value || "html",
+        inputs: ((result && result.inputs) || []).map((i) => i.name).filter((n) => n !== "objects" && n !== "names"),
+        prts: ((result && result.prts) || []).map((p) => p.name),
+      }),
       height: heights[k] || DEFAULT_H[k] || 160,
       onResize: (h) => store(QSTORE_KEY, { heights: Object.assign(stored(QSTORE_KEY).heights || {}, { [k]: h }) }),
     });
@@ -1130,7 +1210,9 @@ async function check() {
     const r = await postJSON("/api/q/check", { path: file.path, index: qindex, seed, src: $("src").value, answers });
     $("status").textContent = "checked in " + r.seconds + " s";
     lastCheck = r.check;
+    result.timing = r.timing; renderMessages();
     showCheck();
+    renderVariables();
     renderPRTGraphs();
   } catch (e) {
     $("status").textContent = "";
@@ -1373,6 +1455,7 @@ function setTab(t) {
   tab = t; store(QSTORE_KEY, { tab: t });
   $("tab-edit").classList.toggle("on", t === "edit"); $("tab-preview").classList.toggle("on", t === "preview");
   $("qgrid").classList.toggle("tab-edit", t === "edit"); $("qgrid").classList.toggle("tab-preview", t === "preview");
+  layout();
   if (t === "edit" || WIDE.matches) refreshEditors();
   if (previewVisible() && previewPending && result) render();
   spyJump();
@@ -1401,15 +1484,26 @@ function jumpTargets(col) {
   const out = JUMPS[col].map(([label, f]) => ({ label, el: f() }));
   if (col === "edit") for (const card of document.querySelectorAll("#prtView .prt"))
     out.push({ label: card.dataset.prt, el: card, sub: true });
+  if (col === "preview") {
+    const vi = out.findIndex((t) => t.label === "Variables");
+    if (vi >= 0) {
+      out[vi].tab = "question";
+      out.splice(vi + 1, 0, ...prtVarTabs().map((n) => ({ label: n, el: out[vi].el, sub: true, tab: n })));
+    }
+  }
   return out.filter((t) => t.el);
 }
 function renderJumpNav() {
-  for (const [col, ids] of [["edit", ["barEdit", "railEdit"]], ["preview", ["barPreview", "railPreview"]]]) {
+  for (const [col, ids] of [["edit", ["railEdit"]], ["preview", ["railPreview"]]]) {
     const targets = jumpTargets(col);
     for (const t of targets) t.el.dataset.jump = t.label;
     for (const id of ids) {
-      $(id).innerHTML = targets.map((t, i) => `<button type="button" class="${t.sub ? "sub" : ""}" data-i="${i}" title="${t.sub ? "PRT " : ""}${esc(t.label)}">${esc(t.label)}</button>`).join("");
-      for (const b of $(id).querySelectorAll("button")) b.addEventListener("click", () => jumpTo(col, targets[+b.dataset.i].el));
+      $(id).innerHTML = targets.map((t, i) => `<button type="button" class="${t.sub ? "sub" : ""}" data-i="${i}" title="${t.tab && t.sub ? "feedback variables of PRT " : t.sub ? "PRT " : ""}${esc(t.label)}">${esc(t.label)}</button>`).join("");
+      for (const b of $(id).querySelectorAll("button")) b.addEventListener("click", () => {
+        const t = targets[+b.dataset.i];
+        if (t.tab) setVarTab(t.tab);
+        jumpTo(col, t.el);
+      });
     }
   }
   spyJump();
@@ -1430,39 +1524,62 @@ function jumpTo(col, el) {
   });
 }
 function spyJump() {
-  for (const [col, colEl, ids] of [["edit", $("editCol"), ["barEdit", "railEdit"]], ["preview", $("previewCol"), ["barPreview", "railPreview"]]]) {
+  for (const [col, colEl, ids] of [["edit", $("editCol"), ["railEdit"]], ["preview", $("previewCol"), ["railPreview"]]]) {
     if (colEl.offsetParent === null) { for (const id of ids) $(id).querySelectorAll("button").forEach((b) => b.classList.remove("on")); continue; }
     const top = (WIDE.matches ? colEl.getBoundingClientRect().top : document.querySelector("header").offsetHeight) + 48;
     const targets = jumpTargets(col);
     let cur = -1;
-    targets.forEach((t, i) => { if (t.el.offsetParent !== null && t.el.getBoundingClientRect().top <= top) cur = i; });
+    // the variables tabs share the section: only the tab shown is highlighted
+    targets.forEach((t, i) => { if (!(t.sub && t.tab) && t.el.offsetParent !== null && t.el.getBoundingClientRect().top <= top) cur = i; });
     if (cur < 0) cur = 0;
+    // scrolled to the end: the last section, even if its heading cannot reach the top
+    const atEnd = WIDE.matches ? colEl.scrollTop + colEl.clientHeight >= colEl.scrollHeight - 2
+      : window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+    if (atEnd) targets.forEach((t, i) => { if (!t.sub && t.el.offsetParent !== null) cur = i; });
+    if (targets[cur] && targets[cur].tab && varTab !== "question") {
+      const ti = targets.findIndex((t) => t.sub && t.tab === varTab);
+      if (ti >= 0) cur = ti;
+    }
     // a PRT card highlights both its own button and "PRTs"
     const prtsIdx = targets.findIndex((t) => t.label === "PRTs" && !t.sub);
     for (const id of ids) $(id).querySelectorAll("button").forEach((b, i) =>
-      b.classList.toggle("on", i === cur || !!(targets[cur] && targets[cur].sub && i === prtsIdx)));
+      b.classList.toggle("on", i === cur || !!(targets[cur] && targets[cur].sub && i === prtsIdx) ||
+        !!(targets[cur] && targets[cur].sub && targets[cur].tab && targets[i].label === "Variables" && !targets[i].sub)));
   }
 }
 for (const id of ["editCol", "previewCol"]) $(id).addEventListener("scroll", () => requestAnimationFrame(spyJump), { passive: true });
 window.addEventListener("scroll", () => requestAnimationFrame(spyJump), { passive: true });
-// top: a bar above each column; outer/inner/left/right: rails beside the columns
-const NAV_MODES = ["top", "outer", "inner", "left", "right"];
-const RAIL_UP = { outer: [true, false], inner: [false, true], left: [true, true], right: [false, false] };   // [editor, preview] reads bottom-up
-function setNavMode(mode) {
-  if (!NAV_MODES.includes(mode)) mode = mode === "side" ? "outer" : "top";
-  const g = $("qgrid");
-  g.classList.toggle("side", mode !== "top");
-  for (const m of NAV_MODES) g.classList.toggle("r-" + m, m === mode);
-  const up = RAIL_UP[mode] || [false, false];
-  $("railEdit").classList.toggle("up", up[0]); $("railPreview").classList.toggle("up", up[1]);
-  $("toggleNav").textContent = "Sections: " + mode;
-  store(QSTORE_KEY, { nav: mode });
-  refreshEditors();
-  spyJump();
+// Side bars: each left or right of its column (default: both between the columns, short mouse
+// ways). The grid columns follow the sides, the files column and, on narrow screens, the tab.
+const NARROW = window.matchMedia("(max-width: 800px)");
+let sides = { edit: "right", preview: "left" };
+function layout() {
+  const g = $("qgrid"), cols = [], areas = [];
+  if (!g.classList.contains("nofiles") && !NARROW.matches) { cols.push("minmax(230px, 290px)"); areas.push("files"); }
+  for (const [c, area, bar] of [["edit", "edit", "re"], ["preview", "prev", "rp"]]) {
+    if (!WIDE.matches && tab !== c) continue;
+    const seg = sides[c] === "left" ? [[bar, "auto"], [area, "minmax(0, 1fr)"]] : [[area, "minmax(0, 1fr)"], [bar, "auto"]];
+    for (const [a, w] of seg) { areas.push(a); cols.push(w); }
+  }
+  g.style.gridTemplateColumns = cols.join(" ");
+  g.style.gridTemplateAreas = `"${areas.join(" ")}"`;
+  g.classList.toggle("sb-edit-left", sides.edit === "left");
+  g.classList.toggle("sb-preview-left", sides.preview === "left");
 }
-$("toggleNav").addEventListener("click", () => {
-  const cur = NAV_MODES.find((m) => $("qgrid").classList.contains("r-" + m)) || "top";
-  setNavMode(NAV_MODES[(NAV_MODES.indexOf(cur) + 1) % NAV_MODES.length]);
+function setSides(s) {
+  sides = { edit: s.edit === "left" ? "left" : "right", preview: s.preview === "right" ? "right" : "left" };
+  for (const [c, name] of [["edit", "sideEdit"], ["preview", "sidePreview"]])
+    for (const r of document.querySelectorAll(`input[name="${name}"]`)) r.checked = r.value === sides[c];
+  store(QSTORE_KEY, { sides });
+  layout(); refreshEditors(); spyJump();
+}
+for (const [c, name] of [["edit", "sideEdit"], ["preview", "sidePreview"]])
+  for (const r of document.querySelectorAll(`input[name="${name}"]`))
+    r.addEventListener("change", () => setSides({ ...sides, [c]: r.value }));
+NARROW.addEventListener("change", layout);
+// a ⋯ menu closes on a click elsewhere
+document.addEventListener("click", (ev) => {
+  for (const d of document.querySelectorAll("details.sbmenu[open]")) if (!d.contains(ev.target)) d.open = false;
 });
 
 function toggleFiles(hide) {
@@ -1470,6 +1587,7 @@ function toggleFiles(hide) {
   $("qgrid").classList.toggle("nofiles", h);
   $("toggleFiles").textContent = h ? "Files ▸" : "Files ◂";
   store(QSTORE_KEY, { hideFiles: h });
+  layout();
   refreshEditors();
 }
 
@@ -1507,6 +1625,7 @@ async function evaluate(firstTime) {
   $("evaluate").disabled = true;
   try {
     const seed = parseInt($("seed").value, 10) || 1;
+    const prev = result, hadCheck = !!lastCheck;
     result = await postJSON("/api/q/eval", { path: file.path, index: qindex, seed, src: $("src").value });
     if (firstTime && result.seeds && result.seeds.length && !$("seed").dataset.userSet) {
       // first deployed variant of the question, if it has any
@@ -1514,11 +1633,38 @@ async function evaluate(firstTime) {
       if (s0 && s0 !== seed) { $("seed").value = s0; $("evaluate").disabled = false; return evaluate(false); }
     }
     $("status").textContent = "evaluated in " + result.seconds + " s (Maxima start " + result.maxima_start + " s)";
-    render();
+    // after an edit of the same question and variant the answers stay (and the graphic's state,
+    // unless the sketch changed); if feedback was shown, it is checked again with them
+    const keep = !firstTime && prev && String(prev.seed) === String(result.seed);
+    if (keep) carryAnswers(prev);
+    lastCheck = null;
+    render(keep);
+    if (keep && hadCheck) await check();
   } catch (e) {
     $("status").textContent = "";
     showMessages([{ cls: "err", text: "Evaluation failed: " + e.message }]);
   } finally { $("evaluate").disabled = false; }
+}
+
+// The [[jsxgraph]] blocks of a result (evaluated, so with the initial objects filled in) and the
+// inputs they are bound to (input-ref-...): a changed block means a changed sketch.
+function graphBlocks(r) {
+  const out = [];
+  for (const v of Object.values((r && r.texts) || {}))
+    for (const t of Object.values(v || {})) out.push(...(String(t || "").match(/\[\[\s*jsxgraph\b[\s\S]*?\[\[\/jsxgraph\]\]/g) || []));
+  return out;
+}
+function carryAnswers(prev) {
+  const names = new Set((result.inputs || []).map((i) => i.name));
+  for (const k of Object.keys(inputValues)) if (!names.has(k)) delete inputValues[k];
+  const before = graphBlocks(prev), now = graphBlocks(result);
+  if (before.join("\n") !== now.join("\n"))
+    for (const b of before) for (const m of b.matchAll(/input-ref-([A-Za-z0-9_]+)\s*=/g)) delete inputValues[m[1]];
+}
+function restart() {
+  if (!result) return;
+  lastCheck = null;
+  render(false);
 }
 
 // ---------------------------------------------------------------- rendering
@@ -1678,10 +1824,28 @@ function render(keepValues) {
   if (lastCheck) showCheck();
 }
 
+// "question" or the name of a PRT: its feedback variables as evaluated by the last Check
+let varTab = "question";
+function prtVarTabs() {
+  if (!lastCheck) return [];
+  const order = byTextOrder(result && result.prts || [], "feedback").map((p) => p.name);   // as in the question text
+  return Object.entries(lastCheck.prts).filter(([, p]) => p.variables && p.variables.length).map(([n]) => n)
+    .sort((a, b) => order.indexOf(a) - order.indexOf(b));
+}
+function setVarTab(t) { varTab = t; renderVariables(); spyJump(); }
 function renderVariables() {
   const tb = $("vars").querySelector("tbody");
   const f = $("varFilter").value.trim().toLowerCase();
-  tb.innerHTML = "<tr><th>Name</th><th>Value</th></tr>" + (result.variables || [])
+  const tabs = prtVarTabs();
+  $("varTabs").innerHTML = tabs.length ? [`<button type="button" data-t="question" class="${varTab === "question" ? "on" : ""}" title="question variables">question</button>`]
+    .concat(tabs.map((n) => `<button type="button" data-t="${esc(n)}" class="sub${varTab === n ? " on" : ""}" title="feedback variables of PRT ${esc(n)} (last Check)">${esc(n)}</button>`)).join("") : "";
+  for (const b of $("varTabs").querySelectorAll("button")) b.addEventListener("click", () => setVarTab(b.dataset.t));
+  if ($("railPreview").querySelectorAll("button.sub").length !== tabs.length) renderJumpNav();   // tabs came or went
+  const prt = varTab !== "question" && lastCheck && lastCheck.prts[varTab];
+  $("varTitle").textContent = varTab === "question" ? "Question variables" : "Feedback variables: " + varTab;
+  const list = varTab === "question" ? result.variables || [] : prt && prt.variables ? prt.variables : null;
+  if (!list) { tb.innerHTML = `<tr><td class="hint">Check to see the feedback variables of PRT ${esc(varTab)}.</td></tr>`; return; }
+  tb.innerHTML = "<tr><th>Name</th><th>Value</th></tr>" + list
     .filter((v) => !f || v.name.toLowerCase().includes(f))
     .map((v) => `<tr><td class="n">${esc(v.name)}</td><td>${v.tex && v.tex.length < 600 ? esc(v.tex) : ""}
       <code class="raw" title="click to expand">${esc(v.raw ?? "(error)")}</code></td></tr>`).join("");
@@ -1711,6 +1875,12 @@ function renderMessages() {
   if (!result.languages || !result.languages.length)
     msgs.push({ cls: "warn", text: "The question text has no [[lang]] block, so STACK sets no language: [[lang]] blocks (e.g. in the meclib feedback functions' texts) stay empty - as in Moodle." });
   for (const inc of result.includes || []) msgs.push({ cls: "info", text: `stack_include ${inc}\n→ follows the meclib source selector (${$("src").value})` });
+  // where Maxima spent the time (last Update or Check): the slowest parts
+  if (result.timing && result.timing.length) {
+    const total = result.timing.reduce((a, t) => a + t[1], 0);
+    const top = result.timing.filter((t) => t[1] >= 0.05).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    msgs.push({ cls: "info", text: `Maxima time ${total.toFixed(1)} s` + (top.length ? ": " + top.map(([l, v]) => `${l} ${v.toFixed(2)} s`).join(" · ") : "") });
+  }
   showMessages(msgs.length ? msgs : [{ cls: "info", text: "no messages" }]);
 }
 
@@ -1749,11 +1919,27 @@ async function start() {
   try { await MeclibEditor.load(config.codemirror && F.resolveUrl(config.codemirror)); }
   catch (e) { showMessages([{ cls: "warn", text: "Code editor not available (plain text fields instead): " + e.message }], true); }
   initEditors();
+  try {
+    const r = await fetch("syntax_help.json");
+    if (r.ok) MeclibEditor.setHelp(await r.json());
+  } catch (e) { showMessages([{ cls: "warn", text: "syntax help not loaded: " + e.message }], true); }
+  {
+    const eo = Object.assign({ autocomplete: true, closeBrackets: true, semicolon: true }, stored(QSTORE_KEY).editor || {});
+    MeclibEditor.configure(eo);
+    $("optAutocomplete").checked = eo.autocomplete; $("optCloseBrackets").checked = eo.closeBrackets; $("optSemicolon").checked = eo.semicolon;
+    for (const [id, key] of [["optAutocomplete", "autocomplete"], ["optCloseBrackets", "closeBrackets"], ["optSemicolon", "semicolon"]])
+      $(id).addEventListener("change", () => {
+        const v = Object.assign({ autocomplete: true, closeBrackets: true, semicolon: true }, stored(QSTORE_KEY).editor || {}, { [key]: $(id).checked });
+        store(QSTORE_KEY, { editor: v }); MeclibEditor.configure(v);
+      });
+  }
   const q = stored(QSTORE_KEY);
   setLang(q.lang || "de");
   setTab(q.tab || "edit");
   if (q.hideFiles) toggleFiles(true);
-  setNavMode(q.nav || "top");
+  // the former "Sections" modes: outer, inner, left, right (top: the default)
+  const OLD = { outer: ["left", "right"], inner: ["right", "left"], left: ["left", "left"], right: ["right", "right"] }[q.nav];
+  setSides(q.sides || (OLD ? { edit: OLD[0], preview: OLD[1] } : {}));
   renderJumpNav();
   $("status").textContent = "repository: " + config.repo_path;
   await loadFolders();
@@ -1815,6 +2001,7 @@ $("addInput").addEventListener("click", openInputDialog);
 $("snippetBtn").addEventListener("click", openSnippets);
 $("checkBtn").addEventListener("click", check);
 $("fillBtn").addEventListener("click", fillModelAnswers);
+$("restartBtn").addEventListener("click", restart);
 $("qtitle").addEventListener("click", () => {
   if (!file || qindex === null) return;
   const el = document.querySelector('#editView [data-field="name"]');
@@ -1891,10 +2078,16 @@ $("toGraphic").addEventListener("click", async () => {
 });
 $("split").addEventListener("click", async () => {
   if (!file || !(await flush())) return;
+  const stackQs = file.questions.filter((q) => q.type === "stack");
+  if (!confirm(`Split into ${stackQs.length} file(s), one per STACK question, in a folder per category?\n` +
+    `The original file is renamed to ${baseName(file.path)}.orig (kept as a backup, no longer listed).`)) return;
+  const k = stackQs.findIndex((q) => q.index === qindex);
   try {
     const r = await postJSON("/api/q/split", { path: file.path });
-    showMessages([{ cls: "info", text: `${r.files.length} STACK question(s) written to ${r.folder}` }]);
-    loadFolders();
+    file = null; qindex = null; saved = null;
+    await openFile(r.files[Math.max(k, 0)]);     // the question that was open, now in its own file
+    fileMsg(`${r.files.length} STACK question(s) written to ${r.folders.map(baseName).join(", ")}; ` +
+      `the original is now ${baseName(r.original)}.`, "info");
   } catch (e) { showMessages([{ cls: "err", text: e.message }]); }
 });
 for (const id of ["src", "jsx", "mathjax"]) $(id).addEventListener("change", () => {

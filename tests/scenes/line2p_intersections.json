@@ -1,0 +1,86 @@
+{
+  "title": "line2p control points and intersections in targets (TM3 06 T07)",
+  "notes": "Questions add the intersections of the two line2p lines (and normals) to targets, so that the crosshair snaps to them (wiki: Dynamic intersection of two line2p objects). The line2p control points use targets as attractors as well; before meclib 2026 10 11 a control point dragged near such an intersection became a glider on it (on a point it moves itself) and stuck at off-grid coordinates. The cases replay the moves of a student in TM3 06 T07.",
+  "block": "[[jsxgraph width='500px' height='400px' input-ref-objects=\"stateRef\" input-ref-names=\"fbd_names\" ]]\nvar mode  = \"STACK\";\nconst initstring = {#init#};\nconst centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],\n  anchorX:'left', anchorY:'middle'}};\n// End of STACK header\n[[include src=\"https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js\" /]]\nconst sectStyle = {fillOpacity:0, withLabel:false}\ntargets.push(board.create('intersection', [objects[1].g, objects[2].g, 0], sectStyle));\ntargets.push(board.create('intersection', [objects[1].n, objects[2].g, 0], sectStyle));\ntargets.push(board.create('intersection', [objects[1].g, objects[2].n, 0], sectStyle));\ntargets.push(board.create('intersection', [objects[1].n, objects[2].n, 0], sectStyle));\nobjects[3].p.setAttribute({snapToPoints:true})\n[[/jsxgraph]]",
+  "initdata": [
+    ["grid", "", "", -5, 7, -5, 5, 40],
+    ["line2p", "1", [5, 3], [4, 3], "n1"],
+    ["line2p", "2", [6, 4], [5, 4], "n2"],
+    ["crosshair", "", [4, 2]],
+    ["fix12", "D", [4, 0], 180],
+    ["fix1", "B", [0, 0], 180],
+    ["polygon", "", [-2, 0], [0, 0], [2, -2]],
+    ["bar", "", [2, -2], [4, 0]],
+    ["point", "A", [-2, 0]],
+    ["node", "C", [2, -2]],
+    ["disp", "v_B", [0, 0], 0, 1, 1.4]
+  ],
+  "cases": [
+    {
+      "id": "to-A",
+      "label": "line 1 through C and A, line 2 dragged to A: its start point lands on A (grid), not on the intersection",
+      "expected": {
+        "names": "[0,[[2,-2],[-2,0]],[[-2,0],[5,4]],[4,2],\"SHOW\",\"SHOW\",\"SHOW\",\"SHOW\",\"A\",\"C\",\"v_B\"]",
+        "objects": [
+          ["grid", "", "", -5, 7, -5, 5, 40],
+          ["line2p", "1", [2, -2], [-2, 0], "n1"],
+          ["line2p", "2", [-2, 0], [5, 4], "n2"],
+          ["crosshair", "", [4, 2]],
+          ["fix12", "D", [4, 0], 180, "SHOW"],
+          ["fix1", "B", [0, 0], 180, "SHOW"],
+          ["polygon", "", [-2, 0], [0, 0], [2, -2], "SHOW"],
+          ["bar", "", [2, -2], [4, 0], "SHOW"],
+          ["point", "A", [-2, 0]],
+          ["node", "C", [2, -2]],
+          ["disp", "v_B", [0, 0], 0, 1, 1.4]
+        ]
+      },
+      "recorded": {"meclib": "2026 10 11 (local)", "jsxgraph": "STACK 4.13.1 bundled (JSXGraph 1.12.2)"},
+      "drags": [[[5, 3], [2, -2]], [[4, 3], [-2, 0]], [[6, 4], [-2.08, 0.05]]]
+    },
+    {
+      "id": "away-from-A",
+      "label": "then line 2's start point dragged away from A: it moves freely",
+      "expected": {
+        "names": "[0,[[2,-2],[-2,0]],[[-3,2],[5,4]],[4,2],\"SHOW\",\"SHOW\",\"SHOW\",\"SHOW\",\"A\",\"C\",\"v_B\"]",
+        "objects": [
+          ["grid", "", "", -5, 7, -5, 5, 40],
+          ["line2p", "1", [2, -2], [-2, 0], "n1"],
+          ["line2p", "2", [-3, 2], [5, 4], "n2"],
+          ["crosshair", "", [4, 2]],
+          ["fix12", "D", [4, 0], 180, "SHOW"],
+          ["fix1", "B", [0, 0], 180, "SHOW"],
+          ["polygon", "", [-2, 0], [0, 0], [2, -2], "SHOW"],
+          ["bar", "", [2, -2], [4, 0], "SHOW"],
+          ["point", "A", [-2, 0]],
+          ["node", "C", [2, -2]],
+          ["disp", "v_B", [0, 0], 0, 1, 1.4]
+        ]
+      },
+      "recorded": {"meclib": "2026 10 11 (local)", "jsxgraph": "STACK 4.13.1 bundled (JSXGraph 1.12.2)"},
+      "drags": [[[5, 3], [2, -2]], [[4, 3], [-2, 0]], [[6, 4], [-2.08, 0.05]], [[-2, 0], [-3, 2]]]
+    },
+    {
+      "id": "crosshair",
+      "label": "line 2 from (-3,2) to (1,-4), crosshair dragged near the intersection of the lines (-1.5,-0.25): it snaps to it",
+      "expected": {
+        "names": "[0,[[2,-2],[-2,0]],[[-3,2],[1,-4]],[-1.5000000000000002,-0.24999999999999994],\"SHOW\",\"SHOW\",\"SHOW\",\"SHOW\",\"A\",\"C\",\"v_B\"]",
+        "objects": [
+          ["grid", "", "", -5, 7, -5, 5, 40],
+          ["line2p", "1", [2, -2], [-2, 0], "n1"],
+          ["line2p", "2", [-3, 2], [1, -4], "n2"],
+          ["crosshair", "", [-1.5000000000000002, -0.24999999999999994]],
+          ["fix12", "D", [4, 0], 180, "SHOW"],
+          ["fix1", "B", [0, 0], 180, "SHOW"],
+          ["polygon", "", [-2, 0], [0, 0], [2, -2], "SHOW"],
+          ["bar", "", [2, -2], [4, 0], "SHOW"],
+          ["point", "A", [-2, 0]],
+          ["node", "C", [2, -2]],
+          ["disp", "v_B", [0, 0], 0, 1, 1.4]
+        ]
+      },
+      "recorded": {"meclib": "2026 10 11 (local)", "jsxgraph": "STACK 4.13.1 bundled (JSXGraph 1.12.2)"},
+      "drags": [[[5, 3], [2, -2]], [[4, 3], [-2, 0]], [[6, 4], [-2.08, 0.05]], [[-2, 0], [-3, 2]], [[5, 4], [1, -4]], [[4, 2], [-1.42, -0.33]]]
+    }
+  ]
+}

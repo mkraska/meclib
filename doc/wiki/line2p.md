@@ -1,6 +1,6 @@
 `[ "line2p", "label", [x1,y1], [x2,y2], "nlabel" ]`
 
-line with two draggable points, meant for [[Mohr's circle]] construction. 
+line with two draggable points, meant for [[Mohr's circle]] construction or as helper for finding the center of rotation. 
 
 The object returns a list of scaled co-ordinates `[ [x1,y1], [x2,y2] ]` to the `names` input field.
 

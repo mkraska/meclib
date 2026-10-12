@@ -1,4 +1,3 @@
-## Question variables
 
 ```
 M: matrix( [a, b], [c, d] );

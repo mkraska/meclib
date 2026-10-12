@@ -544,20 +544,36 @@ class Handler(SimpleHTTPRequestHandler):
 
     def split_file(self, source):
         """Writes each STACK question of a file as its own file (one question per file, as
-        qbank_gitsync keeps them) into <folder of the file>/<file name>/. The questions are cut
-        out of the original text, so CDATA sections and formatting stay as exported."""
+        qbank_gitsync keeps them), named after the question, into a folder per category next to
+        the file: the category path below "top" ("$module$/top/06 Kinematik/Teil A" ->
+        06 Kinematik/Teil A/). The files contain no category entry: Moodle's "import as new
+        version" refuses a file with more than one <question> element, and a category entry is
+        one. The questions are cut out of the original text, so CDATA sections and formatting stay as exported. The
+        original is renamed to <name>.xml.orig (no longer listed, kept as a backup)."""
         text, _ = qfile.read_file(source)
-        folder = source.parent / source.stem
-        folder.mkdir(parents=True, exist_ok=True)
-        written = []
+        written, category = [], ""
         for a, b, qtype in qfile.spans(text):
+            if qtype == "category":
+                category = stack_question.text_of(ET.fromstring(text[a:b]), "category/text") or ""
+                continue
             if qtype != "stack":
                 continue
+            parts = [p for p in category.split("/") if p and not re.fullmatch(r"\$\w+\$", p)]
+            if parts and parts[0] == "top":
+                parts = parts[1:]
+            folder = source.parent.joinpath(*[qfile.safe_filename(p, "") for p in parts]) if parts \
+                else source.parent / source.stem
+            folder.mkdir(parents=True, exist_ok=True)
             qname = stack_question.text_of(ET.fromstring(text[a:b]), "name/text") or "question"
             target = unique_path(folder, qfile.safe_filename(qname))
             target.write_text(qfile.new_file_text([text[a:b]]), encoding="utf-8", newline="")
             written.append(str(target))
-        return {"folder": str(folder), "files": written}
+        if not written:
+            raise ValueError("the file has no STACK questions")
+        orig = unique_path(source.parent, source.name + ".orig")
+        os.replace(source, orig)
+        folders = sorted({str(Path(w).parent) for w in written})
+        return {"folders": folders, "folder": folders[0], "files": written, "original": str(orig)}
 
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)

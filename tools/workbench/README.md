@@ -91,8 +91,17 @@ STACK questions can be opened). **New question** appends a question from the
 template, **Duplicate** inserts a copy (name + " (copy)", idnumber cleared)
 right after the selected one, **Save as ...** writes the selected question
 into a new file in a folder chosen in the folder dialog, **Split file**
-writes one file per STACK question into a folder named like the file (one
-question per file, as qbank_gitsync keeps them).
+writes one file per STACK question (one question per file, as qbank_gitsync
+keeps them), named after the question, into a folder per category next to the
+file: the category path below "top" (`$module$/top/06 Kinematik` ->
+`06 Kinematik/`, subcategories as subfolders). The files contain no category
+entry ("import as new version" accepts exactly one `<question>` element, and a
+category entry counts as one); for a plain import choose the category in
+Moodle's import form. The original file is renamed to
+`<name>.xml.orig` (kept as a backup, no longer listed), and the question that
+was open is opened from its new file. The files column shows folders by
+their last name (full path as tooltip) and files in subfolders under the
+subfolder name.
 
 **Layout**: on wide screens (from 1400 px) the editor and the preview stand
 side by side, equally wide, each column scrolling by itself; Messages, inputs
@@ -100,17 +109,22 @@ and question variables are below the preview. On narrower screens the header
 has Edit / Preview tabs (Ctrl+Shift+Enter switches). "Files ◂" in the header
 hides the files column.
 
-**Sections** (header button "Sections: ..."): buttons that jump to the
-sections of the editor (Review, Variables, Text, Inputs, Options, General FB,
-Specific FB, Note, PRTs and each PRT by name) and of the preview (Question,
-General FB, Note, Messages, Inputs, PRT graphs, Variables). A click on the
-header button switches the arrangement: top (a bar above each column), or
-narrow rails beside the columns (saves height): outer (editor rail left,
-preview rail right), inner (both between the columns), left, right. On narrow
-screens (one column) the rails stay visible, outer and inner then on both
-sides of the column, and a button of the other column's rail switches between
-Edit and Preview. A jump opens
-a collapsed section; the section at the top of the column is highlighted.
+**Side bars**: each column has a narrow bar beside it with its buttons and
+its sections, always in reach while the column scrolls.
+
+- Editor bar: ↶ / ↷ (undo, redo), Snippet, Graphic ↗, then the sections Review,
+  Variables, Text, Inputs, Options, General FB, Specific FB, Note, PRTs and
+  each PRT by name.
+- Preview bar: Update (save and evaluate, Ctrl+Enter), Check, TAns (model answers), Restart, de / en, `0.5` / `0,5`,
+  simp, then the sections Question, General FB, Note, Messages, Inputs, PRT
+  graphs, Variables.
+- `⋯` at the top of a bar: the side of the bar (left or right of its column;
+  default: both between the columns) and, in the editor bar, the settings of
+  the code editors.
+
+A section button scrolls the column to it and opens it if it is collapsed;
+the section at the top of the column is highlighted. On narrow screens (one
+column) the bar of the visible column is shown.
 
 **Editor**: name, question variables, question text, inputs (type, model
 answer, size, verification, validation; more under "more"), general and
@@ -137,7 +151,7 @@ drawn bold. Warnings: branches to missing nodes, loops (STACK refuses them),
 nodes not reachable from the first one. A click on a node shows it in the
 editor.
 
-**Undo / Redo** (editor header): every change of the question - typing (one
+**Undo / Redo** (↶ / ↷ in the editor bar): every change of the question - typing (one
 step per field within a minute), review fixes, new or deleted inputs, PRT and
 node operations - is kept in a history next to the question file
 (`.workbench-history/<file>.json`, the last 50 steps, only the changed part
@@ -209,12 +223,12 @@ fields.
 **Question options** (below the inputs): decimal separator, multiplication
 sign, simplify, scientific notation, assume positive/real, surd, sqrt(-1),
 inverse trig, logic symbols, matrix parentheses, default mark, penalty, ID
-number - as in STACK's question form. The preview header has buttons for
+number - as in STACK's question form. The preview bar has buttons for
 the most used ones: language (de/en, display only), decimal separator
 (`0.5` / `0,5`) and simplify; the latter two change the question option and
 evaluate again.
 
-**Check** (Alt+Enter, in the preview header) evaluates the PRTs with the
+**Check** (Alt+Enter, in the preview bar) evaluates the PRTs with the
 current answers - typed into the input fields or produced by the graphic -
 as STACK does: the answers are set with simplification off, then each PRT
 whose inputs are all answered runs its feedback variables and its nodes from
@@ -223,8 +237,25 @@ functions (`ATAlgEquiv`, `ATUnitsRelative`, ...), score mode, score and
 penalty per branch. The feedback of the branches taken appears in place of
 `[[feedback:...]]`, in the language chosen, with score, mark, penalty and
 the answer notes below it; errors in feedback variables, answer tests or
-feedback texts are listed there too. Next to the inputs the answer is shown
-typeset (or "invalid input" if it does not parse).
+feedback texts are listed there too, with Maxima's message (e.g. "feedback
+variables, line 4: apply: subscript must be an integer; found: i_beam").
+Next to the inputs the answer is shown typeset (or "invalid input" if it
+does not parse).
+
+**PRTs on their own**: as in STACK, each PRT sees the question variables and
+the inputs, but not the feedback variables of the other PRTs (they are deleted
+before each PRT); a PRT that uses `obj` without computing it fails here as in
+Moodle.
+
+**Time**: the messages list where Maxima spent the time of the last Update or
+Check (question variables by line, texts, the feedback variables and nodes of
+each PRT), e.g. `stackjson_parse(objects)` in every PRT; `fb_objects()` reads
+the objects much faster.
+
+**Feedback variables**: after a Check, the Variables section has a tab for
+each PRT (also as sub-buttons under "Variables" in the preview bar) with the
+values of its feedback variables as they are before the nodes run, including
+names assigned inside a statement (e.g. in `if ... then (ok: false, ...)`).
 
 **Matrix inputs** (STACK input type "matrix") are shown as a grid of fields
 in brackets (question option "matrix parentheses"), as in Moodle; the grid has
@@ -232,9 +263,17 @@ the size of the model answer. "Check" builds `matrix([..],[..])` from the
 cells, each cell processed like a single input; only some cells filled counts
 as invalid (incomplete), as in STACK.
 
-**Model answers** fills in the model answers of all inputs; the graphic
+**TAns** fills in the model answers of all inputs; the graphic
 starts from the model answer of its objects input. Then "Check" should give
 full marks.
+
+The answers stay when the question is evaluated again after an edit (save,
+PRT or input changes, Undo/Redo, review fixes), including the state of the
+graphic, unless the sketch itself (the `[[jsxgraph]]` block with its initial
+objects) has changed. If feedback was shown, "Check" runs again with the same
+answers, so a PRT edit shows its effect at once. A new variant (seed) or
+another question starts empty; **Restart** clears the answers and the
+feedback by hand (as "Start again" in Moodle's preview).
 
 Approximations: STACK's input validation is not reproduced. The workbench
 converts a decimal comma to a point (and `;` to `,`), inserts `*` for spaces
@@ -313,6 +352,12 @@ elements of its texts) that no text shows as `@@PLUGINFILE@@/name` - usually
 leftovers of earlier versions edited in Moodle. The review shows the image;
 the fix removes all copies of that file from the question.
 
+Missing `;` in Maxima code (`maxima.semicolon`): where a line ends a complete
+statement and the next line starts an assignment or call, STACK assumes a
+missing `;` (the preview reports it in the messages). The fix writes the `;`
+into the question variables or the PRT's feedback variables, right after the
+statement (before a trailing comment).
+
 **Snippet ...** inserts a text snippet at the cursor of the field last
 edited: the interactive and the fixed [[jsxgraph]] block, the empty
 `[[lang]]` declaration, the hints for the free body diagram input (de/en).
@@ -330,8 +375,67 @@ from), the inputs with model answer and current value, and all question
 variables (typeset and as Maxima expression).
 
 **Variant (seed)** and **de / en** choose the random variant and the language
-of `[[lang]]` blocks (chosen as STACK does). **Evaluate** (Ctrl+Enter) saves
+of `[[lang]]` blocks (chosen as STACK does). **Update** (preview bar, Ctrl+Enter) saves
 and evaluates.
+
+### Syntax help in the editors
+
+The code editors (question variables, the texts, and the feedback variables
+and branch feedback of the PRT editor) help with meclib's and STACK's
+functions:
+
+- **Signature box**: when the cursor is inside a call such as `fb_contact(`
+  or a meclib object list such as `["force",`, a box above the line shows the
+  signature with the current argument in bold (optional arguments in gray with a trailing `?`, taken from "(optional ..." in the wiki),
+  the description of that argument and a short text, with a link to the meclib
+  wiki, the STACK documentation or the Maxima manual. The link and **F1** open
+  the page in a small separate window (always the same one). Esc closes the box.
+- **Autocomplete**: after two characters of a name, a list of matching
+  functions with their signatures (meclib first, then STACK and Maxima);
+  after `["` the meclib object types. **Ctrl+Space** opens the list at any time.
+- **Castext snippets** (outside `{@ @}` and `[[jsxgraph]]`): `\` offers
+  `\( \)` and `\[ \]` with the delimiters the format needs (Markdown:
+  `\\\(`, except in a block of HTML), `{` offers `{@ @}` and `{# #}`, `[[`
+  offers the blocks and `[[input:...]] [[validation:...]]` and
+  `[[feedback:...]]` for the question's inputs and PRTs.
+- **Closing brackets** (in Maxima, inside `{@ @}` and in `[[jsxgraph]]`): the
+  closing bracket or quote is added only before a space, the end of the line
+  or a closing bracket, as a separate undo step (Ctrl+Z right after removes
+  just it). A closing bracket you type skips over an added one, otherwise it
+  is inserted. Backspace between an added pair removes both.
+- **Comments**: `/*` gets `*/` after the cursor (Maxima, and JavaScript in
+  `[[jsxgraph]]`; not in strings or comments), in the same way: typing `*/`
+  there skips it, Backspace right after `/*` removes it. Switched with the
+  closing brackets.
+- **`;` after `:`** (question and feedback variables): a `:` that ends what
+  you typed so far of a statement (outside brackets, strings and comments,
+  nothing after it on the line) gets a `;` after the cursor, in the same way
+  as a closing bracket: `:=` and `::` keep it at the end, `;` typed there skips
+  it, `$` replaces it, Backspace right after the `:` removes both. Inside
+  brackets (`block([a:1], ...)`, `lambda`, lists) nothing is added.
+
+`⋯` in the editor bar switches autocomplete while typing, the closing
+brackets and the `;` after `:` off.
+
+The help comes from `syntax_help.json`, which `build_help.py` builds from
+
+- meclib's Maxima files (definitions and the comments above them, the wiki
+  link in the comment) and `meclib.js` (the object types),
+- the meclib wiki: a local clone (`git clone https://github.com/mkraska/meclib.wiki.git`),
+  given with `--wiki` or as `"wiki_dir"` in `workbench_config.local.json`;
+  updated pages in `doc/wiki/` are used instead of the wiki's version,
+- STACK's Maxima library in `config/stack/<version>/maxima/` (signatures) and
+  the documentation of the same release (`doc/en` of the git tag, fetched into
+  `.cache/`; only functions the documentation mentions),
+- `syntax_help_extra.json`: entries written by hand (common Maxima functions,
+  STACK functions not found automatically); they win over generated ones.
+
+```
+python build_help.py --wiki C:/Users/me/Documents/GitHub/meclib.wiki
+```
+
+It also lists where code and wiki disagree: functions without a wiki link or
+page, different numbers of arguments. Reload the page after a new build.
 
 ### Saving
 
@@ -422,7 +526,8 @@ The pages build the graphic the way STACK 4.13.1 does for a `[[jsxgraph]]`
 block (see `stack/cas/castext2/blocks/jsxgraph.block.php` in
 moodle-qtype_stack):
 
-- a sandboxed frame with MathJax 2 (configured as in STACK), JSXGraph and a
+- a sandboxed frame with MathJax (loaded and configured as in STACK; the MathJax
+  selector offers 2.7.9 and 3.2.2, the default of Moodle 5), JSXGraph and a
   `div#jxgbox`
 - the block content inside `<script type="module">` (strict mode), wrapped in
   `Promise.all([stack_js.request_access_to_input(...)]).then(...)`
@@ -462,7 +567,9 @@ content of the npm package `codemirror@5.65.16`).
 
 - `index.html`, `questions.html`, `tests.html` - the three pages
 - `editor.js` - code editor of the Questions page: loads CodeMirror, Maxima
-  and castext highlighting
+  and castext highlighting, syntax help, autocomplete, closing brackets
+- `build_help.py` - builds `syntax_help.json` (syntax help) from the code,
+  the wiki, STACK's library and documentation and `syntax_help_extra.json`
 - `frame.js` - builds and runs a graphic in a STACK-like frame (shared by the
   pages)
 - `style.css` - shared styles
@@ -489,10 +596,19 @@ content of the npm package `codemirror@5.65.16`).
 
 ## Planned
 
-- editing PRTs (nodes, feedback variables, feedback texts)
-- templates for inputs and PRTs from the wiki
 - a tree of folders, files and questions with context menus for their actions
+- review of all questions in a folder at once
+- templates for inputs and PRTs from the wiki
+- editor assistants, e.g. `tansdata: copy(initdata)` with index variables,
+  repeated points as variables
+- bulk edits across questions (e.g. unifying the crosshair setup)
+- keeping review rules, syntax help and wiki pages in step (`build_help.py`
+  already lists differences)
+- choosing the STACK version on the pages instead of always the newest one
+- split files compatible with STACK's gitsync (category files, YAML)
 - automatic multilingual castext: de/en versions of the texts kept together
   in `[[lang]]` blocks (not urgent)
 - expected feedback per test case
 - reference images of test cases (headless run), e.g. for wiki pages
+- converting pixel graphics (hand sketches) into meclib objects on the
+  Graphic page, possibly with AI support (low priority)

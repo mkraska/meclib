@@ -1,0 +1,34 @@
+{
+  "title": "description: label with leader line",
+  "notes": "Leader lines end gap pixels (default 4) before the label box; the last one also starts 6 px from P.",
+  "initdata": [
+    ["grid", "", "", -1, 9, -1, 6, 50],
+    ["wall", "", [0, 1], [8, 1], -45],
+    ["description", "\\mu_0=0.3", [1, 1], [2, 2.5]],
+    ["description", "\\mu", [3, 1], [3, 2.5]],
+    ["description", "\\mu_0", [4.5, 1], [5.8, 1.6]],
+    ["description", "\\mu=\\frac{1}{2}", [7, 1], [6.5, 3.5]],
+    ["description", "\\text{rough}", [2, 4], [4, 4.5], 4, 6],
+    ["point", "P", [2, 4]]
+  ],
+  "cases": [
+    {
+      "id": "init",
+      "label": "as specified",
+      "expected": {
+        "names": "[0,\"SHOW\",\"\\mu_0=0.3\",\"\\mu\",\"\\mu_0\",\"\\mu=\\frac{1}{2}\",\"\\text{rough}\",\"P\"]",
+        "objects": [
+          ["grid", "", "", -1, 9, -1, 6, 50],
+          ["wall", "", [0, 1], [8, 1], -45, "SHOW"],
+          ["description", "\\mu_0=0.3", [1, 1], [2, 2.5]],
+          ["description", "\\mu", [3, 1], [3, 2.5]],
+          ["description", "\\mu_0", [4.5, 1], [5.8, 1.6]],
+          ["description", "\\mu=\\frac{1}{2}", [7, 1], [6.5, 3.5]],
+          ["description", "\\text{rough}", [2, 4], [4, 4.5], 4, 6],
+          ["point", "P", [2, 4]]
+        ]
+      },
+      "recorded": {"meclib": "2026 10 11 (local)", "jsxgraph": "STACK 4.13.1 bundled (JSXGraph 1.12.2)"}
+    }
+  ]
+}

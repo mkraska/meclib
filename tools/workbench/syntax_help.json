@@ -1,0 +1,4488 @@
+{
+ "generated": "2026-10-12",
+ "sources": {
+  "wiki": "../../../wiki",
+  "wiki_drafts": [
+   "angle1",
+   "beam",
+   "circle",
+   "contact",
+   "description",
+   "dynamic intersection of two line2p obbjects",
+   "fb_contact_reactions()",
+   "fb_ee()",
+   "fb_fbd()",
+   "fb_name()",
+   "fb_objects()",
+   "fb_reaction_name()",
+   "fb_unique_names()",
+   "fb_unit_matrix()",
+   "fb_vars_matrix()",
+   "feedback for contact",
+   "feedback for free body diagrams",
+   "fix1",
+   "fix12",
+   "fix123",
+   "fix13",
+   "line2p",
+   "matrix feedback",
+   "matrix input",
+   "meclib workbench",
+   "springt",
+   "sums of forces and moments",
+   "testing a new stack version",
+   "wall"
+  ],
+  "stack": "2026080600 (v4.13.1)"
+ },
+ "entries": [
+  {
+   "name": "angle",
+   "kind": "meclib",
+   "sig": "angle(a, b)",
+   "args": [
+    "a",
+    "b"
+   ],
+   "text": "returns the angle between two directional objects in radians.",
+   "url": "https://github.com/mkraska/meclib/wiki/angle()",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "a": "directional object 1",
+    "b": "directional object 2"
+   }
+  },
+  {
+   "name": "contributor",
+   "kind": "meclib",
+   "sig": "contributor(o, n, i_dir, tol)",
+   "args": [
+    "o",
+    "n",
+    "i_dir",
+    "tol"
+   ],
+   "text": "Purely formative helper for a direction-choice PRT (no grading effect of its own): lists the names of every \"force\" object in o (regardless of state - an external force, a recognized reaction, or a reaction the student placed somewhere a \"contact\" doesn't recognize) that will actually contribute a non-negligible term when summed along the direction of the \"dir\" object at index i_dir, i.e.",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-%22dir%22",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": ", `n` contents of the parsed `objects` field and of the `names` field",
+    "i_dir": "index of the `dir` object (or any other object suited for `direction()`)",
+    "tol": "coefficient tolerance (same footing as the tolerance passed to `fb_coeffs`)"
+   }
+  },
+  {
+   "name": "deg2rad",
+   "kind": "meclib",
+   "sig": "deg2rad(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Substitutes any use of the \"deg\" marker in expr with its numeric value (pi/180), for use right before a numeric comparison (fb_coeffs, fb_unit, etc.) - never bind deg globally in questionvariables, or every other display of it (questiontext, tans, generalfeedback, and the student's own input-validation echo) loses its nice degree-symbol rendering and shows a raw decimal instead.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_coeffs()",
+   "source": "Maxima/fb_value.mac"
+  },
+  {
+   "name": "direction",
+   "kind": "meclib",
+   "sig": "direction(o)",
+   "args": [
+    "o"
+   ],
+   "text": "returns a direction vector for objects which have a direction or `false` otherwise.",
+   "url": "https://github.com/mkraska/meclib/wiki/direction()",
+   "source": "Maxima/fb_fbd.mac"
+  },
+  {
+   "name": "fb_bar",
+   "kind": "meclib",
+   "sig": "fb_bar(o, n, i, flags?)",
+   "args": [
+    "o",
+    "n",
+    "i",
+    "flags"
+   ],
+   "text": "This function provides feedback on \"force\" reactions replacing a \"bar\" object in the framework of Feedback for Free Body Diagrams.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_bar",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects",
+    "n": "names field",
+    "i": "index of `bar` object",
+    "flags": "optional string with further instructions; `T` means accept tensile forces only.; `2` means test for antiparallel forces close to both ends."
+   },
+   "returns": "[txt, isOK]",
+   "optional": [
+    3
+   ]
+  },
+  {
+   "name": "fb_bar_name",
+   "kind": "meclib",
+   "sig": "fb_bar_name(o, n, i)",
+   "args": [
+    "o",
+    "n",
+    "i"
+   ],
+   "text": "Feedback function for reactions replacing \"bar\" objects.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_bar_name",
+   "source": "Maxima/fb_fbd.mac"
+  },
+  {
+   "name": "fb_coeffs",
+   "kind": "meclib",
+   "sig": "fb_coeffs(sans, tans, tol, description)",
+   "args": [
+    "sans",
+    "tans",
+    "tol",
+    "description"
+   ],
+   "text": "`fb_coeffs()` is meant for symbolic student answers that are linear in a set of variables but whose coefficients are floating-point numbers, e.g. an equilibrium condition built from forces at arbitrary angles, `0.866*F_A - 0.5*F_B + 12.3`. In such cases `fb_vars()`'s symbolic term check and the AlgEquiv answer test are too strict, because the coefficients only agree within a tolerance.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_coeffs()",
+   "source": "Maxima/fb_value.mac",
+   "argdocs": {
+    "sans": "student's answer",
+    "tans": "teacher's answer",
+    "tol": "tolerance, must be positive. It is used in two ways; as the relative tolerance for each coefficient comparison (passed on to `fb_unit()`), e.g. `0.01` for 1 %; as an absolute threshold below which a coefficient counts as zero, i.e. the variable is treated as not present at all (protects against floating-point noise such as `1e-13*b`, same as the `tol` parameter of fb_vars)",
+    "description": "text placed in front of the feedback, e.g. `\"\\\\(\\\\sum F_x\\\\):\"`. Use `\"\"` if no description is wanted."
+   },
+   "returns": "[text, ok]"
+  },
+  {
+   "name": "fb_contact",
+   "kind": "meclib",
+   "sig": "fb_contact(o, n, i, description, friction?, normalNames?, frictionNames?, ignoreNames?)",
+   "args": [
+    "o",
+    "n",
+    "i",
+    "description",
+    "friction",
+    "normalNames",
+    "frictionNames",
+    "ignoreNames"
+   ],
+   "text": "\"contact\" represents a point contact. Once the referenced (cut-away) object is deactivated, it is replaced by a normal force and, for a rough contact, a friction force. Without the optional arguments, the contact is frictionless and the checks below apply.",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-%22contact%22",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects",
+    "n": "names field",
+    "i": "index of `contact` object",
+    "description": "string with text to identify the object for the user",
+    "friction": "(optional) kind of contact, see Rough contact; omitted, `\"\"` or `\"smooth\"`: no friction; `\"static\"`: static friction; `[vx, vy]`: kinetic friction, velocity of the body relative to the environment; `\"v_A\"`: kinetic friction, velocity given by the \"disp\" object named `v_A`",
+    "normalNames": "(optional) accepted names of the normal force (string or list of strings)",
+    "frictionNames": "(optional) accepted names of the friction force (string or list of strings)",
+    "ignoreNames": "(optional) names of other forces at the contact point that are not commented, e.g. `[\"G\"]` for a weight drawn by the student at a sliding block"
+   },
+   "optional": [
+    4,
+    5,
+    6,
+    7
+   ]
+  },
+  {
+   "name": "fb_contact_reactions",
+   "kind": "meclib",
+   "sig": "fb_contact_reactions(o, n, i)",
+   "args": [
+    "o",
+    "n",
+    "i"
+   ],
+   "text": "`fb_contact_reactions()` returns the names the student gave the reactions at a contact, sorted by direction: `nName` name of the force along the contact normal (the normal force),; `tName` name of the force along the tangent (the friction force),; `tDir` direction of the friction force as drawn (unit vector), e.g. to read its sense.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_contact_reactions()",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "the meclib object list (`stackjson_parse(objects)`)",
+    "n": "the `names` array (content of the `names` input field)",
+    "i": "index of the \"contact\" object"
+   },
+   "returns": "[nName, tName, tDir]"
+  },
+  {
+   "name": "fb_dim",
+   "kind": "meclib",
+   "sig": "fb_dim(res, vars, dims)",
+   "args": [
+    "res",
+    "vars",
+    "dims"
+   ],
+   "text": "This performs a dimensional check of a result. The user has to provide a list of variables and a list of the corresponding dimensions. The test is based on a proposal by Leo Butler (forum discussion, Github issue).",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_dim",
+   "source": "Maxima/fb_value.mac",
+   "argdocs": {
+    "res": "symbolic expression to be checked for the dimension",
+    "vars": "list of expected variables in the expression",
+    "dims": "list of dimensions for the variables. Use any variable names, which don't interfere with the actual variables in the expression"
+   }
+  },
+  {
+   "name": "fb_dir",
+   "kind": "meclib",
+   "sig": "fb_dir(o, n, i_dir, tol, desc)",
+   "args": [
+    "o",
+    "n",
+    "i_dir",
+    "tol",
+    "desc"
+   ],
+   "text": "Feedback for one or two direction-choice PRTs, combining contributor()'s formative listing for each direction with, when two directions are given, a check that they aren't parallel: if they are, the resulting equilibrium equations would be linearly dependent - that is a genuine mistake, not just a suboptimal-but-valid choice, so the returned flag is false in that case and the calling PRT should apply a real grading c ...",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-%22dir%22",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {}
+  },
+  {
+   "name": "fb_EE",
+   "kind": "meclib",
+   "sig": "fb_EE(S, T, options?)",
+   "args": [
+    "S",
+    "T",
+    "options"
+   ],
+   "text": "The text starts with `` as with the other feedback functions.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_EE()",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "S": "the student's expression for one equation of equilibrium (the sum, `= 0` implied), e.g. the input `S_GGx`",
+    "T": "the reference, e.g. `sumF(...)` or `sumM(...)` of the student's own free-body diagram, see Sums of Forces and Moments",
+    "options": "(optional) list of options `name = value`; `subst` substitutions applied to both sides before comparing, e.g. `[alpha = atan(yB/xA)]`: symbols of the problem that stand for numbers of the sketch, so that `sin(alpha)` and `2/sqrt(13)` count as equal; `kind` what is summed, for the hint on a wrong sign: `\"M\"` for moments, otherwise the name of the direction, e.g. `\"x\"`, `\"y\"`, `\"\\\\xi\"`; `title` LaTeX title put in front of a message, e.g. `\"\\\\Sigma F_x\"` (only needed if several equations share one feedback)"
+   },
+   "returns": "[txt, OK]",
+   "optional": [
+    2
+   ]
+  },
+  {
+   "name": "fb_fbd",
+   "kind": "meclib",
+   "sig": "fb_fbd(o, n, options)",
+   "args": [
+    "o",
+    "n",
+    "options"
+   ],
+   "text": "`fb_fbd()` does the checks of a free-body diagram that do not depend on a single support. The supports themselves are checked with their own functions (Feedback for \"contact\", Feedback for \"fix12\", ...).",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_fbd()",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "the meclib object list (`stackjson_parse(objects)`)",
+    "n": "the `names` array (content of the `names` input field)",
+    "options": "list of options `name = value`, each optional; `sys` list of indices of the elements of the system (to be shown); `env` list of indices of the elements of the environment (to be deactivated and replaced by reactions); `hint` text added if the system boundaries are wrong; `supports` indices of the supports whose reactions must have different names (default: all \"fix1\", \"fix12\", \"fix123\", \"fix13\" and \"contact\" objects); `reserved` further names a reaction must not have, e.g. `[a, b, h, alpha]` (symbols of the problem); `nameform` `true`: each drawn load is named with one letter and, if needed, an index; `forces`, `moments` expected number of drawn forces and moments"
+   },
+   "returns": "[txt, OK, parts]"
+  },
+  {
+   "name": "fb_fix1",
+   "kind": "meclib",
+   "sig": "fb_fix1(o, n, i, description)",
+   "args": [
+    "o",
+    "n",
+    "i",
+    "description"
+   ],
+   "text": "",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix1%22",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects",
+    "n": "names field",
+    "i": "index of `fix1` object",
+    "description": "string with Text to identify the object for the user"
+   }
+  },
+  {
+   "name": "fb_fix12",
+   "kind": "meclib",
+   "sig": "fb_fix12(o, n, i, description)",
+   "args": [
+    "o",
+    "n",
+    "i",
+    "description"
+   ],
+   "text": "",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix12%22",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects",
+    "n": "names field",
+    "i": "index of \"fix12\" object",
+    "description": "string with Text to identify the object for the user"
+   },
+   "returns": "[txt, isOK]"
+  },
+  {
+   "name": "fb_fix123",
+   "kind": "meclib",
+   "sig": "fb_fix123(o, n, i, description)",
+   "args": [
+    "o",
+    "n",
+    "i",
+    "description"
+   ],
+   "text": "",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix123%22",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects",
+    "n": "names field",
+    "i": "index of \"fix123\" object",
+    "description": "string with Text to identify the object for the user"
+   }
+  },
+  {
+   "name": "fb_fix123_name",
+   "kind": "meclib",
+   "sig": "fb_fix123_name(o, n, i)",
+   "args": [
+    "o",
+    "n",
+    "i"
+   ],
+   "text": "",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix123%22",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects",
+    "n": "names field",
+    "i": "index of \"fix123\" object"
+   }
+  },
+  {
+   "name": "fb_fix12_name",
+   "kind": "meclib",
+   "sig": "fb_fix12_name(o, n, i)",
+   "args": [
+    "o",
+    "n",
+    "i"
+   ],
+   "text": "",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix12%22",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects",
+    "n": "names field",
+    "i": "index of \"fix12\" object"
+   },
+   "returns": "[txt, isOK]"
+  },
+  {
+   "name": "fb_fix13",
+   "kind": "meclib",
+   "sig": "fb_fix13(o, n, i, description)",
+   "args": [
+    "o",
+    "n",
+    "i",
+    "description"
+   ],
+   "text": "",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix13%22",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects",
+    "n": "names field",
+    "i": "index of \"fix13\" object",
+    "description": "string with Text to identify the object for the user"
+   }
+  },
+  {
+   "name": "fb_fix13_name",
+   "kind": "meclib",
+   "sig": "fb_fix13_name(o, n, i)",
+   "args": [
+    "o",
+    "n",
+    "i"
+   ],
+   "text": "Alias for consistency",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix13%22",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects",
+    "n": "names field",
+    "i": "index of \"fix13\" object"
+   }
+  },
+  {
+   "name": "fb_fix13_names",
+   "kind": "meclib",
+   "sig": "fb_fix13_names(o, n, i)",
+   "args": [
+    "o",
+    "n",
+    "i"
+   ],
+   "text": "",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix13%22",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {}
+  },
+  {
+   "name": "fb_fix1_name",
+   "kind": "meclib",
+   "sig": "fb_fix1_name(o, n, i)",
+   "args": [
+    "o",
+    "n",
+    "i"
+   ],
+   "text": "",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-%22fix1%22",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects",
+    "n": "names field",
+    "i": "index of `fix1` object"
+   }
+  },
+  {
+   "name": "fb_force",
+   "kind": "meclib",
+   "sig": "fb_force(o, name, point, dir, toldeg, toldist, description)",
+   "args": [
+    "o",
+    "name",
+    "point",
+    "dir",
+    "toldeg",
+    "toldist",
+    "description"
+   ],
+   "text": "This function provides feedback on a single, freely placed \"force\" object (e.g. a weight force, or a resultant the student places via `forceGen`) in the framework of Feedback for Free Body Diagrams. Unlike Feedback for \"contact\" / `fb_bar()`, the force is not resolved through a contact/support index - it is matched directly against `o` by name, since it is not tied to any particular contact point.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_force()",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects",
+    "name": "expected object name, as a string, or a list of strings if several names would be equally acceptable (e.g. `[\"G\",\"F_G\"]`)",
+    "point": "a point the force's line of action must pass through",
+    "dir": "expected direction, either a number (angle in degrees, standard math convention: 0 = +x axis, 90 = +y axis) or a direction vector `[dx, dy]`",
+    "toldeg": "direction tolerance in degrees",
+    "toldist": "tolerance for the distance between the force's line of action and `point`, in the same length units as the sketch (a bare number for now - no unit tag, though this could later become a `[tol, \"mm\"]`-style list if a question ever needs one)",
+    "description": "string with text to identify the object for the user"
+   },
+   "returns": "[txt, isOK]"
+  },
+  {
+   "name": "fb_force_hvxy",
+   "kind": "meclib",
+   "sig": "fb_force_hvxy(o, i)",
+   "args": [
+    "o",
+    "i"
+   ],
+   "text": "Detailled feedback for \"force\" names. The following checks are done until the first one fails: Basename consists of a single character?; Is there a direction index?; Is the index a single character?; Is the index one of x, y, h(orizontal), v(ertical)?; Does the index match the actual direction?; `txt` feedback text",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_force_hvxy",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects",
+    "i": "index of the force in the list of objects"
+   },
+   "returns": "[txt, isOK]"
+  },
+  {
+   "name": "fb_matrix_label",
+   "kind": "meclib",
+   "sig": "fb_matrix_label(i, j, n, m, labels)",
+   "args": [
+    "i",
+    "j",
+    "n",
+    "m",
+    "labels"
+   ],
+   "text": "`fb_unit_matrix()` checks every element of a matrix (or vector) answer with fb_unit and collects the messages. Each element with a message gets a line of its own, starting with its label; correct elements are not mentioned. The texts are bilingual (German and English).",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_unit_matrix()",
+   "source": "Maxima/fb_value.mac"
+  },
+  {
+   "name": "fb_name",
+   "kind": "meclib",
+   "sig": "fb_name(n, i, lon, show?)",
+   "args": [
+    "n",
+    "i",
+    "lon",
+    "show"
+   ],
+   "text": "`fb_name()` only checks whether the name the student gave the reaction at object `i` is one of the accepted names. It is kept separate from `fb_contact()`, `fb_unidir()`, `fb_bar()` etc. on purpose, so that a question can score the naming independently of the geometric and physical correctness of the reaction.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_name()",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "n": "the `names` array (content of the `names` input field)",
+    "i": "index of the support or contact object that is replaced by the reaction",
+    "lon": "list of accepted names, as strings or symbols, e.g. `[\"N_A\", \"A\", \"F_A\"]` or `[N_A, A, F_A]`",
+    "show": "(optional, default `true`) whether the feedback lists the accepted names"
+   },
+   "returns": "[txt, isOK]",
+   "optional": [
+    3
+   ]
+  },
+  {
+   "name": "fb_number",
+   "kind": "meclib",
+   "sig": "fb_number(sans, tans, tol)",
+   "args": [
+    "sans",
+    "tans",
+    "tol"
+   ],
+   "text": "This function performs the following checks with numbers (see fb_unit and fb_vars for other tests): If teacher's answer is zero and student's answer is not, a complaint is issued (absolute value too large).",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_number",
+   "source": "Maxima/fb_value.mac",
+   "argdocs": {
+    "sans": "student's answer,",
+    "tans": "teacher's answer,",
+    "tol": "relative tolerance for the mantissa. If it is zero and `tans` is nonzero, then the relative deviation is shown (for use in the true branch of the PRT)"
+   }
+  },
+  {
+   "name": "fb_numberOK",
+   "kind": "meclib",
+   "sig": "fb_numberOK(snum, tnum, tol)",
+   "args": [
+    "snum",
+    "tnum",
+    "tol"
+   ],
+   "text": "this should return true if the check passes, false otherwise",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_number",
+   "source": "Maxima/fb_value.mac",
+   "argdocs": {
+    "snum": "student's answer,",
+    "tnum": "teacher's answer,",
+    "tol": "relative tolerance for the mantissa. If it is zero and `tans` is nonzero, then the relative deviation is shown (for use in the true branch of the PRT)"
+   }
+  },
+  {
+   "name": "fb_objects",
+   "kind": "meclib",
+   "sig": "fb_objects(objects)",
+   "args": [
+    "objects"
+   ],
+   "text": "Returns the object list as a Maxima list, the same as STACK's `stackjson_parse(objects)`, but much faster. `stackjson_parse()` needs time that grows with the square of the length of the text: about 1.2 s for a sketch of 25 objects, and that in every PRT that reads the sketch. `fb_objects()` reads the text in one pass (0.02 s for the same sketch).",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_objects()",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "objects": "the content of the objects input (the JSON text the meclib graphic writes)"
+   },
+   "returns": "obj"
+  },
+  {
+   "name": "fb_q",
+   "kind": "meclib",
+   "sig": "fb_q(o, n, i, description, q1, q2, le)",
+   "args": [
+    "o",
+    "n",
+    "i",
+    "description",
+    "q1",
+    "q2",
+    "le"
+   ],
+   "text": "Note: Function requires fb_vars",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-line-loads",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects",
+    "n": "names field",
+    "i": "index of \"q\" object",
+    "description": "string with Text to identify the object for the user",
+    "q1": "value at startpoint",
+    "q2": "value at endpoint",
+    "le": "grid unit length"
+   }
+  },
+  {
+   "name": "fb_reaction_name",
+   "kind": "meclib",
+   "sig": "fb_reaction_name(o, n, i, default)",
+   "args": [
+    "o",
+    "n",
+    "i",
+    "default"
+   ],
+   "text": "`fb_reaction_name()` returns the name of the reaction force that meclib matched to object `i`. It returns `default` if",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_reaction_name()",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "the meclib object list (`stackjson_parse(objects)`)",
+    "n": "the `names` array (content of the `names` input field)",
+    "i": "index of the support or contact object that is replaced by the reaction",
+    "default": "value returned if no single reaction force can be found at `i`"
+   },
+   "returns": "name"
+  },
+  {
+   "name": "fb_reactions",
+   "kind": "meclib",
+   "sig": "fb_reactions(o, f, m)",
+   "args": [
+    "o",
+    "f",
+    "m"
+   ],
+   "text": "This is a function for Feedback for Free Body Diagrams. The function counts",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_reactions()",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects from input field",
+    "f": "expected number of force reactions",
+    "m": "expected number of moment reactions"
+   },
+   "returns": "[txt, OK]"
+  },
+  {
+   "name": "fb_resolve_ref",
+   "kind": "meclib",
+   "sig": "fb_resolve_ref(o, ref)",
+   "args": [
+    "o",
+    "ref"
+   ],
+   "text": "Resolves a \"contact\" targetRef to an index into o. %_ref may be a name string, a 1-based index, or a LIST of either (for a contact that cuts away several environment objects at once, e.g. two wall segments meeting at a corner) - in the list case every element must resolve, and the result is the list of their indices, in the same order. Returns false if any reference cannot be resolved unambiguously.",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-%22contact%22",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {}
+  },
+  {
+   "name": "fb_spline",
+   "kind": "meclib",
+   "sig": "fb_spline(sans, tans, x1, x2, f)",
+   "args": [
+    "sans",
+    "tans",
+    "x1",
+    "x2",
+    "f"
+   ],
+   "text": "The test consists of checking the value and the slope at the boundaries with tolerance of 0.02 in grid coordinates.",
+   "url": "https://github.com/mkraska/meclib/wiki/Values-and-Slope-of-Splines",
+   "source": "Maxima/fb_spline.mac",
+   "argdocs": {
+    "sans": ", `tans` (expression) polynomial representation of the spline. The polynomials are in unscaled grid coordinates. For static (non-randomized) tasks you can set the curves to the correct state and get the corresponding `tans` from the `names` response in the question preview (response history). The polynomials are in unscaled grid coordinates.",
+    "x1": ", `x2` (numbers) boundaries of the x-range in local coordinates (offset and scale as set by \"spline\")",
+    "f": "scale factor for x direction, for internal conversion of local min/max coordinates to grid coordinates"
+   },
+   "returns": "[text, isOK]"
+  },
+  {
+   "name": "fb_strip_list",
+   "kind": "meclib",
+   "sig": "fb_strip_list(_list_of_things)",
+   "args": [
+    "_list_of_things"
+   ],
+   "text": "Checks for missing and spurious vars by comparing the lists of variables in `tans` and `sans`. If they match, then compares the terms with the variables in `vars`. Provide an empty list if you don't want this check (or just use two arguments).",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_vars",
+   "source": "Maxima/fb_value.mac"
+  },
+  {
+   "name": "fb_system",
+   "kind": "meclib",
+   "sig": "fb_system(names, sys, env, hint)",
+   "args": [
+    "names",
+    "sys",
+    "env",
+    "hint"
+   ],
+   "text": "%_names[%_i] is either a state string (\"show\"/\"hide\"/\"SHOW\"/\"HIDE\") or, once loads have been matched to the object, a list of load indices - stringp() guards sdowncase() against the latter. The system elements (%_sys) must be shown (\"show\"/\"SHOW\"); entries that are no state at all (e.g. the name of a node or point) are not checked.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_system()",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "names": "list from the `names` input field",
+    "sys": "list of indices of elements which belong to the system (to be active)",
+    "env": "list of indices of elements which belong to the environment and have to be deactivated and replaced by reactions",
+    "hint": "text, problem-specific hint if the system boundaries aren't correct."
+   },
+   "returns": "[txt, OK]"
+  },
+  {
+   "name": "fb_unidir",
+   "kind": "meclib",
+   "sig": "fb_unidir(o, n, i, description)",
+   "args": [
+    "o",
+    "n",
+    "i",
+    "description"
+   ],
+   "text": "This function handles any unidirectional support (\"bar\", \"dashpot\", \"springt\", \"springc\", \"fix1\", \"rope\") in Feedback for Free Body Diagrams.",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-unidirectional-supports",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects",
+    "n": "names field",
+    "i": "index of unidirectional object",
+    "description": "string with Text to identify the object for the user"
+   },
+   "returns": "[txt, isOK]"
+  },
+  {
+   "name": "fb_unique_names",
+   "kind": "meclib",
+   "sig": "fb_unique_names(o, n, supports)",
+   "args": [
+    "o",
+    "n",
+    "supports"
+   ],
+   "text": "`fb_unique_names()` checks that the reactions at the given supports all have different names. It compares the loads meclib matched to each support (`n[i]`), at different supports and at the same support. Other loads (weights, given forces) are not compared, they may legitimately share a name with something else.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_unique_names()",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "the meclib object list (`stackjson_parse(objects)`)",
+    "n": "the `names` array (content of the `names` input field)",
+    "supports": "list of indices of the supports and contacts whose reactions are compared"
+   },
+   "returns": "[txt, OK]"
+  },
+  {
+   "name": "fb_unit",
+   "kind": "meclib",
+   "sig": "fb_unit(sans, tans, tol)",
+   "args": [
+    "sans",
+    "tans",
+    "tol"
+   ],
+   "text": "This function performs the following checks with units (see fb_vars and fb_number for other functions): Do the units match? This is redundant to the UnitsRelative answer test.; Is the value off by exactly an integer power of 10? This indicates correct mantissa and problems with unit conversion. Mantissa Check; Is the sign correct?",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_unit",
+   "source": "Maxima/fb_value.mac",
+   "argdocs": {
+    "sans": "student's answer,",
+    "tans": "teacher's answer,",
+    "tol": "relative tolerance for the mantissa. Set it to zero to avoid the tests and just display the deviation."
+   }
+  },
+  {
+   "name": "fb_unit_matrix",
+   "kind": "meclib",
+   "sig": "fb_unit_matrix(S, T, tol, labels?)",
+   "args": [
+    "S",
+    "T",
+    "tol",
+    "labels"
+   ],
+   "text": "`fb_unit_matrix()` checks every element of a matrix (or vector) answer with fb_unit and collects the messages. Each element with a message gets a line of its own, starting with its label; correct elements are not mentioned. The texts are bilingual (German and English).",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_unit_matrix()",
+   "source": "Maxima/fb_value.mac",
+   "argdocs": {
+    "S": "student's answer (content of a matrix input)",
+    "T": "teacher's answer, a matrix of the same size",
+    "tol": "relative tolerance, as for fb_unit, e.g. `0.005`",
+    "labels": "(optional) names of the elements in the feedback, see below"
+   },
+   "returns": "[txt, isOK]",
+   "optional": [
+    3
+   ]
+  },
+  {
+   "name": "fb_unitOK",
+   "kind": "meclib",
+   "sig": "fb_unitOK(sans, tans, tol)",
+   "args": [
+    "sans",
+    "tans",
+    "tol"
+   ],
+   "text": "this should return true if the check passes, false otherwise",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_unit",
+   "source": "Maxima/fb_value.mac",
+   "argdocs": {
+    "sans": "student's answer,",
+    "tans": "teacher's answer,",
+    "tol": "relative tolerance for the mantissa. Set it to zero to avoid the tests and just display the deviation."
+   }
+  },
+  {
+   "name": "fb_vars",
+   "kind": "meclib",
+   "sig": "fb_vars(sans, tans, vars?, label?, tol?)",
+   "args": [
+    "sans",
+    "tans",
+    "vars",
+    "label",
+    "tol"
+   ],
+   "text": "Checks for missing and spurious vars by comparing the lists of variables in `tans` and `sans`. If they match, then compares the terms with the variables in `vars`. Provide an empty list if you don't want this check (or just use two arguments).",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_vars",
+   "source": "Maxima/fb_value.mac",
+   "argdocs": {
+    "sans": "student's answer (usually the same as in the PRT node)",
+    "tans": "teacher's answer (usually the same as in the PRT node)",
+    "vars": "(optional) list with vars, for which a check of coefficient is made. If not needed but you want a label, set it to `[]`",
+    "label": "(optional) Text to preceed the feedback text. Only used if there is actual feedback text (you won't get just the label with nothing to follow).",
+    "tol": "(optional, default 0) coefficient tolerance. With a positive value, a variable whose"
+   },
+   "optional": [
+    2,
+    3,
+    4
+   ]
+  },
+  {
+   "name": "fb_vars_matrix",
+   "kind": "meclib",
+   "sig": "fb_vars_matrix(S, T, vars?, labels?, tol?)",
+   "args": [
+    "S",
+    "T",
+    "vars",
+    "labels",
+    "tol"
+   ],
+   "text": "`fb_vars_matrix()` checks every element of a matrix (or vector) answer with fb_vars and collects the messages, each element on a line of its own, starting with its label. The texts are bilingual (German and English). The argument positions are those of `fb_vars(sans, tans, vars, label, tol)`, with a list of labels instead of a single label.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_vars_matrix()",
+   "source": "Maxima/fb_value.mac",
+   "argdocs": {
+    "S": "student's answer (content of a matrix input)",
+    "T": "teacher's answer, a matrix of the same size",
+    "vars": "(optional, default `[]`) as for fb_vars: variables whose terms are checked",
+    "labels": "(optional) names of the elements in the feedback, as for fb_unit_matrix()",
+    "tol": "(optional, default `0`) as for fb_vars"
+   },
+   "returns": "txt",
+   "optional": [
+    2,
+    3,
+    4
+   ]
+  },
+  {
+   "name": "fb_varsOK",
+   "kind": "meclib",
+   "sig": "fb_varsOK(sans, tans, vars?, label?, tol?)",
+   "args": [
+    "sans",
+    "tans",
+    "vars",
+    "label",
+    "tol"
+   ],
+   "text": "this should return true if the check passes, false otherwise",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_vars",
+   "source": "Maxima/fb_value.mac",
+   "argdocs": {
+    "sans": "student's answer (usually the same as in the PRT node)",
+    "tans": "teacher's answer (usually the same as in the PRT node)",
+    "vars": "(optional) list with vars, for which a check of coefficient is made. If not needed but you want a label, set it to `[]`",
+    "label": "(optional) Text to preceed the feedback text. Only used if there is actual feedback text (you won't get just the label with nothing to follow).",
+    "tol": "(optional, default 0) coefficient tolerance. With a positive value, a variable whose"
+   },
+   "optional": [
+    2,
+    3,
+    4
+   ]
+  },
+  {
+   "name": "matchByParallel",
+   "kind": "meclib",
+   "sig": "matchByParallel(o, n)",
+   "args": [
+    "o",
+    "n"
+   ],
+   "text": "returns `names` with all indices for nonparallel reactions for unidirectional supports removed. Use this if more than one unidirectional support act on a single point and reactions can't be assigned uniquely by proximity only.",
+   "url": "https://github.com/mkraska/meclib/wiki/MatchByParallel()",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "n": "value from the input field `names`"
+   },
+   "returns": "nred"
+  },
+  {
+   "name": "moment_of_force",
+   "kind": "meclib",
+   "sig": "moment_of_force(p, f, fname, rname)",
+   "args": [
+    "p",
+    "f",
+    "fname",
+    "rname"
+   ],
+   "text": "The force vector is computed from startpoint and endpoint. The vector is then normalized and multiplied by `fname`. The radius vector is computed from the start point and the reference point and multiplied by `rname`.",
+   "url": "https://github.com/mkraska/meclib/wiki/moment_of_force()",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "p": "point of reference, given as a numeric co-ordinate list",
+    "f": "object of type \"force\"",
+    "fname": "(algebraic expression) size of the force (usually taken from the \"names\" input field).",
+    "rname": "(algebraic expression) grid unit length"
+   },
+   "returns": "M"
+  },
+  {
+   "name": "parallelp",
+   "kind": "meclib",
+   "sig": "parallelp(a, b)",
+   "args": [
+    "a",
+    "b"
+   ],
+   "text": "returns `true` if two objects are parallel or `false` otherwise",
+   "url": "https://github.com/mkraska/meclib/wiki/parallelp()",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {}
+  },
+  {
+   "name": "perpendicularp",
+   "kind": "meclib",
+   "sig": "perpendicularp(a, b)",
+   "args": [
+    "a",
+    "b"
+   ],
+   "text": "",
+   "url": "https://github.com/mkraska/meclib/wiki/Feedback-for-%22dir%22",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {}
+  },
+  {
+   "name": "sum_dir",
+   "kind": "meclib",
+   "sig": "sum_dir(o, n, d)",
+   "args": [
+    "o",
+    "n",
+    "d"
+   ],
+   "text": "Simple single-direction variant of sum_xyM: sums the scalar projections of all matched \"force\" loads in o/n onto a single given direction vector d (e.g. from direction() on a \"dir\" object). Intended for central/concurrent force systems, where only force equilibrium in self-chosen directions is needed and no moment term applies.",
+   "url": "https://github.com/mkraska/meclib/wiki/Sums-of-Forces-and-Moments",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "o": "list of objects",
+    "n": "names field",
+    "d": "direction vector, e.g. `direction(o[i_dir])`"
+   }
+  },
+  {
+   "name": "sum_xyM",
+   "kind": "meclib",
+   "sig": "sum_xyM(obj,names,rp,lu)",
+   "args": [
+    "obj",
+    "names",
+    "rp",
+    "lu"
+   ],
+   "text": "legacy: [sum in x, sum in y, moment about p]; takes the options of sumF() and sumM()",
+   "url": "https://github.com/mkraska/meclib/wiki/Sums-of-Forces-and-Moments",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "names": "Input field with object names",
+    "rp": "coordinates of the reference point in grid units `[x,y]`",
+    "lu": "symbolic length unit"
+   },
+   "returns": "[fx,fy,m]"
+  },
+  {
+   "name": "sumF",
+   "kind": "meclib",
+   "sig": "sumF(obj, names, d, options?)",
+   "args": [
+    "obj",
+    "names",
+    "d",
+    "options"
+   ],
+   "text": "Without options the directions of the arrows (rounded to 0.1) and the points of the sketch are used. `sum_xyM()` returns `[sumF(..., [1,0]), sumF(..., [0,1]), sumM(...)]` and takes the same options; it is kept for existing questions.",
+   "url": "https://github.com/mkraska/meclib/wiki/Sums-of-Forces-and-Moments",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "options": "(optional) list of options `name = value`; `contacts` indices of \"contact\" objects. A force found at one of them (normal or tangential, with the tolerance of Feedback for \"contact\") gets the exact normal or tangent direction of the contact, with the sense of the drawn arrow, and the contact point as point of application. Drawn arrows snap to 0.1 grid units and are only roughly along the contact, so without this option a correct equation such as `N_B*sin(alpha)` may not match `7/sqrt(149)*N_B`. Give the direction of the contact with exact numbers, e.g. `[-2, -3]`.; `at` (`sumM`) list of `[k, r]`: load `k` acts at point `r`, given in length units (like `rp*lu`), e.g. a centre of gravity that depends on symbols of the problem: `at = i_G, pA*a + rS`."
+   },
+   "optional": [
+    3
+   ]
+  },
+  {
+   "name": "sumM",
+   "kind": "meclib",
+   "sig": "sumM(obj, names, rp, lu, options?)",
+   "args": [
+    "obj",
+    "names",
+    "rp",
+    "lu",
+    "options"
+   ],
+   "text": "sumM(o, n, p, lu [, options]): sum of the moments about p (sketch coordinates) of all forces and moments, counterclockwise positive; lu: length unit of the sketch.",
+   "url": "https://github.com/mkraska/meclib/wiki/Sums-of-Forces-and-Moments",
+   "source": "Maxima/fb_fbd.mac",
+   "argdocs": {
+    "options": "(optional) list of options `name = value`; `contacts` indices of \"contact\" objects. A force found at one of them (normal or tangential, with the tolerance of Feedback for \"contact\") gets the exact normal or tangent direction of the contact, with the sense of the drawn arrow, and the contact point as point of application. Drawn arrows snap to 0.1 grid units and are only roughly along the contact, so without this option a correct equation such as `N_B*sin(alpha)` may not match `7/sqrt(149)*N_B`. Give the direction of the contact with exact numbers, e.g. `[-2, -3]`.; `at` (`sumM`) list of `[k, r]`: load `k` acts at point `r`, given in length units (like `rp*lu`), e.g. a centre of gravity that depends on symbols of the problem: `at = i_G, pA*a + rS`."
+   },
+   "optional": [
+    4
+   ]
+  },
+  {
+   "name": "unitvec",
+   "kind": "meclib",
+   "sig": "unitvec(l)",
+   "args": [
+    "l"
+   ],
+   "text": "`[fx,fy,m]: sum_xyM(obj,names,rp,lu)` Returns the sums of forces `fx`, `fy` and moments `m` about reference point `rp` using length unit `lu`.",
+   "url": "https://github.com/mkraska/meclib/wiki/Sums-of-Forces-and-Moments",
+   "source": "Maxima/fb_fbd.mac"
+  },
+  {
+   "name": "angle",
+   "kind": "object",
+   "sig": "[ \"angle\", \"name\", [xc, yc], [xs,ys], radius, angle ]",
+   "args": [
+    "\"name\"",
+    "[xc, yc]",
+    "[xs,ys]",
+    "radius",
+    "angle"
+   ],
+   "argdocs": {
+    "\"name\"": "label text, typeset in MathJax math mode",
+    "[xc, yc]": "center point",
+    "[xs,ys]": "end point of radial base line",
+    "radius": "radius of the arc",
+    "angle": "angle in °, counterclockwise from base line."
+   },
+   "text": "angular dimension consisting of two radial lines, arc and label",
+   "url": "https://github.com/mkraska/meclib/wiki/%22angle%22",
+   "source": "meclib.js"
+  },
+  {
+   "name": "angle1",
+   "kind": "object",
+   "sig": "[ \"angle1\", \"name\", [xc, yc], [xs,ys], radius, angle ]",
+   "args": [
+    "\"name\"",
+    "[xc, yc]",
+    "[xs,ys]",
+    "radius",
+    "angle"
+   ],
+   "argdocs": {
+    "\"name\"": "label text, typeset in MathJax math mode",
+    "[xc, yc]": "center point",
+    "[xs,ys]": "end point of radial baseline",
+    "radius": "radius of the arc",
+    "angle": "angle in °, counterclockwise from base line."
+   },
+   "text": "angular dimension consisting of two radial lines, arc with a single arrow and label.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22angle1%22",
+   "source": "meclib.js"
+  },
+  {
+   "name": "angle2",
+   "kind": "object",
+   "sig": "[ \"angle2\", \"name\", [xc, yc], [xs,ys], radius, angle ]",
+   "args": [
+    "\"name\"",
+    "[xc, yc]",
+    "[xs,ys]",
+    "radius",
+    "angle"
+   ],
+   "argdocs": {
+    "\"name\"": "label text, typeset in MathJax math mode",
+    "[xc, yc]": "center point",
+    "[xs,ys]": "end point of radial baseline",
+    "radius": "radius of the arc",
+    "angle": "angle in °, counterclockwise from base line."
+   },
+   "text": "angular dimension consisting of two radial lines, arc with two arrows and label.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22angle2%22",
+   "source": "meclib.js"
+  },
+  {
+   "name": "bar",
+   "kind": "object",
+   "sig": "[ \"bar\", \"<name>\", [x1, y1], [x2, y2], state? ]",
+   "args": [
+    "\"<name>\"",
+    "[x1, y1]",
+    "[x2, y2]",
+    "state"
+   ],
+   "argdocs": {
+    "\"<name>\"": "label text, typeset in text mode",
+    "[x1, y1]": "start and end point",
+    "[x2, y2]": "start and end point",
+    "state": "(optional, default: `\"SHOW\"`) can be `\"hide\"` or `\"show\"` or `\"HIDE\"` or `\"SHOW\"`. The uppercase versions lock the object in the given state, otherwise it can be changed interactively."
+   },
+   "text": "bar, thick black line with hinge points (nodes) at the ends. The label is placed next to the center of the line on the left side if seen from point 1 to point 2.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22bar%22",
+   "source": "meclib.js",
+   "optional": [
+    3
+   ]
+  },
+  {
+   "name": "beam",
+   "kind": "object",
+   "sig": "[ \"beam\", \"\", [x1, y1], [x2,y2], r, state? ]",
+   "args": [
+    "\"\"",
+    "[x1, y1]",
+    "[x2,y2]",
+    "r",
+    "state"
+   ],
+   "argdocs": {
+    "\"\"": "or `\"\",\"\"` colors for the gradient filling. If empty, the default light gray filling is used. The gradient is tried to be in lateral direction if possible (only horizontal or vertical gradients are possible)",
+    "[x1, y1]": "start and end point. Multiple pairs of start and end points can be specified.",
+    "[x2,y2]": "start and end point. Multiple pairs of start and end points can be specified.",
+    "r": "radius (half width) of the beam",
+    "state": "(optional, default: `\"SHOW\"`) `\"show\"` or `\"hide\"` (can be switched by double click), or `\"SHOW\"` or `\"HIDE\"` (locked in that state). The legacy value `\"locked\"` is still accepted and looks like `\"SHOW\"`, but feedback functions such as `fb_system()` only count `\"SHOW\"`/`\"show\"` as shown; use `\"SHOW\"` instead."
+   },
+   "text": "Rectangle with black border and light gray filling. The rectangle essentially is a thick line connecting two points. r is the radius (half width). More than two points (must be an even number of points) can be handled, in this case multiple rectangles are generated and merged into a single contour if they overlap. For non-merged overlapping beams use separate beam objects.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22beam%22",
+   "source": "meclib.js",
+   "optional": [
+    4
+   ]
+  },
+  {
+   "name": "circle",
+   "kind": "object",
+   "sig": "[ \"circle\", \"name\", [xc, yc], [xp,yp], angle?, state? ]",
+   "args": [
+    "\"name\"",
+    "[xc, yc]",
+    "[xp,yp]",
+    "angle",
+    "state"
+   ],
+   "argdocs": {
+    "\"name\"": "label text for the radial dimension",
+    "[xc, yc]": "center point",
+    "[xp,yp]": "point on perimeter (alternative to specification of radius)",
+    "angle": "(optional, default: `0` ) angular position of the radial dimension glyph (arrow with label). If negative, the arrow is inside the circle, otherwise it is outside.",
+    "state": "(optional, default: `\"SHOW\"`; the legacy value `\"locked\"` looks like `\"SHOW\"` but is not counted as shown by `fb_system()`), can be set to; `\"show\"` initally activated, can be deactivated by doubleclick; `\"hide\"` initally deactivated, can be activated by doubleclick; `\"HIDE\"` locked in deactivated state; `\"SHOW\"` locked in activated state"
+   },
+   "text": "Circle with centerpoint, point on perimeter or radius, angle for dimension. The annotation for the radius is only drawn if name is not empty. If the angle is negative, the dimension is inside the circle, otherwise it is outside.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22circle%22",
+   "source": "meclib.js",
+   "optional": [
+    3,
+    4
+   ]
+  },
+  {
+   "name": "circle2p",
+   "kind": "object",
+   "sig": "[ \"circle2p\", \"label1\", \"label2\", [x1,y1], [x2,y2], f ]",
+   "args": [
+    "\"label1\"",
+    "\"label2\"",
+    "[x1,y1]",
+    "[x2,y2]",
+    "f"
+   ],
+   "argdocs": {
+    "\"label1\"": ", `label2` labels for the two control points",
+    "[x1,y1]": ", `[x2,y2]` initial locations of the control points (in scaled units)",
+    "f": "scale factor for grid units (obsolete since 2022 04 25, because scaling for dynamic display is made by default)."
+   },
+   "text": "circle with two draggable perimeter points, meant for Mohr's circle construction. The intersections between x-axis and circle have an infobox (coordinate display) and are exposed as snap targets for the control points of \"line2p\". The precision of coordinate display is controlled by the \"grid\" object.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22circle2p%22",
+   "source": "meclib.js"
+  },
+  {
+   "name": "contact",
+   "kind": "object",
+   "sig": "[ \"contact\", \"name\", [x, y], [dx, dy], targetRef, lineLength?, visible? ]",
+   "args": [
+    "\"name\"",
+    "[x, y]",
+    "[dx, dy]",
+    "targetRef",
+    "lineLength",
+    "visible"
+   ],
+   "argdocs": {
+    "\"name\"": "label, typeset in MathJax math mode (may be empty)",
+    "[x, y]": "contact point",
+    "[dx, dy]": "normal direction vector (outward, need not be normalized); the tangent is perpendicular to it",
+    "targetRef": "name (string) or 1-based index (integer) of the object that this contact replaces once cut away",
+    "lineLength": "(optional, default `3`) length of the gray cross indicating normal/tangent snap directions, in grid units (the default leaves 1.5 units on each side for a force arrow)",
+    "visible": "(optional, default `true`) whether the gray cross is ever drawn; it is only shown while the referenced object is deactivated"
+   },
+   "text": "Point-type support representing a contact between the sketched body and an environment object that gets cut away. Whether the contact is smooth or rough (static or kinetic friction) is decided in the feedback, see Feedback for \"contact\". Appears as a gray cross (normal + tangent line) once the referenced object is deactivated.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22contact%22",
+   "source": "meclib.js",
+   "optional": [
+    4,
+    5
+   ]
+  },
+  {
+   "name": "crosshair",
+   "kind": "object",
+   "sig": "[ \"crosshair\", \"\", [x0, y0], [xref, yref]?, [fx, fy]?, [dpx, dpy]?, snap? ]",
+   "args": [
+    "\"\"",
+    "[x0, y0]",
+    "[xref, yref]",
+    "[fx, fy]",
+    "[dpx, dpy]",
+    "snap"
+   ],
+   "argdocs": {
+    "[x0, y0]": "initial location in standard grid units",
+    "[xref, yref]": "(optional, default: `[0, 0]`) origin of the co-ordinate display (infobox)",
+    "[fx, fy]": "(optional, default: `[1, 1]`) x and y values of a single grid unit (scaling factors)",
+    "[dpx, dpy]": "(optional, default: `[1, 1]`) decimal precision of the co-ordinate display",
+    "snap": "(optional, default: none) snap mode.; if missing: no snap to grid, just to targets; `\"grid\"` snap to grid with a snap according to dpx, dpy (1 means 0.1 grid spacing, 0 means snap to grid points)"
+   },
+   "text": "Interactive crosshair for indicating or reading off co-ordinate values. The crosshair snaps to objects of type \"line\", \"spline\" and others (if they push components to the target list).",
+   "url": "https://github.com/mkraska/meclib/wiki/%22crosshair%22",
+   "source": "meclib.js",
+   "optional": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "name": "dashpot",
+   "kind": "object",
+   "sig": "[ \"dashpot\", \"name\", [x1,y1], [x2,y2], r?, offset? ]",
+   "args": [
+    "\"name\"",
+    "[x1,y1]",
+    "[x2,y2]",
+    "r",
+    "offset"
+   ],
+   "argdocs": {
+    "\"name\"": "label, typeset in MathJax math mode",
+    "[x1,y1]": "start and end point",
+    "[x2,y2]": "start and end point",
+    "r": "(optional, default: equivalent to 6 pixels) radius of the symbol in grid units",
+    "offset": "(optional, default: equivalent to r plus 8 pixels) lateral offset of the label"
+   },
+   "text": "dashpot (for oscillators)",
+   "url": "https://github.com/mkraska/meclib/wiki/%22dashpot%22",
+   "source": "meclib.js",
+   "optional": [
+    3,
+    4
+   ]
+  },
+  {
+   "name": "description",
+   "kind": "object",
+   "sig": "[ \"description\", \"label\", [x1, y1], [x2, y2], gap?, startgap? ]",
+   "args": [
+    "\"label\"",
+    "[x1, y1]",
+    "[x2, y2]",
+    "gap",
+    "startgap"
+   ],
+   "argdocs": {
+    "\"label\"": "text, typeset in MathJax math mode (e.g. `\"\\\\mu_0=0.3\"`; spaces become small math spaces, as in all meclib labels)",
+    "[x1, y1]": "start point of the line, e.g. on the surface",
+    "[x2, y2]": "center of the label",
+    "gap": "(optional, default `4`) space in pixels between the end of the line and the label's bounding box",
+    "startgap": "(optional, default `0`) space in pixels between `[x1, y1]` and the start of the line"
+   },
+   "text": "Label with a leader line, e.g. a friction coefficient pointing at a rough surface.",
+   "url": "https://github.com/mkraska/meclib/wiki/description",
+   "source": "meclib.js",
+   "optional": [
+    3,
+    4
+   ]
+  },
+  {
+   "name": "dim",
+   "kind": "object",
+   "sig": "[ \"dim\", \"name\", [x1, y1], [x2,y2], off ]",
+   "args": [
+    "\"name\"",
+    "[x1, y1]",
+    "[x2,y2]",
+    "off"
+   ],
+   "argdocs": {
+    "\"name\"": "label text, typeset in MathJax math mode (stars `*` are replaced by small spaces `\\;`)",
+    "[x1, y1]": "reference points",
+    "[x2,y2]": "reference points",
+    "off": "offset of the actual annotation from the baseline defined by the reference points. Offset counts positive to the left side seen from point 1 to point 2. If zero, short end lines are drawn."
+   },
+   "text": "Linear dimension with label",
+   "url": "https://github.com/mkraska/meclib/wiki/%22dim%22",
+   "source": "meclib.js"
+  },
+  {
+   "name": "dir",
+   "kind": "object",
+   "sig": "[ \"dir\", \"name\", [x,y], angle, offset?, length?, state? ]",
+   "args": [
+    "\"name\"",
+    "[x,y]",
+    "angle",
+    "offset",
+    "length",
+    "state"
+   ],
+   "argdocs": {
+    "\"name\"": "label, typeset in MathJax math mode",
+    "[x,y]": "start point",
+    "angle": "arrow direction, counter-clockwise from x-axis, in °.",
+    "offset": "(optional, defaults to 10 pixels) distance from arrow to text anchor point in pixels. If `offset` < 0, then the label is placed at the tail of the arrow, otherwise at the head.",
+    "length": "(optional, defaults to equivalent of 24 pixels), in standard grid units",
+    "state": "(optional, default: `\"locked\"`) can be set to `\"active\"`, then the tip point becomes"
+   },
+   "text": "small arrow with label (indication of coordinate axes).",
+   "url": "https://github.com/mkraska/meclib/wiki/%22dir%22",
+   "source": "meclib.js",
+   "optional": [
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "name": "disp",
+   "kind": "object",
+   "sig": "[ \"disp\", \"name\", [x,y], angle, offset?, length? ]",
+   "args": [
+    "\"name\"",
+    "[x,y]",
+    "angle",
+    "offset",
+    "length"
+   ],
+   "argdocs": {
+    "\"name\"": "label, typeset in MathJax math mode",
+    "[x,y]": "start point",
+    "angle": "arrow direction, counter-clockwise from x-axis, in °.",
+    "offset": "(optional, defaults to 10 pixels) distance from arrow to text anchor point in pixels. If `offset` < 0, then the label is placed at the tail of the arrow, otherwise at the head.",
+    "length": "(optional, defaults to equivalent of 24 pixels), in standard grid units"
+   },
+   "text": "small red arrow with label (indication of displacement). Same as dir, except for the color.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22disp%22",
+   "source": "meclib.js",
+   "optional": [
+    3,
+    4
+   ]
+  },
+  {
+   "name": "fix1",
+   "kind": "object",
+   "sig": "[ \"fix1\", \"name\", [x, y], angle, state? ]",
+   "args": [
+    "\"name\"",
+    "[x, y]",
+    "angle",
+    "state"
+   ],
+   "argdocs": {
+    "\"name\"": "label, typeset in MathJax math mode.",
+    "[x, y]": "pivot point",
+    "angle": "angle counter-clockwise from horizontal direction, in °",
+    "state": "(optional, default: `\"SHOW\"`) `\"show\"` or `\"hide\"` (can be switched by double click), or `\"SHOW\"` or `\"HIDE\"` (locked in that state). The legacy value `\"locked\"` is still accepted and looks like `\"SHOW\"`, but feedback functions such as `fb_system()` only count `\"SHOW\"`/`\"show\"` as shown; use `\"SHOW\"` instead."
+   },
+   "text": "floating bearing with label, horizontal base line for angle = 0",
+   "url": "https://github.com/mkraska/meclib/wiki/%22fix1%22",
+   "source": "meclib.js",
+   "optional": [
+    3
+   ]
+  },
+  {
+   "name": "fix12",
+   "kind": "object",
+   "sig": "[ \"fix12\", \"name\", [x, y], angle, state? ]",
+   "args": [
+    "\"name\"",
+    "[x, y]",
+    "angle",
+    "state"
+   ],
+   "argdocs": {
+    "\"name\"": "label, typeset in MathJax math mode.",
+    "[x, y]": "pivot point",
+    "angle": "angle counter-clockwise from horizontal direction, in °",
+    "state": "(optional, default: `\"SHOW\"`) `\"show\"` or `\"hide\"` (can be switched by double click), or `\"SHOW\"` or `\"HIDE\"` (locked in that state). The legacy value `\"locked\"` is still accepted and looks like `\"SHOW\"`, but feedback functions such as `fb_system()` only count `\"SHOW\"`/`\"show\"` as shown; use `\"SHOW\"` instead."
+   },
+   "text": "fixed bearing with label, horizontal base line for angle = 0",
+   "url": "https://github.com/mkraska/meclib/wiki/%22fix12%22",
+   "source": "meclib.js",
+   "optional": [
+    3
+   ]
+  },
+  {
+   "name": "fix123",
+   "kind": "object",
+   "sig": "[ \"fix123\", \"name\", [x, y], angle, state? ]",
+   "args": [
+    "\"name\"",
+    "[x, y]",
+    "angle",
+    "state"
+   ],
+   "argdocs": {
+    "\"name\"": "label, typeset in MathJax math mode.",
+    "[x, y]": "pivot point",
+    "angle": "angle counter-clockwise from horizontal direction, in °",
+    "state": "(optional, default: `\"SHOW\"`) `\"show\"` or `\"hide\"` (can be switched by double click), or `\"SHOW\"` or `\"HIDE\"` (locked in that state). The legacy value `\"locked\"` is still accepted and looks like `\"SHOW\"`, but feedback functions such as `fb_system()` only count `\"SHOW\"`/`\"show\"` as shown; use `\"SHOW\"` instead."
+   },
+   "text": "Built-in support, constrains translation and rotation. Base line vertical for angle = 0°",
+   "url": "https://github.com/mkraska/meclib/wiki/%22fix123%22",
+   "source": "meclib.js",
+   "optional": [
+    3
+   ]
+  },
+  {
+   "name": "fix13",
+   "kind": "object",
+   "sig": "[ \"fix13\", \"name\", [x, y], angle, state? ]",
+   "args": [
+    "\"name\"",
+    "[x, y]",
+    "angle",
+    "state"
+   ],
+   "argdocs": {
+    "\"name\"": "label, typeset in MathJax math mode.",
+    "[x, y]": "pivot point",
+    "angle": "angle counter-clockwise from horizontal direction, in °",
+    "state": "(optional, default: `\"SHOW\"`) `\"show\"` or `\"hide\"` (can be switched by double click), or `\"SHOW\"` or `\"HIDE\"` (locked in that state). The legacy value `\"locked\"` is still accepted and looks like `\"SHOW\"`, but feedback functions such as `fb_system()` only count `\"SHOW\"`/`\"show\"` as shown; use `\"SHOW\"` instead."
+   },
+   "text": "axial and angular support, floats in vertical direction for angle = 0°",
+   "url": "https://github.com/mkraska/meclib/wiki/%22fix13%22",
+   "source": "meclib.js",
+   "optional": [
+    3
+   ]
+  },
+  {
+   "name": "force",
+   "kind": "object",
+   "sig": "[ \"force\", \"name\", [x1, y1], [x2,y2], offset?, state? ]",
+   "args": [
+    "\"name\"",
+    "[x1, y1]",
+    "[x2,y2]",
+    "offset",
+    "state"
+   ],
+   "argdocs": {
+    "\"name\"": "label, typeset in MathJax math mode (stars `*` are replaced by small spaces `\\;`). For input to STACK, spaces are converted to stars.",
+    "[x1, y1]": "start and end point",
+    "[x2,y2]": "start and end point",
+    "offset": "(optional, default: 10 pixel) distance from start/end point to label text anchor in pixel. if `offset` is negative, the label is drawn at the tail, if positiv or not given the label is at the head of the arrow.",
+    "state": "(optional, default: `\"locked\"`) can be set to; `\"active\"`, then the force can be moved around interactively, or; `\"silent\"`, then the infobox with the coordinates is suppressed.; `\"dotted\"`, then the arrow is drawn with a dashed line (for alternative representations of existing loads like resultant forces or components)"
+   },
+   "text": "force vector (blue arrow with blue label). In the active version, the vector has two control point for interactive modification. Dragging the arrow translates the object, dragging the tail or head point changes direction and length.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22force%22",
+   "source": "meclib.js",
+   "optional": [
+    3,
+    4
+   ]
+  },
+  {
+   "name": "forceGen",
+   "kind": "object",
+   "sig": "[ \"forceGen\", \"name\", [x,y] ]",
+   "args": [
+    "\"name\"",
+    "[x,y]"
+   ],
+   "argdocs": {
+    "\"name\"": "initial value for the label input field.",
+    "[x,y]": "position of the upper left border of the label input field."
+   },
+   "text": "The input field automatically corrects non-valid names (in terms of STACK). Example: `MAx` -> `M_Ax`.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22forceGen%22",
+   "source": "meclib.js"
+  },
+  {
+   "name": "frame",
+   "kind": "object",
+   "sig": "[ \"frame\", \"name\", [[x1,y1], [x2, y2], ...], tension? ]",
+   "args": [
+    "\"name\"",
+    "[[x1,y1], [x2, y2], ...]",
+    "tension"
+   ],
+   "argdocs": {
+    "\"name\"": "not used",
+    "tension": "(optional, default: 3): Tension of the spline. High values give sharp corners, low values give round corners."
+   },
+   "text": "Object to mark the boundary of a system.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22frame%22",
+   "source": "meclib.js",
+   "optional": [
+    2
+   ]
+  },
+  {
+   "name": "grid",
+   "kind": "object",
+   "sig": "[ \"grid\", \"xlabel\", \"ylabel\", xmin, xmax, ymin, ymax, pix, [fx, fy]?, [dpx, dpy]? ]",
+   "args": [
+    "\"xlabel\"",
+    "\"ylabel\"",
+    "xmin",
+    "xmax",
+    "ymin",
+    "ymax",
+    "pix",
+    "[fx, fy]",
+    "[dpx, dpy]"
+   ],
+   "argdocs": {
+    "\"xlabel\"": ", `\"ylabel\"` axis labels, typeset in MathJax. If empty, no axes (arrows with tick labels) are drawn. If you want axes without labels, then specify space characters `\" \"` as labels.",
+    "xmin": "co-ordinate values of the left, right, lower, upper edge of the window respectively. If max < min, then axis direction is reversed. This, however, is unstable (problems with gridsnap). Use negative scaling factors instead.",
+    "xmax": "co-ordinate values of the left, right, lower, upper edge of the window respectively. If max < min, then axis direction is reversed. This, however, is unstable (problems with gridsnap). Use negative scaling factors instead.",
+    "ymin": "co-ordinate values of the left, right, lower, upper edge of the window respectively. If max < min, then axis direction is reversed. This, however, is unstable (problems with gridsnap). Use negative scaling factors instead.",
+    "ymax": "co-ordinate values of the left, right, lower, upper edge of the window respectively. If max < min, then axis direction is reversed. This, however, is unstable (problems with gridsnap). Use negative scaling factors instead.",
+    "pix": "distance between grid lines in pixels",
+    "[fx, fy]": "(optional, defaults to `[1, 1]`) scaling factors for the tick values of the axes (if displayed at all) and of the dynamic coordinate display of points.",
+    "[dpx, dpy]": "(optional, defaults to `[1, 1]`) decimal precision of the dynamic coordinate display of points (Added in 2022 04 25). As the grid snap is 0.1 grid unit, the grid tick values are displayed with one digit less than `dpx` or `dpy`."
+   },
+   "text": "Grid specification (range of user co-ordinates and user unit in pixels). Must be the first object in the list, otherwise scaling of the other objects might be wrong. Scaling factors and decimal precision can be set for Dynamic display of coordinates.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22grid%22",
+   "source": "meclib.js",
+   "optional": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "label",
+   "kind": "object",
+   "sig": "[ \"label\", \"name\", [x, y], color? ]",
+   "args": [
+    "\"name\"",
+    "[x, y]",
+    "color"
+   ],
+   "argdocs": {
+    "\"name\"": "label text",
+    "[x, y]": "position of text anchor",
+    "color": "(optional, default: `\"black\"`) label color"
+   },
+   "text": "label, text anchor is center left, typeset in text mode. To use MathJax math mode bracket the label with `\\\\( \\\\)`.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22label%22",
+   "source": "meclib.js",
+   "optional": [
+    2
+   ]
+  },
+  {
+   "name": "line",
+   "kind": "object",
+   "sig": "[ \"line\", \"color\", [x1, x2,...], [y1, y2,...], dash?, th? ]",
+   "args": [
+    "\"color\"",
+    "[x1, x2,...]",
+    "[y1, y2,...]",
+    "dash",
+    "th"
+   ],
+   "argdocs": {
+    "\"color\"": "color of the line, string. If empty (`\"\"`), `\"black\"` is used.",
+    "[x1, x2,...]": "lists of x and y values. Must have same length.",
+    "[y1, y2,...]": "lists of x and y values. Must have same length.",
+    "dash": "(optional, defaults to `\"-\"`) line style. possible values: `\"-\", \"--\", \".\", \"-.\"` (self explaining)",
+    "th": "(optional, default: 0.8) thickness in pixel"
+   },
+   "text": "polyline with optional dash style and thickness",
+   "url": "https://github.com/mkraska/meclib/wiki/%22line%22",
+   "source": "meclib.js",
+   "optional": [
+    3,
+    4
+   ]
+  },
+  {
+   "name": "line2p",
+   "kind": "object",
+   "sig": "[ \"line2p\", \"label\", [x1,y1], [x2,y2], \"nlabel\"? ]",
+   "args": [
+    "\"label\"",
+    "[x1,y1]",
+    "[x2,y2]",
+    "\"nlabel\""
+   ],
+   "argdocs": {
+    "\"label\"": "label for the line",
+    "[x1,y1]": ", `[x2,y2]` initial locations of the control points (in scaled units)",
+    "\"nlabel\"": "(optional, default: none) label for an optional perpendicular line through the first point. This argument earlier was a scaling factor, which is obsolete. The infobox uses the settings of the \"grid\" object."
+   },
+   "text": "line with two draggable points, meant for Mohr's circle construction.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22line2p%22",
+   "source": "meclib.js",
+   "optional": [
+    3
+   ]
+  },
+  {
+   "name": "mass",
+   "kind": "object",
+   "sig": "[ \"mass\", \"name\", [x1, y1], r?, off? ]",
+   "args": [
+    "\"name\"",
+    "[x1, y1]",
+    "r",
+    "off"
+   ],
+   "argdocs": {
+    "\"name\"": "label, typeset in MathJax math mode",
+    "[x1, y1]": "center position",
+    "r": "(optional, default: 4 pixel) radius of the circle in pixel",
+    "off": "(optional, default: 11 pixel) distance to text anchor of the label, in pixel"
+   },
+   "text": "black filled circle with label",
+   "url": "https://github.com/mkraska/meclib/wiki/%22mass%22",
+   "source": "meclib.js",
+   "optional": [
+    2,
+    3
+   ]
+  },
+  {
+   "name": "moment",
+   "kind": "object",
+   "sig": "[ \"moment\", \"name\", [x1, y1], [x2,y2], [x3,y3], state? ]",
+   "args": [
+    "\"name\"",
+    "[x1, y1]",
+    "[x2,y2]",
+    "[x3,y3]",
+    "state"
+   ],
+   "argdocs": {
+    "\"name\"": "label, typeset in MathJax math mode (stars `*` are replaced by small spaces `\\;`). For input to STACK, spaces are converted to stars.",
+    "[x1, y1]": "center point, tail point, label point",
+    "[x2,y2]": "center point, tail point, label point",
+    "[x3,y3]": "center point, tail point, label point",
+    "state": "(optional, default: `\"locked\"`), can be set to `\"active\"`, then the object can be moved around interactively."
+   },
+   "text": "Moment arrow specified by center point, tail point (defines start angle and radius) and label point (defines end angle and radial label position. Orientation is such that the angle is less then 180° (shortest arc from start angle to end angle).",
+   "url": "https://github.com/mkraska/meclib/wiki/%22moment%22",
+   "source": "meclib.js",
+   "optional": [
+    4
+   ]
+  },
+  {
+   "name": "momentGen",
+   "kind": "object",
+   "sig": "[ \"momentGen\", \"name\", [x,y] ]",
+   "args": [
+    "\"name\"",
+    "[x,y]"
+   ],
+   "argdocs": {
+    "\"name\"": "initial value for the label input field.",
+    "[x,y]": "anchor point of the input field (left, vertically centered)"
+   },
+   "text": "Interactive moment generator. It consists of an input field for the label and a moment prototype, which can be dragged to produce new moments. Moments can be deleted by dragging one of their control points outside of the canvas.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22momentGen%22",
+   "source": "meclib.js"
+  },
+  {
+   "name": "node",
+   "kind": "object",
+   "sig": "[ \"node\", \"name\", [x,y], off?, color? ]",
+   "args": [
+    "\"name\"",
+    "[x,y]",
+    "off",
+    "color"
+   ],
+   "argdocs": {
+    "\"name\"": "label text, typeset in MathJax math mode.",
+    "[x,y]": "center point",
+    "off": "(optional, default: 10 pixel) offset of label text anchor from center point",
+    "color": "(optional, default: fillcolor white, labelcolor black) set the color for label and fill"
+   },
+   "text": "Node (small white circle, typically indicates hinge point) with label.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22node%22",
+   "source": "meclib.js",
+   "optional": [
+    2,
+    3
+   ]
+  },
+  {
+   "name": "point",
+   "kind": "object",
+   "sig": "[ \"point\", \"name\", [x,y], off? ]",
+   "args": [
+    "\"name\"",
+    "[x,y]",
+    "off"
+   ],
+   "argdocs": {
+    "\"name\"": "label text, typeset in MathJax math mode",
+    "[x,y]": "location",
+    "off": "(optional, default: 10 pixel) offset of label text from center point (location)"
+   },
+   "text": "Small black dot with label, to indicate and label particular locations in the sketch",
+   "url": "https://github.com/mkraska/meclib/wiki/%22point%22",
+   "source": "meclib.js",
+   "optional": [
+    2
+   ]
+  },
+  {
+   "name": "polygon",
+   "kind": "object",
+   "sig": "[ \"polygon\", \"name\", [x1, y1], [x2,y2], ..., state? ]",
+   "args": [
+    "\"name\"",
+    "[x1, y1]",
+    "[x2,y2]",
+    "...",
+    "state"
+   ],
+   "argdocs": {
+    "\"name\"": "not used",
+    "[x1, y1]": "any number of vertices to create the polygon",
+    "[x2,y2]": "any number of vertices to create the polygon",
+    "...": "any number of vertices to create the polygon",
+    "state": "(optional)"
+   },
+   "text": "Polygon with light gray fill, represents bodies of arbitrary shape.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22polygon%22",
+   "source": "meclib.js",
+   "optional": [
+    4
+   ]
+  },
+  {
+   "name": "q",
+   "kind": "object",
+   "sig": "[ \"q\", \"q1\", \"q2\", [x1, y1], [x2,y2], q1, q2, phi?, state? ]",
+   "args": [
+    "\"q1\"",
+    "\"q2\"",
+    "[x1, y1]",
+    "[x2,y2]",
+    "q1",
+    "q2",
+    "phi",
+    "state"
+   ],
+   "argdocs": {
+    "\"q1\"": "labels, in latex math mode.",
+    "q1": "labels, in latex math mode.",
+    "\"q2\"": "labels, in latex math mode.",
+    "q2": "labels, in latex math mode.",
+    "[x1, y1]": "start point",
+    "[x2,y2]": "end point",
+    "phi": "(optional, default: `0`) angle of force direction from vertical to baseline, in °",
+    "state": "(optional, default: `\"locked\"`) `\"locked\"`, `\"hide\"` or `\"show\"`. If missing, object can't be switched interactively."
+   },
+   "text": "How to generate Feedback for line loads",
+   "url": "https://github.com/mkraska/meclib/wiki/%22q%22",
+   "source": "meclib.js",
+   "optional": [
+    6,
+    7
+   ]
+  },
+  {
+   "name": "rope",
+   "kind": "object",
+   "sig": "[ \"rope\", \"name\", [x1, y1], r1, [x2,y2], r2, state? ]",
+   "args": [
+    "\"name\"",
+    "[x1, y1]",
+    "r1",
+    "[x2,y2]",
+    "r2",
+    "state"
+   ],
+   "argdocs": {
+    "\"name\"": "label text, typeset as normal text. Add `\\\\(` and `\\\\)` to enforce math mode.",
+    "[x1, y1]": "center of first disk",
+    "r1": "radius of first disk (can be zero, then line starts at the center)",
+    "[x2,y2]": "center of second disk",
+    "r2": "radius of second disk (can be zero, then line ends at the center)",
+    "state": "(optional, default: `\"SHOW\"`) `\"hide\"`, `\"show\"` or `\"HIDE`, `\"SHOW\"`"
+   },
+   "text": "Tangent line to two circles with center and radius given. Negative r values select the tangent point on the left side from the line C1-C2. Represents ropes running between disks.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22rope%22",
+   "source": "meclib.js",
+   "optional": [
+    5
+   ]
+  },
+  {
+   "name": "rot",
+   "kind": "object",
+   "sig": "[ \"rot\", \"name\", [x1, y1], [x2,y2], [x3,y3] ]",
+   "args": [
+    "\"name\"",
+    "[x1, y1]",
+    "[x2,y2]",
+    "[x3,y3]"
+   ],
+   "argdocs": {
+    "\"name\"": "label text, typeset in MathJax math mode",
+    "[x1, y1]": "center point, radius point, label point, respectively.",
+    "[x2,y2]": "center point, radius point, label point, respectively.",
+    "[x3,y3]": "center point, radius point, label point, respectively."
+   },
+   "text": "Red thin arc with arrow (to indicate rotational kinematic quantities) specified by center point, tail point (defines start angle and radius) and label point (defines end angle and radial label position. Orientation is such that the angle is less then 180° (shortest arc from start angle to end angle).",
+   "url": "https://github.com/mkraska/meclib/wiki/%22rot%22",
+   "source": "meclib.js"
+  },
+  {
+   "name": "spline",
+   "kind": "object",
+   "sig": "[ \"spline\", \"eqn\", [X0, Y0], [x1, y1], [x2,y2], [xt1, yt1], [xt2,yt2], style, status ]",
+   "args": [
+    "\"eqn\"",
+    "[X0, Y0]",
+    "[x1, y1]",
+    "[x2,y2]",
+    "[xt1, yt1]",
+    "[xt2,yt2]",
+    "style",
+    "status"
+   ],
+   "argdocs": {
+    "[X0, Y0]": "origin of the local system. The other points are given in this local system. Note that the dynamic display of co-ordinates uses scaling defined by \"grid\".",
+    "[x1, y1]": "start and end points.",
+    "[x2,y2]": "start and end points.",
+    "[xt1, yt1]": "points to define the respective tangent directions. Points are only visible in active state. If they coincide with the boundary points, no tangent condition is assumed and a quadratic or linear spline is drawn.",
+    "[xt2,yt2]": "points to define the respective tangent directions. Points are only visible in active state. If they coincide with the boundary points, no tangent condition is assumed and a quadratic or linear spline is drawn.",
+    "style": "list of style specifications: `[linestyle, [fx,fy], [dpx, dpy]`; `linestyle` currently ignored, might specify color and dashing and width; `[fx,fy]` scaling factors; `[dpx,dpy]` decimal precision",
+    "status": "is `\"active\"`, `\"inactive\"`, `\"locked\"` or `\"pure\"`. The spline can be switched between active and inactive state by doubleclick except if it is locked or pure, then it is black. Otherwise the curve is plotted in blue. \"pure\" plots only the curve, switches off highlighting and gridsnap."
+   },
+   "text": "linear/quadratic/cubic spline for interactive function graphing. The coordinates of the control points are displayed in scaled grid coordinates. The object returns the function of the graph as algebraic expression (polynom of order up to 3) in a local but unscaled coordinate system.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22spline%22",
+   "source": "meclib.js"
+  },
+  {
+   "name": "springc",
+   "kind": "object",
+   "sig": "[ \"springc\", \"name\", [x1, y1], [x2,y2], r?, n?, off? ]",
+   "args": [
+    "\"name\"",
+    "[x1, y1]",
+    "[x2,y2]",
+    "r",
+    "n",
+    "off"
+   ],
+   "argdocs": {
+    "\"name\"": "label text, typeset in MathJax math mode",
+    "r": "(optional, default: equivalent to 6 pixel) radius of the turns",
+    "n": "(optional, default: smart value for nice appearance) number of turns",
+    "off": "(optional, default: equivalent to 14 pixel) lateral offset of the label anchor point"
+   },
+   "text": "Symbol for compression spring with label.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22springc%22",
+   "source": "meclib.js",
+   "optional": [
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "name": "springt",
+   "kind": "object",
+   "sig": "[ \"springt\", \"name\", [x1, y1], [x2,y2], r?, lf?, n?, off? ]",
+   "args": [
+    "\"name\"",
+    "[x1, y1]",
+    "[x2,y2]",
+    "r",
+    "lf",
+    "n",
+    "off"
+   ],
+   "argdocs": {
+    "\"name\"": "label, typeset in MathJax math mode",
+    "[x1, y1]": "start and end point",
+    "[x2,y2]": "start and end point",
+    "r": "(optional, default: 6 pixel) radius of the turns in pixel",
+    "lf": "(optional, default 20) length of the terminal lines in % of the total length",
+    "n": "(optional, default: smart value, making a nice appearance) number of turns",
+    "off": "(optional, default: equivalent to 14 pixels), in standard grid units"
+   },
+   "text": "symbol for a tensile spring",
+   "url": "https://github.com/mkraska/meclib/wiki/%22springt%22",
+   "source": "meclib.js",
+   "optional": [
+    3,
+    4,
+    5,
+    6
+   ]
+  },
+  {
+   "name": "wall",
+   "kind": "object",
+   "sig": "[ \"wall\", \"name\", [x1, y1], [x2,y2], angle, state? ]",
+   "args": [
+    "\"name\"",
+    "[x1, y1]",
+    "[x2,y2]",
+    "angle",
+    "state"
+   ],
+   "argdocs": {
+    "\"name\"": "not used",
+    "[x1, y1]": "start and end point",
+    "[x2,y2]": "start and end point",
+    "angle": "angle in ° of the hatch lines from the base line (usually +45/-45). The range is limited to -90...90°.",
+    "state": "(optional, default: `\"SHOW\"`) `\"show\"` or `\"hide\"` (can be switched by double click), or `\"SHOW\"` or `\"HIDE\"` (locked in that state). The legacy value `\"locked\"` is still accepted and looks like `\"SHOW\"`, but feedback functions such as `fb_system()` only count `\"SHOW\"`/`\"show\"` as shown; use `\"SHOW\"` instead."
+   },
+   "text": "Normal line with thin hatching at left side, specified by start and end point.",
+   "url": "https://github.com/mkraska/meclib/wiki/%22wall%22",
+   "source": "meclib.js",
+   "optional": [
+    4
+   ]
+  },
+  {
+   "name": "add2HTML",
+   "kind": "stack",
+   "sig": "add2HTML(string, fileappend)",
+   "args": [
+    "string",
+    "fileappend"
+   ],
+   "text": "To show the plots produced by STACK a small loop way is used. STACK stores the plot in an SVG file, which is written to a temporary directory. To show the plots an html file `maxima_userdir/plots/test.html` is used. To generate the file use `add2HTML(string,fileappend)` is used. The code looks like:",
+   "url": "https://docs.stack-assessment.org/en/CAS/STACK-Maxima_sandbox/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "all_listp",
+   "kind": "stack",
+   "sig": "all_listp(_p, _l)",
+   "args": [
+    "_p",
+    "_l"
+   ],
+   "text": "`true` if all elements of \\(l\\) satisfy the predicate \\(p\\).",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "Angle",
+   "kind": "stack",
+   "sig": "Angle(A, B, C)",
+   "args": [
+    "A",
+    "B",
+    "C"
+   ],
+   "text": "`Angle(A, B, C)` returns the angle between three points \\(A\\), \\(B\\), \\(C\\). The function returns radians. Note angles are given between \\(-\\pi\\) and \\(\\pi\\) (not between \\(0\\) and \\(2\\pi\\)).",
+   "url": "https://docs.stack-assessment.org/en/CAS/Geometry/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "any_listp",
+   "kind": "stack",
+   "sig": "any_listp(_p, _l)",
+   "args": [
+    "_p",
+    "_l"
+   ],
+   "text": "`true` if any elements of \\(l\\) satisfy the predicate \\(p\\).",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "anyfloatex",
+   "kind": "stack",
+   "sig": "anyfloatex(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Decides if any floats are in the expression.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "append",
+   "kind": "maxima",
+   "sig": "append(list_1, list_2, ...)",
+   "args": [
+    "list_1",
+    "list_2, ..."
+   ],
+   "text": "Joins lists.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-append",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "ATAlgEquiv",
+   "kind": "stack",
+   "sig": "ATAlgEquiv(SA, SB)",
+   "args": [
+    "SA",
+    "SB"
+   ],
+   "text": "The default \"model answer\" for input `ans1` is `ta1` (this need not be changed).; The default potential response tree checks `ATAlgEquiv(ans1, ta1)` (this need not be changed).",
+   "url": "https://docs.stack-assessment.org/en/STACK_question_admin/Authoring_workflow/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "ATCasEqual",
+   "kind": "stack",
+   "sig": "ATCasEqual(SA, SB)",
+   "args": [
+    "SA",
+    "SB"
+   ],
+   "text": "This predicate needs `simp:false`. In particular do not test using the `ATAlgEquiv` test, which always simplifies its arguments. Instead test with `ATCasEqual(complex_exponentialp(ans1),true)` to avoid automatic simplification of `ans1` back to Cartesian form _before_ applying the predicate!",
+   "url": "https://docs.stack-assessment.org/en/CAS/Complex_numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "ATEqualComAss",
+   "kind": "stack",
+   "sig": "ATEqualComAss(sa, sb)",
+   "args": [
+    "sa",
+    "sb"
+   ],
+   "text": "The answer test `AlgEquiv` evaluates all nouns. This has a (perhaps) unexpected side-effect that `noundiff(y,x)` will be equivalent to `0`, and `noundiff(y(x),x)` is not. For this reason we have an alternative answer test `AlgEquivNouns` which does not evaluate all the nouns. The `ATEqualComAss` also evaluates its arguments but does not \"simplify\" them.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Differential_equations/Notation/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "ATGT",
+   "kind": "stack",
+   "sig": "ATGT(SA, SB)",
+   "args": [
+    "SA",
+    "SB"
+   ],
+   "text": "1. The question can readily be adapted by making `ta1` a randomly generated object, if required. 2. The answer test requires _exact_ positioning of point `A` on the required coordinates. In this GGB sheet we have \"snap to grid\" so it is reasonable to ask for exact positioning of the point `A` in this case.",
+   "url": "https://docs.stack-assessment.org/en/Specialist_tools/GeoGebra/Question_block/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "ATNumAbsolute",
+   "kind": "stack",
+   "sig": "ATNumAbsolute(SA, SB, SO)",
+   "args": [
+    "SA",
+    "SB",
+    "SO"
+   ],
+   "text": "1. Every answer test in STACK has a corresponding function in Maxima. The Maxima function name of AlgEquiv is `ATAlgEquiv`, et. 2. The Maxima code for every answer in STACK returns a list of four elements. The _second_ element is the result of the test. See the documentation for details of the other elements.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Answer_tests/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "ATSRegExp",
+   "kind": "stack",
+   "sig": "ATSRegExp(SA, SB)",
+   "args": [
+    "SA",
+    "SB"
+   ],
+   "text": "1. Use the string input (`ans1`) with teacher's answer `s2`. 2. In the PRT use the node `ATSRegExp(ans1, s1)`. This will use the pattern in the string `s1` against the student's answer.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Answer_Tests/String/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "ATSubstEquiv",
+   "kind": "stack",
+   "sig": "ATSubstEquiv([ex])",
+   "args": [
+    "[ex]"
+   ],
+   "text": "If you add an answer test option (not required) in the form of a list of variables, these variables will be \"fixed\" during the comparison. The list of variable is removed from both lists of the teacher's and student's variable lists before any comparison.; `ATSubstEquiv(x=A+B, x=a+b)` will match with `[A = a,B = b,x = x]`.; `ATSubstEquiv(x=A+B, x=a+b, [x])` will match with `[A = a,B = b]`.; `ATSubstEquiv(y=A+B, x=a+b ...",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Answer_Tests/Equivalence/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "block",
+   "kind": "maxima",
+   "sig": "block([v_1, ..., v_m], expr_1, ..., expr_n)",
+   "args": [
+    "[v_1, ..., v_m]",
+    "expr_1, ..., expr_n"
+   ],
+   "text": "Evaluates the expressions in turn with local variables v_1 ... v_m; the value is the last expression (or the argument of return).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-block",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "buggy_pow",
+   "kind": "stack",
+   "sig": "buggy_pow(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`buggy_pow(ex)` Implements the buggy linearity rule for exponentiation, i.e.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Buggy_rules/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "castext",
+   "kind": "stack",
+   "sig": "castext(\"text\")",
+   "args": [
+    "\"text\""
+   ],
+   "text": "A castext literal inside Maxima code: the string is compiled like question text, so {@...@} and [[lang]] blocks work in it. Only literal strings are allowed.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/CASText/",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "castext_concat",
+   "kind": "stack",
+   "sig": "castext_concat(a, b)",
+   "args": [
+    "a",
+    "b"
+   ],
+   "text": "Two castext objects can be joined with `castext_concat()`",
+   "url": "https://docs.stack-assessment.org/en/Authoring/CASText/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "chem_data",
+   "kind": "stack",
+   "sig": "chem_data(element, dp)",
+   "args": [
+    "element",
+    "dp"
+   ],
+   "text": "`chem_data(element, dp)` returns the data `dp` associated with `element`. E.g. `chem_data(\"H\", \"AtomicMass\")` gives `1.008`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Chemistry/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "chem_data_all",
+   "kind": "stack",
+   "sig": "chem_data_all(element)",
+   "args": [
+    "element"
+   ],
+   "text": "`chem_data_all(element)` returns all the data associated with `element`. E.g. `chem_data_all(\"H\")`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Chemistry/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "chem_data_units",
+   "kind": "stack",
+   "sig": "chem_data_units(element, dp)",
+   "args": [
+    "element",
+    "dp"
+   ],
+   "text": "`chem_data_units(element, dp)` returns the data `dp` associated with `element` using the `stackunits` function. E.g. `chem_data_units(\"H\", \"AtomicMass\")` gives `stackunits(1.008,g*mol^(-1))`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Chemistry/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "chem_units",
+   "kind": "stack",
+   "sig": "chem_units(dp)",
+   "args": [
+    "dp"
+   ],
+   "text": "`chem_units(dp)` Returns the units addociated with `dp`. E.g. `chem_units(\"AtomicMass\")` gives `g*mol^(-1)`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Chemistry/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "coeff_list",
+   "kind": "stack",
+   "sig": "coeff_list(ex, v)",
+   "args": [
+    "ex",
+    "v"
+   ],
+   "text": "`zip_with_matrix(f,A,B)` - This function applies the binary function \\(f\\) to two matrices \\(A\\) and \\(B\\) returning a matrix. An example is given in adding matrices to show working. - This function takes an expression `ex` and returns a list of coefficients of `v`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "coeff_list_nz",
+   "kind": "stack",
+   "sig": "coeff_list_nz(ex, v)",
+   "args": [
+    "ex",
+    "v"
+   ],
+   "text": "This function takes an expression `ex` and returns a list of nonzero coefficients of `v`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "col_vecp",
+   "kind": "stack",
+   "sig": "col_vecp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`col_vecp(ex)` Predicate for determining whether a given object is an \\(M\\times 1\\) matrix (a column vector). Note: does not consider `c` a column vector. Use `vec_convert` before `col_vecp`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "cols_to_cols",
+   "kind": "stack",
+   "sig": "cols_to_cols(L)",
+   "args": [
+    "L"
+   ],
+   "text": "`cols_to_cols(L)` Tries to convert a collection of potential columns to a list of Maxima matrices. Returns `[]` if input is invalid.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "cols_to_matrix",
+   "kind": "stack",
+   "sig": "cols_to_matrix(L)",
+   "args": [
+    "L"
+   ],
+   "text": "`cols_to_matrix(L)` Tries to create a matrix with a given list of columns. The columns can be a variety of different objects determined by `convert_to_colvec`. Returns `matrix([null])` if input is invalid.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "commonfaclist",
+   "kind": "stack",
+   "sig": "commonfaclist(l)",
+   "args": [
+    "l"
+   ],
+   "text": "Returns the highest common factors of a list of numbers.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "comp_square",
+   "kind": "stack",
+   "sig": "comp_square(ex, var)",
+   "args": [
+    "ex",
+    "var"
+   ],
+   "text": "Returns a quadratic `ex` in the variable `v` in completed square form.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "complex_exponentialp",
+   "kind": "stack",
+   "sig": "complex_exponentialp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Determines if \\(ex\\) is written in complex exponential form, \\(r e^{i\\theta} \\). Needs `simp:false`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "cons",
+   "kind": "maxima",
+   "sig": "cons(expr, list)",
+   "args": [
+    "expr",
+    "list"
+   ],
+   "text": "List with expr added at the front.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-cons",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "continuousp",
+   "kind": "stack",
+   "sig": "continuousp(ex, v, xp)",
+   "args": [
+    "ex",
+    "v",
+    "xp"
+   ],
+   "text": "true if \\(ex\\) is continuous with respect to \\(v\\) at \\(xp\\) (unreliable).",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "convert_to_colvec",
+   "kind": "stack",
+   "sig": "convert_to_colvec(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`convert_to_colvec(ex)` Tries to convert a given object, e.g. list, matrix, `c` or `r`, ntuples, etc. to a column vector. Returns `matrix([null])` if input is invalid.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "crossproduct",
+   "kind": "stack",
+   "sig": "crossproduct(a, b)",
+   "args": [
+    "a",
+    "b"
+   ],
+   "text": "1. Lists are treated very similarly to row vectors (which means that things like the dot product operator work on them). It also means that it is sufficient to use `transpose([a,b,c])` to get a column vector. 2. `*` is used for element-wise multiplication of lists and matrices, whereas `.` is used as both a dot product and matrix product. This leads to slightly confusing behaviour for vectors, where `[x,y] .",
+   "url": "https://docs.stack-assessment.org/en/Topics/Vector_Calculus/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "decimalplaces",
+   "kind": "stack",
+   "sig": "decimalplaces(ex, n)",
+   "args": [
+    "ex",
+    "n"
+   ],
+   "text": "Truncate \\(x\\) to \\(n\\) decimal places (does perform rounding). See below.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "degree",
+   "kind": "stack",
+   "sig": "degree(ex, v)",
+   "args": [
+    "ex",
+    "v"
+   ],
+   "text": "Returns the degree of the expanded form of `ex` in the variable `v`. See also Maxima's `hipow` command.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "destackvector",
+   "kind": "stack",
+   "sig": "destackvector(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "It is very useful to treat vectors as a single entity. The vector `stackvector(a)` and the atom `a` are different, and are not considered algebraically equivalent. While students may type in `stackvector(a)` as an answer, they are likely to type in `a`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Vectors/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "diagp",
+   "kind": "stack",
+   "sig": "diagp(M)",
+   "args": [
+    "M"
+   ],
+   "text": "`diagp(M)` Predicate to determine whether a matrix is diagonal. `M` need not be square.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "diffp",
+   "kind": "stack",
+   "sig": "diffp(ex, [args])",
+   "args": [
+    "ex",
+    "[args]"
+   ],
+   "text": "true if \\(ex\\) is (optionally \\(n\\) times) differentiable with respect to \\(v\\) at \\(xp\\) (unreliable).",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "dispdp",
+   "kind": "stack",
+   "sig": "dispdp(ex, n)",
+   "args": [
+    "ex",
+    "n"
+   ],
+   "text": "Truncate \\(x\\) to \\(n\\) decimal places and display with trailing digits. Note, this always prints as a float (or integer), and not in scientific notation.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "display_complex",
+   "kind": "stack",
+   "sig": "display_complex(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "1. `display_complex(ex)` takes an expression `ex` and tries to display this as a complex number obeying the above rules. In particular, this function makes use of Maxima's `realpart` and `imagpart` function to split up `ex` into real and imaginary parts. To do this it must assume `simp:true`, and so the real and imaginary part will be simplified.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Complex_numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "dispsf",
+   "kind": "stack",
+   "sig": "dispsf(x, n)",
+   "args": [
+    "x",
+    "n"
+   ],
+   "text": "We also have mechanisms for keeping track of the number of significant figures. See the documentation on `dispsf(ex,n)` for detail.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "disptree",
+   "kind": "stack",
+   "sig": "disptree(e)",
+   "args": [
+    "e"
+   ],
+   "text": "STACK provides a function `disptree` to generate the above tree diagram from a Maxima expression. For example, use `{@disptree(1+2+pi*x^3)@}` in castext. This function generates a string representing the tree of that expression, and is not an inert function.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Expression_tree_display/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "Distance",
+   "kind": "stack",
+   "sig": "Distance(v1, v2)",
+   "args": [
+    "v1",
+    "v2"
+   ],
+   "text": "`Distance(A, B)` returns the Euclidean distance between points represented as lists. Works in any dimension.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Geometry/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "divthru",
+   "kind": "stack",
+   "sig": "divthru(q)",
+   "args": [
+    "q"
+   ],
+   "text": "Takes an algebraic fraction, e.g. \\((x^4-1)/(x+2)\\) and divides through by the denominator, to leave a polynomial and a proper fraction. Useful in feedback, or steps of a calculation.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "element_listp",
+   "kind": "stack",
+   "sig": "element_listp(ex, _l)",
+   "args": [
+    "ex",
+    "_l"
+   ],
+   "text": "`true` if `ex` is an element of the _list_ \\(l\\). (Sets have `elementp`, but lists don't)",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "endcons",
+   "kind": "maxima",
+   "sig": "endcons(expr, list)",
+   "args": [
+    "expr",
+    "list"
+   ],
+   "text": "List with expr added at the end.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-endcons",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "equals_commute_prepare",
+   "kind": "stack",
+   "sig": "equals_commute_prepare([ex])",
+   "args": [
+    "[ex]"
+   ],
+   "text": "You can use `equals_commute_prepare(ex)` to change an expression into this noun form. An optional second argument `equals_commute_prepare(ex, sc)` is the set of operators considered commutative, e.g. typically a subset of `{\"nouneq\", \"nounand\", \"nounor\", \"nounset\", \"nounadd\", \"nounmul\"}`.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Answer_Tests/Rule_based/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "equationp",
+   "kind": "stack",
+   "sig": "equationp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Determines if \\(ex\\) is an equation.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "ev",
+   "kind": "maxima",
+   "sig": "ev(expr, arg_1, ..., arg_n)",
+   "args": [
+    "expr",
+    "arg_1, ..., arg_n"
+   ],
+   "text": "Evaluates expr in the environment of the arguments, e.g. ev(expr, x = 2) or ev(expr, simp).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-ev",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "exdowncase",
+   "kind": "stack",
+   "sig": "exdowncase(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`exdowncase(ex)` | Takes the expression `ex` and substitutes all variables for their lower case version (cf `sdowncase(ex)` in Maxima). This is very useful if you don't care if a student uses the wrong case, just apply this function to their answer before using an answer test. Note, of course, that `exdowncase(X)-x=0.`",
+   "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "expandp",
+   "kind": "stack",
+   "sig": "expandp(expandparg)",
+   "args": [
+    "expandparg"
+   ],
+   "text": "true if \\(ex\\) equals its expanded form.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "expressionp",
+   "kind": "stack",
+   "sig": "expressionp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Determines if \\(ex\\) is _not_ a matrix, list, set, equation, function or inequality.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "factorlist",
+   "kind": "stack",
+   "sig": "factorlist([param])",
+   "args": [
+    "[param]"
+   ],
+   "text": "`factorlist(ex)` | Returns a list of factors of `ex` with or without multiplicities. Note, the product of these factors may not be the original expression, and may differ by a factor of \\(\\pm 1\\) due to unary minus extraction and ordering of variables. For this reason, if you want to decide if `f1` is a factor of `ex` then it's better to check `remainder(ex,f1)` is zero, than membership of the factor list. E.g.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "factorp",
+   "kind": "stack",
+   "sig": "factorp(argfac)",
+   "args": [
+    "argfac"
+   ],
+   "text": "true if \\(ex\\) equals its factored form. Note, if you would like to know if an expression is factored you need to use the FacForm answer test. Prime integers equal their factored form, composite integers do not.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "first",
+   "kind": "maxima",
+   "sig": "first(list)",
+   "args": [
+    "list"
+   ],
+   "text": "First element (also second ... tenth, last).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-first",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "float",
+   "kind": "maxima",
+   "sig": "float(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Converts numbers in expr to floating point.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-float",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "functionp",
+   "kind": "stack",
+   "sig": "functionp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Determines if \\(ex\\) is a function definition, using the operator `:=`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "get_ops",
+   "kind": "stack",
+   "sig": "get_ops(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "This function returns a set of all operators in an expression. Useful if you want to find if multiplication is used anywhere in an expression.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "get_safe_ops",
+   "kind": "stack",
+   "sig": "get_safe_ops(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "We also have a function `get_safe_ops(ex)` which returns a set of \"`safe_op`s\" in the expression. Atoms are ignored.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "imag_numberp",
+   "kind": "stack",
+   "sig": "imag_numberp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Determines if \\(ex\\) is a purely imaginary number.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "ineqorder",
+   "kind": "stack",
+   "sig": "ineqorder(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`ineqorder(ex)`",
+   "url": "https://docs.stack-assessment.org/en/CAS/Inequalities/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "ineqprepare",
+   "kind": "stack",
+   "sig": "ineqprepare(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`ineqprepare(ex)`",
+   "url": "https://docs.stack-assessment.org/en/CAS/Inequalities/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "inequalityp",
+   "kind": "stack",
+   "sig": "inequalityp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Determines if \\(ex\\) is an inequality.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "inintervalp",
+   "kind": "stack",
+   "sig": "inintervalp(p, A)",
+   "args": [
+    "p",
+    "A"
+   ],
+   "text": "1. `intervalp(ex)` returns true if `ex` is a single simple interval. Does not check `ex` is variable free, so `oo(a,b)` is a simple interval. `{}`, `none`, `all` and singleton sets are not considered \"intervals\" by this predicate, use `realsetp` instead. The primary purpose of this predicate is to detect intervals `oo`, `oc` etc within code. 2.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "int",
+   "kind": "stack",
+   "sig": "int([ex])",
+   "args": [
+    "[ex]"
+   ],
+   "text": "Because \\( \\int \\frac{1}{x}dx = \\log(|x|) \\) is OK on either the negative or positive real axis, but it is not OK in the complex plane. There is a switch that controls this, however.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Author_FAQ/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "intersectionp",
+   "kind": "stack",
+   "sig": "intersectionp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "1. `intervalp(ex)` returns true if `ex` is a single simple interval. Does not check `ex` is variable free, so `oo(a,b)` is a simple interval. `{}`, `none`, `all` and singleton sets are not considered \"intervals\" by this predicate, use `realsetp` instead. The primary purpose of this predicate is to detect intervals `oo`, `oc` etc within code. 2.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "interval_complement",
+   "kind": "stack",
+   "sig": "interval_complement(A)",
+   "args": [
+    "A"
+   ],
+   "text": "1. `interval_simple_union(I1, I2)` join two simple intervals. 2. `interval_sort(I)` takes a list of intervals and sorts them into ascending order by their left hand ends. Returns a list. 3. `interval_connect(S)` Given a `%union` of intervals, checks whether any intervals are connected, and if so, joins them up and returns the ammended union. 4.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "interval_connect",
+   "kind": "stack",
+   "sig": "interval_connect(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "1. `interval_simple_union(I1, I2)` join two simple intervals. 2. `interval_sort(I)` takes a list of intervals and sorts them into ascending order by their left hand ends. Returns a list. 3. `interval_connect(S)` Given a `%union` of intervals, checks whether any intervals are connected, and if so, joins them up and returns the ammended union. 4.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "interval_containsp",
+   "kind": "stack",
+   "sig": "interval_containsp(ex, EX)",
+   "args": [
+    "ex",
+    "EX"
+   ],
+   "text": "1. `intervalp(ex)` returns true if `ex` is a single simple interval. Does not check `ex` is variable free, so `oo(a,b)` is a simple interval. `{}`, `none`, `all` and singleton sets are not considered \"intervals\" by this predicate, use `realsetp` instead. The primary purpose of this predicate is to detect intervals `oo`, `oc` etc within code. 2.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "interval_count_components",
+   "kind": "stack",
+   "sig": "interval_count_components(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "1. `interval_simple_union(I1, I2)` join two simple intervals. 2. `interval_sort(I)` takes a list of intervals and sorts them into ascending order by their left hand ends. Returns a list. 3. `interval_connect(S)` Given a `%union` of intervals, checks whether any intervals are connected, and if so, joins them up and returns the ammended union. 4.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "interval_disjointp",
+   "kind": "stack",
+   "sig": "interval_disjointp(A, B)",
+   "args": [
+    "A",
+    "B"
+   ],
+   "text": "1. `intervalp(ex)` returns true if `ex` is a single simple interval. Does not check `ex` is variable free, so `oo(a,b)` is a simple interval. `{}`, `none`, `all` and singleton sets are not considered \"intervals\" by this predicate, use `realsetp` instead. The primary purpose of this predicate is to detect intervals `oo`, `oc` etc within code. 2.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "interval_intersect",
+   "kind": "stack",
+   "sig": "interval_intersect(A, B)",
+   "args": [
+    "A",
+    "B"
+   ],
+   "text": "1. `interval_simple_union(I1, I2)` join two simple intervals. 2. `interval_sort(I)` takes a list of intervals and sorts them into ascending order by their left hand ends. Returns a list. 3. `interval_connect(S)` Given a `%union` of intervals, checks whether any intervals are connected, and if so, joins them up and returns the ammended union. 4.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "interval_intersect_list",
+   "kind": "stack",
+   "sig": "interval_intersect_list(X)",
+   "args": [
+    "X"
+   ],
+   "text": "1. `interval_simple_union(I1, I2)` join two simple intervals. 2. `interval_sort(I)` takes a list of intervals and sorts them into ascending order by their left hand ends. Returns a list. 3. `interval_connect(S)` Given a `%union` of intervals, checks whether any intervals are connected, and if so, joins them up and returns the ammended union. 4.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "interval_set_complement",
+   "kind": "stack",
+   "sig": "interval_set_complement(X)",
+   "args": [
+    "X"
+   ],
+   "text": "1. `interval_simple_union(I1, I2)` join two simple intervals. 2. `interval_sort(I)` takes a list of intervals and sorts them into ascending order by their left hand ends. Returns a list. 3. `interval_connect(S)` Given a `%union` of intervals, checks whether any intervals are connected, and if so, joins them up and returns the ammended union. 4.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "interval_simple_union",
+   "kind": "stack",
+   "sig": "interval_simple_union(X, Y)",
+   "args": [
+    "X",
+    "Y"
+   ],
+   "text": "1. `interval_simple_union(I1, I2)` join two simple intervals. 2. `interval_sort(I)` takes a list of intervals and sorts them into ascending order by their left hand ends. Returns a list. 3. `interval_connect(S)` Given a `%union` of intervals, checks whether any intervals are connected, and if so, joins them up and returns the ammended union. 4.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "interval_sort",
+   "kind": "stack",
+   "sig": "interval_sort(X)",
+   "args": [
+    "X"
+   ],
+   "text": "1. `interval_simple_union(I1, I2)` join two simple intervals. 2. `interval_sort(I)` takes a list of intervals and sorts them into ascending order by their left hand ends. Returns a list. 3. `interval_connect(S)` Given a `%union` of intervals, checks whether any intervals are connected, and if so, joins them up and returns the ammended union. 4.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "interval_subsetp",
+   "kind": "stack",
+   "sig": "interval_subsetp(ex1, ex2)",
+   "args": [
+    "ex1",
+    "ex2"
+   ],
+   "text": "1. `intervalp(ex)` returns true if `ex` is a single simple interval. Does not check `ex` is variable free, so `oo(a,b)` is a simple interval. `{}`, `none`, `all` and singleton sets are not considered \"intervals\" by this predicate, use `realsetp` instead. The primary purpose of this predicate is to detect intervals `oo`, `oc` etc within code. 2.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "interval_tidy",
+   "kind": "stack",
+   "sig": "interval_tidy(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "1. `interval_simple_union(I1, I2)` join two simple intervals. 2. `interval_sort(I)` takes a list of intervals and sorts them into ascending order by their left hand ends. Returns a list. 3. `interval_connect(S)` Given a `%union` of intervals, checks whether any intervals are connected, and if so, joins them up and returns the ammended union. 4.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "intervalp",
+   "kind": "stack",
+   "sig": "intervalp(X)",
+   "args": [
+    "X"
+   ],
+   "text": "1. `intervalp(ex)` returns true if `ex` is a single simple interval. Does not check `ex` is variable free, so `oo(a,b)` is a simple interval. `{}`, `none`, `all` and singleton sets are not considered \"intervals\" by this predicate, use `realsetp` instead. The primary purpose of this predicate is to detect intervals `oo`, `oc` etc within code. 2.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "is",
+   "kind": "maxima",
+   "sig": "is(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Evaluates a predicate to true or false.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-is",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "is_lang",
+   "kind": "stack",
+   "sig": "is_lang(code)",
+   "args": [
+    "code"
+   ],
+   "text": "STACK defines a variable `%_STACK_LANG`, which should be a string reflecting the language preference of the user of the question. The default is `\"en\"`. We also have a predicate function `is_lang(code)` which returns `true` if the current language set is `code`.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Languages/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "lambda",
+   "kind": "maxima",
+   "sig": "lambda([x_1, ..., x_n], expr_1, ..., expr_n)",
+   "args": [
+    "[x_1, ..., x_n]",
+    "expr_1, ..., expr_n"
+   ],
+   "text": "Anonymous function, e.g. lambda([x], x^2).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-lambda",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "Length",
+   "kind": "stack",
+   "sig": "Length(v1)",
+   "args": [
+    "v1"
+   ],
+   "text": "`Length(v)` returns the Euclidean length of the vector (represented as a list) from the origin to the point.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Geometry/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "length",
+   "kind": "maxima",
+   "sig": "length(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Number of elements of a list (or of the arguments of an expression).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-length",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "levenshtein",
+   "kind": "stack",
+   "sig": "levenshtein(s, t)",
+   "args": [
+    "s",
+    "t"
+   ],
+   "text": "In STACK `levenshtein(s, t)` takes strings `s`, `t` to compare and returns an integer, the Levensthein distance between `s` and `t`. This is basically the number of single-character edits. For example `levenshtein(\"Add\", \"And\")` gives 1, since one letter needs to be changed. `levenshtein(\"Add\", \"and\")` gives 2, since two leters need to be changed.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Levenshtein_distance/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "levenshtein_compare_strings",
+   "kind": "stack",
+   "sig": "levenshtein_compare_strings(needle, haystack)",
+   "args": [
+    "needle",
+    "haystack"
+   ],
+   "text": "`levenshtein_compare_strings(needle, haystack)` looks for the string `needle` in the list of stings `haystack`. It returns `[maxscore, index_haystack_found]` where `maxscore` is the value of the closest match and `index_haystack_found` is the index to the string found. The `maxscore` is rounded to five decimal places to help with comparison of floats later.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Levenshtein_distance/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "levenshtein_plv",
+   "kind": "stack",
+   "sig": "levenshtein_plv(s, t)",
+   "args": [
+    "s",
+    "t"
+   ],
+   "text": "For example \"Add\" and \"Addition\" have a distance of 5, and the longest string is 8, so `levenshtein_plv(\"Add\", \"Addition\")` gives similarity of 0.375.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Levenshtein_distance/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "linear_combination_p",
+   "kind": "stack",
+   "sig": "linear_combination_p(ex, p)",
+   "args": [
+    "ex",
+    "p"
+   ],
+   "text": "`linear_combination_p(ex, p)` establishes that the expression `ex` is a linear combination of terms for which `p` is true.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "linear_term_p",
+   "kind": "stack",
+   "sig": "linear_term_p(ex, p)",
+   "args": [
+    "ex",
+    "p"
+   ],
+   "text": "`linear_term_p(ex, p)` establishes that the expression `ex` is a simple product of one expression for which the predicate `p` is true and zero or more real numbers.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "list_cancel",
+   "kind": "stack",
+   "sig": "list_cancel(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "STACK provides a maxima function `list_cancel(l1,l2)` which removes any common elements from `[l1,l2]`, with duplication. E.g. use the following in the question variables.",
+   "url": "https://docs.stack-assessment.org/en/Specialist_tools/Unsorted_multi_input/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "list_expression_numbers",
+   "kind": "stack",
+   "sig": "list_expression_numbers(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Create a list with all parts for which `numberp(ex)=true`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "listofnonunits",
+   "kind": "stack",
+   "sig": "listofnonunits(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`listofnonunits(ex)` lists all variables in the expression `ex` considered not to be units however they appear. Use of this function auto-loads `stack_unit_si_declare(true)`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Units/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "listofunits",
+   "kind": "stack",
+   "sig": "listofunits(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`listofunits(ex)` lists all variables in the expression `ex` considered to be units however they appear. Use of this function auto-loads `stack_unit_si_declare(true)`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Units/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "listp",
+   "kind": "maxima",
+   "sig": "listp(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "true if expr is a list.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-listp",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "lowesttermsp",
+   "kind": "stack",
+   "sig": "lowesttermsp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Determines if a fraction \\(ex\\) is in lowest terms.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "make_less_ineq",
+   "kind": "stack",
+   "sig": "make_less_ineq(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`make_less_ineq(ex)`",
+   "url": "https://docs.stack-assessment.org/en/CAS/Inequalities/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "make_list_of_lists",
+   "kind": "stack",
+   "sig": "make_list_of_lists(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`make_list_of_lists(ex)` Takes a collection (a list, set, ntuple, span, matrix) of vectors (as lists, matrices, sets, ntuples, `c` or `r`) and returns a list of lists; If given a matrix, it returns a list of its column vectors, which are given as lists.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "make_multsgn",
+   "kind": "stack",
+   "sig": "make_multsgn(OPT_MULTSGN)",
+   "args": [
+    "OPT_MULTSGN"
+   ],
+   "text": "Internally the display of multiplication signs is controlled by the STACK function `make_multsgn(ex)`, where the argument can be one of the strings `\"cross\"`, `\"dot\"`, `\"onum\"`, `\"space\"` or `\"none\"`. This can be switched part-way through a session. E.g. consider the following castext.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Question_options/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "makelist",
+   "kind": "maxima",
+   "sig": "makelist(expr, i, i_0, i_1)",
+   "args": [
+    "expr",
+    "i",
+    "i_0",
+    "i_1"
+   ],
+   "text": "List of the values of expr for i from i_0 to i_1 (also makelist(expr, x, list)).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-makelist",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "map",
+   "kind": "maxima",
+   "sig": "map(f, list)",
+   "args": [
+    "f",
+    "list"
+   ],
+   "text": "Applies f to every element of list.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-map",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "mat_solve",
+   "kind": "stack",
+   "sig": "mat_solve(A, b, [lstsq])",
+   "args": [
+    "A",
+    "b",
+    "[lstsq]"
+   ],
+   "text": "`mat_solve(A,b,[lstsq])` is a STACK-provided function that is mostly just a wrapper for `linsolve` that expects matrices instead of lists of equations.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "matrix_to_cols",
+   "kind": "stack",
+   "sig": "matrix_to_cols(M)",
+   "args": [
+    "M"
+   ],
+   "text": "`matrix_to_cols(M)` Takes a matrix and returns a list of its column vectors.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "mcq_correct",
+   "kind": "stack",
+   "sig": "mcq_correct(ta)",
+   "args": [
+    "ta"
+   ],
+   "text": "1. `mcq_correct(ta)` takes the \"model answer\" list and returns a list of values for which `correct` is true. 2. `mcq_incorrect(ta)` takes the \"model answer\" list and returns a list of values for which `correct` is false.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Inputs/Multiple_choice_input/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "mcq_incorrect",
+   "kind": "stack",
+   "sig": "mcq_incorrect(ta)",
+   "args": [
+    "ta"
+   ],
+   "text": "1. `mcq_correct(ta)` takes the \"model answer\" list and returns a list of values for which `correct` is true. 2. `mcq_incorrect(ta)` takes the \"model answer\" list and returns a list of values for which `correct` is false.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Inputs/Multiple_choice_input/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "mediant",
+   "kind": "stack",
+   "sig": "mediant(ex1, ex2)",
+   "args": [
+    "ex1",
+    "ex2"
+   ],
+   "text": "`mediant(ex1,ex2)` calculates the mediant of two rational expressions. The mediant of two fractions",
+   "url": "https://docs.stack-assessment.org/en/CAS/Buggy_rules/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "natural_domain",
+   "kind": "stack",
+   "sig": "natural_domain(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "The function `natural_domain(ex)` returns the natural domain of a function represented by the expression `ex`, in the form of the inert function `realset`. For example `natural_domain(1/x)` gives",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "noun_logic",
+   "kind": "stack",
+   "sig": "noun_logic(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "The function `verb_logic(ex)` will remove the noun forms such as `nounand` and substitute in the lisp versions which will enable evaluation of expressions. The function `noun_logic(ex)` will replace any remaining lisp but beware that any evaluation (even with `simp:false`) will evaluate lisp logical expressions. It is best to use noun forms at the outset, e.g.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Propositional_Logic/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "noun_logic_remove",
+   "kind": "stack",
+   "sig": "noun_logic_remove(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Note, the answer tests do not convert noun forms to the Maxima forms. Otherwise both `x=1 or x=2` and `x=1 or x=3` would be evaluated to `false` and a teacher could not tell that they are different! To replace all `nounand` (etc) operators and replace them with the Maxima equivalent, use `noun_logic_remove(ex)`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Propositional_Logic/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "noundiff",
+   "kind": "stack",
+   "sig": "noundiff([ex])",
+   "args": [
+    "[ex]"
+   ],
+   "text": "Students' answers always have noun forms added. If a student types in `diff(y,x)` then this is protected by a special function `noundiff(y,x)` (etc), and ends up being sent to answer test as `'diff(y,x,1)`. If a student types in (literally) `diff(y,x)+1 = 0` this will end up being sent to answer test as `'diff(y,x,1)+1 = 0`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Differential_equations/Notation/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "ntupleify",
+   "kind": "stack",
+   "sig": "ntupleify(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "1. In the input, make the model answer `A`. This is a list. 2. Make sure you set \"forbid floats\" option in the input to be false, if you want to! 3. Complete the default potential response tree `prt1` as `ATAlgEquiv(ntupleify(ans1),ntupleify(A))`",
+   "url": "https://docs.stack-assessment.org/en/Specialist_tools/GeoGebra/Question_block/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "num_ensure_rational",
+   "kind": "stack",
+   "sig": "num_ensure_rational(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "1. Simplification is automatically switched off when this test is applied, otherwise it makes no sense. 2. This test does not include laws of indices, so \\(x\\times x \\neq x^2\\). Since we are dealing only with nouns \\(-\\times -\\) does not simplify to \\(1\\). E.g. \\(-x\\times -x \\neq x\\times x \\neq x^2\\). This also means that \\(\\sqrt{x}\\) is not considered to be equivalent to \\(x^{\\frac{1}{2}}\\) under this test.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Answer_Tests/Rule_based/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "numabsolutep",
+   "kind": "stack",
+   "sig": "numabsolutep(sa, ta, tol)",
+   "args": [
+    "sa",
+    "ta",
+    "tol"
+   ],
+   "text": "Is \\(sa\\) within \\(tol\\) of \\(ta\\)? I.e. \\( - sa-ta - <tol \\)",
+   "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "numexactp",
+   "kind": "stack",
+   "sig": "numexactp(sa, ta)",
+   "args": [
+    "sa",
+    "ta"
+   ],
+   "text": "This function checks if one number equals another, but only when the floating point number is _exact_. E.g. if `ta=1/4` then it has an exact decimal \\(0.25\\). Here the float will be converted to a rational and compared. However if `ta=1/3` then this decimal does not terminate, and so floats in `sa` will not be converted.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "numrelativep",
+   "kind": "stack",
+   "sig": "numrelativep(sa, ta, tol)",
+   "args": [
+    "sa",
+    "ta",
+    "tol"
+   ],
+   "text": "Is \\(sa\\) within \\(tol\\times ta\\) of \\(ta\\)? I.e. \\( - sa-ta - <tol\\times ta \\).",
+   "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "oneMulp",
+   "kind": "stack",
+   "sig": "oneMulp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "The simplifier rules assume `simp:false` and that the expression has noun forms. The simplifier rule names are Maxima functions with exactly the names shown above. Each rule has a predicate function, which decides if the rule can be applied _at the top level of the expression_. E.g.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Answer_Tests/Rule_based/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "parsons_answer",
+   "kind": "stack",
+   "sig": "parsons_answer(proof_ans, proof_steps)",
+   "args": [
+    "proof_ans",
+    "proof_steps"
+   ],
+   "text": "E.g. in test-case construction use `parsons_answer([ta, proof_steps])` where `ta` is a list of tags and `proof_steps` is the proof steps array.",
+   "url": "https://docs.stack-assessment.org/en/Specialist_tools/Drag_and_drop/Question_block/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "parsons_decode",
+   "kind": "stack",
+   "sig": "parsons_decode(st)",
+   "args": [
+    "st"
+   ],
+   "text": "1. The maxima function `parsons_encode(proof_steps)` will convert a list of `proof_steps` into a JSON string with hashed keys. 2. The maxima function `parsons_decode(ans1)` will convert a JSON string into a proof construction function.",
+   "url": "https://docs.stack-assessment.org/en/Specialist_tools/Drag_and_drop/Question_block/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "parsons_encode",
+   "kind": "stack",
+   "sig": "parsons_encode(steps)",
+   "args": [
+    "steps"
+   ],
+   "text": "1. The maxima function `parsons_encode(proof_steps)` will convert a list of `proof_steps` into a JSON string with hashed keys. 2. The maxima function `parsons_decode(ans1)` will convert a JSON string into a proof construction function.",
+   "url": "https://docs.stack-assessment.org/en/Specialist_tools/Drag_and_drop/Question_block/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "pinv",
+   "kind": "stack",
+   "sig": "pinv(M)",
+   "args": [
+    "M"
+   ],
+   "text": "If the unique minimal least squares solution to \\(A\\mathbf{x} = \\mathbf{b}\\) is desired, then \\(\\tilde{\\mathbf{x}} = A^{+}\\mathbf{b}\\) can be computed using `pinv(A) . b`. `pinv` calls the `moore_penrose_pseudoinverse` function",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "plot",
+   "kind": "stack",
+   "sig": "plot(ex, [ra])",
+   "args": [
+    "ex",
+    "[ra]"
+   ],
+   "text": "In STACK, the `plot` command has been defined to be a wrapper for Maxima's `plot2d` command. The wrapper makes sure that an image file is given an appropriate name, file location, and that Maxima returns a URL to the user giving the image. Not all of the features of `plot2d` are available through `plot`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Maxima_plot/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "pm_replace",
+   "kind": "stack",
+   "sig": "pm_replace(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Internally, the \\(\\pm\\) operator is represented with an infix (or prefix) operation `#pm#`, which is part of STACK but not core Maxima. Instead of `a+-b` teachers must type `a#pm#b`. Students' answers get translated into this format. Mostly when dealing with expressions you need to remove the \\(\\pm\\) operator.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Differential_equations/Assessing_Responses/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "polarform_simp",
+   "kind": "stack",
+   "sig": "polarform_simp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "1. Positive numbers are returned as real numbers, not as \\(r e^{i \\times 0}\\). E.g. `polarform_simp(3)` is \\(3\\). 2. If \\(r=1\\) then this is not displayed. E.g. `polarform_simp(1/sqrt(2)*(-1+%i))` is \\(e^{\\frac{3\\,i\\,\\pi}{4}}\\).",
+   "url": "https://docs.stack-assessment.org/en/CAS/Complex_numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "poly_about_a",
+   "kind": "stack",
+   "sig": "poly_about_a(ex, v, a)",
+   "args": [
+    "ex",
+    "v",
+    "a"
+   ],
+   "text": "To help provide feedback to students on how to calculate the partial fraction form we have special function `poly_about_a(ex, v, a)` which writes the polynomial `ex` in variable `v` about the point `v=a`. E.g. \\(x^2=1-2(x-1)+(x-1)^2\\) when written about \\(x=1\\). This is basically the complete finite Taylor series for the polynomial about \\(x=1\\).",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Answer_Tests/Form/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "polynomialpsimp",
+   "kind": "stack",
+   "sig": "polynomialpsimp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Determines if \\(ex\\) is a polynomial in its own variables.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "proof_display",
+   "kind": "stack",
+   "sig": "proof_display(p_ans, p_steps)",
+   "args": [
+    "p_ans",
+    "p_steps"
+   ],
+   "text": "To display a whole proof whole proof using proof-step lists use `proof_display(P1, proof_steps)`. E.g. add `{@proof_display(P1, proof_steps)@}` to the appropriate castext. This will (1) replace all keys in the proof `P1` with the corresponding strings in `proof_steps` (if they exist) and (2) display the structure using the nested `` from the CSS Styles for displaying proof, (3) display any narrative.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Proof/Proof_CAS_library/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "proof_display_para",
+   "kind": "stack",
+   "sig": "proof_display_para(proof_ans, proof_steps)",
+   "args": [
+    "proof_ans",
+    "proof_steps"
+   ],
+   "text": "`proof_display_para(P1, proof_steps)` displays a complete proof, but using HTML paragraphs to split blocks. This is a more traditional presentation of proof.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Proof/Proof_CAS_library/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "proof_flatten",
+   "kind": "stack",
+   "sig": "proof_flatten(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`proof_flatten` turns a proof-tree into a list of steps. E.g. `proof_flatten(proof_iff(A,B))` is just `[A, B]`. This function is useful when the teacher creates a structured tree, but a student's proof is a flat list.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Proof/Proof_CAS_library/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "proof_getstep",
+   "kind": "stack",
+   "sig": "proof_getstep(k, pf)",
+   "args": [
+    "k",
+    "pf"
+   ],
+   "text": "`proof_getstep(key, proof_steps)` looks for the key `key` in the `proof_steps` list. They key can be either a numerical, or string key. If found then the function returns the full string, otherwise the key is returned without an error. One advantage of this approach is that the teacher can define abbreviated, alternative proofs using some of the strings in `proof_steps`, e.g.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Proof/Proof_CAS_library/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "proof_keys_int",
+   "kind": "stack",
+   "sig": "proof_keys_int(ex, proof_steps)",
+   "args": [
+    "ex",
+    "proof_steps"
+   ],
+   "text": "`proof_keys_int(ex, proof_steps)` takes a proof built from string keys, and translate this into numbered indexes.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Proof/Proof_CAS_library/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "proof_keys_sub",
+   "kind": "stack",
+   "sig": "proof_keys_sub(ex, proof_steps)",
+   "args": [
+    "ex",
+    "proof_steps"
+   ],
+   "text": "`proof_keys_sub(ex, proof_steps)` takes a proof built from numbered indexes, and translate this into string keys. In the above example, it might be easier to author a proof as `proof(1,2,3,4,5)` rather than type in `proof(\"assodd\",\"defn_odd\",\"alg_odd\",\"def_M_odd\",\"conc_odd\")`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Proof/Proof_CAS_library/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "proof_steps_prune",
+   "kind": "stack",
+   "sig": "proof_steps_prune(proof_steps)",
+   "args": [
+    "proof_steps"
+   ],
+   "text": "3. The `proof_steps` list can contain an optional string argument `\"comment\"`. This string can be used to store justification, explanation and narrative. Some display functions use this argument, when it exists. To prune out the comments use `proof_steps_prune(proof_steps)` as an argument to the display function. 4. Note that the backslash must be protected when defining these strings. 5.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Proof/Proof_CAS_library/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "rand",
+   "kind": "maxima",
+   "sig": "rand(n)",
+   "args": [
+    "n"
+   ],
+   "text": "Random number (STACK: repeatable for the variant); rand(5) gives 0 ... 4, rand([a,b,c]) an element.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-rand",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "rand_range",
+   "kind": "stack",
+   "sig": "rand_range([ex])",
+   "args": [
+    "[ex]"
+   ],
+   "text": "The function `rand_range(lower,upper,step)` does the same thing.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Random/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "rand_selection",
+   "kind": "stack",
+   "sig": "rand_selection(ex, n)",
+   "args": [
+    "ex",
+    "n"
+   ],
+   "text": "Also, you can use STACK's `rand_selection(L, n)` to select \\(n\\) different elements from the list \\(L\\). Say you have the following list of wrong answers and you want to take only 3 out of 5.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Inputs/Multiple_choice_input/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "rand_with_prohib",
+   "kind": "stack",
+   "sig": "rand_with_prohib(lower, upper, list)",
+   "args": [
+    "lower",
+    "upper",
+    "list"
+   ],
+   "text": "`rand_with_prohib(-5,5,[0])` returns a random number from the set \\(\\{-5,-4,-3,-2,-1,1,2,3,4,5\\}\\).",
+   "url": "https://docs.stack-assessment.org/en/CAS/Random/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "rand_with_step",
+   "kind": "stack",
+   "sig": "rand_with_step(lower, upper, step_parameter)",
+   "args": [
+    "lower",
+    "upper",
+    "step_parameter"
+   ],
+   "text": "`rand_with_step(-5,5,1)` returns a random number from the set \\(\\{-5,-4,-3,-2,-1,0,1,2,3,4,5\\}\\).",
+   "url": "https://docs.stack-assessment.org/en/CAS/Random/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "random_ne_subset",
+   "kind": "stack",
+   "sig": "random_ne_subset(u)",
+   "args": [
+    "u"
+   ],
+   "text": "`random_ne_subset(u)` returns a non-empty random subset of `u`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Random/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "random_subset",
+   "kind": "stack",
+   "sig": "random_subset(u)",
+   "args": [
+    "u"
+   ],
+   "text": "`random_subset(u)` returns a random subset of `u`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Random/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "random_subset_n",
+   "kind": "stack",
+   "sig": "random_subset_n(u, n)",
+   "args": [
+    "u",
+    "n"
+   ],
+   "text": "`random_subset_n(u,n)` returns a random subset of `u` with `n` elements (if possible).",
+   "url": "https://docs.stack-assessment.org/en/CAS/Random/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "rational_numberp",
+   "kind": "stack",
+   "sig": "rational_numberp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`rational_numberp(ex)` | Determines if \\(ex\\) is written as a fraction. For a true mathematical rational number use `rational_numberp(ex) or simp_integerp(ex)`",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "rationalized",
+   "kind": "stack",
+   "sig": "rationalized(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`rationalized(ex)` searches across the whole expression `ex` and looks in the denominators of any fractions. If the denominators are free of such things the function returns `true` otherwise the function returns the list of offending expressions. This design allows efficient feedback of the form ``the denominator in your expression should be free of the following: ...\".",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "ratsimp",
+   "kind": "maxima",
+   "sig": "ratsimp(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Simplifies a rational expression (a common test whether a difference is zero).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-ratsimp",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "real_numberp",
+   "kind": "stack",
+   "sig": "real_numberp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Determines if \\(ex\\) is a real number (whether in float form or not).",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "realsetp",
+   "kind": "stack",
+   "sig": "realsetp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "1. `intervalp(ex)` returns true if `ex` is a single simple interval. Does not check `ex` is variable free, so `oo(a,b)` is a simple interval. `{}`, `none`, `all` and singleton sets are not considered \"intervals\" by this predicate, use `realsetp` instead. The primary purpose of this predicate is to detect intervals `oo`, `oc` etc within code. 2.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "recursemod",
+   "kind": "stack",
+   "sig": "recursemod(ex, n)",
+   "args": [
+    "ex",
+    "n"
+   ],
+   "text": "The function `recursemod(ex, n)` recurses over an expression tree, and applies the function `mod(?, n)` to any numbers as identified by `numberp`. This works on any expression, whereas `polymod` only applies to polynomials.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "regex_match_exactp",
+   "kind": "stack",
+   "sig": "regex_match_exactp(regex, str)",
+   "args": [
+    "regex",
+    "str"
+   ],
+   "text": "STACK also provides a helper function `regex_match_exactp(regex, str)` to check if the string equals the pattern matched by the regular expression.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Answer_Tests/String/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "remove_disp",
+   "kind": "stack",
+   "sig": "remove_disp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "STACK provides the function `remove_disp_select(ex)` to remove this inert display function. The function `remove_disp(ex)` removes all inert display functions.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Simplification/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "remove_disp_parens",
+   "kind": "stack",
+   "sig": "remove_disp_parens(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "It may be necessary to remove the `disp_parens` from an expression. STACK provides the function `remove_disp_parens(ex)` to remove this inert display function. Actually, this function is remarkably simple.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Simplification/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "remove_numerical_inert",
+   "kind": "stack",
+   "sig": "remove_numerical_inert(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Removes the above inert forms from an expression `ex`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "rest",
+   "kind": "maxima",
+   "sig": "rest(list, n)",
+   "args": [
+    "list",
+    "n"
+   ],
+   "text": "list without its first n elements (n < 0: without its last -n elements).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-rest",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "root",
+   "kind": "stack",
+   "sig": "root([ex])",
+   "args": [
+    "[ex]"
+   ],
+   "text": "The function `root(x,n)` can be used for `x^(1/n)`. If you omit the second argument you get `root(x)=sqrt(x)`.",
+   "url": "https://docs.stack-assessment.org/en/Students/Answer_input/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "round",
+   "kind": "maxima",
+   "sig": "round(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Nearest integer.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-round",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "row_vecp",
+   "kind": "stack",
+   "sig": "row_vecp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`row_vecp(ex)` Predicate for determining whether a given object is a \\(1\\times N\\) matrix (a row vector). Note: does not consider `r` a row vector. Use `vec_convert` before `row_vecp`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "rowadd",
+   "kind": "stack",
+   "sig": "rowadd(m, i, j, k)",
+   "args": [
+    "m",
+    "i",
+    "j",
+    "k"
+   ],
+   "text": "`rowadd(M,i,j,k)` Returns matrix `M` where `M[i]: M[i] + k * M[j]`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "rowmul",
+   "kind": "stack",
+   "sig": "rowmul(m, i, k)",
+   "args": [
+    "m",
+    "i",
+    "k"
+   ],
+   "text": "`rowmul(M,i,k)` Returns matrix `M` where `M[i]: k * M[i]`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "rowswap",
+   "kind": "stack",
+   "sig": "rowswap(m, i, j)",
+   "args": [
+    "m",
+    "i",
+    "j"
+   ],
+   "text": "`rowswap(M,i,j)` Swaps rows `i` and `j`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "rref",
+   "kind": "stack",
+   "sig": "rref(m)",
+   "args": [
+    "m"
+   ],
+   "text": "`rref(M)` Returns the reduced row echelon form of `M`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "s_assert",
+   "kind": "stack",
+   "sig": "s_assert(ex1, ex2)",
+   "args": [
+    "ex1",
+    "ex2"
+   ],
+   "text": "STACK provides a special function `s_assert(ex1, ex2)` for testing, which can be used in the question variables and feedback variables. If `is(ex1=ex2)` does not evaluate to `true` then this function throws a maxima error message. This can be used to create a runtime error and prevent a question, and a particular variant, being used.",
+   "url": "https://docs.stack-assessment.org/en/STACK_question_admin/Testing/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "s_test_case",
+   "kind": "stack",
+   "sig": "s_test_case(simp)",
+   "args": [
+    "simp"
+   ],
+   "text": "The system currently supports documenting functions and variables by placing a comment-block just before their definition. For inert functions and unbound variables that do not have definitions in the form of code you may add extra comment blocks somewhere in the `.mac` files in the directories under `/stack/maximasrc/`.",
+   "url": "https://docs.stack-assessment.org/en/Developer/Documentation_maximasrc/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "safe_op",
+   "kind": "stack",
+   "sig": "safe_op(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Returns the operation of the expression as a string. Atoms return an empty string (rather than throwing an error as does `op`).",
+   "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "scale_nicely",
+   "kind": "stack",
+   "sig": "scale_nicely(v, [_pos])",
+   "args": [
+    "v",
+    "[_pos]"
+   ],
+   "text": "STACK provides the `scale_nicely(v)` function. Given a vector or list, it will return the smallest possible parallel vector or list with integer entries. It will leave zero vectors untouched, and vectors that contain all negative values will be negated. This is useful in a number of situations, including:",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "scientific_notation",
+   "kind": "stack",
+   "sig": "scientific_notation([a])",
+   "args": [
+    "[a]"
+   ],
+   "text": "Write \\(x\\) in the form \\(m10^e\\). Only works reliably with `simp:false` (e.g. try 9000). The optional second argument applies `displaysci(m,n)` to the mantissa to control the display of trailing zeros.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "scientific_notationp",
+   "kind": "stack",
+   "sig": "scientific_notationp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Determines if \\(ex\\) is written in the form \\(a10^n\\) where \\(a\\) is an integer or float, and \\(n\\) is an integer.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "sconcat",
+   "kind": "maxima",
+   "sig": "sconcat(arg_1, arg_2, ...)",
+   "args": [
+    "arg_1",
+    "arg_2, ..."
+   ],
+   "text": "Concatenates its arguments to a string.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sconcat",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "select",
+   "kind": "stack",
+   "sig": "select(p1, ex)",
+   "args": [
+    "p1",
+    "ex"
+   ],
+   "text": "When creating feedback it is often useful to select, and highlight, part of an expression. STACK provides a function `select(p1, ex)` to do this. The select function traverses the expression tree for `ex` and when it encounters a sub-tree for which the predicate `p1` is true it adds `disp_select` to the sub-tree and stops traversing any further down that sub-tree.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Simplification/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "select_apply",
+   "kind": "stack",
+   "sig": "select_apply([ex1])",
+   "args": [
+    "[ex1]"
+   ],
+   "text": "The function `select_apply(f1, ex)` traverses the expression and when it encounters the `disp_select` function it applied the function `f1` to that sub-tree of the expression. This allows for selective simplification/modification of highlighted sub-trees. For example,",
+   "url": "https://docs.stack-assessment.org/en/CAS/Simplification/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "significantfigures",
+   "kind": "stack",
+   "sig": "significantfigures(x, n)",
+   "args": [
+    "x",
+    "n"
+   ],
+   "text": "Truncate \\(x\\) to \\(n\\) significant figures (does perform rounding).",
+   "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "simp_floatnump",
+   "kind": "stack",
+   "sig": "simp_floatnump(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Determines if \\(ex\\) is a float when `simp:false`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "simp_integerp",
+   "kind": "stack",
+   "sig": "simp_integerp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Determines if \\(ex\\) is an integer when `simp:false`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "simp_numberp",
+   "kind": "stack",
+   "sig": "simp_numberp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Determines if \\(ex\\) is a number when `simp:false`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "simplify",
+   "kind": "stack",
+   "sig": "simplify(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "That is to say, we turn the equation `ex1` into an expression `x1:simplify(lhs(ex1)-rhs(ex1))` and the equation `ex2` into an expression `x2:simplify(lhs(ex2)-rhs(ex2))`, and then simplify the ratio of the two numerators of `x1` and `x2`:, i.e. `num(x1)/num(x2)` (with some edge case detection of course). If this is a number then we have cancelled algebraic factors precisely, and roots match (with multiplicity).",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Answer_Tests/Equivalence/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "solve",
+   "kind": "maxima",
+   "sig": "solve(eqs, vars)",
+   "args": [
+    "eqs",
+    "vars"
+   ],
+   "text": "Solves equations, e.g. solve([x+y=1, x-y=0], [x, y]).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-solve",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "squarep",
+   "kind": "stack",
+   "sig": "squarep(M)",
+   "args": [
+    "M"
+   ],
+   "text": "`squarep(M)` Is a given object a square matrix?",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "sremove_chars",
+   "kind": "stack",
+   "sig": "sremove_chars(rem, st)",
+   "args": [
+    "rem",
+    "st"
+   ],
+   "text": "1. To trim whitespace and full stops from each end of a string, you can define `sans1:strim(\" .\",ans1);` in the feedback variables. 2. STACK provides a function `sremove_chars(rem, st)` which removes all occurrences of each _character_ in the string `rem` from the string `st`. For example to remove all selected punctuation characters use `sremove_chars(\".,!?\", ans1)`. 3.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Levenshtein_distance/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_chemistry_declare",
+   "kind": "stack",
+   "sig": "stack_chemistry_declare(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "1. Support for Maxima 5.47.0, 5.48.0, and 5.49.0. This includes a fix for issue #1281 from 5.48.0. 2. Question tests can now test the whole route through a PRT, rather than just the final node. This is a significant improvement on the ability to test questions. This is back-compatible with older questions. 3. Add in a new \"free-text\" input to allow students to input typed free-text proof. 4.",
+   "url": "https://docs.stack-assessment.org/en/Developer/Development_history/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_disp",
+   "kind": "stack",
+   "sig": "stack_disp(expr, exprm)",
+   "args": [
+    "expr",
+    "exprm"
+   ],
+   "text": "1. `sh:stack_disp(unary_minus_sort(p), \"\")` will provide the LaTeX output (fine-tuned by STACK). The problems with using this format here, outside the LaTeX maths environment, are things like (i) use of `\\left(...\\right)`, use of `\\frac{}{}` for division etc. 2. `sh:sremove(\"*\", string(unary_minus_sort(p)))` will provide the string output.",
+   "url": "https://docs.stack-assessment.org/en/Specialist_tools/Equivalence_reasoning/Equivalence_input/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_disp_arg",
+   "kind": "stack",
+   "sig": "stack_disp_arg([exs])",
+   "args": [
+    "[exs]"
+   ],
+   "text": "The maxima function `stack_disp_arg(ex, [showlogic, showdomain])` can be used to display a list of expressions `ex` in the same form as used in the input and answer tests. This is useful for displaying the teacher's worked solution in the general feedback.",
+   "url": "https://docs.stack-assessment.org/en/Specialist_tools/Equivalence_reasoning/Equivalence_assessment/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_disp_comma_separate",
+   "kind": "stack",
+   "sig": "stack_disp_comma_separate(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "If you want comma separated values without the list brackets then use `{@stack_disp_comma_separate( list )@}`. This function turns a list into a string representation of its arguments, without braces.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/CASText/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_disp_fractions",
+   "kind": "stack",
+   "sig": "stack_disp_fractions(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "The function `stack_disp_fractions(ex)` can be used to control the display globally within a question.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Question_options/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_equiv_find_step",
+   "kind": "stack",
+   "sig": "stack_equiv_find_step(ex, exl)",
+   "args": [
+    "ex",
+    "exl"
+   ],
+   "text": "To facilitate this search we provide the function `stack_equiv_find_step(ex, exl)`. This looks for expression `ex` in the list `exl` using `ATEqualComAss`. It returns the list of indices of the position. If you just want to know if the expression is missing use the predicate `emptyp`. Note, this function strips off `stackeq` before testing, so this function will find \\( \\log_5(5^2) \\) in both `sa1` and `sa2` below.",
+   "url": "https://docs.stack-assessment.org/en/Specialist_tools/Equivalence_reasoning/Equivalence_assessment/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_eval_arg_equation_reasoningp",
+   "kind": "stack",
+   "sig": "stack_eval_arg_equation_reasoningp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "1. `stack_eval_arg_expression_reasoningp(ex)` 2. `stack_eval_arg_equation_reasoningp(ex)`",
+   "url": "https://docs.stack-assessment.org/en/Specialist_tools/Equivalence_reasoning/Equivalence_reasoning/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_eval_arg_expression_reasoningp",
+   "kind": "stack",
+   "sig": "stack_eval_arg_expression_reasoningp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "1. `stack_eval_arg_expression_reasoningp(ex)` 2. `stack_eval_arg_equation_reasoningp(ex)`",
+   "url": "https://docs.stack-assessment.org/en/Specialist_tools/Equivalence_reasoning/Equivalence_reasoning/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_include",
+   "kind": "stack",
+   "sig": "stack_include(\"url\")",
+   "args": [
+    "\"url\""
+   ],
+   "text": "Includes Maxima code from a URL into the question variables when the question is compiled (e.g. meclib's fb_fbd.mac and fb_value.mac from GitHub). Only allowed sources work on a STACK server.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Inclusions/",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "stack_linear_algebra_declare",
+   "kind": "stack",
+   "sig": "stack_linear_algebra_declare(mode)",
+   "args": [
+    "mode"
+   ],
+   "text": "Loading this library automatically declares `stack_linear_algebra_declare(true);` to provide context. See the documentation on the core linear algebra for more information.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Eigen/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_matrix_col",
+   "kind": "stack",
+   "sig": "stack_matrix_col(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "You can control the alignment of the columns of the matrix using the function `stack_matrix_col(m)`. This function takes the matrix, and returns the string of characters \"c\", \"l\", or \"r\" to decide how to format the column in the LaTeX representation of the array. By default, this is centered with \"c\". We need a _function_ to count the number of columns. This is the default function.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Matrix/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_reset_vars",
+   "kind": "stack",
+   "sig": "stack_reset_vars(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Sometimes you need to use \\(e\\), or other constants, as an abstract symbol not a number. The Maxima solution is to use the `kill()` command, but for security reasons users of STACK are not permitted to use this function. Instead use `stack_reset_vars(true)` in the question variables. This resets all the special constants defined by STACK so the symbols can be redefined in an individual STACK question.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "STACK_SETUP",
+   "kind": "stack",
+   "sig": "STACK_SETUP(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "The healthcheck page (Moodle admin access only) displays the contents of the Maxima configuration file which is written to the sever. This contains Maxima commands to update the path (which you probably don't want to copy) and also the function `STACK_SETUP(ex)` which configures your particular version of STACK. You may want to replace `STACK_SETUP(ex)` in the sandbox with `STACK_SETUP(ex)` from the Moodle server.",
+   "url": "https://docs.stack-assessment.org/en/CAS/STACK-Maxima_sandbox/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_strip_percent",
+   "kind": "stack",
+   "sig": "stack_strip_percent(ex, var)",
+   "args": [
+    "ex",
+    "var"
+   ],
+   "text": "Removes any variable beginning with the `%` character from `ex` and replace them with variables from `var`. Useful for use with solve, ode2 etc. Solve and ode2.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_unit_si_declare",
+   "kind": "stack",
+   "sig": "stack_unit_si_declare(mode)",
+   "args": [
+    "mode"
+   ],
+   "text": "The function `stack_unit_si_declare(true)` declares variables as units. (Note the argument to this function is not used.) For example, this changes the TeX output of `m` to Roman \\(\\mathrm{m}\\) and not the normal \\(m\\). (That units are displayed in Roman is lost to most students!).",
+   "url": "https://docs.stack-assessment.org/en/Topics/Units/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_unit_si_to_si_base",
+   "kind": "stack",
+   "sig": "stack_unit_si_to_si_base(si5)",
+   "args": [
+    "si5"
+   ],
+   "text": "If you are manipulating two expressions and you want to ensure they both use the same units use `stack_unit_si_to_si_base(ex)` on each. This ensures only the base units of SI are used. E.g. `stack_unit_si_to_si_base(stackunits(12.1,km))` gives `stackunits(12100.0,m)`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Units/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_units_nums",
+   "kind": "stack",
+   "sig": "stack_units_nums(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "try to split the expression into units and numbers, and the return the units and numbers found. If there are no numbers, `stack_units_nums(ex)` returns `NULLNUM`. If there are no numbers, `stack_units_units(ex)` returns `NULLUNITS`. These are special tags, but note they are displayed by LaTeX as empty strings.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Units/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stack_units_units",
+   "kind": "stack",
+   "sig": "stack_units_units(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "try to split the expression into units and numbers, and the return the units and numbers found. If there are no numbers, `stack_units_nums(ex)` returns `NULLNUM`. If there are no numbers, `stack_units_units(ex)` returns `NULLUNITS`. These are special tags, but note they are displayed by LaTeX as empty strings.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Units/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stackjson_parse",
+   "kind": "stack",
+   "sig": "stackjson_parse(\"json\")",
+   "args": [
+    "\"json\""
+   ],
+   "text": "Parses a JSON string into a Maxima structure (lists, strings, numbers); meclib questions use it for the objects input: obj: stackjson_parse(objects).",
+   "url": "https://docs.stack-assessment.org/en/Authoring/JSON/",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "stackjson_stringify",
+   "kind": "stack",
+   "sig": "stackjson_stringify(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Converts a Maxima list structure into a JSON string; meclib questions use it for the graphic's initial objects: init: stackjson_stringify(initdata).",
+   "url": "https://docs.stack-assessment.org/en/Authoring/JSON/",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "stackunits_make",
+   "kind": "stack",
+   "sig": "stackunits_make(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "The function `stackunits_make(ex)` takes the expression `ex` and, if this is a product of numbers and units, it returns an inert function `stackunits` with arguments `stackunits(numbers, symbols)`. Note, symbols will include a mix of variables, and symbols which are considered to be units. Use of this function autoloads `stack_unit_si_declare(true)`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Units/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "stackunits_to_product",
+   "kind": "stack",
+   "sig": "stackunits_to_product(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "The function `stackunits_to_product(ex)` turns a `stackunits` object into a product of number and units.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Units/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "string",
+   "kind": "maxima",
+   "sig": "string(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Expression -> string, as it would be typed.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-string",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "stringp",
+   "kind": "maxima",
+   "sig": "stringp(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "true if expr is a string.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-stringp",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "sublist",
+   "kind": "maxima",
+   "sig": "sublist(list, p)",
+   "args": [
+    "list",
+    "p"
+   ],
+   "text": "Elements of list for which the predicate p is true.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sublist",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "sublist_indices",
+   "kind": "maxima",
+   "sig": "sublist_indices(list, p)",
+   "args": [
+    "list",
+    "p"
+   ],
+   "text": "Indices of the elements of list for which the predicate p is true.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sublist_indices",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "subst",
+   "kind": "maxima",
+   "sig": "subst(a, b, expr)",
+   "args": [
+    "a",
+    "b",
+    "expr"
+   ],
+   "text": "Substitutes a for b in expr; also subst([b_1 = a_1, ...], expr).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-subst",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "table_zip_with",
+   "kind": "stack",
+   "sig": "table_zip_with(fn, T1, T2)",
+   "args": [
+    "fn",
+    "T1",
+    "T2"
+   ],
+   "text": "`table_zip_with(fn, T1, T2)` combines two tables, using the binary function `fn` (much as `zip_with` combines two lists).",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Tables/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "texboldatoms",
+   "kind": "stack",
+   "sig": "texboldatoms(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`texboldatoms(ex)` Displays all non-numeric atoms in bold. Useful for vector questions.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Vectors/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "trigsimp",
+   "kind": "maxima",
+   "sig": "trigsimp(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Simplifies with sin^2+cos^2=1 and related identities.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-trigsimp",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "trivialintervalp",
+   "kind": "stack",
+   "sig": "trivialintervalp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "1. `intervalp(ex)` returns true if `ex` is a single simple interval. Does not check `ex` is variable free, so `oo(a,b)` is a simple interval. `{}`, `none`, `all` and singleton sets are not considered \"intervals\" by this predicate, use `realsetp` instead. The primary purpose of this predicate is to detect intervals `oo`, `oc` etc within code. 2.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "truth_table",
+   "kind": "stack",
+   "sig": "truth_table(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`truth_table(ex)` returns the true table of the expression `ex`. The function will throw an error if the number of variables exceeds 5. The first row of the table is the headings, consisting of a list of variables, and the expression itself. See the documentation on tables for more functionality.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Propositional_Logic/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "un_vec_convert",
+   "kind": "stack",
+   "sig": "un_vec_convert(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`un_vec_convert(ex)` Given a row or column vector, convert it to `c()` or `r()` form.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Vectors/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "unary_minus_sort",
+   "kind": "stack",
+   "sig": "unary_minus_sort(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Tidies up the way unary minus is represented within expressions when `simp:false`. See also simplification.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "unionp",
+   "kind": "stack",
+   "sig": "unionp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "1. `intervalp(ex)` returns true if `ex` is a single simple interval. Does not check `ex` is variable free, so `oo(a,b)` is a simple interval. `{}`, `none`, `all` and singleton sets are not considered \"intervals\" by this predicate, use `realsetp` instead. The primary purpose of this predicate is to detect intervals `oo`, `oc` etc within code. 2.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "unitsp",
+   "kind": "stack",
+   "sig": "unitsp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`unitsp(ex)` is a predicate which decides if STACK considers the expression to represent a dimensional numerical quantity `stackunits`.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Units/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "variablep",
+   "kind": "stack",
+   "sig": "variablep(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Determines if \\(ex\\) is a variable, that is an atom but not a real number, \\(i\\) or a string.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "vec_convert",
+   "kind": "stack",
+   "sig": "vec_convert(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`vec_convert(ex)` Attempts to convert `c` and `r` convenience functions into matrices. If the expression contains multiple `c` and `r` terms that do not conform, the original expression is returned.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Vectors/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "vec_convertedp",
+   "kind": "stack",
+   "sig": "vec_convertedp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`vec_convertedp(ex)` A predicate function that checks whether `c` or `r` is present. This is useful in a PRT to ensure that an earlier conversion was successful (i.e. everything conforms) before continuing.",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Vectors/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "vectorp",
+   "kind": "stack",
+   "sig": "vectorp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`vectorp(ex):= col_vecp(ex) or row_vecp(ex);`",
+   "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "zeroAdd",
+   "kind": "stack",
+   "sig": "zeroAdd(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Each rule is a named function in Maxima, and each rule has an associated predicate function to decide if the rule is applicable at the top level of an expression. E.g. `zeroAddp(0+x)` would return `true` and `zeroAdd(0+x)` would return `x`.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Answer_Tests/Rule_based/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "zeroAddp",
+   "kind": "stack",
+   "sig": "zeroAddp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "Each rule is a named function in Maxima, and each rule has an associated predicate function to decide if the rule is applicable at the top level of an expression. E.g. `zeroAddp(0+x)` would return `true` and `zeroAdd(0+x)` would return `x`.",
+   "url": "https://docs.stack-assessment.org/en/Authoring/Answer_Tests/Rule_based/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "zeroMulp",
+   "kind": "stack",
+   "sig": "zeroMulp(ex)",
+   "args": [
+    "ex"
+   ],
+   "text": "`p1` displays as \\({\\left(1-1\\right)\\cdot x^2+\\color{red}{\\underline{0\\cdot x}}+1}\\). We have selected all the parts for which the predicate `zeroMulp` is true. This is the predicate which checks if the rule \\(0 \\times x \\rightarrow 0 \\) is applicable. While the coefficient of \\(x^2\\) is equivalent to zero, it is unsimplified and the predicate `zeroMulp(1-1)` is false. This sub-tree is not selected by this predicate.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Simplification/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "zip_with",
+   "kind": "stack",
+   "sig": "zip_with(zf, a, b)",
+   "args": [
+    "zf",
+    "a",
+    "b"
+   ],
+   "text": "This function applies the binary function \\(f\\) to two lists \\(a\\) and \\(b\\) returning a list.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
+   "source": "STACK v4.13.1"
+  },
+  {
+   "name": "zip_with_matrix",
+   "kind": "stack",
+   "sig": "zip_with_matrix(zfm, A, B)",
+   "args": [
+    "zfm",
+    "A",
+    "B"
+   ],
+   "text": "This function applies the binary function \\(f\\) to two matrices \\(A\\) and \\(B\\) returning a matrix. An example is given in adding matrices to show working. - `coeff_list(ex,v)` - This function takes an expression `ex` and returns a list of coefficients of `v`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
+   "source": "STACK v4.13.1"
+  }
+ ]
+}

@@ -773,8 +773,36 @@ def r_unused_files(Q_):
     return out
 
 
+# Missing statement separators in Maxima code: STACK's parser assumes a ; where a line ends a
+# complete statement and the next line starts an assignment or call (the preview reports these
+# as "missing ; assumed"); the fix writes the ; into the file.
+def r_semicolons(Q_):
+    out = []
+    new, lines = sq.insert_missing_semicolons(Q_.qvars)
+    if lines:
+        out.append(F("maxima.semicolon", "questionvariables", "recommended", "Missing ; in Maxima code",
+                     "Question variables: no ; at the end of the statement in line %s (STACK assumes one). "
+                     "Add it." % ", ".join(map(str, lines)),
+                     lambda q: _set_text(q, "questionvariables", sq.insert_missing_semicolons(Q(q).qvars)[0])))
+    for prt in Q_.prts:
+        _, lines = sq.insert_missing_semicolons(prt["feedbackvariables"])
+        if not lines:
+            continue
+
+        def fix(q, P=prt["name"]):
+            fv = next(p for p in Q(q).prts if p["name"] == P)["feedbackvariables"]
+            m = _named(q, "prt", P)
+            block = qfile._replace_text_child(m.group(0), "feedbackvariables", sq.insert_missing_semicolons(fv)[0],
+                                              qfile._newline(q))[0]
+            return q[:m.start()] + block + q[m.end():]
+        out.append(F("maxima.semicolon", "PRT " + prt["name"], "recommended", "Missing ; in Maxima code",
+                     "PRT %s, feedback variables: no ; at the end of the statement in line %s (STACK assumes one). "
+                     "Add it." % (prt["name"], ", ".join(map(str, lines))), fix))
+    return out
+
+
 RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_graphic_inputs, r_input_settings, r_prts,
-         r_grade, r_literal_index, r_tans_copy, r_math_delimiters, r_matrix_inputs, r_unused_files]
+         r_grade, r_literal_index, r_tans_copy, r_math_delimiters, r_matrix_inputs, r_unused_files, r_semicolons]
 
 
 # ---------------------------------------------------------------------- metadata in the description

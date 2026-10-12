@@ -8,12 +8,23 @@
 //               between \( \) / \[ \] (one to three backslashes, as in HTML and Markdown)
 // CodeMirror is loaded from the URL in workbench_config.json ("codemirror"); without it the
 // page keeps plain text fields (MeclibEditor.available() is false).
+//
+// Syntax help (from syntax_help.json, built by build_help.py): a box with the signature of the
+// function or meclib object at the cursor (current argument in bold, its description, a link to
+// the wiki or the STACK documentation, opened in a small separate window; F1 opens it directly),
+// autocomplete of names (while typing or Ctrl+Space), castext snippets (\ -> math delimiters,
+// { -> {@ @}, [[ -> blocks, inputs and PRTs) and closing brackets that are added only where
+// they rarely disturb (before a space, the end of the line or a closing bracket; Ctrl+Z right
+// after removes just the added one; a closing bracket is skipped only if it was added).
+// In Maxima fields, ":" at the end of a statement (top level, nothing after it on the line) gets
+// a ";" after the cursor in the same way; ";" typed there skips it, "$" replaces it. "/*" gets "*/".
 (function () {
   "use strict";
 
   const SCRIPTS = ["lib/codemirror.js", "addon/edit/matchbrackets.js", "addon/search/searchcursor.js",
-    "addon/dialog/dialog.js", "addon/search/search.js", "addon/search/jump-to-line.js", "mode/javascript/javascript.js"];
-  const STYLES = ["lib/codemirror.css", "addon/dialog/dialog.css"];
+    "addon/dialog/dialog.js", "addon/search/search.js", "addon/search/jump-to-line.js", "mode/javascript/javascript.js",
+    "addon/hint/show-hint.js"];
+  const STYLES = ["lib/codemirror.css", "addon/dialog/dialog.css", "addon/hint/show-hint.css"];
   let ready = false;
 
   function loadScript(src) {
@@ -157,6 +168,420 @@
     CM.defineMode("castext", () => castextMode(CM));
   }
 
+  // ------------------------------------------------------------------ syntax help
+  const settings = { autocomplete: true, closeBrackets: true, semicolon: true };
+  let help = { functions: new Map(), objects: new Map(), list: [] };
+
+  function setHelp(data) {
+    help = { functions: new Map(), objects: new Map(), list: [] };
+    for (const e of (data && data.entries) || []) {
+      if (e.kind === "object") help.objects.set(e.name, e);
+      else if (!help.functions.has(e.name)) help.functions.set(e.name, e);
+      help.list.push(e);
+    }
+  }
+  function configure(s) { Object.assign(settings, s || {}); }
+
+  function openHelp(url) {
+    if (!url) return;
+    const w = 720, h = Math.min(860, screen.availHeight - 80);
+    const win = window.open(url, "meclib-help",
+      `popup,width=${w},height=${h},left=${Math.max(0, screen.availWidth - w - 20)},top=40`);
+    if (win) win.focus();
+  }
+
+  // The innermost call "name(" or meclib object list "["type"," around the cursor whose name is
+  // known, and the index of the argument the cursor is in. Strings and comments are skipped
+  // (strings from the start of the text, so that the parity is right).
+  function contextAt(cm) {
+    const cur = cm.getCursor();
+    const from = cm.indexFromPos(cur);
+    // from the start of the text (a window starting inside a string or comment would turn the
+    // string parity around); questions are short enough
+    const start = Math.max(0, from - 30000);
+    const text = cm.getRange(cm.posFromIndex(start), cur);
+    // blank out comments and the contents of strings (scanning forward, so that a string the
+    // cursor is in counts as one)
+    let masked = "", inStr = false, inCom = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inCom) { masked += " "; if (ch === "/" && text[i - 1] === "*") inCom = false; continue; }
+      if (inStr) { masked += ch === '"' && text[i - 1] !== "\\" ? (inStr = false, '"') : "x"; continue; }
+      if (ch === "/" && text[i + 1] === "*") { inCom = true; masked += " "; continue; }
+      if (ch === '"') inStr = true;
+      masked += ch;
+    }
+    let depth = 0, commas = 0;
+    const stack = [];
+    // walk backwards
+    for (let i = masked.length - 1; i >= 0; i--) {
+      const ch = masked[i];
+      if (ch === ")" || ch === "]" || ch === "}") { depth++; continue; }
+      if (ch === "(" || ch === "[" || ch === "{") {
+        if (depth > 0) { depth--; continue; }
+        // an unclosed opening bracket: is it a known call or object list?
+        if (ch === "(") {
+          const m = /([A-Za-z_%][A-Za-z0-9_%]*)\s*$/.exec(masked.slice(0, i));
+          const e = m && help.functions.get(m[1]);
+          if (e) return { entry: e, arg: commas, kind: "function", pos: cm.posFromIndex(start + i) };
+          // inside a call of a function without help (e.g. atan(...) in an argument): no box
+          // rather than the help of the enclosing call; "then (", "do (" are groupings
+          if (m && !/^(then|else|elseif|do|and|or|not|if|while|unless|thru|step|in|for|from|next)$/.test(m[1])) return null;
+        } else if (ch === "[") {
+          const m = /^\[\s*"([A-Za-z0-9]+)"/.exec(text.slice(i));
+          const e = m && help.objects.get(m[1]);
+          if (e) return { entry: e, arg: commas - 1, kind: "object", pos: cm.posFromIndex(start + i) };
+        }
+        commas = 0;     // continue outwards (e.g. inside a coordinate pair of an object)
+        stack.push(i);
+        continue;
+      }
+      if (ch === "," && depth === 0) commas++;
+      if ((ch === ";" || ch === "$") && depth === 0) break;
+    }
+    return null;
+  }
+  // The commas counted for the level that was found: recount from the bracket to the cursor.
+  function argIndex(cm, ctx) {
+    const text = cm.getRange(ctx.pos, cm.getCursor()).slice(1);
+    let depth = 0, n = 0, inStr = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch === '"' && text[i - 1] !== "\\") inStr = !inStr;
+      if (inStr) continue;
+      if ("([{".includes(ch)) depth++;
+      else if (")]}".includes(ch)) depth--;
+      else if (ch === "," && depth === 0) n++;
+    }
+    return ctx.kind === "object" ? n - 1 : n;
+  }
+
+  let box = null, boxHover = false, boxCtx = null;
+  function hideBox() { if (box) box.style.display = "none"; boxCtx = null; }
+  function escHTML(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
+  function codeSpans(s) { return escHTML(s).replace(/`([^`]+)`/g, "<code>$1</code>"); }
+  function sigHTML(e, arg) {
+    const args = e.args || [];
+    const parts = args.map((a, i) => {
+      let h = escHTML(a);
+      if ((e.optional || []).includes(i)) h = `<span class="hb-opt">${h}?</span>`;
+      return i === arg ? `<b>${h}</b>` : h;
+    });
+    if (e.kind === "object") return `[ "${escHTML(e.name)}", ${parts.join(", ")} ]`;
+    return `${escHTML(e.name)}(${parts.join(", ")})`;
+  }
+  function boxHTML(e, arg) {
+    const a = (e.args || [])[arg];
+    const ad = a != null && e.argdocs ? e.argdocs[a] : null;
+    const src = e.kind === "meclib" || e.kind === "object" ? "meclib wiki" : e.kind === "stack" ? "STACK docs" : "Maxima manual";
+    return `<div class="hb-sig">${e.returns ? `<span class="hb-ret">${escHTML(e.returns)}:</span> ` : ""}${sigHTML(e, arg)}</div>` +
+      (ad ? `<div class="hb-arg"><b>${escHTML(a)}</b>: ${codeSpans(ad)}</div>` : "") +
+      (e.text ? `<div class="hb-text">${codeSpans(e.text)}</div>` : "") +
+      `<div class="hb-foot">${e.url ? `<a href="#" data-url="${escHTML(e.url)}">${src} ↗</a> <span>F1</span>` : ""}<span class="hb-src">${escHTML(e.source || "")}</span></div>`;
+  }
+  function updateBox(cm) {
+    if (cm.state.completionActive) { hideBox(); return; }
+    const ctx = contextAt(cm);
+    if (!ctx) { hideBox(); return; }
+    const arg = argIndex(cm, ctx);
+    if (!box) {
+      box = document.createElement("div"); box.className = "meclib-helpbox";
+      box.addEventListener("mouseenter", () => { boxHover = true; });
+      box.addEventListener("mouseleave", () => { boxHover = false; });
+      box.addEventListener("mousedown", (ev) => {
+        const a = ev.target.closest("a[data-url]");
+        if (a) { ev.preventDefault(); openHelp(a.dataset.url); }
+      });
+      document.body.appendChild(box);
+    }
+    box.innerHTML = boxHTML(ctx.entry, arg);
+    boxCtx = ctx;
+    box.style.display = "block";
+    const c = cm.cursorCoords(null, "page");
+    const h = box.offsetHeight;
+    let top = c.top - h - 6;
+    if (top < window.scrollY + 4) top = c.bottom + 6;   // no room above: below the line
+    box.style.top = top + "px";
+    box.style.left = Math.max(4, Math.min(c.left - 20, window.scrollX + document.documentElement.clientWidth - box.offsetWidth - 8)) + "px";
+  }
+  function openHelpAtCursor(cm) {
+    const ctx = contextAt(cm);
+    if (ctx) return openHelp(ctx.entry.url);
+    const w = cm.findWordAt(cm.getCursor());
+    const name = cm.getRange(w.anchor, w.head);
+    const e = help.functions.get(name) || help.objects.get(name);
+    if (e) openHelp(e.url);
+  }
+
+  // ---------------------------------------------------------------- autocomplete
+  function inCas(cm) {          // castext: inside {@ @} or {# #}?
+    const tok = cm.getTokenAt(cm.getCursor());
+    return /castext-cas/.test(tok.type || "");
+  }
+  function inJsx(cm) { const st = cm.getStateAfter ? cm.getTokenAt(cm.getCursor()).state : null; return !!(st && st.js); }
+  // Markdown: is the cursor in a block of HTML (a paragraph that starts with a tag)? There
+  // MathJax delimiters are written as in HTML.
+  function inHtmlBlock(cm) {
+    let l = cm.getCursor().line;
+    while (l > 0 && cm.getLine(l - 1).trim() !== "") l--;
+    return /^\s*<[A-Za-z]/.test(cm.getLine(l));
+  }
+  function mathSnippets(cm, opts) {
+    const fmt = opts.context ? (opts.context().format || "html") : "html";
+    const b = fmt === "markdown" && !inHtmlBlock(cm) ? "\\\\\\" : "\\";
+    return [
+      { text: b + "(", tail: b + ")", display: b + "( ... " + b + ")  inline math" },
+      { text: b + "[", tail: b + "]", display: b + "[ ... " + b + "]  displayed math" },
+    ];
+  }
+  // list of snippets {text, tail, display}: text is inserted before the cursor, tail after it
+  function snippetHint(cm, from, list) {
+    return {
+      from, to: cm.getCursor(),
+      list: list.map((s) => ({
+        text: s.text + (s.tail || ""), displayText: s.display,
+        hint: (c, data, comp) => {
+          c.replaceRange(s.text + (s.tail || ""), data.from, data.to, "complete");
+          const p = c.indexFromPos(data.from) + s.text.length;
+          c.setCursor(c.posFromIndex(p));
+        },
+      })),
+    };
+  }
+  function nameHint(cm, kind) {
+    const cur = cm.getCursor(), line = cm.getLine(cur.line);
+    let s = cur.ch;
+    while (s > 0 && /[A-Za-z0-9_%]/.test(line[s - 1])) s--;
+    const word = line.slice(s, cur.ch);
+    const before = line.slice(0, s);
+    // object type inside ["...
+    if (/\[\s*"$/.test(before)) {
+      const list = [...help.objects.values()].filter((e) => e.name.startsWith(word)).map((e) => ({
+        text: e.name + '", ', displayText: e.name, entry: e,
+        render: (el) => { el.innerHTML = `<span class="hn">${escHTML(e.name)}</span> <span class="hs">${escHTML(e.sig)}</span>`; },
+        hint: (c, data) => {
+          const after = c.getRange(data.to, { line: data.to.line, ch: data.to.ch + 1 });
+          c.replaceRange(e.name, data.from, data.to, "complete");
+          const p = { line: data.from.line, ch: data.from.ch + e.name.length };
+          if (after === '"') {            // the closing quote is there already: step over it
+            const m = addedAt(c, p); if (m) m.clear();
+            c.setCursor({ line: p.line, ch: p.ch + 1 });
+            c.replaceSelection(", ", "end", "complete");
+          } else c.replaceRange('", ', p, p, "complete");
+          updateBox(c);
+        },
+      }));
+      return list.length ? { from: { line: cur.line, ch: s }, to: cur, list } : null;
+    }
+    if (word.length < 1) return null;
+    const rank = { meclib: 0, object: 3, stack: 1, extra: 1, maxima: 2 };
+    const list = help.list.filter((e) => e.kind !== "object" && e.name.startsWith(word) && e.name !== word)
+      .sort((a, b) => (rank[a.kind] - rank[b.kind]) || a.name.localeCompare(b.name)).slice(0, 60)
+      .map((e) => ({
+        text: e.name + "(", displayText: e.name, entry: e,
+        render: (el) => { el.innerHTML = `<span class="hn">${escHTML(e.name)}</span> <span class="hs">${escHTML(e.sig.slice(e.name.length))}</span> <span class="hk">${e.kind}</span>`; },
+        hint: (c, data) => {
+          c.replaceRange(e.name + "(", data.from, data.to, "complete");
+          autoClose(c, ")");
+        },
+      }));
+    return list.length ? { from: { line: cur.line, ch: s }, to: cur, list } : null;
+  }
+  function complete(cm, kind, opts, explicit) {
+    hideBox();
+    cm.showHint({
+      hint: (c) => {
+        const cur = c.getCursor(), line = c.getLine(cur.line);
+        if (kind === "castext" && !inCas(c) && !inJsx(c)) {
+          if (line[cur.ch - 1] === "\\") return snippetHint(c, { line: cur.line, ch: cur.ch - 1 - (/\\\\\\$/.test(line.slice(0, cur.ch)) ? 2 : 0) }, mathSnippets(c, opts));
+          if (line[cur.ch - 1] === "{") return snippetHint(c, { line: cur.line, ch: cur.ch - 1 },
+            [{ text: "{@", tail: "@}", display: "{@ ... @}  value of a CAS expression" }, { text: "{#", tail: "#}", display: "{# ... #}  raw value (e.g. for JavaScript)" }]);
+          if (line.slice(cur.ch - 2, cur.ch) === "[[") return snippetHint(c, { line: cur.line, ch: cur.ch - 2 }, blockSnippets(opts));
+          if (!explicit) return null;
+        }
+        return nameHint(c, kind);
+      },
+      completeSingle: false, closeCharacters: /[\s()\[\]{};:>,]/,
+    });
+  }
+  function blockSnippets(opts) {
+    const ctx = opts.context ? opts.context() : {};
+    const out = [];
+    for (const n of ctx.inputs || []) {
+      out.push({ text: `[[input:${n}]] [[validation:${n}]]`, display: `[[input:${n}]] [[validation:${n}]]` });
+    }
+    for (const n of ctx.prts || []) out.push({ text: `[[feedback:${n}]]`, display: `[[feedback:${n}]]` });
+    out.push(
+      { text: '[[lang code="de"]]', tail: "[[/lang]]", display: '[[lang code="de"]] ... [[/lang]]' },
+      { text: '[[lang code="en,other"]]', tail: "[[/lang]]", display: '[[lang code="en,other"]] ... [[/lang]]' },
+      { text: '[[if test="', tail: '"]]\n[[/if]]', display: '[[if test="..."]] ... [[/if]]' },
+      { text: "[[comment]]", tail: "[[/comment]]", display: "[[comment]] ... [[/comment]]" },
+      { text: '[[jsxgraph width="400px" height="300px"]]\n', tail: "\n[[/jsxgraph]]", display: "[[jsxgraph]] ... [[/jsxgraph]]" },
+    );
+    return out;
+  }
+  function onInputRead(cm, change, kind, opts) {
+    if (change.origin !== "+input" || cm.state.completionActive) return;
+    const ch = change.text.join("");
+    if (kind === "castext" && !inCas(cm) && !inJsx(cm)) {
+      const cur = cm.getCursor(), line = cm.getLine(cur.line);
+      if (ch === "\\" || ch === "{" || (ch === "[" && line[cur.ch - 2] === "[")) { complete(cm, kind, opts, false); return; }
+      return;     // no name completion in plain text
+    }
+    if (!settings.autocomplete) return;
+    const tt = cm.getTokenAt(cm.getCursor()).type || "";
+    if (/string|comment/.test(tt) && !/\[\s*"[A-Za-z]*$/.test(cm.getLine(cm.getCursor().line).slice(0, cm.getCursor().ch))) return;
+    if (/^[A-Za-z0-9_%]$/.test(ch)) {
+      const cur = cm.getCursor(), line = cm.getLine(cur.line);
+      let s = cur.ch;
+      while (s > 0 && /[A-Za-z0-9_%]/.test(line[s - 1])) s--;
+      if (cur.ch - s >= 2 || /\[\s*"[A-Za-z]*$/.test(line.slice(0, cur.ch))) complete(cm, kind, opts, false);
+    }
+  }
+
+  // ---------------------------------------------------------------- brackets
+  const PAIRS = { "(": ")", "[": "]", "{": "}", '"': '"' };
+  function autoClose(cm, close) {
+    // adds the closing character after the cursor as its own undo step (a separate operation,
+    // so Ctrl+Z removes just this character), marked as added
+    queueMicrotask(() => cm.operation(() => addClosing(cm, close)));
+  }
+  function addClosing(cm, close) {
+    const cur = cm.getCursor();
+    const next = cm.getRange(cur, { line: cur.line, ch: cur.ch + 1 });
+    if (!(next === "" || /[\s)\]};,]/.test(next))) return;
+    cm.replaceRange(close, cur, cur, "*autoclose");
+    const m = cm.markText(cur, { line: cur.line, ch: cur.ch + close.length }, { className: "cm-autoclosed", inclusiveLeft: false, inclusiveRight: false });
+    (cm.state.autoClosed = cm.state.autoClosed || []).push(m);
+    cm.setCursor(cur);
+  }
+  // Maxima: is the cursor at the top level of a statement (outside strings, comments and
+  // brackets, counted from the last ; or $)?
+  function statementTopLevel(cm) {
+    const text = cm.getRange({ line: 0, ch: 0 }, cm.getCursor());
+    let inStr = false, com = 0, depth = 0;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (com) {                       // Maxima comments nest
+        if (ch === "*" && text[i + 1] === "/") { com--; i++; }
+        else if (ch === "/" && text[i + 1] === "*") { com++; i++; }
+        continue;
+      }
+      if (inStr) { if (ch === "\\") i++; else if (ch === '"') inStr = false; continue; }
+      if (ch === "/" && text[i + 1] === "*") { com++; i++; continue; }
+      if (ch === '"') inStr = true;
+      else if ("([{".includes(ch)) depth++;
+      else if (")]}".includes(ch)) depth = Math.max(0, depth - 1);
+      else if (ch === ";" || ch === "$") depth = 0;     // a new statement (also after unbalanced text)
+    }
+    return !inStr && !com && depth === 0;
+  }
+  function addedAt(cm, pos) {
+    for (const m of cm.state.autoClosed || []) {
+      const r = m.find();
+      if (r && r.from.line === pos.line && r.from.ch === pos.ch) return m;
+    }
+    return null;
+  }
+  // In castext, brackets are closed only inside {@ @}/{# #} and [[jsxgraph]] (not in prose).
+  function codeHere(cm) { return cm.meclibKind !== "castext" || inCas(cm) || inJsx(cm); }
+  function bracketKeys(kind, opts) {
+    const keys = {};
+    for (const [open, close] of Object.entries(PAIRS)) {
+      if (open !== '"') keys[`'${open}'`] = (cm) => {
+        if (!settings.closeBrackets) return window.CodeMirror.Pass;
+        const code = codeHere(cm);
+        if (cm.somethingSelected()) {
+          if (!code) return window.CodeMirror.Pass;
+          cm.replaceSelection(open + cm.getSelection() + close, "around"); return;
+        }
+        cm.replaceSelection(open, "end", "+input");
+        if (code) autoClose(cm, close);
+        else {           // castext prose: the snippets for { and [[
+          const cur = cm.getCursor(), line = cm.getLine(cur.line);
+          if (open === "{" || (open === "[" && line[cur.ch - 2] === "[")) complete(cm, kind, opts, false);
+        }
+      };
+      keys[`'${close}'`] = (cm) => {
+        if (!settings.closeBrackets || cm.somethingSelected()) return window.CodeMirror.Pass;
+        const cur = cm.getCursor(), m = addedAt(cm, cur);
+        if (m && cm.getRange(cur, { line: cur.line, ch: cur.ch + 1 }) === close) {
+          m.clear(); cm.setCursor({ line: cur.line, ch: cur.ch + 1 }); return;
+        }
+        if (close === '"' && open === '"') {   // a quote: open a pair where a string can start
+          if (!codeHere(cm)) return window.CodeMirror.Pass;
+          const before = cm.getRange({ line: cur.line, ch: cur.ch - 1 }, cur);
+          cm.replaceSelection('"', "end", "+input");
+          if (!/[\w\\"]/.test(before)) autoClose(cm, '"');
+          return;
+        }
+        return window.CodeMirror.Pass;
+      };
+    }
+    // "/*" starts a comment (Maxima, and JavaScript in [[jsxgraph]]): "*/" is added after the cursor
+    // as a closing bracket; typing "*/" there skips it, Backspace after "/*" removes it again
+    const addedComment = (cm, pos) => {
+      for (const m of cm.state.autoClosed || []) {
+        const r = m.find();
+        if (r && r.from.line === pos.line && r.from.ch <= pos.ch && r.to.ch >= pos.ch && cm.getRange(r.from, r.to) === "*/") return [m, r];
+      }
+      return null;
+    };
+    keys["'*'"] = (cm) => {
+      if (!settings.closeBrackets || cm.somethingSelected() || !codeHere(cm)) return window.CodeMirror.Pass;
+      const cur = cm.getCursor(), a = addedComment(cm, cur);
+      if (a && a[1].from.ch === cur.ch) { cm.setCursor({ line: cur.line, ch: cur.ch + 1 }); return; }   // over the added "*"
+      const prev = cm.getRange({ line: cur.line, ch: cur.ch - 1 }, cur);
+      const type = cm.getTokenTypeAt(cur) || "";
+      if (prev !== "/" || /comment|string/.test(type)) return window.CodeMirror.Pass;
+      cm.replaceSelection("*", "end", "+input");
+      autoClose(cm, "*/");
+    };
+    keys["'/'"] = (cm) => {
+      if (cm.somethingSelected()) return window.CodeMirror.Pass;
+      const cur = cm.getCursor(), a = addedComment(cm, cur);
+      if (a && a[1].from.ch === cur.ch - 1) { a[0].clear(); cm.setCursor({ line: cur.line, ch: cur.ch + 1 }); return; }   // over the added "/"
+      return window.CodeMirror.Pass;
+    };
+    if (kind === "maxima") {
+      // ":" ending a statement: add ";" (not inside brackets, e.g. block([a:1], ...), lambda, lists)
+      keys["':'"] = (cm) => {
+        if (!settings.semicolon || cm.somethingSelected()) return window.CodeMirror.Pass;
+        const top = statementTopLevel(cm);
+        cm.replaceSelection(":", "end", "+input");
+        const cur = cm.getCursor();
+        if (top && /^\s*$/.test(cm.getLine(cur.line).slice(cur.ch))) autoClose(cm, ";");
+      };
+      for (const end of [";", "$"]) keys[`'${end}'`] = (cm) => {
+        if (cm.somethingSelected()) return window.CodeMirror.Pass;
+        const cur = cm.getCursor(), m = addedAt(cm, cur), after = { line: cur.line, ch: cur.ch + 1 };
+        if (!m || cm.getRange(cur, after) !== ";") return window.CodeMirror.Pass;
+        m.clear();
+        if (end === "$") cm.replaceRange("$", cur, after, "+input");
+        cm.setCursor(after);
+      };
+    }
+    keys.Backspace = (cm) => {
+      if (cm.somethingSelected()) return window.CodeMirror.Pass;
+      const cur = cm.getCursor(), m = addedAt(cm, cur);
+      const prev = cm.getRange({ line: cur.line, ch: cur.ch - 1 }, cur);
+      const next = cm.getRange(cur, { line: cur.line, ch: cur.ch + 1 });
+      if (m && prev === "*" && cm.getRange({ line: cur.line, ch: cur.ch - 2 }, cur) === "/*" &&
+          cm.getRange(cur, { line: cur.line, ch: cur.ch + 2 }) === "*/") {   // "/*|*/": back to "/"
+        m.clear();
+        cm.replaceRange("", { line: cur.line, ch: cur.ch - 1 }, { line: cur.line, ch: cur.ch + 2 }, "+delete");
+        return;
+      }
+      if (m && ((settings.closeBrackets && PAIRS[prev] === next) || (prev === ":" && next === ";"))) {
+        m.clear();
+        cm.replaceRange("", { line: cur.line, ch: cur.ch - 1 }, { line: cur.line, ch: cur.ch + 1 }, "+delete");
+        return;
+      }
+      return window.CodeMirror.Pass;
+    };
+    return keys;
+  }
+
   // ------------------------------------------------------------------ fields
   // A field wraps a textarea: a CodeMirror editor when available, the textarea otherwise.
   // opts.height: initial height in px (the user can drag the lower right corner; then
@@ -179,8 +604,14 @@
     const cm = window.CodeMirror.fromTextArea(textarea, {
       mode: kind, lineNumbers: true, lineWrapping: true, matchBrackets: true, indentUnit: 2, tabSize: 2,
       viewportMargin: 50,
-      extraKeys: { Tab: (c) => c.replaceSelection("  "), "Shift-Tab": "indentLess" },
+      extraKeys: Object.assign({ Tab: (c) => c.replaceSelection("  "), "Shift-Tab": "indentLess",
+        "Ctrl-Space": (c) => complete(c, kind, opts, true), F1: (c) => openHelpAtCursor(c), Esc: (c) => hideBox() },
+        bracketKeys(kind, opts)),
     });
+    cm.meclibKind = kind;
+    cm.on("cursorActivity", (c) => updateBox(c));
+    cm.on("blur", () => setTimeout(() => { if (!boxHover) hideBox(); }, 150));
+    cm.on("inputRead", (c, change) => onInputRead(c, change, kind, opts));
     const wrap = cm.getWrapperElement();
     wrap.classList.add("cm-resizable");
     if (opts.height) wrap.style.height = opts.height + "px";
@@ -206,5 +637,5 @@
     };
   }
 
-  window.MeclibEditor = { load, field, available: () => ready };
+  window.MeclibEditor = { load, field, setHelp, configure, available: () => ready };
 })();
