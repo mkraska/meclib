@@ -146,8 +146,12 @@ expectations stay valid.
 
 **PRT graphs** (right column): each PRT as a tree, nodes in layers from the
 first node; green the true, red the false branch, a branch that ends the PRT
-with its score. After "Check" the branches taken (by their answer notes) are
-drawn bold. Warnings: branches to missing nodes, loops (STACK refuses them),
+with its score. The layers run from left to right (true branches leave
+upwards, false ones downwards) when they fit the width of the column, else from
+top to bottom; the layout follows when the column is resized. Each node shows
+its answer test and its description (shortened to the space available; full
+text and the test's arguments in the tooltip). After "Check" the branches taken
+(by their answer notes) are drawn bold. Warnings: branches to missing nodes, loops (STACK refuses them),
 nodes not reachable from the first one. A click on a node shows it in the
 editor.
 
@@ -247,10 +251,18 @@ the inputs, but not the feedback variables of the other PRTs (they are deleted
 before each PRT); a PRT that uses `obj` without computing it fails here as in
 Moodle.
 
-**Time**: the messages list where Maxima spent the time of the last Update or
-Check (question variables by line, texts, the feedback variables and nodes of
-each PRT), e.g. `stackjson_parse(objects)` in every PRT; `fb_objects()` reads
-the objects much faster.
+**Time**: where Maxima spent the time of the last Update or Check. The
+preview's header line sums it up in the order the parts ran (`Maxima 0.46 s:
+variables 0.11 · texts 0.03 · answers 0.00 · PRTs 0.32`; variables = question
+variables, model answers and syntax hints); the same line is in the messages,
+followed by the lines of the question variables that took 0.05 s or more (click
+to go to the line). Each PRT's info line under its feedback shows the time of
+its feedback variables and of its nodes (`Variables 0.02 s · Nodes 0.01 s`).
+The first Update and the first Check after a Maxima start are marked "first run
+after start": they include Maxima's warm-up (about 0.2 s, mostly in the first
+PRT), so run again before comparing. A typical cost is
+`stackjson_parse(objects)` in every PRT; `fb_objects()` reads the objects much
+faster.
 
 **Feedback variables**: after a Check, the Variables section has a tab for
 each PRT (also as sub-buttons under "Variables" in the preview bar) with the

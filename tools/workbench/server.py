@@ -114,7 +114,7 @@ class SessionPool:
 
     def __init__(self):
         self.lock = threading.Lock()
-        self.sessions = {}   # key -> [session, last_used, names]
+        self.sessions = {}   # key -> [session, last_used, names, kinds of runs done ("eval", "check")]
 
     def get(self, key, maxima):
         with self.lock:
@@ -128,7 +128,7 @@ class SessionPool:
                 oldest = min(self.sessions, key=lambda k: self.sessions[k][1])
                 self.sessions.pop(oldest)[0].close()
         session = MaximaSession(maxima or None)
-        entry = [session, time.time(), []]
+        entry = [session, time.time(), [], set()]
         with self.lock:
             self.sessions[key] = entry
         return entry
@@ -446,6 +446,11 @@ class Handler(SimpleHTTPRequestHandler):
                 answers = req.get("answers") if path == "/api/q/check" else None
                 result = stack_question.evaluate(entry[0], data, int(req.get("seed", 1)), resolver, entry[2], answers)
                 entry[2] = result["kill"]
+                # the first run of its kind in a session includes Maxima's warm-up (about 0.2 s,
+                # mostly in the first PRT), so its times are not comparable with later runs
+                kind = "check" if answers is not None else "eval"
+                result["first_run"] = kind not in entry[3]
+                entry[3].add(kind)
                 result.update({"name": data["name"], "format": data["formats"]["questiontext"],
                                "formats": data["formats"], "prts": data["prts"],
                                "seeds": data["seeds"], "decimals": data["decimals"],
