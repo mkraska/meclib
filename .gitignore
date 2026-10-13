@@ -1,9 +1,30 @@
+# meclib: files that are never committed (further rules in tools/workbench/.gitignore
+# and Maxima/tests/.gitignore)
 
-iMecLib/Readme.md.backup
-Maxima/Readme.md.backup
-Maxima/Readme.md.backup
-README.md.backup
-Maxima/Readme.md.backup
-Maxima/Readme.md.backup
-Maxima/Readme.md.backup
-Maxima/tests/run_tests.log
+# Meclib Workbench, next to the question files
+.workbench-history/
+*.xml.bak
+*.xml.orig
+*.tmp
+
+# backup copies of editors and tools
+*.bak
+*.backup
+*~
+*.swp
+
+# logs
+*.log
+
+# Python
+__pycache__/
+*.pyc
+
+# operating systems
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# editor settings
+.vscode/
+.idea/
