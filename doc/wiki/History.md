@@ -1,5 +1,15 @@
 ### Dev Branch
 
+2026 10 13
+- [[fb_EE()]]: the feedback for an equation with wrong terms ("Prüfen Sie den Term mit ...") showed as raw castext (`["%root", ...]`) in Moodle; fixed
+- [[Meclib Workbench]]:
+  - Maxima times in the preview header (variables, texts, answers, PRTs) and per PRT below its feedback (feedback variables, nodes); the first run after a Maxima start is marked, since it includes Maxima's warm-up
+  - PRT trees run left to right when they fit the column, with the description of each node
+  - meclib scenes (`[[jsxgraph]]`) in PRT feedback are shown in the preview; the specific feedback is evaluated with the answers and shown below the question
+  - review rule "Multilingual syntax hint" adds `stack_include` of `fb_value.mac` when the question lacks it
+- Wiki pages are published from the drafts in `doc/wiki` by a GitHub Action on every push to `dev2026` (`tools/wiki_sync.py`); pages edited on GitHub since are not overwritten but reported
+- Top level `.gitignore` (workbench history and backups, logs, Python caches)
+
 2026 10 12
 - [[Meclib Workbench]]: 
   - MathJax 3.2.2 (default of Moodle 5) can be chosen for the graphics

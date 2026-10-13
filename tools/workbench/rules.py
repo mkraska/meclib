@@ -325,10 +325,36 @@ def r_input_settings(Q_):
                              % (inp["name"], '"%s"' % hint if hint else "empty", want),
                              _input_fix(inp["name"], {"syntaxhint": want}), WIKI + "Multilingual-questions"))
             else:
-                out.append(F("inputs.syntaxhint", inp["name"], "hint", "Multilingual syntax hint",
-                             "Input %s: the multilingual hint %s needs fb_value.mac in the question variables."
-                             % (inp["name"], want), None, WIKI + "Multilingual-questions"))
+                url = include_url(Q_, "fb_value.mac")
+                out.append(F("inputs.syntaxhint", inp["name"], "recommended", "Multilingual syntax hint",
+                             "Input %s: syntax hint %s → %s (German/English); this adds "
+                             "stack_include(\"%s\") to the question variables."
+                             % (inp["name"], '"%s"' % hint if hint else "empty", want, url),
+                             _include_fix(url, _input_fix(inp["name"], {"syntaxhint": want})),
+                             WIKI + "Multilingual-questions"))
     return out
+
+
+def include_url(Q_, mac):
+    """URL of a meclib Maxima file, from the same place (branch) as the question's other meclib
+    includes, else from main."""
+    for u in Q_.includes:
+        m = re.match(r"(https://raw\.githubusercontent\.com/mkraska/meclib/[^/]+/Maxima/)", u)
+        if m:
+            return m.group(1) + mac
+    return "https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/" + mac
+
+
+def _include_fix(url, then=None):
+    """Fix that appends stack_include(url) to the question variables unless a file of that name
+    is already included (several findings may share the include), then applies `then`."""
+    mac = url.rsplit("/", 1)[-1]
+    def fix(q):
+        qv = Q(q).qvars
+        if not any(u.rsplit("/", 1)[-1] == mac for u in sq.INCLUDE.findall(qv)):
+            q = _set_text(q, "questionvariables", qv.rstrip() + '\nstack_include("%s");\n' % url)
+        return then(q) if then else q
+    return fix
 
 
 def _feedback(node):

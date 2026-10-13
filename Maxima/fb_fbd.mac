@@ -1277,11 +1277,14 @@ fb_EE(%_S, %_T, [%_options]):= block(
   if %_z(%_S - %_T) then return(["", true]),
   %_msg: if %_z(%_S + %_T) then (
       if %_kind = "M" then str_sign_M
-      else if stringp(%_kind) and %_kind # "" then sconcat(str_sign_pre, %_kind, str_sign_post)
+      else if stringp(%_kind) and %_kind # "" then castext_concat(castext_concat(str_sign_pre, %_kind), str_sign_post)
       else str_sign)
     else block([%_v: fb_vars(ratsimp(subst(%_sub, %_S)), ratsimp(subst(%_sub, %_T)), listofvars(subst(%_sub, %_T)))],
       if %_v = "" then str_wrong else %_v),
-  [sconcat("<br>", if stringp(%_title) then sconcat("\\(", %_title, "\\): ") else "", %_msg), false]
+  /* castext_concat, not sconcat: fb_vars() returns castext (a ["%root", ...] list) when its text
+     contains values ({@...@}); sconcat would print that list literally. For plain strings
+     castext_concat is sconcat. */
+  [castext_concat(sconcat("<br>", if stringp(%_title) then sconcat("\\(", %_title, "\\): ") else ""), %_msg), false]
 );
 
 /* https://github.com/mkraska/meclib/wiki/fb_force() */

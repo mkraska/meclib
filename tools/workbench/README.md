@@ -239,8 +239,10 @@ whose inputs are all answered runs its feedback variables and its nodes from
 the first one along the true/false branches with STACK's own answer test
 functions (`ATAlgEquiv`, `ATUnitsRelative`, ...), score mode, score and
 penalty per branch. The feedback of the branches taken appears in place of
-`[[feedback:...]]`, in the language chosen, with score, mark, penalty and
-the answer notes below it; errors in feedback variables, answer tests or
+`[[feedback:...]]`, in the language chosen (including `[[jsxgraph]]` scenes
+in the feedback, e.g. a meclib sketch of the student's answer; the specific
+feedback is evaluated with the answers and shown below the question), with score,
+mark, penalty and the answer notes below it; errors in feedback variables, answer tests or
 feedback texts are listed there too, with Maxima's message (e.g. "feedback
 variables, line 4: apply: subscript must be an integer; found: i_beam").
 Next to the inputs the answer is shown typeset (or "invalid input" if it
@@ -326,7 +328,8 @@ Current rules: forbidden identifiers; broken `style=style="..."` attributes;
 margin of right/left floating blocks (graphic); empty `[[lang]]` declaration when meclib feedback is used;
 obsolete `fb_*_EN.mac`; settings of the graphic's inputs (objects, names);
 input settings (insert stars: spaces only, none for numbers; placeholder hint;
-validation compact; students must verify); multilingual syntax hints; PRT
+validation compact; students must verify); multilingual syntax hints (the fix
+adds `stack_include` of `fb_value.mac` if the question lacks it); PRT
 feedback style compact, feedback format html (Markdown suppresses the yellow
 feedback background), quiet answer test with meclib
 feedback, simplification off with `fb_unit`; relative tolerance other than

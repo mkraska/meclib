@@ -876,6 +876,22 @@ def answer_code(data, answers, langs, resolver, checked, qv_names=()):
         # an input that does not parse makes the PRT invalid (reported after the run), as in STACK
         code.append("simp: false$")
         code += prt_code(prt, raw_by_input, data.get("penalty") or "0.1", pick_lang("de", langs), pick_lang("en", langs), includes, fv_all)
+    # specific feedback: castext with the answers (as STACK: question variables and inputs, not
+    # the PRTs' feedback variables), shown below the question
+    sfb = data.get("specificfeedback") or ""
+    if sfb.strip():
+        if fv_all:
+            code.append("kill(%s)$" % ",".join(fv_all))
+        code.append("simp: %s$" % ("false" if str(data.get("questionsimplify", "1")) == "0" else "true"))
+        md = data["formats"].get("specificfeedback") == "markdown"
+        code.append('fb_tmpl_md: %s$' % ("true" if md else "false"))
+        code.append('%%_c: errcatch(castext(%s))$' % mstring(mark_html_blocks(sfb) if md else sfb))
+        code.append('fb_tmpl_md: false$')
+        code.append('if %%_c = [] then print("@@CTERR specificfeedback@@") else (meclib_out("sfb:de", '
+                    'stack_resolve_lang(%%_c[1], %s)), meclib_out("sfb:en", stack_resolve_lang(%%_c[1], %s)))$'
+                    % (mstring(pick_lang("de", langs)), mstring(pick_lang("en", langs))))
+        code.append(tick("specific feedback"))
+        checked["sfb"] = True
     return code
 
 
@@ -934,6 +950,10 @@ def check_results(checked, results, stdout, data):
         if invalid:
             res = {"skipped": "invalid input: " + ", ".join(invalid)}
         out["prts"][name] = res
+    if checked.get("sfb"):
+        out["specificfeedback"] = {"de": first("sfb:de", ""), "en": first("sfb:en", ""),
+                                   "format": data["formats"].get("specificfeedback", "html"),
+                                   "error": "specific feedback: castext error" if "@@CTERR specificfeedback@@" in stdout else ""}
     return out
 
 

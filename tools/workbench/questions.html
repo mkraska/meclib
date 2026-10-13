@@ -136,6 +136,7 @@
   .stack-validation .val-bad { color: var(--err); }
   .stack-prt { margin: 6px 0; padding: 4px 8px; border-left: 3px solid #c9d6e3; color: var(--muted); font-size: 12.5px; background: #f6f8fa; }
   .jsx-slot { display: inline-block; }
+  .specificfeedback { margin-top: 12px; padding: 8px 10px; background: #fcefdc; border-radius: 4px; }
   table.vars { border-collapse: collapse; width: 100%; font-size: 12.5px; }
   table.vars td, table.vars th { border-bottom: 1px solid #ecece7; padding: 3px 4px; vertical-align: top; text-align: left; }
   table.vars th { color: var(--muted); font-weight: 600; font-size: 12px; }
@@ -385,6 +386,7 @@
       <div id="previewView">
         <div id="qmeta" class="meta"></div>
         <div id="qtext" class="formulation"><p class="hint">Open a file and choose a STACK question.</p></div>
+        <div id="sfb" class="specificfeedback" hidden></div>
         <details id="gfbBox" style="margin-top:12px"><summary>General feedback</summary><div id="gfb"></div></details>
         <h2 style="margin-top:12px">Question note</h2>
         <div id="qnote" class="hint"></div>
@@ -1287,14 +1289,23 @@ function showCheck() {
       if (p.skipped) { el.innerHTML = `<span class="hint">PRT <b>${esc(name)}</b>: ${esc(p.skipped)}</span>`; continue; }
       const score = parseFloat(p.score), value = parseFloat(p.value) || 1;
       el.classList.add(score >= 0.999 ? "score-1" : score <= 0.001 ? "score-0" : "score-p");
-      const fb = (p.feedback[lang] || []).map(([fmt, text]) => toHTML(text || "", fmt, [])).join("");
+      const blocks = [];   // meclib scenes in the feedback
+      const fb = (p.feedback[lang] || []).map(([fmt, text]) => toHTML(text || "", fmt, blocks)).join("");
       el.innerHTML = `<div class="prtfb">${fb || '<span class="hint">(no feedback text)</span>'}</div>` +
         (p.testfeedback.length ? `<div class="hint">answer test: ${esc(p.testfeedback.join(" "))}</div>` : "") +
         (p.errors.length ? `<div class="prterr">${esc(p.errors.join("\n"))}</div>` : "") +
         `<div class="prtinfo"><span>PRT <b>${esc(name)}</b></span><span>score ${esc(p.score)}</span>` +
         `<span>mark ${(score * value).toFixed(2).replace(/\.?0+$/, "")} / ${value.toString()}</span><span>penalty ${esc(p.penalty)}</span>` +
         `<span>notes: ${esc(p.notes || "-")}</span>${prtTimes(name)}</div>`;
+      runGraphics(el, blocks);
     }
+  }
+  // specific feedback (STACK shows it below the question after a submission)
+  const sf = lastCheck.specificfeedback, box = $("sfb");
+  box.hidden = !(sf && (sf[lang] || sf.error));
+  if (!box.hidden) {
+    if (sf.error) showMessages([{ cls: "err", text: sf.error }], true);
+    renderInto(box, sf[lang] || "", sf.format || "html");
   }
   if (window.MathJax && MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, $("qtext")]);
 }
@@ -1829,6 +1840,10 @@ async function renderInto(container, text, format) {
     el.addEventListener("input", () => setInputValue(el.dataset.input, el.value));
   }
   if (window.MathJax && MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, container]);
+  await runGraphics(container, blocks);
+}
+// [[jsxgraph]] blocks of a rendered text (toHTML leaves a .jsx-slot for each): run them
+async function runGraphics(container, blocks) {
   if (!blocks.length) return;
   let src;
   try { src = await F.loadMeclib($("src").value); }
@@ -1868,6 +1883,7 @@ function render(keepValues) {
   ].map((x) => `<span>${x}</span>`).join("") + '<span id="qtime"></span>';
   renderTiming();
   renderInto($("qtext"), pick("questiontext"), fmt);
+  if (!lastCheck) $("sfb").hidden = true;
   renderInto($("gfb"), pick("generalfeedback"), (result.formats || {}).generalfeedback || "html");
   if (pick("questionnote")) renderInto($("qnote"), pick("questionnote"), (result.formats || {}).questionnote || "html");
   else $("qnote").textContent = "-";
