@@ -366,7 +366,8 @@ def r_prts(Q_):
     for prt in Q_.prts:
         P = prt["name"]
         texts = "".join(_feedback(n) for n in prt["nodes"])
-        if prt["feedbackstyle"] != "2":
+        # formative PRTs (style 0: no score, text only, e.g. a sketch of the answer) stay as they are
+        if prt["feedbackstyle"] not in ("2", "0"):
             if HTML_BLOCK.search(texts):
                 out.append(F("prt.feedbackstyle", P, "hint", "PRT feedback style",
                              "PRT %s: feedback style is not compact, but its feedback contains HTML blocks "
@@ -440,6 +441,27 @@ def _cas_sources(Q_):
                 yield "PRT %s node %d feedback" % (prt["name"], k + 1), part
             for f in ("sans", "tans"):
                 yield "PRT %s node %d %s" % (prt["name"], k + 1, f), node.get(f) or ""
+
+
+def r_feedback_inputs(Q_):
+    """Input names in the CAS parts of the specific or general feedback: STACK evaluates these
+    texts once when the question starts, with the question variables only, so an input there is
+    just an unbound symbol. The answers reach the specific feedback through [[feedback:..]] of a
+    PRT whose feedback shows what depends on them."""
+    names = [i["name"] for i in Q_.inputs]
+    out = []
+    for key, label in (("specificfeedback", "specific feedback"), ("generalfeedback", "general feedback")):
+        used = []
+        for part in sq.castext_cas_parts(Q_.data.get(key, "")):
+            code = re.sub(r'"(?:\\.|[^"\\])*"', '""', sq.strip_comments(part))
+            used += [n for n in sq.IDENT.findall(code) if n in names]
+        if used:
+            out.append(F("feedback.inputs", key, "recommended", "Input used in the " + label,
+                         "%s: %s. STACK evaluates the CAS parts of the %s when the question starts, without the "
+                         "answers, so the input is an unbound symbol there. Move this part into the feedback of a PRT "
+                         "(e.g. a formative PRT, feedback style 0) and place its [[feedback:..]] in the specific feedback."
+                         % (label, ", ".join(dict.fromkeys(used)), label)))
+    return out
 
 
 def r_literal_index(Q_):
@@ -828,7 +850,7 @@ def r_semicolons(Q_):
 
 
 RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_graphic_inputs, r_input_settings, r_prts,
-         r_grade, r_literal_index, r_tans_copy, r_math_delimiters, r_matrix_inputs, r_unused_files, r_semicolons]
+         r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_matrix_inputs, r_unused_files, r_semicolons]
 
 
 # ---------------------------------------------------------------------- metadata in the description

@@ -123,9 +123,22 @@
   .stack-validation { font-size: 12px; color: var(--muted); margin-left: 6px; }
   .stack-prt .prtfb { color: var(--ink); font-size: 14px; }
   .stack-prt .prtinfo { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; font-size: 11.5px; color: var(--muted); }
-  .stack-prt.score-1 { border-left-color: #4c9a52; }
-  .stack-prt.score-0 { border-left-color: #c0504d; }
-  .stack-prt.score-p { border-left-color: #d8a23a; }
+  /* PRT feedback as STACK renders it (renderer.php prt_feedback_display, styles.css) */
+  /* the [[feedback:...]] place: inline like STACK's <span> for compact/symbolic feedback (after the validation
+     when there is room), a block for standard/formative (STACK's <div>); the workbench line below it */
+  .stack-prt.checked { background: transparent; border: none; padding: 0; margin: 0; display: inline; }
+  .stack-prt.checked.block { display: block; margin: 6px 0; }
+  /* workbench data of the PRT (answer test, errors, score, notes, times): gray box below the feedback */
+  .stack-prt .prtwb { display: block; margin: 2px 0 8px; padding: 3px 8px; border-left: 3px solid #c9d6e3; background: #f6f8fa; }
+  .stack-prt .prtwb .prtinfo { margin-top: 0; }
+  .stackprtfeedback { background: #fcf8e3; margin: 0.2em -0.2em 0.5em; padding: 0.2em 0.5em 0.2em 0.2em; display: inline-block; vertical-align: top; color: var(--ink); font-size: 14px; }
+  .stackprtfeedback .correct, .stackprtfeedback .partiallycorrect, .stackprtfeedback .incorrect { background: transparent; font-weight: 700; }
+  /* Moodle draws the symbols with its icon font (fa fa-check / fa-times / fa-adjust); the same glyphs as characters, no font needed */
+  .stackprtfeedback i.fa { font-style: normal; font-weight: 400; display: inline-block; width: 1.1em; }
+  .stackprtfeedback i.fa-check::before { content: "\2714"; }
+  .stackprtfeedback i.fa-times::before { content: "\2716"; }
+  .stackprtfeedback i.fa-adjust::before { content: ""; display: inline-block; width: 0.8em; height: 0.8em; box-sizing: border-box;
+    border: 0.1em solid currentColor; border-radius: 50%; background: linear-gradient(90deg, currentColor 50%, transparent 50%); vertical-align: -0.05em; }
   .stack-prt .prterr { color: var(--err); font-size: 12px; white-space: pre-wrap; }
   /* variables: question variables or the feedback variables of a PRT (after Check) */
   .vtabs { display: flex; flex-wrap: wrap; gap: 3px; margin: 0 0 6px; }
@@ -133,8 +146,11 @@
   .vtabs button.sub { font-family: var(--mono); }
   .vtabs button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .stack-validation .val-ok { color: var(--ink); }
+  /* as STACK's styles.css: compact validation (show validation 3) in a white box next to the input, standard (1, 2) as a white block */
+  .stack-validation .val-ok.compact { margin: 3px; display: inline-block; vertical-align: top; background-color: white; border: 1px solid #ccc; padding: 0.3em; }
+  .stack-validation .val-ok.standard { display: block; margin: 0.2em 3em 0.5em; padding: 0.5em; background-color: white; border: 1px solid #fff; }
   .stack-validation .val-bad { color: var(--err); }
-  .stack-prt { margin: 6px 0; padding: 4px 8px; border-left: 3px solid #c9d6e3; color: var(--muted); font-size: 12.5px; background: #f6f8fa; }
+  .stack-prt { display: inline-block; margin: 6px 0; padding: 4px 8px; border-left: 3px solid #c9d6e3; color: var(--muted); font-size: 12.5px; background: #f6f8fa; }
   .jsx-slot { display: inline-block; }
   .specificfeedback { margin-top: 12px; padding: 8px 10px; background: #fcefdc; border-radius: 4px; }
   table.vars { border-collapse: collapse; width: 100%; font-size: 12.5px; }
@@ -370,10 +386,10 @@
       <div class="sbhead">This bar</div>
       <label><input type="radio" name="sidePreview" value="left"> left of the preview</label>
       <label><input type="radio" name="sidePreview" value="right"> right of the preview</label></div></details>
+    <button id="restartBtn" class="primary" title="clear all answers and the feedback; the graphic starts from its initial state (as Moodle's &quot;Start again&quot;)">Restart</button>
     <button id="evaluate" class="primary" title="Ctrl+Enter: save, evaluate the question and update the preview">Update</button>
+    <button id="fillBtn" class="primary" title="Model answer: fill in the model answers (the graphic starts from the model answer of its objects input)">TAns</button>
     <button id="checkBtn" class="primary" title="evaluate the PRTs with the current answers (Alt+Enter)">Check</button>
-    <button id="fillBtn" title="Model answer: fill in the model answers (the graphic starts from the model answer of its objects input)">TAns</button>
-    <button id="restartBtn" title="clear all answers and the feedback; the graphic starts from its initial state (as Moodle's &quot;Start again&quot;)">Restart</button>
     <span class="pair" title="language of the [[lang]] blocks"><button id="lang-de">de</button><button id="lang-en">en</button></span>
     <span class="pair" title="decimal separator (question option, saved in the file)"><button id="dec-point" class="dec">0<b>.</b>5</button><button id="dec-comma" class="dec">0<b>,</b>5</button></span>
     <button id="simpToggle" title="simplify (question option, saved in the file)">simp</button>
@@ -1278,36 +1294,68 @@ function showCheck() {
   for (const [name, v] of Object.entries(lastCheck.inputs)) {
     const inp = (result.inputs || []).find((i) => i.name === name) || {};
     for (const el of document.querySelectorAll(`.stack-validation[data-input="${CSS.escape(name)}"]`)) {
-      if (v.state === "invalid") el.innerHTML = `<span class="val-bad">${inp.type === "matrix" ? "invalid input (incomplete or does not parse)" : "invalid input (does not parse)"}</span>`;
-      else if (v.state === "valid" && inp.showvalidation !== "0" && inp.type !== "string") el.innerHTML = `<span class="val-ok">${esc(v.tex || "")}</span>`;
+      if (v.empty) el.innerHTML = "";   // blank, valid by allowempty (value EMPTYANSWER)
+      else if (v.state === "invalid") el.innerHTML = `<span class="val-bad">${inp.type === "matrix" ? "invalid input (incomplete or does not parse)" : "invalid input (does not parse)"}</span>`;
+      else if (v.state === "valid" && inp.showvalidation !== "0" && inp.type !== "string") el.innerHTML = `<span class="val-ok ${inp.showvalidation === "3" ? "compact" : "standard"}">${esc(v.tex || "")}</span>`;
       else el.innerHTML = "";
     }
+  }
+  // specific feedback (STACK shows it below the question after a submission); rendered first,
+  // so that [[feedback:..]] of PRTs placed in it are filled in below like those in the question text
+  const sf = lastCheck.specificfeedback, box = $("sfb");
+  box.hidden = !(sf && (sf[lang] || sf.error));
+  if (!box.hidden) {
+    if (sf.error) showMessages([{ cls: "err", text: sf.error }], true);
+    renderInto(box, sf[lang] || "", sf.format || "html");   // sets the HTML at once, graphics follow
   }
   for (const [name, p] of Object.entries(lastCheck.prts)) {
     for (const el of document.querySelectorAll(`.stack-prt[data-prt="${CSS.escape(name)}"]`)) {
       el.className = "stack-prt";
       if (p.skipped) { el.innerHTML = `<span class="hint">PRT <b>${esc(name)}</b>: ${esc(p.skipped)}</span>`; continue; }
       const score = parseFloat(p.score), value = parseFloat(p.value) || 1;
-      el.classList.add(score >= 0.999 ? "score-1" : score <= 0.001 ? "score-0" : "score-p");
+      el.classList.add("checked");
+      if (!(parseInt(p.feedbackstyle ?? "1", 10) >= 2)) el.classList.add("block");
       const blocks = [];   // meclib scenes in the feedback
       const fb = (p.feedback[lang] || []).map(([fmt, text]) => toHTML(text || "", fmt, blocks)).join("");
-      el.innerHTML = `<div class="prtfb">${fb || '<span class="hint">(no feedback text)</span>'}</div>` +
+      el.innerHTML = prtFeedbackHTML(name, p, score, fb, blocks) + '<div class="prtwb">' +
         (p.testfeedback.length ? `<div class="hint">answer test: ${esc(p.testfeedback.join(" "))}</div>` : "") +
         (p.errors.length ? `<div class="prterr">${esc(p.errors.join("\n"))}</div>` : "") +
         `<div class="prtinfo"><span>PRT <b>${esc(name)}</b></span><span>score ${esc(p.score)}</span>` +
-        `<span>mark ${(score * value).toFixed(2).replace(/\.?0+$/, "")} / ${value.toString()}</span><span>penalty ${esc(p.penalty)}</span>` +
-        `<span>notes: ${esc(p.notes || "-")}</span>${prtTimes(name)}</div>`;
+        (p.feedbackstyle === "0" ? "<span>formative: no mark, no penalty</span>" :
+          `<span>mark ${(score * value).toFixed(2).replace(/\.?0+$/, "")} / ${value.toString()}</span><span>penalty ${esc(p.penalty)}</span>`) +
+        `<span>notes: ${esc(p.notes || "-")}</span>${prtTimes(name)}</div></div>`;
       runGraphics(el, blocks);
     }
   }
-  // specific feedback (STACK shows it below the question after a submission)
-  const sf = lastCheck.specificfeedback, box = $("sfb");
-  box.hidden = !(sf && (sf[lang] || sf.error));
-  if (!box.hidden) {
-    if (sf.error) showMessages([{ cls: "err", text: sf.error }], true);
-    renderInto(box, sf[lang] || "", sf.format || "html");
+  if (window.MathJax && MathJax.Hub) {
+    MathJax.Hub.Queue(["Typeset", MathJax.Hub, $("qtext")]);
+    if (!box.hidden) MathJax.Hub.Queue(["Typeset", MathJax.Hub, box]);
   }
-  if (window.MathJax && MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, $("qtext")]);
+}
+// The PRT's feedback as STACK shows it, by the PRT's feedback style: 0 formative (text only),
+// 1 standard (standard feedback of the question options, then the text), 2 compact (symbol in
+// front of the text, inline), 3 symbolic (symbol only). Symbol and class by the score as Moodle's
+// question_state::graded_state_for_fraction(); no standard feedback when the PRT has errors.
+const PRT_SYMBOLS = {
+  correct: '<span style="font-size: 1.5em; color:green;"><i class="fa fa-check"></i></span>',
+  incorrect: '<span style="font-size: 1.5em; color:red;"><i class="fa fa-times"></i></span>',
+  partiallycorrect: '<span style="font-size: 1.5em; color:orange;"><i class="fa fa-adjust"></i></span>',
+};
+function prtFeedbackHTML(name, p, score, fb, blocks) {
+  const style = parseInt(p.feedbackstyle ?? "1", 10);
+  const cls = score >= 1 - 1e-7 ? "correct" : score <= 1e-7 ? "incorrect" : "partiallycorrect";
+  let std = "";
+  if (!p.errors.length) {
+    if (style === 2 || style === 3) std = `<span class="${cls}">${PRT_SYMBOLS[cls]}</span>`;
+    else if (style === 1) {
+      const key = "prt" + cls, t = ((result.texts || {})[key] || {})[lang] || "";
+      if (t.trim()) std = `<div class="${cls}">${toHTML(t, (result.formats || {})[key] || "html", blocks)}</div>`;
+    }
+  }
+  const inner = style === 0 ? fb : style === 3 ? std : std + fb;
+  if (!inner) return "";
+  const tag = style === 2 || style === 3 ? "span" : "div";
+  return `<${tag} class="stackprtfeedback stackprtfeedback-${esc(name)}">${inner}</${tag}>`;
 }
 // model answer as a student would type it (as STACK shows it): stackunits(8, cm) -> 8*cm; with a
 // decimal comma, decimals get a comma and the list separator becomes ";" (the input processing
@@ -1771,7 +1819,7 @@ function toHTML(text, format, blocks) {
   });
   t = t.replace(/\[\[\s*validation:([A-Za-z0-9_]+)\s*\]\]/g, (m, n) => `<span class="stack-validation" data-input="${esc(n)}"></span>`);
   t = t.replace(/\[\[\s*feedback:([A-Za-z0-9_]+)\s*\]\]/g, (m, n) =>
-    `<div class="stack-prt" data-prt="${esc(n)}"><span class="hint">PRT <b>${esc(n)}</b> - "Check" shows the feedback here</span></div>`);
+    `<span class="stack-prt" data-prt="${esc(n)}"><span class="hint">PRT <b>${esc(n)}</b> - "Check" shows the feedback here</span></span>`);
   return t;
 }
 
@@ -1845,10 +1893,13 @@ async function renderInto(container, text, format) {
 // [[jsxgraph]] blocks of a rendered text (toHTML leaves a .jsx-slot for each): run them
 async function runGraphics(container, blocks) {
   if (!blocks.length) return;
+  // the slots of this text, taken before waiting for meclib: slots added to the container
+  // later (e.g. PRT feedback placed in the specific feedback) belong to other block lists
+  const slots = [...container.querySelectorAll(".jsx-slot")];
   let src;
   try { src = await F.loadMeclib($("src").value); }
   catch (e) { showMessages([{ cls: "err", text: e.message }], true); return; }
-  for (const slot of container.querySelectorAll(".jsx-slot")) {
+  for (const slot of slots) {
     // the graphic starts from the current value of its objects input (e.g. after "Model answers")
     const ref = /input-ref-([A-Za-z0-9_]+)\s*=\s*["']stateRef["']/.exec(blocks[+slot.dataset.jsx]);
     const startState = ref ? inputValues[ref[1]] || "" : "";

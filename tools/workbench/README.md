@@ -115,7 +115,7 @@ its sections, always in reach while the column scrolls.
 - Editor bar: ↶ / ↷ (undo, redo), Snippet, Graphic ↗, then the sections Review,
   Variables, Text, Inputs, Options, General FB, Specific FB, Note, PRTs and
   each PRT by name.
-- Preview bar: Update (save and evaluate, Ctrl+Enter), Check, TAns (model answers), Restart, de / en, `0.5` / `0,5`,
+- Preview bar: Restart, Update (save and evaluate, Ctrl+Enter), TAns (model answers), Check, de / en, `0.5` / `0,5`,
   simp, then the sections Question, General FB, Note, Messages, Inputs, PRT
   graphs, Variables.
 - `⋯` at the top of a bar: the side of the bar (left or right of its column;
@@ -240,9 +240,20 @@ the first one along the true/false branches with STACK's own answer test
 functions (`ATAlgEquiv`, `ATUnitsRelative`, ...), score mode, score and
 penalty per branch. The feedback of the branches taken appears in place of
 `[[feedback:...]]`, in the language chosen (including `[[jsxgraph]]` scenes
-in the feedback, e.g. a meclib sketch of the student's answer; the specific
-feedback is evaluated with the answers and shown below the question), with score,
-mark, penalty and the answer notes below it; errors in feedback variables, answer tests or
+in the feedback, e.g. a meclib sketch of the student's answer). The specific
+feedback is shown below the question; as in STACK its CAS parts know only the
+question variables, not the answers (the review warns about an input used
+there) - what depends on the answers comes from PRTs whose `[[feedback:...]]`
+stands in it, e.g. a formative PRT drawing a sketch. An input with the extra
+option `allowempty` counts as answered when blank (value `EMPTYANSWER`), and a
+PRT whose feedback variables set `%stack_prt_stop_p: true` bails out (no
+score, no penalty, no feedback, note `<name>-bail`), both as in STACK. The
+feedback looks as in Moodle, by the PRT's feedback style: compact = symbol (✔ green,
+✖ red, half circle orange, by the PRT's score) in front of the text in a light
+yellow box, inline (after the validation when there is room), standard = the question's standard feedback ("Richtig." ...) above the
+text, symbolic = symbol only, formative = text only; so a feedback text that starts
+with a line break or a paragraph shows as in Moodle. Score,
+mark, penalty and the answer notes are below it, in small grey print; errors in feedback variables, answer tests or
 feedback texts are listed there too, with Maxima's message (e.g. "feedback
 variables, line 4: apply: subscript must be an integer; found: i_beam").
 Next to the inputs the answer is shown typeset (or "invalid input" if it
@@ -294,7 +305,7 @@ converts a decimal comma to a point (and `;` to `,`), inserts `*` for spaces
 and implied products according to "insert stars", and accepts whatever then
 parses in Maxima (no forbidden words, no syntax checks). Answer test feedback
 appears as STACK's message keys (e.g. `ATAlgEquiv_SA_not_logic`), not
-translated. A `[[jsxgraph]]` block inside PRT feedback is not rendered.
+translated.
 
 **Forbidden identifiers**: STACK refuses to save a question that uses an
 identifier its security map forbids everywhere (variables such as `values`,

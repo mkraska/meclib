@@ -1,5 +1,8 @@
 ### Dev Branch
 
+2026 10 15
+- [[Meclib Workbench]]: the variables table of the preview lists names assigned by a list assignment such as `[aa, bb]: rand([[1,4], [2,3]])` (they were missing)
+
 2026 10 13
 - [[fb_EE()]]: the feedback for an equation with wrong terms ("Prüfen Sie den Term mit ...") showed as raw castext (`["%root", ...]`) in Moodle; fixed
 - [[Meclib Workbench]]:
