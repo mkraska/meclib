@@ -256,8 +256,8 @@
     return ctx.kind === "object" ? n - 1 : n;
   }
 
-  let box = null, boxHover = false, boxCtx = null;
-  function hideBox() { if (box) box.style.display = "none"; boxCtx = null; }
+  let box = null, boxHover = false, boxCtx = null, boxCm = null;   // boxCm: the editor the box is for
+  function hideBox() { if (box) box.style.display = "none"; boxCtx = null; boxCm = null; }
   function escHTML(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
   function codeSpans(s) { return escHTML(s).replace(/`([^`]+)`/g, "<code>$1</code>"); }
   function sigHTML(e, arg) {
@@ -296,6 +296,7 @@
     }
     box.innerHTML = boxHTML(ctx.entry, arg);
     boxCtx = ctx;
+    boxCm = cm;
     box.style.display = "block";
     const c = cm.cursorCoords(null, "page");
     const h = box.offsetHeight;
@@ -610,7 +611,8 @@
     });
     cm.meclibKind = kind;
     cm.on("cursorActivity", (c) => updateBox(c));
-    cm.on("blur", () => setTimeout(() => { if (!boxHover) hideBox(); }, 150));
+    // only the box of this editor: a click into another field shows that field's box at once
+    cm.on("blur", () => setTimeout(() => { if (!boxHover && boxCm === cm) hideBox(); }, 150));
     cm.on("inputRead", (c, change) => onInputRead(c, change, kind, opts));
     const wrap = cm.getWrapperElement();
     wrap.classList.add("cm-resizable");
