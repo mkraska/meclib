@@ -40,6 +40,18 @@ def page_file(page):
     return page.replace(" ", "-") + ".md"
 
 
+SYNC_AUTHOR = "meclib wiki sync"     # git user.name of the GitHub Action (wiki-sync.yml)
+
+
+def last_author(wiki, target):
+    """Author of the last wiki commit that changed the page: if it is this script (an earlier
+    sync), nobody edited the page on GitHub since, even though "base" still names the page
+    before that sync."""
+    r = subprocess.run(["git", "-C", str(wiki), "log", "-1", "--format=%an", "--", target.name],
+                       capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--wiki", help="clone of the wiki (https://github.com/mkraska/meclib.wiki.git)")
@@ -66,7 +78,8 @@ def main():
         live = target.read_text(encoding="utf-8") if target.exists() else None
         if live is not None and norm(live) == norm(draft):
             same.append(entry["page"])
-        elif (live is None and entry.get("base") is None) or (live is not None and page_hash(live) == entry.get("base")):
+        elif (live is None and entry.get("base") is None) or (live is not None and (
+                page_hash(live) == entry.get("base") or last_author(wiki, target) == SYNC_AUTHOR)):
             if not a.check:
                 target.write_text(norm(draft) + "\n", encoding="utf-8", newline="\n")
             published.append(entry["page"])
