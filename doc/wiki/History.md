@@ -2,6 +2,7 @@
 
 2026 10 18
 - [[fb_floats()]]: the deviating numbers and extra summands are underlined instead of red (`\color` needs a MathJax extension that Moodle's MathJax 3 may fail to load; the whole formula was replaced by an error message)
+- [[fb_floats()]]: no feedback on the numbers when a summand has a wrong unit (with `fb_dims`)
 - [[Meclib Workbench]], Questions page: "Graphic: interactive ⇄ static" switches the `[[jsxgraph]]` block at the cursor (inputs `objects`/`names` deleted or added, `input-ref-...` and `var stateRef;` adjusted; refused while a PRT uses the inputs); new review rules for graphics bound to missing inputs, interactive graphics in the feedback and left-over graphic inputs
 
 2026 10 17

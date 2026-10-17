@@ -130,6 +130,13 @@ fb_check(fb_floats(g-0.317*a*c/m, g-(3-6/sqrt(5))*c*a/m, 0.01), true,
   "",
   "fb_floats+fb_dims: right answer");
 
+/* a summand with a wrong unit: its numbers and those of the other summands are not judged
+   (sqrt(13)*a is 3.606*a, but 4*a would be named as well) */
+fb_check(fb_floats((4*a-3)*c, c*(sqrt(13)*a-3*a), 0.01), false,
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({4\\,a\\,c-{\\underline{3\\,c}}}\\).&nbsp;Der markierte Term hat die Einheit \\({\\frac{\\mathrm{kg}}{\\mathrm{s}^2}}\\), das Ergebnis aber \\({\\frac{\\mathrm{kg}\\,\\mathrm{m}}{\\mathrm{s}^2}}\\).",
+  "&nbsp;Evaluated, your answer is \\({4\\,a\\,c-{\\underline{3\\,c}}}\\).&nbsp;The marked term has the unit \\({\\frac{\\mathrm{kg}}{\\mathrm{s}^2}}\\), the result \\({\\frac{\\mathrm{kg}\\,\\mathrm{m}}{\\mathrm{s}^2}}\\).",
+  "fb_floats+fb_dims: wrong unit, no feedback on the numbers");
+
 /* ---- the unit parser and fb_dimension() ---- */
 fb_check_val(fb_dims_unit("kg*m/s^2") - fb_dims_unit("N"), 0, "fb_dims: N = kg*m/s^2");
 fb_check_val(fb_dims_unit("kg/(m s^2)") - fb_dims_unit("Pa"), 0, "fb_dims: parentheses and blank");

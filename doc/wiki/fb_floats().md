@@ -51,7 +51,7 @@ The units are strings, read by a small parser of the library and not by Maxima, 
 - "In the marked term, a function (e.g. sin, exp, ln) or an exponent has an argument with a unit." (e.g. `sin(a)`)
 - for the whole answer: "Your result has the unit kg·m/s² instead of m/s²." and the like
 
-A variable that is not declared, or a unit that the parser does not know, switches the check off for that summand (for the model answer: altogether), so that a typo is reported by [[fb_vars]] and not as a wrong unit. Without `fb_dims` there is no unit check.
+If a summand has a wrong unit, the numbers are not judged (neither marked nor named): with a wrong unit, a number cannot be right or wrong. A variable that is not declared, or a unit that the parser does not know, switches the check off for that summand (for the model answer: altogether), so that a typo is reported by [[fb_vars]] and not as a wrong unit. Without `fb_dims` there is no unit check.
 
 `fb_dimension(sans, tans)` does the unit check of the whole answer alone, e.g. together with [[fb_vars]]; it returns the text, `""` if the unit is right or cannot be checked.
 

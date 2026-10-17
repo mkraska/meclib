@@ -430,16 +430,8 @@ fb_floats(%_sans, %_tans, %_tol) := block([simp: true, %_s, %_t, %_sT, %_tT, %_u
     for %_k thru length(%_b) do
       if is(abs(%_a[%_k] - %_b[%_k]) > %_tol*abs(%_b[%_k])) then %_bad: endcons([%_p[1], %_k, %_a[%_k], %_b[%_k]], %_bad)),
   if %_bad = [] and %_us = [] and %_ut = [] then return(["", true]),
-  /* the evaluated form with the deviating numbers and the extra summands marked: for marked
-     summands, and for an answer that differs from its evaluated form (exact constants, factored
-     forms), so that the numbers below can be found */
-  if %_us # [] or (%_bad # [] and not is(%_sans = %_s)) then (
-    %_disp: apply("+", makelist(fb_floats_tshow(%_sT[%_i], member(%_i, %_us),
-      map(second, sublist(%_bad, lambda([%_b], %_b[1] = %_i)))), %_i, length(%_sT))),
-    %_txt: castext("[[lang code='de']]&nbsp;Ausgewertet entspricht Ihre Eingabe {@%_disp@}.[[/lang]][[lang code='en,other']]&nbsp;Evaluated, your answer is {@%_disp@}.[[/lang]]"),
-    str_value: str_marked),
-  /* the extra summands: their dimension, if fb_dims is declared, and fb_vars() against the
-     summands of the model answer without a partner */
+  /* the extra summands: their dimension, if fb_dims is declared. A summand with a wrong unit makes
+     the numbers meaningless: then they are neither marked nor named */
   if %_us # [] then (
     %_tab: fb_dims_table(),
     %_dt: if %_tab = [] then '%_dunk else fb_dims_of(%_t, %_tab),
@@ -452,6 +444,17 @@ fb_floats(%_sans, %_tans, %_tol) := block([simp: true, %_s, %_t, %_sT, %_tT, %_u
         if length(%_us) = 1 then %_dimtxt: castext_concat(%_dimtxt, castext("[[lang code='de']]&nbsp;Der markierte Term hat die Einheit {@%_du@}, das Ergebnis aber {@%_tu@}.[[/lang]][[lang code='en,other']]&nbsp;The marked term has the unit {@%_du@}, the result {@%_tu@}.[[/lang]]"))
         else (%_v: fb_floats_round(%_sT[%_i][3]*%_sT[%_i][4]),
           %_dimtxt: castext_concat(%_dimtxt, castext("[[lang code='de']]&nbsp;Der Term {@%_v@} hat die Einheit {@%_du@}, das Ergebnis aber {@%_tu@}.[[/lang]][[lang code='en,other']]&nbsp;The term {@%_v@} has the unit {@%_du@}, the result {@%_tu@}.[[/lang]]"))))),
+    if %_dimtxt # "" then %_bad: []),
+  /* the evaluated form with the deviating numbers and the extra summands marked: for marked
+     summands, and for an answer that differs from its evaluated form (exact constants, factored
+     forms), so that the numbers below can be found */
+  if %_us # [] or (%_bad # [] and not is(%_sans = %_s)) then (
+    %_disp: apply("+", makelist(fb_floats_tshow(%_sT[%_i], member(%_i, %_us),
+      map(second, sublist(%_bad, lambda([%_b], %_b[1] = %_i)))), %_i, length(%_sT))),
+    %_txt: castext("[[lang code='de']]&nbsp;Ausgewertet entspricht Ihre Eingabe {@%_disp@}.[[/lang]][[lang code='en,other']]&nbsp;Evaluated, your answer is {@%_disp@}.[[/lang]]"),
+    str_value: str_marked),
+  /* fb_vars() for the extra summands against the summands of the model answer without a partner */
+  if %_us # [] then (
     %_vt: fb_vars(apply("+", map(lambda([%_i], %_sT[%_i][3]*%_sT[%_i][4]), %_us)),
                   apply("+", map(lambda([%_j], %_tT[%_j][3]*%_tT[%_j][4]), %_ut))),
     %_txt: castext_concat(%_txt, castext_concat(%_dimtxt, %_vt)),
