@@ -848,8 +848,69 @@ def r_semicolons(Q_):
                      "Add it." % (prt["name"], ", ".join(map(str, lines))), fix))
     return out
 
+def r_scenes(Q_):
+    """[[jsxgraph]] blocks and the inputs they are bound to (input-ref-...): graphics in the
+    feedback must be static, a bound input must exist, a hidden (or missing) input of a former
+    interactive graphic is left over."""
+    out = []
+    names = {i["name"] for i in Q_.inputs}
+    for field in ("generalfeedback", "specificfeedback"):
+        for k, blk in enumerate(qfile.jsx_blocks(Q_.data.get(field) or "")):
+            if not blk["refs"]:
+                continue
 
-RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_graphic_inputs, r_input_settings, r_prts,
+            def fix(q, field=field, k=k):
+                text = Q(q).data.get(field) or ""
+                return _set_text(q, field, qfile._make_static_text(text, qfile.jsx_blocks(text)[k]))
+            out.append(F("graphic.feedback-interactive", "%s graphic %d" % (field, k + 1), "required",
+                         "Interactive graphic in the feedback",
+                         "%s, graphic %d: it is bound to %s, but a graphic in the feedback has no inputs. "
+                         "Make it static (no input-ref attributes, var stateRef; in the header)."
+                         % (field, k + 1, ", ".join(blk["refs"])), fix, WIKI + "MecLib-Question-Setup"))
+    blocks = qfile.jsx_blocks(Q_.qtext)
+    for k, blk in enumerate(blocks):
+        missing = [n for n in blk["refs"] if n not in names]
+        if not missing:
+            continue
+
+        def fix(q, k=k, missing=tuple(missing)):
+            text = Q(q).qtext
+            b = qfile.jsx_blocks(text)[k]
+            head = text[b["start"]:b["head_end"]]
+            head = qfile.INPUT_REF.sub(lambda r: "" if r.group(1) in missing else r.group(0), head)
+            text = text[:b["start"]] + head + text[b["head_end"]:]
+            b = qfile.jsx_blocks(text)[k]
+            if not b["refs"]:
+                text = qfile._make_static_text(text, b)
+            return _set_text(q, "questiontext", text)
+        out.append(F("graphic.missing-input", "graphic %d" % (k + 1), "required", "Graphic bound to a missing input",
+                     "Question text, graphic %d: input-ref-%s refers to %s, which the question does not have; "
+                     "Moodle then does not save the question. Remove the binding%s."
+                     % (k + 1, " / input-ref-".join(missing), ", ".join(missing),
+                        " (the graphic becomes static)" if len(missing) == len(blk["refs"]) else ""),
+                     fix, WIKI + "MecLib-Question-Setup"))
+    bound = {n for b in blocks for n in b["refs"]}
+    used = qfile._prts_using(Q_.block, [i["name"] for i in Q_.inputs])
+    used = {n for v in used.values() for n in v}
+    for inp in Q_.inputs:
+        n = inp["name"]
+        # only the inputs of the meclib convention (objects, names; objects2, names2 for a second graphic)
+        if n in bound or n in used or not re.match(r"^(objects|names)\d*$", n):
+            continue
+        placed = re.search(r"\[\[\s*input:%s\s*\]\]" % re.escape(n), Q_.qtext)
+        hidden = re.search(r"<p\s+hidden\s*>[^<]*\[\[\s*input:%s\s*\]\]" % re.escape(n), Q_.qtext)
+        if placed and not hidden:
+            continue
+        out.append(F("graphic.unused-input", n, "hint", "Input without a graphic",
+                     "Input %s is %s, no graphic is bound to it and no PRT uses it (left over from an "
+                     "interactive graphic?). Delete it%s." % (
+                         n, "hidden" if placed else "not in the question text", " with its placeholders" if placed else ""),
+                     lambda q, n=n: qfile._delete_input_q(q, n)))
+    return out
+
+
+
+RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_scenes, r_graphic_inputs, r_input_settings, r_prts,
          r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_matrix_inputs, r_unused_files, r_semicolons]
 
 

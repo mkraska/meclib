@@ -52,6 +52,9 @@ Endpoints
   POST /api/q/input         {path, index, rev, op: "add", name, kind, tans?, tol?} new input S_<name>
                             with PRT <name> (qfile.INPUT_KINDS), or {op: "delete", input, prt?}
                             -> {rev, fields}
+  POST /api/q/scene         {path, index, rev, block, to: "static" | "interactive", dry?} [[jsxgraph]] block
+                            number block of the question text made static (bound inputs deleted) or
+                            interactive (hidden inputs objects, names added) -> {plan} (dry) or {rev, plan, fields}
   POST /api/q/review        {path, index} -> {rev, findings}: the review rules (rules.py) for a question
   POST /api/q/review-apply  {path, index, rev, apply: [keys], reject: [keys]} -> fixes applied, rejected
                             findings recorded in the question description -> {rev, applied, fields, findings}
@@ -494,6 +497,23 @@ class Handler(SimpleHTTPRequestHandler):
                 a, b, _ = qfile.question_span(new, index)
                 return self.send_json({"rev": rev, "applied": applied, "fields": qfile.question_fields(new, index),
                                        "findings": rules.public(rules.findings(new[a:b])),
+                                       "history": history.status(target, index)})
+            if path == "/api/q/scene":
+                target = allowed_path(cfg, req["path"])
+                text, rev = qfile.read_file(target)
+                if req.get("rev") and req["rev"] != rev:
+                    raise qfile.ConflictError("the file was changed outside the workbench")
+                index, k, to = int(req["index"]), int(req["block"]), req.get("to")
+                if to not in ("static", "interactive"):
+                    raise ValueError("to: static or interactive")
+                a, b, _ = qfile.question_span(text, index)
+                plan = qfile.scene_plan(text[a:b], k, to)
+                if req.get("dry") or plan.get("error"):
+                    return self.send_json({"plan": plan})
+                new = qfile.scene_switch(text, index, k, to)
+                rev = qfile.write_file(target, new, rev, bool(req.get("backup")))
+                history.record(target, text, new, index, "graphic %d %s" % (k + 1, to))
+                return self.send_json({"rev": rev, "plan": plan, "fields": qfile.question_fields(new, index),
                                        "history": history.status(target, index)})
             if path == "/api/q/input":
                 target = allowed_path(cfg, req["path"])

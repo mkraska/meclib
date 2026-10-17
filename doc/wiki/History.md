@@ -1,9 +1,13 @@
 ### Dev Branch
 
+2026 10 18
+- [[fb_floats()]]: the deviating numbers and extra summands are underlined instead of red (`\color` needs a MathJax extension that Moodle's MathJax 3 may fail to load; the whole formula was replaced by an error message)
+- [[Meclib Workbench]], Questions page: "Graphic: interactive ⇄ static" switches the `[[jsxgraph]]` block at the cursor (inputs `objects`/`names` deleted or added, `input-ref-...` and `var stateRef;` adjusted; refused while a PRT uses the inputs); new review rules for graphics bound to missing inputs, interactive graphics in the feedback and left-over graphic inputs
+
 2026 10 17
 - New feedback function [[fb_floats()]] in `fb_value.mac`: symbolic answers with rounded coefficients of any structure (products, powers, roots); both answers are normalised with `expand(float(...))`, the expressions without their numbers must agree, and the numbers are compared one by one with a relative tolerance (feedback per deviating number, via [[fb_unit]])
-  - the evaluated form of the answer is shown with the deviating numbers marked red, if the answer differs from it
-  - the summands are compared one by one: an extra summand is marked red, with the [[fb_vars]] feedback for it ("Check the marked term." otherwise); a missing summand is reported ("right except for a missing term")
+  - the evaluated form of the answer is shown with the deviating numbers underlined, if the answer differs from it
+  - the summands are compared one by one: an extra summand is underlined, with the [[fb_vars]] feedback for it ("Check the marked term." otherwise); a missing summand is reported ("right except for a missing term")
   - optional unit check: with `fb_dims: [a = "m", c = "N/m", ...]` (units as strings, no clash with variables such as `m`) a marked summand or the whole answer is checked for its unit (wrong unit, sum of different units, function of a quantity with a unit); `fb_dimension(sans, tans)` for the whole answer alone
 - [[Meclib Workbench]], Questions page: a change of the open file on disk is noticed when the page gets the focus again; without unsaved edits the file is reloaded, otherwise the conflict box ("Reload from disk" / "Apply my edits") appears; a renamed or deleted file is reported
 - `fb_floats()`: no `concat()` any more (forbidden in STACK questions; the decimal numbers are hidden behind `%_P[i]` instead)

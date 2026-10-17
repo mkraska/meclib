@@ -47,11 +47,11 @@ fb_check(fb_floats(g+0.317*a*c/m, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
   "&nbsp;Number \\({0.317}\\):&nbsp;Check the sign.",
   "fb_floats: sign of a term");
 /* an exact answer with one wrong integer (2 instead of 3): its coefficient 2-6/sqrt(5) is negative.
-   The answer differs from its evaluated form, so that form is shown, the deviating number marked red,
+   The answer differs from its evaluated form, so that form is shown, the deviating number underlined,
    and the number is named with 4 significant figures */
 fb_check(fb_floats(g-((2*sqrt(5)*a-6*a)*c)/(sqrt(5)*m), g-(3-6/sqrt(5))*c*a/m, 0.01), false,
-  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({\\frac{{\\color{red}{0.6833}}\\,a\\,c}{m}+g}\\).&nbsp;Markierter Zahlenwert \\({0.6833}\\):&nbsp;Pr&uuml;fen Sie das Vorzeichen.",
-  "&nbsp;Evaluated, your answer is \\({\\frac{{\\color{red}{0.6833}}\\,a\\,c}{m}+g}\\).&nbsp;Marked number \\({0.6833}\\):&nbsp;Check the sign.",
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({\\frac{{\\underline{0.6833}}\\,a\\,c}{m}+g}\\).&nbsp;Markierter Zahlenwert \\({0.6833}\\):&nbsp;Pr&uuml;fen Sie das Vorzeichen.",
+  "&nbsp;Evaluated, your answer is \\({\\frac{{\\underline{0.6833}}\\,a\\,c}{m}+g}\\).&nbsp;Marked number \\({0.6833}\\):&nbsp;Check the sign.",
   "fb_floats: exact answer with a wrong integer");
 
 /* ---- the model answer as a product of roots (sqrt(2)*sqrt(...), as Maxima simplifies
@@ -67,23 +67,23 @@ fb_check(fb_floats(sqrt(a*(6*g-0.502*c*a/m)), sqrt(2*(g*3*a-c/(2*m)*(3*sqrt(5)*a
 forget(a > 0)$
 
 /* ---- summands: each summand of the model answer gets the summand of the answer with the same
-   variable part; a summand without a partner is marked red in the evaluated form, with the
+   variable part; a summand without a partner is underlined in the evaluated form, with the
    fb_vars() feedback against the summands of the model answer without a partner ---- */
 fb_check(fb_floats(g-0.317*a^2*c/m, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
-  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({g-{\\color{red}{\\frac{0.317\\,a^2\\,c}{m}}}}\\).&nbsp;Pr&uuml;fen Sie den markierten Term.",
-  "&nbsp;Evaluated, your answer is \\({g-{\\color{red}{\\frac{0.317\\,a^2\\,c}{m}}}}\\).&nbsp;Check the marked term.",
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({g-{\\underline{\\frac{0.317\\,a^2\\,c}{m}}}}\\).&nbsp;Pr&uuml;fen Sie den markierten Term.",
+  "&nbsp;Evaluated, your answer is \\({g-{\\underline{\\frac{0.317\\,a^2\\,c}{m}}}}\\).&nbsp;Check the marked term.",
   "fb_floats: extra power in one summand");
 fb_check(fb_floats(g-0.317*a*c/m+0.5*c, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
-  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({-\\frac{0.317\\,a\\,c}{m}+g+{\\color{red}{0.5\\,c}}}\\).&nbsp;Pr&uuml;fen Sie den markierten Term.",
-  "&nbsp;Evaluated, your answer is \\({-\\frac{0.317\\,a\\,c}{m}+g+{\\color{red}{0.5\\,c}}}\\).&nbsp;Check the marked term.",
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({-\\frac{0.317\\,a\\,c}{m}+g+{\\underline{0.5\\,c}}}\\).&nbsp;Pr&uuml;fen Sie den markierten Term.",
+  "&nbsp;Evaluated, your answer is \\({-\\frac{0.317\\,a\\,c}{m}+g+{\\underline{0.5\\,c}}}\\).&nbsp;Check the marked term.",
   "fb_floats: extra summand");
 fb_check(fb_floats(g-0.317*a*c, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
-  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({g-{\\color{red}{0.317\\,a\\,c}}}\\).&nbsp;Fehlende Variable \\({m}\\) (<code>m</code>).",
-  "&nbsp;Evaluated, your answer is \\({g-{\\color{red}{0.317\\,a\\,c}}}\\).&nbsp;Missing variable \\({m}\\) (<code>m</code>).",
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({g-{\\underline{0.317\\,a\\,c}}}\\).&nbsp;Fehlende Variable \\({m}\\) (<code>m</code>).",
+  "&nbsp;Evaluated, your answer is \\({g-{\\underline{0.317\\,a\\,c}}}\\).&nbsp;Missing variable \\({m}\\) (<code>m</code>).",
   "fb_floats: variable missing in one summand");
 fb_check(fb_floats(g-0.317*ac/m, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
-  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({g-{\\color{red}{\\frac{0.317\\,{\\it ac}}{m}}}}\\).&nbsp;Unerwartete Variable \\({{\\it ac}}\\).&nbsp;Fehlende Variable \\({a}\\), \\({c}\\) (<code>a, c</code>).",
-  "&nbsp;Evaluated, your answer is \\({g-{\\color{red}{\\frac{0.317\\,{\\it ac}}{m}}}}\\).&nbsp;Unexpected variable \\({{\\it ac}}\\).&nbsp;Missing variable \\({a}\\), \\({c}\\) (<code>a, c</code>).",
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({g-{\\underline{\\frac{0.317\\,{\\it ac}}{m}}}}\\).&nbsp;Unerwartete Variable \\({{\\it ac}}\\).&nbsp;Fehlende Variable \\({a}\\), \\({c}\\) (<code>a, c</code>).",
+  "&nbsp;Evaluated, your answer is \\({g-{\\underline{\\frac{0.317\\,{\\it ac}}{m}}}}\\).&nbsp;Unexpected variable \\({{\\it ac}}\\).&nbsp;Missing variable \\({a}\\), \\({c}\\) (<code>a, c</code>).",
   "fb_floats: typo in one summand");
 fb_check(fb_floats(g, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
   "&nbsp;Ihr Ergebnis ist bis auf einen fehlenden Term richtig.",
@@ -94,36 +94,36 @@ fb_check(fb_floats(0.317*a*c/m, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
   "&nbsp;Number \\({0.317}\\):&nbsp;Check the sign.&nbsp;Also, a term is missing.",
   "fb_floats: wrong number and missing summand");
 fb_check(fb_floats(g-0.3*a*c/m-a*c, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
-  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({-\\frac{{\\color{red}{0.3}}\\,a\\,c}{m}+g-{\\color{red}{a\\,c}}}\\).&nbsp;Pr&uuml;fen Sie den markierten Term.&nbsp;Markierter Zahlenwert \\({-0.3}\\):&nbsp;Der Betrag ist um mindestens 5% zu klein.",
-  "&nbsp;Evaluated, your answer is \\({-\\frac{{\\color{red}{0.3}}\\,a\\,c}{m}+g-{\\color{red}{a\\,c}}}\\).&nbsp;Check the marked term.&nbsp;Marked number \\({-0.3}\\):&nbsp;The value is too small by at least 5%.",
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({-\\frac{{\\underline{0.3}}\\,a\\,c}{m}+g-{\\underline{a\\,c}}}\\).&nbsp;Pr&uuml;fen Sie den markierten Term.&nbsp;Markierter Zahlenwert \\({-0.3}\\):&nbsp;Der Betrag ist um mindestens 5% zu klein.",
+  "&nbsp;Evaluated, your answer is \\({-\\frac{{\\underline{0.3}}\\,a\\,c}{m}+g-{\\underline{a\\,c}}}\\).&nbsp;Check the marked term.&nbsp;Marked number \\({-0.3}\\):&nbsp;The value is too small by at least 5%.",
   "fb_floats: wrong number and extra summand");
 
 /* ---- units: with fb_dims declared, a marked summand (or the whole answer) is checked for its
    unit; an undeclared variable switches the check off ---- */
 fb_dims: [a = "m", c = "N/m", m = "kg", g = "m/s^2"]$
 fb_check(fb_floats(g-0.317*a^2*c/m, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
-  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({g-{\\color{red}{\\frac{0.317\\,a^2\\,c}{m}}}}\\).&nbsp;Der markierte Term hat die Einheit \\({\\frac{\\mathrm{m}^2}{\\mathrm{s}^2}}\\), das Ergebnis aber \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).",
-  "&nbsp;Evaluated, your answer is \\({g-{\\color{red}{\\frac{0.317\\,a^2\\,c}{m}}}}\\).&nbsp;The marked term has the unit \\({\\frac{\\mathrm{m}^2}{\\mathrm{s}^2}}\\), the result \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).",
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({g-{\\underline{\\frac{0.317\\,a^2\\,c}{m}}}}\\).&nbsp;Der markierte Term hat die Einheit \\({\\frac{\\mathrm{m}^2}{\\mathrm{s}^2}}\\), das Ergebnis aber \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).",
+  "&nbsp;Evaluated, your answer is \\({g-{\\underline{\\frac{0.317\\,a^2\\,c}{m}}}}\\).&nbsp;The marked term has the unit \\({\\frac{\\mathrm{m}^2}{\\mathrm{s}^2}}\\), the result \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).",
   "fb_floats+fb_dims: summand with a wrong unit");
 fb_check(fb_floats(g-0.317*a*c, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
-  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({g-{\\color{red}{0.317\\,a\\,c}}}\\).&nbsp;Der markierte Term hat die Einheit \\({\\frac{\\mathrm{kg}\\,\\mathrm{m}}{\\mathrm{s}^2}}\\), das Ergebnis aber \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).&nbsp;Fehlende Variable \\({m}\\) (<code>m</code>).",
-  "&nbsp;Evaluated, your answer is \\({g-{\\color{red}{0.317\\,a\\,c}}}\\).&nbsp;The marked term has the unit \\({\\frac{\\mathrm{kg}\\,\\mathrm{m}}{\\mathrm{s}^2}}\\), the result \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).&nbsp;Missing variable \\({m}\\) (<code>m</code>).",
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({g-{\\underline{0.317\\,a\\,c}}}\\).&nbsp;Der markierte Term hat die Einheit \\({\\frac{\\mathrm{kg}\\,\\mathrm{m}}{\\mathrm{s}^2}}\\), das Ergebnis aber \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).&nbsp;Fehlende Variable \\({m}\\) (<code>m</code>).",
+  "&nbsp;Evaluated, your answer is \\({g-{\\underline{0.317\\,a\\,c}}}\\).&nbsp;The marked term has the unit \\({\\frac{\\mathrm{kg}\\,\\mathrm{m}}{\\mathrm{s}^2}}\\), the result \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).&nbsp;Missing variable \\({m}\\) (<code>m</code>).",
   "fb_floats+fb_dims: unit and missing variable");
 fb_check(fb_floats(g+sqrt(a*g)-0.317*a*c/m, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
-  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({-\\frac{0.317\\,a\\,c}{m}+{\\color{red}{\\sqrt{a\\,g}}}+g}\\).&nbsp;Der markierte Term hat die Einheit \\({\\frac{\\mathrm{m}}{\\mathrm{s}}}\\), das Ergebnis aber \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).",
-  "&nbsp;Evaluated, your answer is \\({-\\frac{0.317\\,a\\,c}{m}+{\\color{red}{\\sqrt{a\\,g}}}+g}\\).&nbsp;The marked term has the unit \\({\\frac{\\mathrm{m}}{\\mathrm{s}}}\\), the result \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).",
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({-\\frac{0.317\\,a\\,c}{m}+{\\underline{\\sqrt{a\\,g}}}+g}\\).&nbsp;Der markierte Term hat die Einheit \\({\\frac{\\mathrm{m}}{\\mathrm{s}}}\\), das Ergebnis aber \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).",
+  "&nbsp;Evaluated, your answer is \\({-\\frac{0.317\\,a\\,c}{m}+{\\underline{\\sqrt{a\\,g}}}+g}\\).&nbsp;The marked term has the unit \\({\\frac{\\mathrm{m}}{\\mathrm{s}}}\\), the result \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).",
   "fb_floats+fb_dims: root of a product");
 fb_check(fb_floats(g-0.317*a*c/m+sin(a), g-(3-6/sqrt(5))*c*a/m, 0.01), false,
-  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({-\\frac{0.317\\,a\\,c}{m}+g+{\\color{red}{\\sin \\left( a \\right)}}}\\).&nbsp;Im markierten Term hat eine Funktion (z.&nbsp;B. sin, exp, ln) oder ein Exponent ein Argument mit Einheit.",
-  "&nbsp;Evaluated, your answer is \\({-\\frac{0.317\\,a\\,c}{m}+g+{\\color{red}{\\sin \\left( a \\right)}}}\\).&nbsp;In the marked term, a function (e.g. sin, exp, ln) or an exponent has an argument with a unit.",
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({-\\frac{0.317\\,a\\,c}{m}+g+{\\underline{\\sin \\left( a \\right)}}}\\).&nbsp;Im markierten Term hat eine Funktion (z.&nbsp;B. sin, exp, ln) oder ein Exponent ein Argument mit Einheit.",
+  "&nbsp;Evaluated, your answer is \\({-\\frac{0.317\\,a\\,c}{m}+g+{\\underline{\\sin \\left( a \\right)}}}\\).&nbsp;In the marked term, a function (e.g. sin, exp, ln) or an exponent has an argument with a unit.",
   "fb_floats+fb_dims: function of a length");
 fb_check(fb_floats(0.317*a*c, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
   "&nbsp;Ihr Ergebnis hat die Einheit \\({\\frac{\\mathrm{kg}\\,\\mathrm{m}}{\\mathrm{s}^2}}\\) statt \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).&nbsp;Fehlende Variable \\({g}\\), \\({m}\\) (<code>g, m</code>).",
   "&nbsp;Your result has the unit \\({\\frac{\\mathrm{kg}\\,\\mathrm{m}}{\\mathrm{s}^2}}\\) instead of \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).&nbsp;Missing variable \\({g}\\), \\({m}\\) (<code>g, m</code>).",
   "fb_floats+fb_dims: whole answer with a wrong unit");
 fb_check(fb_floats(g-0.317*ac/m, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
-  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({g-{\\color{red}{\\frac{0.317\\,{\\it ac}}{m}}}}\\).&nbsp;Unerwartete Variable \\({{\\it ac}}\\).&nbsp;Fehlende Variable \\({a}\\), \\({c}\\) (<code>a, c</code>).",
-  "&nbsp;Evaluated, your answer is \\({g-{\\color{red}{\\frac{0.317\\,{\\it ac}}{m}}}}\\).&nbsp;Unexpected variable \\({{\\it ac}}\\).&nbsp;Missing variable \\({a}\\), \\({c}\\) (<code>a, c</code>).",
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({g-{\\underline{\\frac{0.317\\,{\\it ac}}{m}}}}\\).&nbsp;Unerwartete Variable \\({{\\it ac}}\\).&nbsp;Fehlende Variable \\({a}\\), \\({c}\\) (<code>a, c</code>).",
+  "&nbsp;Evaluated, your answer is \\({g-{\\underline{\\frac{0.317\\,{\\it ac}}{m}}}}\\).&nbsp;Unexpected variable \\({{\\it ac}}\\).&nbsp;Missing variable \\({a}\\), \\({c}\\) (<code>a, c</code>).",
   "fb_floats+fb_dims: undeclared variable, no unit check");
 fb_check(fb_floats(g-0.317*a*c/m, g-(3-6/sqrt(5))*c*a/m, 0.01), true,
   "",

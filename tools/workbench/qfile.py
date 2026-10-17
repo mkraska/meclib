@@ -592,7 +592,11 @@ def delete_input(text, index, iname, with_prt=None):
     """Removes input iname, its [[input:..]]/[[validation:..]] placeholders, its test inputs, and
     optionally PRT with_prt with its [[feedback:..]] placeholder and expected test results."""
     a, b, qtype = question_span(text, index)
-    q = text[a:b]
+    return text[:a] + _delete_input_q(text[a:b], iname, with_prt) + text[b:]
+
+
+def _delete_input_q(q, iname, with_prt=None):
+    """delete_input() on the question block q."""
     blocks = [m for m in re.finditer(r"<input>.*?</input>", q, re.S)
               if re.search(r"<name>%s</name>" % re.escape(iname), m.group(0))]
     if not blocks:
@@ -609,7 +613,144 @@ def delete_input(text, index, iname, with_prt=None):
         q = re.sub(r" ?" + ph, "", q)
     # an emptied paragraph (e.g. <p hidden> </p>) is removed as well
     q = re.sub(r"[ \t]*<p( hidden)?>\s*</p>[ \t]*\r?\n?", "", q)
-    return text[:a] + q + text[b:]
+    return q
+
+
+# ---------------------------------------------------------------------- graphics: interactive or static
+# A [[jsxgraph]] block is interactive when its header binds inputs (input-ref-objects="stateRef"
+# input-ref-names="fbd_names", as in the template): meclib writes the state of the graphic into
+# them. A static block binds nothing and declares "var stateRef;" itself (meclib.js reads it).
+JSX_OPEN = re.compile(r"\[\[\s*jsxgraph\b([^\]]*)\]\]")
+JSX_CLOSE = re.compile(r"\[\[\s*/\s*jsxgraph\s*\]\]")
+INPUT_REF = re.compile(r"""\s*input-ref-([A-Za-z0-9_]+)\s*=\s*(["'])([^"']*)\2""")
+STATEREF_DECL = re.compile(r"^[ \t]*var[ \t]+stateRef[ \t]*;[^\n]*\n?", re.M)
+SCENE_INPUTS = (("objects", "stateRef"), ("names", "fbd_names"))   # input base name, JavaScript variable
+
+
+def jsx_blocks(text):
+    """The [[jsxgraph]] blocks of a text: [{start, head_end, end, refs: {input: js variable}}]."""
+    out = []
+    for m in JSX_OPEN.finditer(text):
+        c = JSX_CLOSE.search(text, m.end())
+        out.append({"start": m.start(), "head_end": m.end(), "end": c.end() if c else len(text),
+                    "refs": {r.group(1): r.group(3) for r in INPUT_REF.finditer(m.group(1))}})
+    return out
+
+
+def _uses(text, name):
+    return re.search(r"(?<![A-Za-z0-9_%])" + re.escape(name) + r"(?![A-Za-z0-9_%])", text or "") is not None
+
+
+def _prts_using(q, names):
+    """PRTs whose feedback variables or nodes use one of the input names: {prt: [inputs]}."""
+    el = ET.fromstring(q)
+    out = {}
+    for p in el.findall("prt"):
+        code = " ".join([_text(p, "feedbackvariables/text")] + [
+            _text(n, k) for n in p.findall("node") for k in ("sans", "tans", "testoptions")])
+        used = [n for n in names if _uses(code, n)]
+        if used:
+            out[_text(p, "name")] = used
+    return out
+
+
+def _make_static_text(text, blk):
+    """text with the block blk static: no input-ref attributes, "var stateRef;" in the body."""
+    head = text[blk["start"]:blk["head_end"]]
+    head = INPUT_REF.sub("", head)
+    head = re.sub(r"\s*\]\]$", " ]]", head)
+    body = text[blk["head_end"]:blk["end"]]
+    if not re.search(r"\b(var|let|const)\s+stateRef\b", body):
+        m = re.search(r"^[ \t]*var[ \t]+mode\b[^\n]*\n", body, re.M)
+        at = m.end() if m else (body.find("\n") + 1 if body.startswith("\n") else 0)
+        body = body[:at] + "var stateRef;\n" + body[at:]
+    return text[:blk["start"]] + head + body + text[blk["end"]:]
+
+
+def scene_plan(q, k, to):
+    """What switching block k of the question text of the question block q to "static" or
+    "interactive" does: {to, inputs (removed or added), prts (blocking: they use the inputs),
+    tans (model answer of the new objects input), error}."""
+    el = ET.fromstring(q)
+    qtext = _text(el, "questiontext/text")
+    blocks = jsx_blocks(qtext)
+    if not 0 <= k < len(blocks):
+        return {"error": "the cursor is not in a [[jsxgraph]] block of the question text"}
+    blk = blocks[k]
+    inputs = [_text(i, "name") for i in el.findall("input")]
+    other = {n for j, b in enumerate(blocks) if j != k for n in b["refs"]}
+    if to == "static":
+        if not blk["refs"]:
+            return {"error": "this graphic is static already"}
+        remove = [n for n in blk["refs"] if n in inputs and n not in other]
+        prts = _prts_using(q, remove)
+        return {"to": to, "inputs": remove, "prts": prts,
+                "error": ("%s %s the graphic's inputs - delete %s first" % (
+                    "PRT" if len(prts) == 1 else "PRTs", ", ".join("%s (%s)" % (p, ", ".join(v)) for p, v in prts.items()),
+                    "uses" if len(prts) == 1 else "use", "it" if len(prts) == 1 else "them")) if prts else None}
+    if blk["refs"]:
+        return {"error": "this graphic is interactive already"}
+    # input names: objects/names, or objects2/names2, ... when another graphic uses them
+    taken = set(inputs) | other
+    suffix = ""
+    n = 1
+    while any(base + suffix in taken for base, _ in SCENE_INPUTS):
+        n += 1
+        suffix = str(n)
+    qv = _text(el, "questionvariables/text")
+    tans = next((v for v in ("tans", "init") if re.search(r"(^|[;\s])%s\s*:" % v, qv)), None)
+    return {"to": to, "inputs": [base + suffix for base, _ in SCENE_INPUTS], "prts": {},
+            "tans": tans, "error": None}
+
+
+def scene_switch_q(q, k, to):
+    """Switches block k of the question text of question block q (see scene_plan). Returns q."""
+    plan = scene_plan(q, k, to)
+    if plan.get("error"):
+        raise ValueError(plan["error"])
+    nl = _newline(q)
+    qtext = _text(ET.fromstring(q), "questiontext/text").replace("\r\n", "\n")
+    blk = jsx_blocks(qtext)[k]
+    if to == "static":
+        qtext = _make_static_text(qtext, blk)
+        q, _ = _replace_text_child(q, "questiontext", qtext, nl)
+        for name in plan["inputs"]:
+            q = _delete_input_q(q, name)
+        return q
+    obj, nam = plan["inputs"]
+    head = qtext[blk["start"]:blk["head_end"]]
+    head = re.sub(r"\s*\]\]$", ' input-ref-%s="stateRef" input-ref-%s="fbd_names" ]]' % (obj, nam), head)
+    body = STATEREF_DECL.sub("", qtext[blk["head_end"]:blk["end"]])
+    # the hidden inputs before the block, or before the <div> that holds it
+    line = qtext.rfind("\n", 0, blk["start"]) + 1
+    if not qtext[line:blk["start"]].strip() and line > 0:
+        prev = qtext.rfind("\n", 0, line - 1) + 1
+        if re.match(r"\s*<div\b[^>]*>\s*$", qtext[prev:line]):
+            line = prev
+    hidden = "<p hidden>[[input:%s]] [[validation:%s]]</p>\n<p hidden>[[input:%s]] [[validation:%s]]</p>\n" % (
+        obj, obj, nam, nam)
+    qtext = qtext[:line] + hidden + qtext[line:blk["start"]] + head + body + qtext[blk["end"]:]
+    q, _ = _replace_text_child(q, "questiontext", qtext, nl)
+    # the inputs as in the template, after the last input
+    tpl = (TEMPLATES / "meclib_question.xml").read_text(encoding="utf-8")
+    for base, name in (("names", nam), ("objects", obj)):
+        m = re.search(r"([ \t]*)<input>\s*<name>%s</name>.*?</input>" % base, tpl, re.S)
+        block = m.group(0).replace("<name>%s</name>" % base, "<name>%s</name>" % name)
+        if base == "objects":
+            block = block.replace("<tans>tans</tans>", "<tans>%s</tans>" % encode_plain(plan["tans"] or '""'))
+        ind = re.search(r"\n([ \t]*)<input>", q)
+        ind = ind.group(1) if ind else "    "
+        block = "\n".join(ind + ln[len(m.group(1)):] if ln.startswith(m.group(1)) else ln
+                          for ln in block.replace("\r\n", "\n").split("\n")).replace("\n", nl)
+        q = _insert_after_last(q, "</input>", block, nl, ["<prt>", "<deployedseed>", "<qtest>", "<hint"])
+    return q
+
+
+def scene_switch(text, index, k, to):
+    a, b, qtype = question_span(text, index)
+    if qtype != "stack":
+        raise ValueError("question %d is not a STACK question" % index)
+    return text[:a] + scene_switch_q(text[a:b], k, to) + text[b:]
 
 
 # ---------------------------------------------------------------------- new questions

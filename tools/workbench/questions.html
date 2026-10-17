@@ -327,7 +327,8 @@
         <label class="f">Question variables</label>
         <textarea data-field="questionvariables" rows="12" spellcheck="false"></textarea>
         <label class="f">Question text <select data-format="questiontext"></select>
-          <button type="button" id="addInput" class="small" title="new input with its PRT; the placeholders are inserted at the cursor">Input ...</button></label>
+          <button type="button" id="addInput" class="small" title="new input with its PRT; the placeholders are inserted at the cursor">Input ...</button>
+          <button type="button" id="sceneSwitch" class="small" title="the [[jsxgraph]] block at the cursor: interactive (hidden inputs objects, names) or static">Graphic: interactive ⇄ static</button></label>
         <textarea data-field="questiontext" rows="14" spellcheck="false"></textarea>
         <h2 style="margin-top:14px">Inputs</h2>
         <table class="inp" id="inputEd"></table>
@@ -1456,6 +1457,55 @@ async function inputOp(body) {
   }
 }
 
+// ---------------------------------------------------------------- graphic at the cursor: interactive or static
+// The [[jsxgraph]] blocks of a text with the inputs they bind (input-ref-...), as qfile.jsx_blocks().
+function jsxBlocks(text) {
+  const out = [], open = /\[\[\s*jsxgraph\b([^\]]*)\]\]/g;
+  let m;
+  while ((m = open.exec(text))) {
+    const close = /\[\[\s*\/\s*jsxgraph\s*\]\]/g;
+    close.lastIndex = open.lastIndex;
+    const c = close.exec(text);
+    const refs = [...m[1].matchAll(/input-ref-([A-Za-z0-9_]+)\s*=/g)].map((r) => r[1]);
+    out.push({ start: m.index, end: c ? close.lastIndex : text.length, refs });
+  }
+  return out;
+}
+async function switchScene() {
+  if (!file || qindex === null) return;
+  const ed = editors.questiontext, text = ed.get();
+  const pos = ed.cm ? ed.cm.indexFromPos(ed.cm.getCursor()) : (document.querySelector('#editView [data-field="questiontext"]').selectionStart ?? -1);
+  const blocks = jsxBlocks(text);
+  const k = blocks.findIndex((b) => pos >= b.start && pos <= b.end);
+  if (k < 0) { showMessages([{ cls: "warn", text: "Put the cursor into the [[jsxgraph]] block of the question text that you want to switch." }]); return; }
+  const to = blocks[k].refs.length ? "static" : "interactive";
+  if (!(await flush())) return;
+  try {
+    const d = await postJSON("/api/q/scene", { path: file.path, index: qindex, rev: file.rev, block: k, to, dry: true });
+    const p = d.plan;
+    if (p.error) { showMessages([{ cls: "err", text: `Graphic ${k + 1}: ${p.error}.` }]); return; }
+    const what = to === "static"
+      ? `Make graphic ${k + 1} static?\n\nThe input-ref attributes are removed, "var stateRef;" is added to the block` +
+        (p.inputs.length ? `, and the input(s) ${p.inputs.join(", ")} are deleted with their placeholders.` : ".")
+      : `Make graphic ${k + 1} interactive?\n\nNew hidden inputs ${p.inputs.join(" and ")} (as in the meclib template) with ` +
+        `their placeholders before the block; the block is bound to them.` +
+        (p.tans ? ` Model answer of ${p.inputs[0]}: ${p.tans}.` : `\n\nNo question variable tans or init found: the model answer of ${p.inputs[0]} is "" - set it in the inputs table.`);
+    if (!confirm(what)) return;
+    const backup = !backedUp.has(file.path);
+    const r = await postJSON("/api/q/scene", { path: file.path, index: qindex, rev: file.rev, block: k, to, backup });
+    if (r.plan && r.plan.error) { showMessages([{ cls: "err", text: `Graphic ${k + 1}: ${r.plan.error}.` }]); return; }
+    if (backup) backedUp.add(file.path);
+    file.rev = r.rev;
+    fillEditor(r.fields);
+    showHistory(r.history);
+    showMessages([{ cls: "info", text: `Graphic ${k + 1} is ${to} now` + (p.inputs.length ? ` (inputs ${p.inputs.join(", ")} ${to === "static" ? "deleted" : "added"}).` : ".") }]);
+    evaluate(false);
+  } catch (e) {
+    if (e.conflict) { conflict = true; showConflict(); }
+    else showMessages([{ cls: "err", text: e.message }]);
+  }
+}
+
 function openInputDialog() {
   if (!file || qindex === null) return;
   $("inName").value = ""; $("inTans").value = ""; $("inTans").placeholder = "same as name"; $("inTol").value = "0.005";
@@ -2146,6 +2196,7 @@ $("lang-en").addEventListener("click", () => setLang("en"));
 $("tab-edit").addEventListener("click", () => setTab("edit"));
 $("tab-preview").addEventListener("click", () => setTab("preview"));
 $("addInput").addEventListener("click", openInputDialog);
+$("sceneSwitch").addEventListener("click", switchScene);
 $("snippetBtn").addEventListener("click", openSnippets);
 $("checkBtn").addEventListener("click", check);
 $("fillBtn").addEventListener("click", fillModelAnswers);

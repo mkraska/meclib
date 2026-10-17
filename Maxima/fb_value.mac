@@ -234,7 +234,7 @@ fb_coeffs(%_sans, %_tans, %_tol, %_description):=block(
    and sqrt(2*x) agree. Both are split into summands, each a number (coefficient with sign) times a
    variable part; the summands are paired by their variable parts (decimal numbers inside it
    replaced by a placeholder), and the numbers of each pair are compared one by one with fb_unit()
-   and the relative tolerance %_tol. Extra summands of the answer are marked red in the evaluated
+   and the relative tolerance %_tol. Extra summands of the answer are underlined in the evaluated
    form, with fb_vars() against the summands of the model answer without a partner and, if
    fb_dims declares the units of the variables, a unit check; a summand of the model answer left
    over is reported as missing. Without any pair, the whole answer gets the unit check, fb_vars()
@@ -257,8 +257,10 @@ fb_floats_norm(%_e) := block([fb_floats_nums: [], %_h, %_i],
   for %_i thru length(fb_floats_nums) do %_h: subst(%_P[%_i] = fb_floats_nums[%_i], %_h),
   expand(float(%_h)));
 /* display of the evaluated answer: numbers with 4 significant figures, the deviating ones (their
-   positions in fb_floats_bad, counted as by fb_floats_walk) marked red by fb_floats_mark() */
-texput(fb_floats_mark, lambda([%_e], sconcat("{\\color{red}{", tex1(first(%_e)), "}}")));
+   positions in fb_floats_bad, counted as by fb_floats_walk) underlined by fb_floats_mark() */
+/* underlined, not coloured: \color needs MathJax's color extension, which Moodle's MathJax 3
+   may fail to load ("Extension color failed to load" instead of the whole formula) */
+texput(fb_floats_mark, lambda([%_e], sconcat("{\\underline{", tex1(first(%_e)), "}}")));
 fb_floats_show(%_x) := if floatnump(%_x) then block([%_v],
     fb_floats_k: fb_floats_k + 1, %_v: significantfigures(%_x, 4),
     if member(fb_floats_k, fb_floats_bad) then (if %_v < 0 then -fb_floats_mark(-%_v) else fb_floats_mark(%_v)) else %_v)
