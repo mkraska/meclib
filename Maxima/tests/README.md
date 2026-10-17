@@ -62,6 +62,14 @@ student sees it in Moodle, e.g. `{@S_10@}` as `\({{S}_{10}}\)` and
   - Test entry points (see below) and `s_test_summary()`.
 - **`test_<function>.mac`** - one file per feedback function or closely
   related family of functions (`test_fb_fix1.mac`, `test_fb_vars.mac`, ...).
+- **`test_security.mac`** - no feedback function: checks that no function of
+  the meclib files calls a function or uses a variable that STACK forbids in
+  every question (e.g. `concat`, `eval_string`, `print`, `values`; the
+  "globalyforbidden..." entries of `../../config/stack/<version>/security-map.json`).
+  Plain Maxima allows them, but Moodle does not save a question that includes
+  such a library. `run_tests.mac` notes the functions the meclib files define
+  in `meclib_functions`. Statements outside of function definitions are not
+  checked.
 - **`fixtures/scenes.mac`** - generated, do not edit: the objects and names
   meclib produced for the test scenes in `../../tests/scenes/` (see "Scene
   fixtures" below).

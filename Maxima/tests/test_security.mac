@@ -1,0 +1,58 @@
+/* ============================================================================
+   STACK refuses a question whose Maxima code - including the libraries it
+   loads with stack_include() - calls a function or uses a variable that
+   STACK's security map forbids in every question (e.g. concat, eval_string,
+   parse_string, print, values). Moodle then does not save the question, and
+   the offline tests would not notice, since plain Maxima allows everything.
+
+   This test reads the security map of the STACK release kept in the
+   repository (../../config/stack/<version>/security-map.json, the newest
+   one) and walks the definitions of all functions that the meclib files
+   define (meclib_functions, noted in run_tests.mac): every operator of a
+   definition is a call, every other symbol a variable. Comments and strings are not part of a
+   definition, so they cannot give a false alarm. Not covered: statements
+   outside of function definitions (e.g. a texput() at the top level).
+   ============================================================================ */
+
+/* names with "globalyforbiddenfunction" / "globalyforbiddenvariable": true, from the map,
+   read line by line (an entry starts with a line '  "name": {' at an indent of two) */
+security_forbidden(%_path) := block([%_f, %_line, %_key: "", %_p, %_fun: [], %_var: []],
+  %_f: openr(%_path),
+  while stringp(%_line: readline(%_f)) do (
+    if slength(%_line) > 4 and substring(%_line, 1, 4) = "  \"" and substring(%_line, 4, 5) # " " then (
+      %_p: ssearch("\": {", %_line),
+      if integerp(%_p) then %_key: ssubst("\"", "\\\"", substring(%_line, 4, %_p))),
+    if integerp(ssearch("\"globalyforbiddenfunction\": true", %_line)) then %_fun: cons(%_key, %_fun),
+    if integerp(ssearch("\"globalyforbiddenvariable\": true", %_line)) then %_var: cons(%_key, %_var)),
+  close(%_f),
+  [%_fun, %_var])$
+
+/* the operators (calls) and the other symbols (variables) of an expression, as strings, collected
+   in security_calls and security_vars (bound in the caller) */
+security_walk(%_e) := if atom(%_e) then (if symbolp(%_e) then security_vars: cons(string(%_e), security_vars))
+  else block([%_o: op(%_e)],
+    if symbolp(%_o) then security_calls: cons(string(%_o), security_calls)
+    else if not stringp(%_o) then security_walk(%_o),
+    map(security_walk, args(%_e)), 0)$
+
+block([%_maps, %_fb, %_new, %_bad: [], security_calls, security_vars, %_c, %_v],
+  %_maps: sort(directory("../../config/stack/*/security-map.json")),
+  if %_maps = [] then (
+    print("FAIL [security] no security-map.json under ../../config/stack/<version>/"),
+    s_test_fails: s_test_fails + 1)
+  else (
+    %_fb: security_forbidden(last(%_maps)),
+    %_new: meclib_functions,
+    for %_f in %_new do (
+      security_calls: [], security_vars: [],
+      block([simp: false], security_walk(apply(fundef, [op(%_f)]))),   /* fundef quotes its argument;
+        simp:false - simplifying parts of a definition can overflow */
+      %_c: sublist(unique(security_calls), lambda([%_w], member(%_w, %_fb[1]))),
+      %_v: sublist(unique(security_vars), lambda([%_w], member(%_w, %_fb[2]))),
+      if %_c # [] or %_v # [] then
+        %_bad: endcons(sconcat(string(op(%_f)), ": ", simplode(append(%_c, %_v), ", ")), %_bad)),
+    if %_bad = [] and length(%_new) > 0 then s_test_success: s_test_success + 1
+    else (
+      if %_new = [] then print("FAIL [security] no meclib functions found (meclib_functions, see run_tests.mac)"),
+      for %_b in %_bad do print(sconcat("FAIL [security] forbidden by STACK in ", %_b)),
+      s_test_fails: s_test_fails + 1)))$
