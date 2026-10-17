@@ -38,6 +38,7 @@ Endpoints
   POST /api/q/folders       {add: path} or {remove: path}
   POST /api/q/open          {path} -> {path, rev, questions}
   POST /api/q/question      {path, index} -> editable fields of a STACK question, rev
+  POST /api/q/rev           {path} -> {rev} of the file on disk (null if it is gone)
   POST /api/q/save          {path, index, rev, changes, backup} -> {rev, changed}; 409 if
                             the file changed on disk since rev
   POST /api/q/eval          {path, index, seed, src} -> question variables, model answers and
@@ -410,6 +411,9 @@ class Handler(SimpleHTTPRequestHandler):
                 questions = qfile.list_questions(text)
                 STATE.touch(str(target))
                 return self.send_json({"path": str(target), "rev": rev, "questions": questions})
+            if path == "/api/q/rev":
+                target = allowed_path(cfg, req["path"], must_exist=False)
+                return self.send_json({"rev": qfile.read_file(target)[1] if target.is_file() else None})
             if path == "/api/q/question":
                 target = allowed_path(cfg, req["path"])
                 text, rev = qfile.read_file(target)

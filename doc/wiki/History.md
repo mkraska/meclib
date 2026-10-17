@@ -5,6 +5,8 @@
   - the evaluated form of the answer is shown with the deviating numbers marked red, if the answer differs from it
   - the summands are compared one by one: an extra summand is marked red, with the [[fb_vars]] feedback for it ("Check the marked term." otherwise); a missing summand is reported ("right except for a missing term")
   - optional unit check: with `fb_dims: [a = "m", c = "N/m", ...]` (units as strings, no clash with variables such as `m`) a marked summand or the whole answer is checked for its unit (wrong unit, sum of different units, function of a quantity with a unit); `fb_dimension(sans, tans)` for the whole answer alone
+- [[Meclib Workbench]], Questions page: a change of the open file on disk is noticed when the page gets the focus again; without unsaved edits the file is reloaded, otherwise the conflict box ("Reload from disk" / "Apply my edits") appears; a renamed or deleted file is reported
+- [[Meclib Workbench]], syntax help: about 90 more Maxima functions (lists such as `copylist`, `member`, `delete`, `assoc`, `sort`, `lsum`, `apply`; strings; `sqrt`, `atan2` and the other elementary functions; algebra such as `expand`, `coeff`, `rhs`, `linsolve`; vectors and matrices; predicates), with short examples for working with `initdata`
 
 2026 10 16
 - [[Meclib Workbench]], Graphic page:

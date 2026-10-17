@@ -1151,6 +1151,26 @@ async function flush() {
   return ok;
 }
 
+// a change of the file on disk (another program, a git checkout) is noticed when the page gets
+// the focus again: without own edits the file is read again, with edits the conflict box shows
+let diskCheck = null;
+function checkDisk() {
+  if (!file || saving || diskCheck || conflict) return;
+  diskCheck = (async () => {
+    try {
+      const r = await postJSON("/api/q/rev", { path: file.path });
+      if (r.rev === file.rev) return;
+      if (!r.rev) { fileMsg("The file is no longer on disk (renamed, moved or deleted):\n" + file.path); return; }
+      if (dirty) { conflict = true; showConflict(); return; }
+      await openFile(file.path, qindex);
+      fileMsg("Reloaded: the file was changed on disk.", "info");
+    } catch (e) { /* server not reachable: nothing to do */ }
+    finally { diskCheck = null; }
+  })();
+}
+window.addEventListener("focus", checkDisk);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) checkDisk(); });
+
 function showConflict() {
   showSaveState();
   const box = $("conflict");

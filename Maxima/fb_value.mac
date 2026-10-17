@@ -248,13 +248,13 @@ fb_floats_walk(%_x) := if floatnump(%_x) then (fb_floats_nums: endcons(%_x, fb_f
   else block([simp: false, inflag: true], apply(op(%_x), map(fb_floats_walk, args(%_x))));
 /* normal form: rootscontract() (sqrt(2)*sqrt(x) -> sqrt(2*x), also sqrt(a)*sqrt(...) as Maxima
    splits sqrt(a*(...)) for a positive a), then expand(float(...)). The decimal numbers are hidden
-   behind symbols during rootscontract(), which would turn them into fractions. */
-fb_floats_hide(%_x) := if floatnump(%_x) then (fb_floats_nums: endcons(%_x, fb_floats_nums), concat('%_P, length(fb_floats_nums)))
+   behind subscripted symbols %_P[i] during rootscontract(), which would turn them into fractions. */
+fb_floats_hide(%_x) := if floatnump(%_x) then (fb_floats_nums: endcons(%_x, fb_floats_nums), %_P[length(fb_floats_nums)])
   else if atom(%_x) then %_x
   else block([simp: false, inflag: true], apply(op(%_x), map(fb_floats_hide, args(%_x))));
 fb_floats_norm(%_e) := block([fb_floats_nums: [], %_h, %_i],
   %_h: rootscontract(ev(fb_floats_hide(%_e), simp)),
-  for %_i thru length(fb_floats_nums) do %_h: subst(concat('%_P, %_i) = fb_floats_nums[%_i], %_h),
+  for %_i thru length(fb_floats_nums) do %_h: subst(%_P[%_i] = fb_floats_nums[%_i], %_h),
   expand(float(%_h)));
 /* display of the evaluated answer: numbers with 4 significant figures, the deviating ones (their
    positions in fb_floats_bad, counted as by fb_floats_walk) marked red by fb_floats_mark() */
