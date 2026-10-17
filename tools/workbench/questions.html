@@ -181,39 +181,6 @@
   .ed .CodeMirror-scroll { min-height: 3em; }
   /* the editors keep their height; drag the lower right corner to change it */
   .ed .CodeMirror.cm-resizable { resize: vertical; overflow: hidden; }
-  .cm-s-default .cm-comment { color: #7a7a72; font-style: italic; }
-  .cm-s-default .cm-string { color: #a33a1e; }
-  .cm-s-default .cm-number, .cm-s-default .cm-atom { color: #116644; }
-  .cm-s-default .cm-keyword { color: #7a1fa2; font-weight: 600; }
-  .cm-s-default .cm-def { color: #1f5f99; font-weight: 600; }
-  .cm-s-default .cm-variable-2 { color: #00607a; }
-  .cm-s-default .cm-meta { color: #b06000; font-weight: 600; }
-  .cm-s-default .cm-def-op { color: #1f5f99; font-weight: 600; }
-  .cm-s-default .cm-tag { color: #6b6b66; }
-  .cm-castext-delim { color: #b06000; font-weight: 600; }
-  .cm-castext-cas { background: #fff4df; }
-  .cm-castext-block { color: #1f5f99; font-weight: 600; }
-  .cm-castext-slot { color: #fff; background: #5b8fbf; border-radius: 3px; }
-  .cm-castext-math-delim { color: #116644; font-weight: 600; }
-  .cm-castext-math { color: #116644; }
-  .cm-castext-latex { color: #0b7a4f; font-weight: 600; }
-  .cm-flash-line { background: #fde9b8; }
-  /* syntax help box and autocomplete list of the code editors (editor.js) */
-  .meclib-helpbox { position: absolute; z-index: 50; display: none; max-width: 560px; padding: 6px 9px; background: #fffef6;
-    border: 1px solid #d8d2b4; border-radius: 5px; box-shadow: 0 3px 10px rgba(0,0,0,.15); font-size: 12.5px; line-height: 1.4; }
-  .meclib-helpbox .hb-sig { font-family: var(--mono); font-size: 12px; }
-  .meclib-helpbox .hb-sig b { color: #9b2c00; }
-  .meclib-helpbox .hb-opt { color: #777; }
-  .meclib-helpbox .hb-ret { color: #777; }
-  .meclib-helpbox .hb-arg { margin-top: 3px; }
-  .meclib-helpbox .hb-text { margin-top: 3px; color: #333; }
-  .meclib-helpbox code { font-family: var(--mono); font-size: 11.5px; color: #d63384; }
-  .meclib-helpbox .hb-foot { margin-top: 4px; display: flex; gap: 8px; font-size: 11px; color: var(--muted); }
-  .meclib-helpbox .hb-foot a { color: #1a5fb4; }
-  .meclib-helpbox .hb-src { margin-left: auto; }
-  .CodeMirror-hints { font-size: 12px; max-width: 640px; z-index: 60; }
-  .CodeMirror-hint .hs { color: #888; font-size: 11px; } .CodeMirror-hint .hk { color: #aaa; font-size: 10px; margin-left: 6px; }
-  li.CodeMirror-hint-active .hs, li.CodeMirror-hint-active .hk { color: #e8eef8; }
   #snippetDialog { border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; width: min(460px, 92vw); }
   #snippetDialog::backdrop { background: rgba(0, 0, 0, .15); }
   #snippetList li .pv { display: block; font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -334,6 +301,7 @@
       <label><input type="checkbox" id="optAutocomplete"> autocomplete while typing (Ctrl+Space: always)</label>
       <label><input type="checkbox" id="optCloseBrackets"> add closing brackets</label>
       <label><input type="checkbox" id="optSemicolon"> add <code>;</code> after <code>:</code> (Maxima)</label>
+      <label title="F2 in an editor switches it, too"><input type="checkbox" id="optHelpBox"> syntax help box (F2)</label>
       <span class="hint">F1: help on the function at the cursor</span></div></details>
     <span class="pair"><button id="undoBtn" disabled title="nothing to undo">↶</button><button id="redoBtn" disabled title="nothing to redo">↷</button></span>
     <button id="snippetBtn" title="insert a text snippet at the cursor (templates/snippets/)">Snippet</button>
@@ -2076,14 +2044,22 @@ async function start() {
     if (r.ok) MeclibEditor.setHelp(await r.json());
   } catch (e) { showMessages([{ cls: "warn", text: "syntax help not loaded: " + e.message }], true); }
   {
-    const eo = Object.assign({ autocomplete: true, closeBrackets: true, semicolon: true }, stored(QSTORE_KEY).editor || {});
+    const EO = { autocomplete: true, closeBrackets: true, semicolon: true, helpBox: true };
+    const eo = Object.assign({}, EO, stored(QSTORE_KEY).editor || {});
     MeclibEditor.configure(eo);
-    $("optAutocomplete").checked = eo.autocomplete; $("optCloseBrackets").checked = eo.closeBrackets; $("optSemicolon").checked = eo.semicolon;
-    for (const [id, key] of [["optAutocomplete", "autocomplete"], ["optCloseBrackets", "closeBrackets"], ["optSemicolon", "semicolon"]])
+    const OPTS = [["optAutocomplete", "autocomplete"], ["optCloseBrackets", "closeBrackets"], ["optSemicolon", "semicolon"], ["optHelpBox", "helpBox"]];
+    for (const [id, key] of OPTS) {
+      $(id).checked = eo[key];
       $(id).addEventListener("change", () => {
-        const v = Object.assign({ autocomplete: true, closeBrackets: true, semicolon: true }, stored(QSTORE_KEY).editor || {}, { [key]: $(id).checked });
+        const v = Object.assign({}, EO, stored(QSTORE_KEY).editor || {}, { [key]: $(id).checked });
         store(QSTORE_KEY, { editor: v }); MeclibEditor.configure(v);
       });
+    }
+    // F2 in an editor
+    document.addEventListener("meclib-editor-settings", (ev) => {
+      $("optHelpBox").checked = ev.detail.helpBox;
+      store(QSTORE_KEY, { editor: Object.assign({}, EO, stored(QSTORE_KEY).editor || {}, { helpBox: ev.detail.helpBox }) });
+    });
   }
   const q = stored(QSTORE_KEY);
   setLang(q.lang || "de");

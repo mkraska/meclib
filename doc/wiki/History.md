@@ -1,7 +1,24 @@
 ### Dev Branch
 
+2026 10 17
+- New feedback function [[fb_floats()]] in `fb_value.mac`: symbolic answers with rounded coefficients of any structure (products, powers, roots); both answers are normalised with `expand(float(...))`, the expressions without their numbers must agree, and the numbers are compared one by one with a relative tolerance (feedback per deviating number, via [[fb_unit]])
+  - the evaluated form of the answer is shown with the deviating numbers marked red, if the answer differs from it
+  - the summands are compared one by one: an extra summand is marked red, with the [[fb_vars]] feedback for it ("Check the marked term." otherwise); a missing summand is reported ("right except for a missing term")
+  - optional unit check: with `fb_dims: [a = "m", c = "N/m", ...]` (units as strings, no clash with variables such as `m`) a marked summand or the whole answer is checked for its unit (wrong unit, sum of different units, function of a quantity with a unit); `fb_dimension(sans, tans)` for the whole answer alone
+
+2026 10 16
+- [[Meclib Workbench]], Graphic page:
+  - "Edit points": a red handle on each point argument of the objects (taken from the object signatures of the syntax help); dragging one changes initdata and redraws the graphic, snapping to 1, 0.5 or 0.1 grid units or free
+  - shelf of object types (supports, bodies, loads, kinematics, annotation): drag one onto the graphic, or click it and then into the graphic; it is added to initdata at that point with default arguments (signature and description as tooltip)
+  - the initdata field is a code editor with the syntax help of the Questions page (signature box, autocomplete of object names after `["`)
+  - the help box of a code field no longer disappears when another field had the focus before
+- [[Meclib Workbench]], Graphic page: the shelf buttons show icons of the objects (`shelf_icons.json`, made by `tools/workbench/build_shelf_icons.py` with the workbench server and Playwright; run it again after a change of the shelf or of the drawing of an object)
+- [[Meclib Workbench]], code editors: the help box can be dragged out of the way (it stays there, double click: it follows the cursor again); F2 switches it off and on (Questions page: also in the editor settings)
+- [[Meclib Workbench]], Tests page: timing summary next to the pass count (sum and median of the initialisation times, slowest case, wall time) and a table of the runs of the session, to compare JSXGraph or meclib versions
+
 2026 10 15
 - [[Meclib Workbench]]: the variables table of the preview lists names assigned by a list assignment such as `[aa, bb]: rand([[1,4], [2,3]])` (they were missing)
+- Wiki sync (`tools/wiki_sync.py`): a page last changed by the sync itself is no longer taken for an edit on GitHub (the run of 2026 10 15 failed on History for this reason)
 
 2026 10 13
 - [[fb_EE()]]: the feedback for an equation with wrong terms ("Prüfen Sie den Term mit ...") showed as raw castext (`["%root", ...]`) in Moodle; fixed

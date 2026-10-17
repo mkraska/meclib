@@ -34,6 +34,10 @@
   tr.passed.hide-passed { display: none; }
   .mismatch { color: var(--err); }
   #summary { font-size: 13px; }
+  #summary .secs, #runs { color: var(--muted); }
+  #runs { font-size: 12px; padding: 0 16px; max-width: 1400px; }
+  #runs table { width: auto; }
+  #runs td, #runs th { padding: 2px 10px 2px 0; border: none; font-size: 12px; }
 </style>
 </head>
 <body>
@@ -48,6 +52,7 @@
   <span id="summary"></span>
   <div id="status">connecting to server ...</div>
 </header>
+<div id="runs"></div>
 <div id="scenes"></div>
 
 <script src="frame.js"></script>
@@ -230,14 +235,47 @@ async function runCases(list) {
   catch (e) { $("status").textContent = e.message; running = false; $("runAll").disabled = false; return; }
   $("status").textContent = src.info + " - Meclib " + src.version;
   let pass = 0, fail = 0;
+  const times = [], started = performance.now();     // initialisation time of each case
   for (const scene of list) {
     for (let i = 0; i < scene.cases.length; i++) {
       const r = await runOne(scene, i, src);
       if (r && r.status === "pass") pass++; else fail++;
-      $("summary").innerHTML = `<span class="badge pass">${pass} passed</span> <span class="badge ${fail ? "fail" : ""}">${fail} failed</span>`;
+      if (r && typeof r.seconds === "number") times.push({ s: r.seconds, name: scene.file + " #" + (i + 1) });
+      $("summary").innerHTML = `<span class="badge pass">${pass} passed</span> <span class="badge ${fail ? "fail" : ""}">${fail} failed</span>` +
+        timeSummary(times, (performance.now() - started) / 1000);
     }
   }
+  if (times.length > 1) addRun(src, pass, fail, times, (performance.now() - started) / 1000);
   running = false; $("runAll").disabled = false;
+}
+
+// Timing summary: the sum and the median of the initialisation times of the cases (the first
+// case also loads JSXGraph and MathJax, so the median compares versions better than the sum),
+// the slowest case, and the wall time of the whole run (rendering, comparing, thumbnails).
+function timeStats(times) {
+  const v = times.map((t) => t.s).sort((a, b) => a - b);
+  const sum = v.reduce((a, b) => a + b, 0);
+  const median = v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2;
+  const max = times.reduce((a, b) => (b.s > a.s ? b : a), times[0]);
+  return { sum, median, max };
+}
+function timeSummary(times, wall) {
+  if (!times.length) return "";
+  const t = timeStats(times);
+  return ` <span class="secs" title="initialisation times of the cases: sum, median, slowest; wall: whole run">` +
+    `Σ ${t.sum.toFixed(1)} s · median ${t.median.toFixed(2)} s · max ${t.max.s.toFixed(1)} s (${esc(t.max.name)}) · wall ${wall.toFixed(0)} s</span>`;
+}
+// the runs of this page session, to compare JSXGraph or meclib versions
+const runs = [];
+function addRun(src, pass, fail, times, wall) {
+  const t = timeStats(times);
+  runs.push({ when: new Date().toLocaleTimeString(), jsx: $("jsx").value, mathjax: $("mathjax").value,
+    meclib: src.version + " (" + $("src").value + ")", pass, fail, n: times.length, ...t, wall });
+  $("runs").innerHTML = `<table><tr><th>run</th><th>JSXGraph</th><th>MathJax</th><th>meclib</th><th>cases</th>` +
+    `<th>Σ s</th><th>median s</th><th>max s</th><th>wall s</th></tr>` +
+    runs.map((r) => `<tr><td>${esc(r.when)}</td><td>${esc(r.jsx)}</td><td>${esc(r.mathjax)}</td><td>${esc(r.meclib)}</td>` +
+      `<td>${r.pass}/${r.pass + r.fail} passed</td><td>${r.sum.toFixed(1)}</td><td>${r.median.toFixed(2)}</td>` +
+      `<td>${r.max.s.toFixed(1)}</td><td>${r.wall.toFixed(0)}</td></tr>`).join("") + "</table>";
 }
 
 function applyFilter() {

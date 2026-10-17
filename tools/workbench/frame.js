@@ -101,6 +101,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
 (function () {
   const TOKEN = ${token};
   const post = (msg) => { msg.token = TOKEN; parent.postMessage(msg, "*"); };
+  window.__tryout_post = post;      // for the point editor (editorAddon)
   // Cheap, depth-limited rendering of console arguments: meclib logs whole JSXGraph objects,
   // and serializing those completely (JSON.stringify) made a 30-object scene take 15 s instead
   // of a fraction of a second. Plain data (meclib object lists) is still shown in full.
@@ -177,8 +178,34 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
 })();`;
   }
 
+  // Point editor of the Graphic page: a red handle on each point argument of the objects
+  // (edit.handles: [{id, xy}], computed by the page); a handle released at a new position is
+  // reported as {type: "edit", id, xy}. The page changes initdata and renders again.
+  // edit.snap: snap size in grid units (0: free).
+  function editorAddon(edit) {
+    if (!edit || !edit.handles || !edit.handles.length) return "";
+    return `
+;(function () {
+  const H = ${JSON.stringify(edit)};
+  const board = Object.values(JXG.boards)[0];
+  if (!board) return;
+  const snap = H.snap > 0, dec = snap ? Math.max(0, Math.ceil(-Math.log10(H.snap))) : 4;
+  const r = (v) => +v.toFixed(dec);
+  for (const h of H.handles) {
+    const p = board.create("point", h.xy, { name: "", withLabel: false, fixed: false, size: 4, face: "[]",
+      fillColor: "#e74c3c", strokeColor: "#a93226", fillOpacity: 0.75, highlightFillColor: "#e74c3c",
+      highlightStrokeColor: "#7b241c", layer: 9, snapToGrid: snap, snapSizeX: H.snap || 1, snapSizeY: H.snap || 1,
+      showInfobox: true });
+    p.on("up", () => {
+      const xy = [r(p.X()), r(p.Y())];
+      if (xy[0] !== h.xy[0] || xy[1] !== h.xy[1]) window.__tryout_post({ type: "edit", id: h.id, xy });
+    });
+  }
+})();`;
+  }
+
   function buildFrameDoc(opts) {
-    const { token, jsx, mathjaxUrl, block, initText, decsep, startState, meclibSource, drags } = opts;
+    const { token, jsx, mathjaxUrl, block, initText, decsep, startState, meclibSource, drags, edit } = opts;
     const unknown = [];
     let body = block.body.replace(/\{#\s*([^#]*?)\s*#\}/g, (m, name) => {
       if (name === "init") return JSON.stringify(initText);
@@ -216,6 +243,7 @@ const stack_js = window.__tryout_stack_js;
 const stack_jxg = {};
 ${wrapOpen}var divid = "jxgbox";var BOARDID = divid;
 ${body}
+${editorAddon(edit)}
 ;window.__tryout_done();${wrapClose}
 <\/script>
 </body></html>`;
@@ -238,6 +266,7 @@ ${body}
   // reporting interactions until stop() is called or the next graphic is rendered.
   // opts: container, config, jsxKey, mathjaxKey, meclibSource, initText, blockText, decsep,
   //       startState, drags ([[from], [to]] in board coordinates, performed before "done"),
+  //       edit ({handles, snap}: point editor, see editorAddon), onEdit(id, xy),
   //       onConsole(level, text), onInput(varName, value, inputName), onResize(w, h),
   //       scale (thumbnail factor, default 1), timeout (ms, default 60000 - a scene with many
   //       line loads can take several seconds to initialise)
@@ -248,7 +277,7 @@ ${body}
     const mathjax = opts.config.mathjax[opts.mathjaxKey] || Object.values(opts.config.mathjax)[0];
     const doc = buildFrameDoc({
       token, block, initText: opts.initText, decsep: opts.decsep || ".",
-      startState: opts.startState || "", meclibSource: opts.meclibSource, drags: opts.drags,
+      startState: opts.startState || "", meclibSource: opts.meclibSource, drags: opts.drags, edit: opts.edit,
       jsx: { js: resolveUrl(jsxEntry.js), css: resolveUrl(jsxEntry.css) },
       mathjaxUrl: resolveUrl(mathjax),
     });
@@ -298,6 +327,8 @@ ${body}
         if (varName === "stateRef") result.objects = msg.value;
         else if (varName === "fbd_names") result.names = msg.value;
         if (opts.onInput) opts.onInput(varName, msg.value, msg.name);
+      } else if (msg.type === "edit") {
+        if (opts.onEdit) opts.onEdit(msg.id, msg.xy);
       } else if (msg.type === "done") {
         result.initSeconds = (performance.now() - started) / 1000;
         setTimeout(() => finish(true), 400);

@@ -1,7 +1,7 @@
 {
- "generated": "2026-10-12",
+ "generated": "2026-10-17",
  "sources": {
-  "wiki": "../../../wiki",
+  "wiki": "/tmp/claude-0/-home-claude-meclib/d7911bb2-49c6-5e23-b283-67729fee0f43/scratchpad/ws/wiki",
   "wiki_drafts": [
    "angle1",
    "beam",
@@ -12,6 +12,7 @@
    "fb_contact_reactions()",
    "fb_ee()",
    "fb_fbd()",
+   "fb_floats()",
    "fb_name()",
    "fb_objects()",
    "fb_reaction_name()",
@@ -223,6 +224,19 @@
    }
   },
   {
+   "name": "fb_dimension",
+   "kind": "meclib",
+   "sig": "fb_dimension(sans, tans)",
+   "args": [
+    "sans",
+    "tans"
+   ],
+   "text": "feedback on the dimension of a whole answer, \"\" if it is right or cannot be checked",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_floats()",
+   "source": "Maxima/fb_value.mac",
+   "argdocs": {}
+  },
+  {
    "name": "fb_dir",
    "kind": "meclib",
    "sig": "fb_dir(o, n, i_dir, tol, desc)",
@@ -251,7 +265,7 @@
    "url": "https://github.com/mkraska/meclib/wiki/fb_EE()",
    "source": "Maxima/fb_fbd.mac",
    "argdocs": {
-    "S": "the student's expression for one equation of equilibrium (the sum, `= 0` implied), e.g. the input `S_GGx`",
+    "S": "the student's expression for one Equation of Equilibrium (the sum, `= 0` implied), e.g. the input `S_GGx`",
     "T": "the reference, e.g. `sumF(...)` or `sumM(...)` of the student's own free-body diagram, see Sums of Forces and Moments",
     "options": "(optional) list of options `name = value`; `subst` substitutions applied to both sides before comparing, e.g. `[alpha = atan(yB/xA)]`: symbols of the problem that stand for numbers of the sketch, so that `sin(alpha)` and `2/sqrt(13)` count as equal; `kind` what is summed, for the hint on a wrong sign: `\"M\"` for moments, otherwise the name of the direction, e.g. `\"x\"`, `\"y\"`, `\"\\\\xi\"`; `title` LaTeX title put in front of a message, e.g. `\"\\\\Sigma F_x\"` (only needed if several equations share one feedback)"
    },
@@ -446,6 +460,36 @@
     "n": "names field",
     "i": "index of `fix1` object"
    }
+  },
+  {
+   "name": "fb_floats",
+   "kind": "meclib",
+   "sig": "fb_floats(sans, tans, tol)",
+   "args": [
+    "sans",
+    "tans",
+    "tol"
+   ],
+   "text": "`fb_floats()` checks a symbolic answer whose numbers may be rounded, e.g. `0.708*c*a` for the exact `(3*sqrt(5)-6)*c*a`. Unlike fb_coeffs(), the expression need not be linear in its variables: products, powers, roots and functions are fine.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_floats()",
+   "source": "Maxima/fb_value.mac",
+   "argdocs": {
+    "sans": "student's answer",
+    "tans": "teacher's answer (exact or decimal)",
+    "tol": "relative tolerance of each number, e.g. `0.01` for 1 %"
+   },
+   "returns": "[text, ok]"
+  },
+  {
+   "name": "fb_floats_walk",
+   "kind": "meclib",
+   "sig": "fb_floats_walk(x)",
+   "args": [
+    "x"
+   ],
+   "text": "`fb_floats()` checks a symbolic answer whose numbers may be rounded, e.g. `0.708*c*a` for the exact `(3*sqrt(5)-6)*c*a`. Unlike fb_coeffs(), the expression need not be linear in its variables: products, powers, roots and functions are fine.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_floats()",
+   "source": "Maxima/fb_value.mac"
   },
   {
    "name": "fb_force",
@@ -1019,23 +1063,17 @@
   {
    "name": "sumM",
    "kind": "meclib",
-   "sig": "sumM(obj, names, rp, lu, options?)",
+   "sig": "sumM(o, n, p, lu, [options])",
    "args": [
-    "obj",
-    "names",
-    "rp",
+    "o",
+    "n",
+    "p",
     "lu",
-    "options"
+    "[options]"
    ],
    "text": "sumM(o, n, p, lu [, options]): sum of the moments about p (sketch coordinates) of all forces and moments, counterclockwise positive; lu: length unit of the sketch.",
-   "url": "https://github.com/mkraska/meclib/wiki/Sums-of-Forces-and-Moments",
-   "source": "Maxima/fb_fbd.mac",
-   "argdocs": {
-    "options": "(optional) list of options `name = value`; `contacts` indices of \"contact\" objects. A force found at one of them (normal or tangential, with the tolerance of Feedback for \"contact\") gets the exact normal or tangent direction of the contact, with the sense of the drawn arrow, and the contact point as point of application. Drawn arrows snap to 0.1 grid units and are only roughly along the contact, so without this option a correct equation such as `N_B*sin(alpha)` may not match `7/sqrt(149)*N_B`. Give the direction of the contact with exact numbers, e.g. `[-2, -3]`.; `at` (`sumM`) list of `[k, r]`: load `k` acts at point `r`, given in length units (like `rp*lu`), e.g. a centre of gravity that depends on symbols of the problem: `at = i_G, pA*a + rS`."
-   },
-   "optional": [
-    4
-   ]
+   "url": "https://github.com/mkraska/meclib/wiki/fb_EE()",
+   "source": "Maxima/fb_fbd.mac"
   },
   {
    "name": "unitvec",
@@ -1310,7 +1348,7 @@
     "startgap": "(optional, default `0`) space in pixels between `[x1, y1]` and the start of the line"
    },
    "text": "Label with a leader line, e.g. a friction coefficient pointing at a rough surface.",
-   "url": "https://github.com/mkraska/meclib/wiki/description",
+   "url": "https://github.com/mkraska/meclib/wiki/%22description%22",
    "source": "meclib.js",
    "optional": [
     3,
@@ -1641,7 +1679,7 @@
     "[x1,y1]": ", `[x2,y2]` initial locations of the control points (in scaled units)",
     "\"nlabel\"": "(optional, default: none) label for an optional perpendicular line through the first point. This argument earlier was a scaling factor, which is obsolete. The infobox uses the settings of the \"grid\" object."
    },
-   "text": "line with two draggable points, meant for Mohr's circle construction.",
+   "text": "line with two draggable points, meant for Mohr's circle construction or as helper for finding the center of rotation.",
    "url": "https://github.com/mkraska/meclib/wiki/%22line2p%22",
    "source": "meclib.js",
    "optional": [
