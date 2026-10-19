@@ -173,11 +173,11 @@ def question_data(q):
 NEW_STATEMENT = re.compile(r"\s*[A-Za-z_%][A-Za-z0-9_%]*\s*(:|\()")
 
 
-def insert_missing_semicolons(src):
-    """src with a ; inserted wherever split_statements() assumes a missing statement separator
-    (right after the last code character of the statement, before a trailing comment).
-    Returns (new src, [line numbers of the statements that got a ;])."""
-    ins, lines, i, n = [], [], 0, len(src)
+def missing_semicolons(src):
+    """Where split_statements() assumes a missing statement separator, in order: [(index, line,
+    column)] of the place for the ; - right after the last code character of the statement,
+    before a trailing comment (line 1-based, column 0-based as in the editor)."""
+    out, i, n = [], 0, len(src)
     in_str, depth, last_code, has_code = False, 0, None, False
     while i < n:
         c = src[i]
@@ -193,8 +193,8 @@ def insert_missing_semicolons(src):
         if c in ";$":
             depth, has_code, last_code = 0, False, None; i += 1; continue
         if c == "\n" and depth == 0 and has_code and NEW_STATEMENT.match(src, i + 1):
-            ins.append(last_code + 1)
-            lines.append(src.count("\n", 0, last_code) + 1)
+            out.append((last_code + 1, src.count("\n", 0, last_code) + 1,
+                        last_code + 1 - (src.rfind("\n", 0, last_code) + 1)))
             has_code, last_code = False, None; i += 1; continue
         if not c.isspace():
             has_code, last_code = True, i
@@ -205,9 +205,16 @@ def insert_missing_semicolons(src):
         elif c in ")]}":
             depth = max(0, depth - 1)
         i += 1
-    for k in reversed(ins):
+    return out
+
+
+def insert_missing_semicolons(src):
+    """src with a ; inserted wherever split_statements() assumes a missing statement separator
+    (see missing_semicolons). Returns (new src, [line numbers of the statements that got a ;])."""
+    places = missing_semicolons(src)
+    for k, _l, _c in reversed(places):
         src = src[:k] + ";" + src[k:]
-    return src, lines
+    return src, [l for _k, l, _c in places]
 
 
 def split_statements(src):
@@ -715,12 +722,14 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
         code.append("stack_unit_si_declare(true)$")
     code.append("stack_randseed(%d)$" % seed)
     stmt_info = []
+    places = iter(missing_semicolons(data["questionvariables"]))    # one per inserted statement
     code.append(tick("start"))
     for k, (stmt, line, inserted) in enumerate(statements):
         clean = strip_comments(stmt)
         if inserted:
-            stmt_info.append({"index": "s%d" % k, "line": line, "source": clean[:200],
-                              "note": "missing ; before this line assumed (as STACK's parser does)"})
+            _i, sline, scol = next(places, (None, line, None))
+            stmt_info.append({"index": "s%d" % k, "line": sline, "ch": scol, "source": clean[:200],
+                              "note": "no ; at the end of this line, STACK assumes one"})
         try:
             clean = INCLUDE.sub(lambda m: "load(%s)" % mpath(resolver.local_file(m.group(1))), clean)
             for m in INCLUDE.finditer(strip_comments(stmt)):

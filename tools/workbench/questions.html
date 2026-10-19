@@ -1589,10 +1589,10 @@ async function deleteInput(iname) {
   evaluate(false);
 }
 
-function gotoLine(field, line) {
+function gotoLine(field, line, ch) {
   if (!editors[field]) return;
   setTab("edit");
-  editors[field].focusLine(line);
+  editors[field].focusLine(line, ch);
 }
 
 // side by side on wide screens, tabs (Edit / Preview) on narrow ones
@@ -2023,7 +2023,7 @@ function renderInputs() {
 function renderMessages() {
   const msgs = [];
   for (const s of result.statements || []) {
-    if (s.note) msgs.push({ cls: "warn", text: `question variables, line ${s.line}: ${s.note}`, line: s.line });
+    if (s.note) msgs.push({ cls: "warn", text: `question variables, line ${s.line}: ${s.note}`, line: s.line, ch: s.ch });
     else if (s.error) msgs.push({ cls: "err", text: `question variables, line ${s.line}: ${s.source}\n${s.error}`, line: s.line });
     else if (s.output) msgs.push({ cls: "info", text: `question variables, line ${s.line} printed:\n${s.output}` });
   }
@@ -2079,7 +2079,7 @@ function showMessages(list, append) {
   if (!append) box.innerHTML = "";
   for (const m of list) {
     const d = document.createElement("div"); d.className = "msg " + m.cls; d.textContent = m.text;
-    if (m.line) { d.classList.add("goto"); d.title = "go to line " + m.line; d.addEventListener("click", () => gotoLine("questionvariables", m.line)); }
+    if (m.line) { d.classList.add("goto"); d.title = "go to line " + m.line; d.addEventListener("click", () => gotoLine("questionvariables", m.line, m.ch)); }
     box.appendChild(d);
   }
 }

@@ -654,9 +654,9 @@
       set: (v) => { if (cm.getValue() !== v) cm.setValue(v); cm.clearHistory(); },
       refresh: () => cm.refresh(),
       insert: (text) => { cm.replaceSelection(text); cm.focus(); },   // at the cursor (kept while the editor is not focused)
-      focusLine: (n) => {
+      focusLine: (n, ch) => {     // ch: column of the cursor (default: start of the line)
         const line = Math.max(0, n - 1);
-        cm.focus(); cm.setCursor({ line, ch: 0 });
+        cm.focus(); cm.setCursor({ line, ch: ch || 0 });
         cm.scrollIntoView({ line, ch: 0 }, 80);
         cm.addLineClass(line, "background", "cm-flash-line");
         setTimeout(() => cm.removeLineClass(line, "background", "cm-flash-line"), 1500);

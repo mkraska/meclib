@@ -1,5 +1,8 @@
 ### Dev Branch
 
+2026 10 19
+- [[Meclib Workbench]], Questions page: the note on a missing `;` in the question variables names the line where it is missing ("no ; at the end of this line"); a click puts the cursor right where the `;` belongs
+
 2026 10 18
 - [[fb_floats()]]: the deviating numbers and extra summands are underlined instead of red (`\color` needs a MathJax extension that Moodle's MathJax 3 may fail to load; the whole formula was replaced by an error message)
 - [[fb_floats()]]: no feedback on the numbers when a summand has a wrong unit (with `fb_dims`)
