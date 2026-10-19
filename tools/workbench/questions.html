@@ -120,6 +120,9 @@
   .stack-matrix.paren-round { border-left: 2px solid #000; border-right: 2px solid #000; border-radius: 1em; }
   .stack-matrix.paren-bar { border-left: 2px solid #000; border-right: 2px solid #000; }
   input.stack-input.matrix-cell { width: auto; }
+  select.stack-choice { font: inherit; padding: 1px 2px; border: 1px solid #9aa; border-radius: 3px; max-width: 100%; }
+  .stack-choices { display: inline-block; vertical-align: top; }
+  .stack-choices label { display: block; cursor: pointer; }
   .stack-validation { font-size: 12px; color: var(--muted); margin-left: 6px; }
   .stack-prt .prtfb { color: var(--ink); font-size: 14px; }
   .stack-prt .prtinfo { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; font-size: 11.5px; color: var(--muted); }
@@ -417,6 +420,8 @@
         <option value="expression">expression (fb_vars)</option>
         <option value="matrix">vector / matrix of numbers (fb_unit_matrix)</option>
         <option value="matrixexpr">vector / matrix of expressions (fb_vars_matrix)</option>
+        <option value="dropdown">choice: dropdown list</option>
+        <option value="radio">choice: radio buttons</option>
       </select></div>
     <div class="form-row"><label style="width:8em">Model answer</label><input type="text" id="inTans" spellcheck="false" list="inVars"></div>
     <datalist id="inVars"></datalist>
@@ -1380,6 +1385,10 @@ function fillModelAnswers() {
     let v = inp.tans_raw;
     if (v == null) continue;
     if (inp.type === "string" || inp.type === "notes") { try { v = JSON.parse(v); } catch (e) { /* not a string literal */ } }
+    else if (MCQ_TYPES.includes(inp.type) && inp.choices) {
+      const ok = inp.choices.filter((c) => c.correct).map((c) => c.value);
+      v = inp.type === "checkbox" ? (ok.length ? JSON.stringify(ok) : "") : (ok[0] ?? "");
+    }
     else if (inp.type === "matrix") { const mc = matrixModelCells(inp); if (!mc) continue; v = JSON.stringify(mc.map((r) => r.map(studentSyntax))); }
     else v = studentSyntax(v);
     inputValues[inp.name] = v;
@@ -1517,7 +1526,13 @@ function openInputDialog() {
   if (!$("inputDialog").open) $("inputDialog").show();
   $("inName").focus();
 }
-const MATRIX_KINDS = ["matrix", "matrixexpr"];
+const MATRIX_KINDS = ["matrix", "matrixexpr"], CHOICE_KINDS = ["dropdown", "radio"];
+// model answer of a choice input: a list variable, by default <name>_mcq
+function inputTans(n, kind) { return $("inTans").value.trim() || (CHOICE_KINDS.includes(kind) && n ? n + "_mcq" : n); }
+function choiceTemplate(tans, name) {
+  return `/* choices of S_${name}: [value, correct, display] (see wiki "Multiple Choice Questions") */\n` +
+    `${tans}: [[1, true, "…"], [2, false, "…"], [3, false, "…"]];\n`;
+}
 // names assigned in the last evaluation, or in the question variables as they are now
 function questionVariableNames() {
   const names = (result && result.variables || []).map((v) => v.name);
@@ -1527,11 +1542,12 @@ function questionVariableNames() {
 }
 function updateInputDialog() {
   const n = $("inName").value.trim(), kind = $("inKind").value, isMatrix = MATRIX_KINDS.includes(kind);
-  $("inTolRow").hidden = kind === "expression" || kind === "matrixexpr";
+  const isChoice = CHOICE_KINDS.includes(kind);
+  $("inTolRow").hidden = kind === "expression" || kind === "matrixexpr" || isChoice;
   $("inMatrix").hidden = !isMatrix;
-  $("inTans").placeholder = n || "same as name";
+  $("inTans").placeholder = (isChoice && n ? n + "_mcq" : n) || "same as name";
   const names = questionVariableNames();
-  const tans = $("inTans").value.trim() || n;
+  const tans = inputTans(n, kind);
   const isVar = /^[A-Za-z][A-Za-z0-9_]*$/.test(tans), missing = isVar && !names.includes(tans);
   $("inSizeRow").hidden = !(isMatrix && missing);
   const lines = [];
@@ -1540,7 +1556,9 @@ function updateInputDialog() {
   if (clash) lines.push(`<span class="bad">There is already an input S_${esc(n)} or a PRT ${esc(n)}: choose another name.</span>`);
   if (n && !clash && isMatrix) lines.push(`creates input S_${n}, PRT ${n}, and a table row (label | matrix | unit | validation) with [[feedback:${n}]] below it at the cursor in the question text`);
   else if (n && !clash) lines.push(`creates input S_${n}, PRT ${n}, and [[input:S_${n}]] [[validation:S_${n}]] [[feedback:${n}]] at the cursor in the question text`);
-  if (n && isMatrix && missing) lines.push(`${tans} is not (yet) a question variable: a ${$("inRows").value}×${$("inCols").value} placeholder matrix is added to the question variables (the size of the model answer sets the size of the input)`);
+  if (n && isChoice && missing) lines.push(`${tans} is not (yet) a question variable: a list of choices to fill in is added at the beginning of the question variables:\n${choiceTemplate(tans, n).trimEnd()}`);
+  else if (n && isChoice) lines.push(`${tans} must be the list of choices [[value, true/false, display], ...]; the PRT compares with mcq_correct(${tans})[1]`);
+  else if (n && isMatrix && missing) lines.push(`${tans} is not (yet) a question variable: a ${$("inRows").value}×${$("inCols").value} placeholder matrix is added to the question variables (the size of the model answer sets the size of the input)`);
   else if (n && missing)
     lines.push(`note: ${tans} is not (yet) a question variable` + (kind === "units" ? " - for this type it must include the unit, e.g. " + tans + ": 720*N;" : ""));
   $("inInfo").innerHTML = lines.map((l) => l.startsWith("<span") ? l : esc(l)).join("\n");
@@ -1557,7 +1575,12 @@ function matrixInputText(name) {
 }
 async function createInput() {
   const name = $("inName").value.trim(), kind = $("inKind").value, isMatrix = MATRIX_KINDS.includes(kind);
-  const tans = $("inTans").value.trim() || name;
+  const tans = inputTans(name, kind);
+  if (CHOICE_KINDS.includes(kind) && /^[A-Za-z][A-Za-z0-9_]*$/.test(tans) && !questionVariableNames().includes(tans)) {
+    // the list of choices, at the beginning (the cursor is in the question text, not here)
+    const ed = editors.questionvariables;
+    ed.set(choiceTemplate(tans, name) + ed.get());
+  }
   if (isMatrix && /^[A-Za-z][A-Za-z0-9_]*$/.test(tans) && !questionVariableNames().includes(tans)) {
     // placeholder model answer of the requested size, to be replaced by the author
     const rows = Math.max(1, Math.min(9, parseInt($("inRows").value, 10) || 1));
@@ -1566,7 +1589,7 @@ async function createInput() {
     const ed = editors.questionvariables, qv = ed.get();
     ed.set(qv + (qv && !qv.endsWith("\n") ? "\n" : "") + `${tans}: matrix(${Array(rows).fill(row).join(", ")}); /* model answer of S_${name} (placeholder) */\n`);
   }
-  const r = await inputOp({ op: "add", name, kind, tans: $("inTans").value.trim(), tol: $("inTol").value.trim() || "0.005",
+  const r = await inputOp({ op: "add", name, kind, tans: CHOICE_KINDS.includes(kind) ? tans : $("inTans").value.trim(), tol: $("inTol").value.trim() || "0.005",
     labels: isMatrix ? $("inComp").value.trim() : "" });
   if (!r) return;
   saved.inputs = r.fields.inputs; saved.prts = r.fields.prts;
@@ -1848,6 +1871,7 @@ function toHTML(text, format, blocks) {
   t = t.replace(/\[\[\s*input:([A-Za-z0-9_]+)\s*\]\]/g, (m, n) => {
     const inp = (result.inputs || []).find((x) => x.name === n) || {};
     if (inp.type === "matrix") return matrixInputHTML(inp);
+    if (MCQ_TYPES.includes(inp.type) && inp.choices) return choiceInputHTML(inp);
     const box = parseInt(inp.boxsize, 10) || 15;   // STACK: width (boxsize * 0.9 + 0.1) em, size boxsize * 1.1
     const opts = String(inp.options || "").split(",").map((o) => o.trim().toLowerCase());
     const cls = "stack-input" + (opts.includes("monospace") ? " mono" : "") + (opts.includes("align:right") ? " right" : "");
@@ -1884,6 +1908,47 @@ function matrixModelCells(inp) {
   const rows = split(m[1]).map((r) => /^\[(.*)\]$/s.exec(r)).filter(Boolean).map((r) => split(r[1]));
   return rows.length ? rows : null;
 }
+// Choice inputs (STACK types dropdown, radio, checkbox): the entries of the model answer
+// [[value, correct, display], ...] come evaluated from the server (inp.choices). The value kept in
+// inputValues and sent to "Check" is the chosen entry's value (Maxima text) - for a checkbox the
+// JSON list of the ticked values, "" when none is ticked.
+const MCQ_TYPES = ["dropdown", "radio", "checkbox"];
+function choiceOptions(inp) { return String(inp.options || "").split(",").map((o) => o.trim().toLowerCase()); }
+function choiceInputHTML(inp) {
+  const n = esc(inp.name), none = !choiceOptions(inp).includes("nonotanswered");
+  if (inp.type === "dropdown")      // as STACK: plain text, no math in a <select>
+    return `<select class="stack-choice" data-input="${n}">${none ? '<option value=""></option>' : ""}` +
+      inp.choices.map((c, k) => `<option value="${k}">${esc(c.display || c.value)}</option>`).join("") + "</select>";
+  const label = (c) => c.display || `\\(${c.tex}\\)`;   // the display is castext (HTML, math)
+  const type = inp.type === "radio" ? "radio" : "checkbox";
+  let h = inp.choices.map((c, k) =>
+    `<label><input type="${type}" class="stack-choice" name="mcq-${n}" data-input="${n}" value="${k}"> ${label(c)}</label>`).join("");
+  if (type === "radio" && none)
+    h += `<label><input type="radio" class="stack-choice" name="mcq-${n}" data-input="${n}" value=""> <i>${lang === "en" ? "(Clear my choice)" : "(Auswahl aufheben)"}</i></label>`;
+  return `<span class="stack-choices">${h}</span>`;
+}
+function choiceValue(name) {
+  const inp = (result.inputs || []).find((x) => x.name === name) || {};
+  const els = [...document.querySelectorAll(`.stack-choice[data-input="${CSS.escape(name)}"]`)];
+  if (inp.type === "checkbox") {
+    const vals = els.filter((e) => e.checked).map((e) => inp.choices[+e.value].value);
+    return vals.length ? JSON.stringify(vals) : "";
+  }
+  const el = inp.type === "dropdown" ? els[0] : els.find((e) => e.checked);
+  return el && el.value !== "" ? inp.choices[+el.value].value : "";
+}
+function showChoice(name, value) {
+  const inp = (result.inputs || []).find((x) => x.name === name) || {};
+  if (!inp.choices) return;
+  let picked = [];
+  if (inp.type === "checkbox") { try { picked = JSON.parse(value || "[]"); } catch (e) { picked = []; } }
+  else picked = [value];
+  const on = (k) => picked.includes(inp.choices[k].value);
+  for (const el of document.querySelectorAll(`.stack-choice[data-input="${CSS.escape(name)}"]`)) {
+    if (el.tagName === "SELECT") { const k = inp.choices.findIndex((c) => c.value === value); el.value = k >= 0 ? String(k) : ""; }
+    else el.checked = el.value === "" ? !value : on(+el.value);
+  }
+}
 function matrixInputHTML(inp) {
   const cells = matrixModelCells(inp) || [[""]];
   const parens = ((saved && saved.options) || {}).matrixparens ?? "[";
@@ -1909,6 +1974,7 @@ function matrixCell(value, r, c) {
 function setInputValue(name, value) {
   inputValues[name] = value;
   for (const el of document.querySelectorAll(`input.stack-input[data-input="${CSS.escape(name)}"]:not(.matrix-cell)`)) if (el.value !== value) el.value = value;
+  showChoice(name, value);
   const cell = document.querySelector(`#inputs [data-current="${CSS.escape(name)}"]`);
   if (cell) cell.textContent = value;
 }
@@ -1925,6 +1991,12 @@ async function renderInto(container, text, format) {
     el.value = inputValues[el.dataset.input] || el.dataset.initial || "";
     el.addEventListener("input", () => setInputValue(el.dataset.input, el.value));
   }
+  const choices = new Set();
+  for (const el of container.querySelectorAll(".stack-choice")) {
+    choices.add(el.dataset.input);
+    el.addEventListener("change", () => setInputValue(el.dataset.input, choiceValue(el.dataset.input)));
+  }
+  for (const n of choices) showChoice(n, inputValues[n] || "");
   if (window.MathJax && MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, container]);
   await runGraphics(container, blocks);
 }
@@ -2028,6 +2100,11 @@ function renderMessages() {
     else if (s.output) msgs.push({ cls: "info", text: `question variables, line ${s.line} printed:\n${s.output}` });
   }
   for (const [k, v] of Object.entries(result.castext_errors || {})) msgs.push({ cls: "err", text: `${k}: ${v}` });
+  for (const inp of result.inputs || []) {      // STACK refuses choice inputs without a proper list
+    if (!MCQ_TYPES.includes(inp.type)) continue;
+    if (!inp.choices) msgs.push({ cls: "err", text: `input ${inp.name} (${inp.type}): the model answer ${inp.tans} must be a list of choices [[value, true/false, display], ...]` });
+    else if (!inp.choices.some((c) => c.correct)) msgs.push({ cls: "err", text: `input ${inp.name} (${inp.type}): no choice in ${inp.tans} is marked true` });
+  }
   if (!result.languages || !result.languages.length)
     msgs.push({ cls: "warn", text: "The question text has no [[lang]] block, so STACK sets no language: [[lang]] blocks (e.g. in the meclib feedback functions' texts) stay empty - as in Moodle." });
   for (const inc of result.includes || []) msgs.push({ cls: "info", text: `stack_include ${inc}\n→ follows the meclib source selector (${$("src").value})` });

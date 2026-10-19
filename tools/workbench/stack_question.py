@@ -513,6 +513,18 @@ def uses_units(data):
         n["answertest"].startswith("Units") for p in data["prts"] for n in p["nodes"])
 
 
+def mcq_choices(text):
+    """The entries of a choice input's model answer: [{value, correct, display, tex}], or None."""
+    if not text:
+        return None
+    import json
+    try:
+        rows = json.loads(text)
+    except ValueError:
+        return None
+    return [{"value": r[0], "correct": r[1] == "true", "display": r[2], "tex": r[3]} for r in rows]
+
+
 def matrix_cells(text):
     """The cells of a matrix model answer as rows of strings (from stackjson_stringify), or None."""
     if not text:
@@ -560,6 +572,22 @@ def student_value(inp, raw, decimals):
     if stars in ("3", "4", "5", "6", "7"):   # spaces between operands
         v = re.sub(r"([A-Za-z0-9_.)\]])\s+(?=[A-Za-z0-9_(\[%])", r"\1*", v)
     return v
+
+
+MCQ_TYPES = ("dropdown", "radio", "checkbox")
+
+
+def mcq_value(inp, raw):
+    """The Maxima expression of a choice input's answer: the value of the chosen entry (dropdown,
+    radio) or the list of the ticked ones (checkbox, raw: JSON list of the values)."""
+    if inp.get("type") == "checkbox":
+        import json
+        try:
+            vals = json.loads(raw)
+        except ValueError:
+            vals = []
+        return "[%s]" % ",".join(vals)
+    return raw.strip()
 
 
 def allows_empty(inp):
@@ -765,6 +793,18 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
     security = security_findings(data)
     for inp in data["inputs"]:
         tans = inp.get("tans") or ""
+        if tans.strip() and "model answer of %s" % inp["name"] not in security and inp.get("type") in MCQ_TYPES:
+            # choice inputs: the model answer is the list [[value, correct, display], ...]; the
+            # teacher's answer is the correct value (dropdown, radio) or the list of them (checkbox)
+            pick = "%_l" if inp["type"] == "checkbox" else "first(%_l)"
+            code.append('block([%%_v: errcatch(%s), %%_l], if %%_v # [] and listp(%%_v[1]) then ('
+                        'meclib_out(%s, stackjson_stringify(map(lambda([%%_e], [string(%%_e[1]), string(is(second(%%_e) = true)),'
+                        ' if length(%%_e) > 2 then (if stringp(%%_e[3]) then %%_e[3] else string(%%_e[3])) else "", tex1(%%_e[1])]), %%_v[1]))),'
+                        ' %%_l: errcatch(mcq_correct(%%_v[1])), if %%_l # [] and %%_l[1] # [] then (%%_l: %%_l[1],'
+                        ' meclib_out(%s, string(%s)), meclib_out(%s, fb_tmpl_tostring(%s)))))$'
+                        % (tans, mstring("mcq:" + inp["name"]), mstring("tans:" + inp["name"]), pick,
+                           mstring("tanstex:" + inp["name"]), pick))
+            continue
         if tans.strip() and "model answer of %s" % inp["name"] not in security:
             code.append('block([%%_v: errcatch(%s)], if %%_v # [] then (meclib_out(%s, string(%%_v[1])),'
                         ' meclib_out(%s, fb_tmpl_tostring(%%_v[1]))))$'
@@ -853,7 +893,7 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
         "includes": includes,
         "inputs": [dict(inp, tans_raw=first("tans:" + inp["name"]), tans_tex=first("tanstex:" + inp["name"]),
                         hint_de=first("hint:de:" + inp["name"]), hint_en=first("hint:en:" + inp["name"]),
-                        mcells=matrix_cells(first("mcells:" + inp["name"])))
+                        mcells=matrix_cells(first("mcells:" + inp["name"])), choices=mcq_choices(first("mcq:" + inp["name"])))
                    for inp in data["inputs"]],
         "texts": {key: {"de": first(key + ":de"), "en": first(key + ":en")} for key in texts if texts[key].strip()},
         "castext_errors": castext_errors,
@@ -891,6 +931,11 @@ def answer_code(data, answers, langs, resolver, checked, qv_names=()):
             code.append('%s: %s$' % (n, value))
             code.append('meclib_out(%s, "valid")$' % mstring("ans:%s:state" % n))
             continue
+        elif inp.get("type") in MCQ_TYPES:
+            value = mcq_value(inp, raw)
+            if value == "[]" and not allows_empty(inp):     # no box ticked: not answered (STACK)
+                inputs[n] = {"state": "blank"}
+                continue
         else:
             value = student_value(inp, raw, data["decimals"])
         inputs[n] = {"state": "?", "value": value}

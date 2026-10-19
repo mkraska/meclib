@@ -310,7 +310,22 @@ INPUT_KINDS = {
                 "fv": "txt: fb_vars_matrix(%(s)s, %(t)s, []%(lab)s);",
                 "true": "{@txt@}", "false": "{@txt@}"},
     },
+    # choice inputs: the model answer is the list [[value, correct, display], ...]; the PRT
+    # compares with the (first) correct value; no feedback text, the choice speaks for itself
+    "dropdown": {
+        "input": {"type": "dropdown", "boxsize": "15", "insertstars": "0", "syntaxhint": "",
+                  "syntaxattribute": "0", "forbidfloat": "0", "mustverify": "0", "showvalidation": "0"},
+        "prt": {"autosimplify": "1", "answertest": "AlgEquiv", "options": False, "tans": "mcq_correct(%(t)s)[1]",
+                "true": "", "false": ""},
+    },
+    "radio": {
+        "input": {"type": "radio", "boxsize": "15", "insertstars": "0", "syntaxhint": "",
+                  "syntaxattribute": "0", "forbidfloat": "0", "mustverify": "0", "showvalidation": "0"},
+        "prt": {"autosimplify": "1", "answertest": "AlgEquiv", "options": False, "tans": "mcq_correct(%(t)s)[1]",
+                "true": "", "false": ""},
+    },
 }
+CHOICE_KINDS = ("dropdown", "radio")
 
 
 def split_top(s):
@@ -366,7 +381,7 @@ def prt_block(name, kind, sans, tans, tol, nl, indent="    ", labels=""):
     spec = INPUT_KINDS[kind]["prt"]
     sub = {"s": sans, "t": tans, "tol": tol, "lab": matrix_labels(labels)}
     fvars = spec.get("fv", "") % sub
-    sans, tans = spec.get("sans", sans), spec.get("tans", tans)
+    sans, tans = spec.get("sans", sans), (spec["tans"] % sub if "tans" in spec else tans)
     i2, i3, i4 = indent + "  ", indent + "    ", indent + "      "
 
     def fb(tag, text):

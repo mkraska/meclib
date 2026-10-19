@@ -1,6 +1,8 @@
 ### Dev Branch
 
 2026 10 19
+- [[Meclib Workbench]], Questions page, "Input ...": types "choice: dropdown list" and "choice: radio buttons" (model answer `X_mcq`, a list of choices added as a template at the beginning of the question variables; PRT `S_X` = `mcq_correct(X_mcq)[1]`); the messages report a choice list that is not a list or has no correct choice
+- [[Meclib Workbench]], Questions page: choice inputs (dropdown, radio, checkbox) in the preview, with the entries of the evaluated model answer `[[value, correct, display], ...]`; "TAns" picks the correct entries, "Check" passes the chosen value (checkbox: the list of the ticked values) to the PRTs
 - [[Meclib Workbench]], Questions page: the note on a missing `;` in the question variables names the line where it is missing ("no ; at the end of this line"); a click puts the cursor right where the `;` belongs
 
 2026 10 18
