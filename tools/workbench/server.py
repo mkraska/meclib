@@ -38,6 +38,7 @@ Endpoints
   POST /api/q/folders       {add: path} or {remove: path}
   POST /api/q/open          {path} -> {path, rev, questions}
   POST /api/q/question      {path, index} -> editable fields of a STACK question, rev
+  POST /api/q/rev           {path} -> {rev} of the file on disk (null if it is gone)
   POST /api/q/save          {path, index, rev, changes, backup} -> {rev, changed}; 409 if
                             the file changed on disk since rev
   POST /api/q/eval          {path, index, seed, src} -> question variables, model answers and
@@ -51,6 +52,9 @@ Endpoints
   POST /api/q/input         {path, index, rev, op: "add", name, kind, tans?, tol?} new input S_<name>
                             with PRT <name> (qfile.INPUT_KINDS), or {op: "delete", input, prt?}
                             -> {rev, fields}
+  POST /api/q/scene         {path, index, rev, block, to: "static" | "interactive", dry?} [[jsxgraph]] block
+                            number block of the question text made static (bound inputs deleted) or
+                            interactive (hidden inputs objects, names added) -> {plan} (dry) or {rev, plan, fields}
   POST /api/q/review        {path, index} -> {rev, findings}: the review rules (rules.py) for a question
   POST /api/q/review-apply  {path, index, rev, apply: [keys], reject: [keys]} -> fixes applied, rejected
                             findings recorded in the question description -> {rev, applied, fields, findings}
@@ -114,7 +118,7 @@ class SessionPool:
 
     def __init__(self):
         self.lock = threading.Lock()
-        self.sessions = {}   # key -> [session, last_used, names]
+        self.sessions = {}   # key -> [session, last_used, names, kinds of runs done ("eval", "check")]
 
     def get(self, key, maxima):
         with self.lock:
@@ -128,7 +132,7 @@ class SessionPool:
                 oldest = min(self.sessions, key=lambda k: self.sessions[k][1])
                 self.sessions.pop(oldest)[0].close()
         session = MaximaSession(maxima or None)
-        entry = [session, time.time(), []]
+        entry = [session, time.time(), [], set()]
         with self.lock:
             self.sessions[key] = entry
         return entry
@@ -410,6 +414,9 @@ class Handler(SimpleHTTPRequestHandler):
                 questions = qfile.list_questions(text)
                 STATE.touch(str(target))
                 return self.send_json({"path": str(target), "rev": rev, "questions": questions})
+            if path == "/api/q/rev":
+                target = allowed_path(cfg, req["path"], must_exist=False)
+                return self.send_json({"rev": qfile.read_file(target)[1] if target.is_file() else None})
             if path == "/api/q/question":
                 target = allowed_path(cfg, req["path"])
                 text, rev = qfile.read_file(target)
@@ -446,6 +453,11 @@ class Handler(SimpleHTTPRequestHandler):
                 answers = req.get("answers") if path == "/api/q/check" else None
                 result = stack_question.evaluate(entry[0], data, int(req.get("seed", 1)), resolver, entry[2], answers)
                 entry[2] = result["kill"]
+                # the first run of its kind in a session includes Maxima's warm-up (about 0.2 s,
+                # mostly in the first PRT), so its times are not comparable with later runs
+                kind = "check" if answers is not None else "eval"
+                result["first_run"] = kind not in entry[3]
+                entry[3].add(kind)
                 result.update({"name": data["name"], "format": data["formats"]["questiontext"],
                                "formats": data["formats"], "prts": data["prts"],
                                "seeds": data["seeds"], "decimals": data["decimals"],
@@ -485,6 +497,23 @@ class Handler(SimpleHTTPRequestHandler):
                 a, b, _ = qfile.question_span(new, index)
                 return self.send_json({"rev": rev, "applied": applied, "fields": qfile.question_fields(new, index),
                                        "findings": rules.public(rules.findings(new[a:b])),
+                                       "history": history.status(target, index)})
+            if path == "/api/q/scene":
+                target = allowed_path(cfg, req["path"])
+                text, rev = qfile.read_file(target)
+                if req.get("rev") and req["rev"] != rev:
+                    raise qfile.ConflictError("the file was changed outside the workbench")
+                index, k, to = int(req["index"]), int(req["block"]), req.get("to")
+                if to not in ("static", "interactive"):
+                    raise ValueError("to: static or interactive")
+                a, b, _ = qfile.question_span(text, index)
+                plan = qfile.scene_plan(text[a:b], k, to)
+                if req.get("dry") or plan.get("error"):
+                    return self.send_json({"plan": plan})
+                new = qfile.scene_switch(text, index, k, to)
+                rev = qfile.write_file(target, new, rev, bool(req.get("backup")))
+                history.record(target, text, new, index, "graphic %d %s" % (k + 1, to))
+                return self.send_json({"rev": rev, "plan": plan, "fields": qfile.question_fields(new, index),
                                        "history": history.status(target, index)})
             if path == "/api/q/input":
                 target = allowed_path(cfg, req["path"])

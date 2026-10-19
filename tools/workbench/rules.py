@@ -325,10 +325,36 @@ def r_input_settings(Q_):
                              % (inp["name"], '"%s"' % hint if hint else "empty", want),
                              _input_fix(inp["name"], {"syntaxhint": want}), WIKI + "Multilingual-questions"))
             else:
-                out.append(F("inputs.syntaxhint", inp["name"], "hint", "Multilingual syntax hint",
-                             "Input %s: the multilingual hint %s needs fb_value.mac in the question variables."
-                             % (inp["name"], want), None, WIKI + "Multilingual-questions"))
+                url = include_url(Q_, "fb_value.mac")
+                out.append(F("inputs.syntaxhint", inp["name"], "recommended", "Multilingual syntax hint",
+                             "Input %s: syntax hint %s → %s (German/English); this adds "
+                             "stack_include(\"%s\") to the question variables."
+                             % (inp["name"], '"%s"' % hint if hint else "empty", want, url),
+                             _include_fix(url, _input_fix(inp["name"], {"syntaxhint": want})),
+                             WIKI + "Multilingual-questions"))
     return out
+
+
+def include_url(Q_, mac):
+    """URL of a meclib Maxima file, from the same place (branch) as the question's other meclib
+    includes, else from main."""
+    for u in Q_.includes:
+        m = re.match(r"(https://raw\.githubusercontent\.com/mkraska/meclib/[^/]+/Maxima/)", u)
+        if m:
+            return m.group(1) + mac
+    return "https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/" + mac
+
+
+def _include_fix(url, then=None):
+    """Fix that appends stack_include(url) to the question variables unless a file of that name
+    is already included (several findings may share the include), then applies `then`."""
+    mac = url.rsplit("/", 1)[-1]
+    def fix(q):
+        qv = Q(q).qvars
+        if not any(u.rsplit("/", 1)[-1] == mac for u in sq.INCLUDE.findall(qv)):
+            q = _set_text(q, "questionvariables", qv.rstrip() + '\nstack_include("%s");\n' % url)
+        return then(q) if then else q
+    return fix
 
 
 def _feedback(node):
@@ -340,7 +366,8 @@ def r_prts(Q_):
     for prt in Q_.prts:
         P = prt["name"]
         texts = "".join(_feedback(n) for n in prt["nodes"])
-        if prt["feedbackstyle"] != "2":
+        # formative PRTs (style 0: no score, text only, e.g. a sketch of the answer) stay as they are
+        if prt["feedbackstyle"] not in ("2", "0"):
             if HTML_BLOCK.search(texts):
                 out.append(F("prt.feedbackstyle", P, "hint", "PRT feedback style",
                              "PRT %s: feedback style is not compact, but its feedback contains HTML blocks "
@@ -414,6 +441,27 @@ def _cas_sources(Q_):
                 yield "PRT %s node %d feedback" % (prt["name"], k + 1), part
             for f in ("sans", "tans"):
                 yield "PRT %s node %d %s" % (prt["name"], k + 1, f), node.get(f) or ""
+
+
+def r_feedback_inputs(Q_):
+    """Input names in the CAS parts of the specific or general feedback: STACK evaluates these
+    texts once when the question starts, with the question variables only, so an input there is
+    just an unbound symbol. The answers reach the specific feedback through [[feedback:..]] of a
+    PRT whose feedback shows what depends on them."""
+    names = [i["name"] for i in Q_.inputs]
+    out = []
+    for key, label in (("specificfeedback", "specific feedback"), ("generalfeedback", "general feedback")):
+        used = []
+        for part in sq.castext_cas_parts(Q_.data.get(key, "")):
+            code = re.sub(r'"(?:\\.|[^"\\])*"', '""', sq.strip_comments(part))
+            used += [n for n in sq.IDENT.findall(code) if n in names]
+        if used:
+            out.append(F("feedback.inputs", key, "recommended", "Input used in the " + label,
+                         "%s: %s. STACK evaluates the CAS parts of the %s when the question starts, without the "
+                         "answers, so the input is an unbound symbol there. Move this part into the feedback of a PRT "
+                         "(e.g. a formative PRT, feedback style 0) and place its [[feedback:..]] in the specific feedback."
+                         % (label, ", ".join(dict.fromkeys(used)), label)))
+    return out
 
 
 def r_literal_index(Q_):
@@ -800,9 +848,70 @@ def r_semicolons(Q_):
                      "Add it." % (prt["name"], ", ".join(map(str, lines))), fix))
     return out
 
+def r_scenes(Q_):
+    """[[jsxgraph]] blocks and the inputs they are bound to (input-ref-...): graphics in the
+    feedback must be static, a bound input must exist, a hidden (or missing) input of a former
+    interactive graphic is left over."""
+    out = []
+    names = {i["name"] for i in Q_.inputs}
+    for field in ("generalfeedback", "specificfeedback"):
+        for k, blk in enumerate(qfile.jsx_blocks(Q_.data.get(field) or "")):
+            if not blk["refs"]:
+                continue
 
-RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_graphic_inputs, r_input_settings, r_prts,
-         r_grade, r_literal_index, r_tans_copy, r_math_delimiters, r_matrix_inputs, r_unused_files, r_semicolons]
+            def fix(q, field=field, k=k):
+                text = Q(q).data.get(field) or ""
+                return _set_text(q, field, qfile._make_static_text(text, qfile.jsx_blocks(text)[k]))
+            out.append(F("graphic.feedback-interactive", "%s graphic %d" % (field, k + 1), "required",
+                         "Interactive graphic in the feedback",
+                         "%s, graphic %d: it is bound to %s, but a graphic in the feedback has no inputs. "
+                         "Make it static (no input-ref attributes, var stateRef; in the header)."
+                         % (field, k + 1, ", ".join(blk["refs"])), fix, WIKI + "MecLib-Question-Setup"))
+    blocks = qfile.jsx_blocks(Q_.qtext)
+    for k, blk in enumerate(blocks):
+        missing = [n for n in blk["refs"] if n not in names]
+        if not missing:
+            continue
+
+        def fix(q, k=k, missing=tuple(missing)):
+            text = Q(q).qtext
+            b = qfile.jsx_blocks(text)[k]
+            head = text[b["start"]:b["head_end"]]
+            head = qfile.INPUT_REF.sub(lambda r: "" if r.group(1) in missing else r.group(0), head)
+            text = text[:b["start"]] + head + text[b["head_end"]:]
+            b = qfile.jsx_blocks(text)[k]
+            if not b["refs"]:
+                text = qfile._make_static_text(text, b)
+            return _set_text(q, "questiontext", text)
+        out.append(F("graphic.missing-input", "graphic %d" % (k + 1), "required", "Graphic bound to a missing input",
+                     "Question text, graphic %d: input-ref-%s refers to %s, which the question does not have; "
+                     "Moodle then does not save the question. Remove the binding%s."
+                     % (k + 1, " / input-ref-".join(missing), ", ".join(missing),
+                        " (the graphic becomes static)" if len(missing) == len(blk["refs"]) else ""),
+                     fix, WIKI + "MecLib-Question-Setup"))
+    bound = {n for b in blocks for n in b["refs"]}
+    used = qfile._prts_using(Q_.block, [i["name"] for i in Q_.inputs])
+    used = {n for v in used.values() for n in v}
+    for inp in Q_.inputs:
+        n = inp["name"]
+        # only the inputs of the meclib convention (objects, names; objects2, names2 for a second graphic)
+        if n in bound or n in used or not re.match(r"^(objects|names)\d*$", n):
+            continue
+        placed = re.search(r"\[\[\s*input:%s\s*\]\]" % re.escape(n), Q_.qtext)
+        hidden = re.search(r"<p\s+hidden\s*>[^<]*\[\[\s*input:%s\s*\]\]" % re.escape(n), Q_.qtext)
+        if placed and not hidden:
+            continue
+        out.append(F("graphic.unused-input", n, "hint", "Input without a graphic",
+                     "Input %s is %s, no graphic is bound to it and no PRT uses it (left over from an "
+                     "interactive graphic?). Delete it%s." % (
+                         n, "hidden" if placed else "not in the question text", " with its placeholders" if placed else ""),
+                     lambda q, n=n: qfile._delete_input_q(q, n)))
+    return out
+
+
+
+RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_scenes, r_graphic_inputs, r_input_settings, r_prts,
+         r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_matrix_inputs, r_unused_files, r_semicolons]
 
 
 # ---------------------------------------------------------------------- metadata in the description

@@ -118,5 +118,9 @@
  "wall.md": {
   "page": "\"wall\"",
   "base": "5e6ece6114d5bfcf"
+ },
+ "fb_floats().md": {
+  "page": "fb_floats()",
+  "base": null
  }
 }

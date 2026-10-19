@@ -120,12 +120,28 @@
   .stack-matrix.paren-round { border-left: 2px solid #000; border-right: 2px solid #000; border-radius: 1em; }
   .stack-matrix.paren-bar { border-left: 2px solid #000; border-right: 2px solid #000; }
   input.stack-input.matrix-cell { width: auto; }
+  select.stack-choice { font: inherit; padding: 1px 2px; border: 1px solid #9aa; border-radius: 3px; max-width: 100%; }
+  .stack-choices { display: inline-block; vertical-align: top; }
+  .stack-choices label { display: block; cursor: pointer; }
   .stack-validation { font-size: 12px; color: var(--muted); margin-left: 6px; }
   .stack-prt .prtfb { color: var(--ink); font-size: 14px; }
   .stack-prt .prtinfo { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; font-size: 11.5px; color: var(--muted); }
-  .stack-prt.score-1 { border-left-color: #4c9a52; }
-  .stack-prt.score-0 { border-left-color: #c0504d; }
-  .stack-prt.score-p { border-left-color: #d8a23a; }
+  /* PRT feedback as STACK renders it (renderer.php prt_feedback_display, styles.css) */
+  /* the [[feedback:...]] place: inline like STACK's <span> for compact/symbolic feedback (after the validation
+     when there is room), a block for standard/formative (STACK's <div>); the workbench line below it */
+  .stack-prt.checked { background: transparent; border: none; padding: 0; margin: 0; display: inline; }
+  .stack-prt.checked.block { display: block; margin: 6px 0; }
+  /* workbench data of the PRT (answer test, errors, score, notes, times): gray box below the feedback */
+  .stack-prt .prtwb { display: block; margin: 2px 0 8px; padding: 3px 8px; border-left: 3px solid #c9d6e3; background: #f6f8fa; }
+  .stack-prt .prtwb .prtinfo { margin-top: 0; }
+  .stackprtfeedback { background: #fcf8e3; margin: 0.2em -0.2em 0.5em; padding: 0.2em 0.5em 0.2em 0.2em; display: inline-block; vertical-align: top; color: var(--ink); font-size: 14px; }
+  .stackprtfeedback .correct, .stackprtfeedback .partiallycorrect, .stackprtfeedback .incorrect { background: transparent; font-weight: 700; }
+  /* Moodle draws the symbols with its icon font (fa fa-check / fa-times / fa-adjust); the same glyphs as characters, no font needed */
+  .stackprtfeedback i.fa { font-style: normal; font-weight: 400; display: inline-block; width: 1.1em; }
+  .stackprtfeedback i.fa-check::before { content: "\2714"; }
+  .stackprtfeedback i.fa-times::before { content: "\2716"; }
+  .stackprtfeedback i.fa-adjust::before { content: ""; display: inline-block; width: 0.8em; height: 0.8em; box-sizing: border-box;
+    border: 0.1em solid currentColor; border-radius: 50%; background: linear-gradient(90deg, currentColor 50%, transparent 50%); vertical-align: -0.05em; }
   .stack-prt .prterr { color: var(--err); font-size: 12px; white-space: pre-wrap; }
   /* variables: question variables or the feedback variables of a PRT (after Check) */
   .vtabs { display: flex; flex-wrap: wrap; gap: 3px; margin: 0 0 6px; }
@@ -133,9 +149,13 @@
   .vtabs button.sub { font-family: var(--mono); }
   .vtabs button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
   .stack-validation .val-ok { color: var(--ink); }
+  /* as STACK's styles.css: compact validation (show validation 3) in a white box next to the input, standard (1, 2) as a white block */
+  .stack-validation .val-ok.compact { margin: 3px; display: inline-block; vertical-align: top; background-color: white; border: 1px solid #ccc; padding: 0.3em; }
+  .stack-validation .val-ok.standard { display: block; margin: 0.2em 3em 0.5em; padding: 0.5em; background-color: white; border: 1px solid #fff; }
   .stack-validation .val-bad { color: var(--err); }
-  .stack-prt { margin: 6px 0; padding: 4px 8px; border-left: 3px solid #c9d6e3; color: var(--muted); font-size: 12.5px; background: #f6f8fa; }
+  .stack-prt { display: inline-block; margin: 6px 0; padding: 4px 8px; border-left: 3px solid #c9d6e3; color: var(--muted); font-size: 12.5px; background: #f6f8fa; }
   .jsx-slot { display: inline-block; }
+  .specificfeedback { margin-top: 12px; padding: 8px 10px; background: #fcefdc; border-radius: 4px; }
   table.vars { border-collapse: collapse; width: 100%; font-size: 12.5px; }
   table.vars td, table.vars th { border-bottom: 1px solid #ecece7; padding: 3px 4px; vertical-align: top; text-align: left; }
   table.vars th { color: var(--muted); font-weight: 600; font-size: 12px; }
@@ -164,39 +184,6 @@
   .ed .CodeMirror-scroll { min-height: 3em; }
   /* the editors keep their height; drag the lower right corner to change it */
   .ed .CodeMirror.cm-resizable { resize: vertical; overflow: hidden; }
-  .cm-s-default .cm-comment { color: #7a7a72; font-style: italic; }
-  .cm-s-default .cm-string { color: #a33a1e; }
-  .cm-s-default .cm-number, .cm-s-default .cm-atom { color: #116644; }
-  .cm-s-default .cm-keyword { color: #7a1fa2; font-weight: 600; }
-  .cm-s-default .cm-def { color: #1f5f99; font-weight: 600; }
-  .cm-s-default .cm-variable-2 { color: #00607a; }
-  .cm-s-default .cm-meta { color: #b06000; font-weight: 600; }
-  .cm-s-default .cm-def-op { color: #1f5f99; font-weight: 600; }
-  .cm-s-default .cm-tag { color: #6b6b66; }
-  .cm-castext-delim { color: #b06000; font-weight: 600; }
-  .cm-castext-cas { background: #fff4df; }
-  .cm-castext-block { color: #1f5f99; font-weight: 600; }
-  .cm-castext-slot { color: #fff; background: #5b8fbf; border-radius: 3px; }
-  .cm-castext-math-delim { color: #116644; font-weight: 600; }
-  .cm-castext-math { color: #116644; }
-  .cm-castext-latex { color: #0b7a4f; font-weight: 600; }
-  .cm-flash-line { background: #fde9b8; }
-  /* syntax help box and autocomplete list of the code editors (editor.js) */
-  .meclib-helpbox { position: absolute; z-index: 50; display: none; max-width: 560px; padding: 6px 9px; background: #fffef6;
-    border: 1px solid #d8d2b4; border-radius: 5px; box-shadow: 0 3px 10px rgba(0,0,0,.15); font-size: 12.5px; line-height: 1.4; }
-  .meclib-helpbox .hb-sig { font-family: var(--mono); font-size: 12px; }
-  .meclib-helpbox .hb-sig b { color: #9b2c00; }
-  .meclib-helpbox .hb-opt { color: #777; }
-  .meclib-helpbox .hb-ret { color: #777; }
-  .meclib-helpbox .hb-arg { margin-top: 3px; }
-  .meclib-helpbox .hb-text { margin-top: 3px; color: #333; }
-  .meclib-helpbox code { font-family: var(--mono); font-size: 11.5px; color: #d63384; }
-  .meclib-helpbox .hb-foot { margin-top: 4px; display: flex; gap: 8px; font-size: 11px; color: var(--muted); }
-  .meclib-helpbox .hb-foot a { color: #1a5fb4; }
-  .meclib-helpbox .hb-src { margin-left: auto; }
-  .CodeMirror-hints { font-size: 12px; max-width: 640px; z-index: 60; }
-  .CodeMirror-hint .hs { color: #888; font-size: 11px; } .CodeMirror-hint .hk { color: #aaa; font-size: 10px; margin-left: 6px; }
-  li.CodeMirror-hint-active .hs, li.CodeMirror-hint-active .hk { color: #e8eef8; }
   #snippetDialog { border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; width: min(460px, 92vw); }
   #snippetDialog::backdrop { background: rgba(0, 0, 0, .15); }
   #snippetList li .pv { display: block; font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -260,6 +247,7 @@
   .rvimg { display: block; max-width: 260px; max-height: 200px; margin: 4px 0; border: 1px solid var(--line); }
   #prtGraph .gtitle { font-size: 12px; font-weight: 600; }
   #prtGraph .gwarn { font-size: 12px; color: #b3261e; }
+  #prtGraph .glabel { paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }   /* readable where an edge crosses */
 </style>
 </head>
 <body>
@@ -316,6 +304,7 @@
       <label><input type="checkbox" id="optAutocomplete"> autocomplete while typing (Ctrl+Space: always)</label>
       <label><input type="checkbox" id="optCloseBrackets"> add closing brackets</label>
       <label><input type="checkbox" id="optSemicolon"> add <code>;</code> after <code>:</code> (Maxima)</label>
+      <label title="F2 in an editor switches it, too"><input type="checkbox" id="optHelpBox"> syntax help box (F2)</label>
       <span class="hint">F1: help on the function at the cursor</span></div></details>
     <span class="pair"><button id="undoBtn" disabled title="nothing to undo">↶</button><button id="redoBtn" disabled title="nothing to redo">↷</button></span>
     <button id="snippetBtn" title="insert a text snippet at the cursor (templates/snippets/)">Snippet</button>
@@ -341,7 +330,8 @@
         <label class="f">Question variables</label>
         <textarea data-field="questionvariables" rows="12" spellcheck="false"></textarea>
         <label class="f">Question text <select data-format="questiontext"></select>
-          <button type="button" id="addInput" class="small" title="new input with its PRT; the placeholders are inserted at the cursor">Input ...</button></label>
+          <button type="button" id="addInput" class="small" title="new input with its PRT; the placeholders are inserted at the cursor">Input ...</button>
+          <button type="button" id="sceneSwitch" class="small" title="the [[jsxgraph]] block at the cursor: interactive (hidden inputs objects, names) or static">Graphic: interactive ⇄ static</button></label>
         <textarea data-field="questiontext" rows="14" spellcheck="false"></textarea>
         <h2 style="margin-top:14px">Inputs</h2>
         <table class="inp" id="inputEd"></table>
@@ -368,10 +358,10 @@
       <div class="sbhead">This bar</div>
       <label><input type="radio" name="sidePreview" value="left"> left of the preview</label>
       <label><input type="radio" name="sidePreview" value="right"> right of the preview</label></div></details>
+    <button id="restartBtn" class="primary" title="clear all answers and the feedback; the graphic starts from its initial state (as Moodle's &quot;Start again&quot;)">Restart</button>
     <button id="evaluate" class="primary" title="Ctrl+Enter: save, evaluate the question and update the preview">Update</button>
+    <button id="fillBtn" class="primary" title="Model answer: fill in the model answers (the graphic starts from the model answer of its objects input)">TAns</button>
     <button id="checkBtn" class="primary" title="evaluate the PRTs with the current answers (Alt+Enter)">Check</button>
-    <button id="fillBtn" title="Model answer: fill in the model answers (the graphic starts from the model answer of its objects input)">TAns</button>
-    <button id="restartBtn" title="clear all answers and the feedback; the graphic starts from its initial state (as Moodle's &quot;Start again&quot;)">Restart</button>
     <span class="pair" title="language of the [[lang]] blocks"><button id="lang-de">de</button><button id="lang-en">en</button></span>
     <span class="pair" title="decimal separator (question option, saved in the file)"><button id="dec-point" class="dec">0<b>.</b>5</button><button id="dec-comma" class="dec">0<b>,</b>5</button></span>
     <button id="simpToggle" title="simplify (question option, saved in the file)">simp</button>
@@ -384,6 +374,7 @@
       <div id="previewView">
         <div id="qmeta" class="meta"></div>
         <div id="qtext" class="formulation"><p class="hint">Open a file and choose a STACK question.</p></div>
+        <div id="sfb" class="specificfeedback" hidden></div>
         <details id="gfbBox" style="margin-top:12px"><summary>General feedback</summary><div id="gfb"></div></details>
         <h2 style="margin-top:12px">Question note</h2>
         <div id="qnote" class="hint"></div>
@@ -429,6 +420,8 @@
         <option value="expression">expression (fb_vars)</option>
         <option value="matrix">vector / matrix of numbers (fb_unit_matrix)</option>
         <option value="matrixexpr">vector / matrix of expressions (fb_vars_matrix)</option>
+        <option value="dropdown">choice: dropdown list</option>
+        <option value="radio">choice: radio buttons</option>
       </select></div>
     <div class="form-row"><label style="width:8em">Model answer</label><input type="text" id="inTans" spellcheck="false" list="inVars"></div>
     <datalist id="inVars"></datalist>
@@ -848,7 +841,7 @@ function renderPRTs(prts) {
     if (el.tagName === "TEXTAREA" && MeclibEditor.available()) { prtCodeField(el); continue; }
     el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
       setDirty(true);
-      if (/nextnode$/.test(el.dataset.nk || "")) renderPRTGraphs();
+      if (/nextnode$|^description$|^answertest$/.test(el.dataset.nk || "")) renderPRTGraphs();
     });
   }
   for (const b of box.querySelectorAll("[data-op]")) {
@@ -947,8 +940,15 @@ $("addPrt").addEventListener("click", async () => {
 // ---------------------------------------------------------------- PRT graphs (right column)
 // Nodes in layers by their longest distance from the first node (the one no branch leads to,
 // as in STACK); green: true branch, red: false branch; a branch ending the PRT shows its score.
-// After "Check" the branches taken (by their answer notes) are drawn bold.
-function prtGraphSVG(p, taken) {
+// After "Check" the branches taken (by their answer notes) are drawn bold. Left to right (a layer
+// is a column, true branches leave upwards, false downwards) when the layers fit the width, else
+// top down.
+const PRT_DX = 130;   // column distance in the left-to-right layout
+function clipText(t, px, size) {
+  const n = Math.max(3, Math.floor(px / (size * 0.56)));
+  return t.length > n ? t.slice(0, n - 1) + "\u2026" : t;
+}
+function prtGraphSVG(p, taken, width) {
   const names = p.nodes.map((n) => n.name), byName = Object.fromEntries(p.nodes.map((n) => [n.name, n]));
   const targets = new Set(p.nodes.flatMap((n) => [n.truenextnode, n.falsenextnode]));
   const root = names.find((n) => !targets.has(n)) ?? names[0];
@@ -975,44 +975,81 @@ function prtGraphSVG(p, taken) {
   unreached.forEach((n) => { depth[n] = ++maxD; });
   const layers = [];
   for (const n of names) (layers[depth[n]] = layers[depth[n]] || []).push(n);
-  const W = 260, dy = 58, r = 13, pos = {};
-  layers.forEach((l, d) => l.forEach((n, i) => { pos[n] = [W * (i + 1) / (l.length + 1), 22 + d * dy]; }));
-  const H = 22 + layers.length * dy + 4;
-  let svg = "";
+  const r = 13, pos = {}, room = {};
+  const lr = 30 + layers.length * PRT_DX <= width;
+  let W, H;
+  if (lr) {
+    const rowH = 64, top = 26, maxL = Math.max(...layers.map((l) => l.length));
+    layers.forEach((l, d) => l.forEach((n, i) => {
+      pos[n] = [20 + d * PRT_DX, top + ((maxL - l.length) / 2 + i) * rowH];
+      room[n] = PRT_DX - 12;
+    }));
+    W = 30 + layers.length * PRT_DX; H = top + maxL * rowH - 10;
+  } else {
+    const dy = 58;
+    W = 260;
+    layers.forEach((l, d) => l.forEach((n, i) => {
+      pos[n] = [W * (i + 1) / (l.length + 1), 22 + d * dy];
+      room[n] = W / (l.length + 1) - r - 6;
+    }));
+    H = 22 + layers.length * dy + 4;
+  }
+  let svg = "", y0 = 0, y1 = H;   // y0, y1: extent of the edges that bend out
   for (const n of names) {
     const [x, y] = pos[n];
     for (const [k, br] of [[-1, "true"], [1, "false"]]) {
       const t = byName[n][br + "nextnode"], col = br === "true" ? "#3a8a4f" : "#b3261e";
       const bold = taken.has(byName[n][br + "answernote"]) ? 3.2 : 1.3;
-      if (byName[t]) {
-        const [tx, ty] = pos[t], skip = Math.round((ty - y) / dy) - 1;
+      const sc = byName[n][br + "scoremode"] + byName[n][br + "score"];
+      if (lr) {
+        if (byName[t]) {
+          // true above, false below; an edge across columns bends further out, around the nodes
+          // between and their labels (below them)
+          const [tx, ty] = pos[t], skip = Math.max(0, Math.round((tx - x) / PRT_DX) - 1);
+          const cx = (x + tx) / 2, cy = (y + ty) / 2 + k * (skip ? (k > 0 ? 92 : 48) + 16 * (skip - 1) : 12);
+          const peak = (y + 2 * cy + ty) / 4;
+          y0 = Math.min(y0, peak - 8); y1 = Math.max(y1, peak + 8);
+          svg += `<path d="M${x + r - 2},${y + k * 6} Q${cx},${cy} ${tx - r - (skip > 0 ? 0 : 1)},${ty + (skip > 0 ? k * 6 : 0)}" fill="none" stroke="${col}" stroke-width="${bold}" marker-end="url(#ah)"/>`;
+        } else {
+          const ex = x + 34, ey = y + k * 13;
+          svg += `<line x1="${x + r - 2}" y1="${y + k * 6}" x2="${ex}" y2="${ey}" stroke="${col}" stroke-width="${bold}"/>` +
+            `<text x="${ex + 3}" y="${ey + 4}" font-size="10.5" fill="${col}">${esc(sc)}</text>`;
+        }
+      } else if (byName[t]) {
+        const [tx, ty] = pos[t], skip = Math.round((ty - y) / 58) - 1;
         // an edge across layers bends sideways (true left, false right), so it does not run through other nodes
         const cx = (x + tx) / 2 + k * 45 * Math.max(0, skip), cy = (y + ty) / 2;
         svg += `<path d="M${x + k * 6},${y + r - 2} Q${cx},${cy} ${tx + (skip > 0 ? k * 6 : 0)},${ty - r}" fill="none" stroke="${col}" stroke-width="${bold}" marker-end="url(#ah)"/>`;
       } else {
-        const ex = x + k * 30, ey = y + 34, sc = byName[n][br + "scoremode"] + byName[n][br + "score"];
+        const ex = x + k * 30, ey = y + 34;
         svg += `<line x1="${x + k * 6}" y1="${y + r - 2}" x2="${ex}" y2="${ey - 8}" stroke="${col}" stroke-width="${bold}"/>` +
           `<text x="${ex}" y="${ey + 2}" font-size="10.5" text-anchor="middle" fill="${col}">${esc(sc)}</text>`;
       }
     }
   }
   for (const n of names) {
-    const [x, y] = pos[n], nd = byName[n];
-    svg += `<g class="gnode" data-node="${esc(n)}" style="cursor:pointer"><title>${esc(nd.answertest + "(" + nd.sans + ", " + nd.tans + ")")}</title>` +
+    const [x, y] = pos[n], nd = byName[n], desc = (nd.description || "").trim();
+    // labels: under the node (left to right) or to its right (top down); full text in the tooltip
+    const [lx, ly1, ly2] = lr ? [x - r, y + r + 12, y + r + 23] : [x + r + 3, y - 6, y + 6];
+    svg += `<g class="gnode" data-node="${esc(n)}" style="cursor:pointer"><title>${esc((desc ? desc + "\n" : "") + nd.answertest + "(" + nd.sans + ", " + nd.tans + ")")}</title>` +
       `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" stroke="#555"/>` +
       `<text x="${x}" y="${y + 4}" font-size="12" text-anchor="middle">${esc(nodeNo(n))}</text>` +
-      `<text x="${x + r + 3}" y="${y - 6}" font-size="10" fill="#777">${esc(nd.answertest)}</text></g>`;
+      `<text class="glabel" x="${lx}" y="${ly1}" font-size="10" fill="#777">${esc(clipText(nd.answertest, room[n], 10))}</text>` +
+      (desc ? `<text class="glabel" x="${lx}" y="${ly2}" font-size="10" fill="#333">${esc(clipText(desc, room[n], 10))}</text>` : "") + `</g>`;
   }
-  return { svg: `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#777"/></marker></defs>${svg}</svg>`, warn };
+  H = y1 - y0;
+  return { svg: `<svg width="${W}" height="${H}" viewBox="0 ${y0} ${W} ${H}"><defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#777"/></marker></defs>${svg}</svg>`, warn };
 }
 function renderPRTGraphs() {
   const box = $("prtGraph");
   if (!box) return;
   const prts = byTextOrder(editedPRTs(), "feedback");
   if (!prts.length) { box.innerHTML = '<p class="hint">-</p>'; return; }
+  const width = box.clientWidth || 260;
+  box.dataset.width = width;
   box.innerHTML = prts.map((p) => {
     const notes = lastCheck && lastCheck.prts && lastCheck.prts[p.name] ? String(lastCheck.prts[p.name].notes || "") : "";
-    const { svg, warn } = prtGraphSVG(p, new Set(notes.split("|").map((x) => x.trim()).filter(Boolean)));
+    const { svg, warn } = prtGraphSVG(p, new Set(notes.split("|").map((x) => x.trim()).filter(Boolean)), width);
     return `<div data-prt="${esc(p.name)}"><div class="gtitle">${esc(p.name)}</div>${warn.map((w) => `<div class="gwarn">${esc(w)}</div>`).join("")}${svg}</div>`;
   }).join("");
   for (const g of box.querySelectorAll(".gnode")) g.addEventListener("click", () => {
@@ -1023,6 +1060,11 @@ function renderPRTGraphs() {
     el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1500);
   });
 }
+// the layout depends on the width of the column: draw again when it changes
+if (window.ResizeObserver && $("prtGraph")) new ResizeObserver(() => {
+  const box = $("prtGraph");
+  if (box.clientWidth && String(box.clientWidth) !== box.dataset.width && saved) renderPRTGraphs();
+}).observe($("prtGraph"));
 
 function collectChanges() {
   // only what differs from the last saved state
@@ -1114,6 +1156,26 @@ async function flush() {
   if (!ok && conflict) return confirm("The file was changed outside the workbench and your edits are not saved.\nDiscard your edits?");
   return ok;
 }
+
+// a change of the file on disk (another program, a git checkout) is noticed when the page gets
+// the focus again: without own edits the file is read again, with edits the conflict box shows
+let diskCheck = null;
+function checkDisk() {
+  if (!file || saving || diskCheck || conflict) return;
+  diskCheck = (async () => {
+    try {
+      const r = await postJSON("/api/q/rev", { path: file.path });
+      if (r.rev === file.rev) return;
+      if (!r.rev) { fileMsg("The file is no longer on disk (renamed, moved or deleted):\n" + file.path); return; }
+      if (dirty) { conflict = true; showConflict(); return; }
+      await openFile(file.path, qindex);
+      fileMsg("Reloaded: the file was changed on disk.", "info");
+    } catch (e) { /* server not reachable: nothing to do */ }
+    finally { diskCheck = null; }
+  })();
+}
+window.addEventListener("focus", checkDisk);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) checkDisk(); });
 
 function showConflict() {
   showSaveState();
@@ -1209,8 +1271,8 @@ async function check() {
     const seed = parseInt($("seed").value, 10) || 1;
     const r = await postJSON("/api/q/check", { path: file.path, index: qindex, seed, src: $("src").value, answers });
     $("status").textContent = "checked in " + r.seconds + " s";
-    lastCheck = r.check;
-    result.timing = r.timing; renderMessages();
+    lastCheck = r.check; lastCheck.timing = r.timing;
+    result.timing = r.timing; result.first_run = r.first_run; renderMessages();
     showCheck();
     renderVariables();
     renderPRTGraphs();
@@ -1226,27 +1288,68 @@ function showCheck() {
   for (const [name, v] of Object.entries(lastCheck.inputs)) {
     const inp = (result.inputs || []).find((i) => i.name === name) || {};
     for (const el of document.querySelectorAll(`.stack-validation[data-input="${CSS.escape(name)}"]`)) {
-      if (v.state === "invalid") el.innerHTML = `<span class="val-bad">${inp.type === "matrix" ? "invalid input (incomplete or does not parse)" : "invalid input (does not parse)"}</span>`;
-      else if (v.state === "valid" && inp.showvalidation !== "0" && inp.type !== "string") el.innerHTML = `<span class="val-ok">${esc(v.tex || "")}</span>`;
+      if (v.empty) el.innerHTML = "";   // blank, valid by allowempty (value EMPTYANSWER)
+      else if (v.state === "invalid") el.innerHTML = `<span class="val-bad">${inp.type === "matrix" ? "invalid input (incomplete or does not parse)" : "invalid input (does not parse)"}</span>`;
+      else if (v.state === "valid" && inp.showvalidation !== "0" && inp.type !== "string") el.innerHTML = `<span class="val-ok ${inp.showvalidation === "3" ? "compact" : "standard"}">${esc(v.tex || "")}</span>`;
       else el.innerHTML = "";
     }
+  }
+  // specific feedback (STACK shows it below the question after a submission); rendered first,
+  // so that [[feedback:..]] of PRTs placed in it are filled in below like those in the question text
+  const sf = lastCheck.specificfeedback, box = $("sfb");
+  box.hidden = !(sf && (sf[lang] || sf.error));
+  if (!box.hidden) {
+    if (sf.error) showMessages([{ cls: "err", text: sf.error }], true);
+    renderInto(box, sf[lang] || "", sf.format || "html");   // sets the HTML at once, graphics follow
   }
   for (const [name, p] of Object.entries(lastCheck.prts)) {
     for (const el of document.querySelectorAll(`.stack-prt[data-prt="${CSS.escape(name)}"]`)) {
       el.className = "stack-prt";
       if (p.skipped) { el.innerHTML = `<span class="hint">PRT <b>${esc(name)}</b>: ${esc(p.skipped)}</span>`; continue; }
       const score = parseFloat(p.score), value = parseFloat(p.value) || 1;
-      el.classList.add(score >= 0.999 ? "score-1" : score <= 0.001 ? "score-0" : "score-p");
-      const fb = (p.feedback[lang] || []).map(([fmt, text]) => toHTML(text || "", fmt, [])).join("");
-      el.innerHTML = `<div class="prtfb">${fb || '<span class="hint">(no feedback text)</span>'}</div>` +
+      el.classList.add("checked");
+      if (!(parseInt(p.feedbackstyle ?? "1", 10) >= 2)) el.classList.add("block");
+      const blocks = [];   // meclib scenes in the feedback
+      const fb = (p.feedback[lang] || []).map(([fmt, text]) => toHTML(text || "", fmt, blocks)).join("");
+      el.innerHTML = prtFeedbackHTML(name, p, score, fb, blocks) + '<div class="prtwb">' +
         (p.testfeedback.length ? `<div class="hint">answer test: ${esc(p.testfeedback.join(" "))}</div>` : "") +
         (p.errors.length ? `<div class="prterr">${esc(p.errors.join("\n"))}</div>` : "") +
         `<div class="prtinfo"><span>PRT <b>${esc(name)}</b></span><span>score ${esc(p.score)}</span>` +
-        `<span>mark ${(score * value).toFixed(2).replace(/\.?0+$/, "")} / ${value.toString()}</span><span>penalty ${esc(p.penalty)}</span>` +
-        `<span>notes: ${esc(p.notes || "-")}</span></div>`;
+        (p.feedbackstyle === "0" ? "<span>formative: no mark, no penalty</span>" :
+          `<span>mark ${(score * value).toFixed(2).replace(/\.?0+$/, "")} / ${value.toString()}</span><span>penalty ${esc(p.penalty)}</span>`) +
+        `<span>notes: ${esc(p.notes || "-")}</span>${prtTimes(name)}</div></div>`;
+      runGraphics(el, blocks);
     }
   }
-  if (window.MathJax && MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, $("qtext")]);
+  if (window.MathJax && MathJax.Hub) {
+    MathJax.Hub.Queue(["Typeset", MathJax.Hub, $("qtext")]);
+    if (!box.hidden) MathJax.Hub.Queue(["Typeset", MathJax.Hub, box]);
+  }
+}
+// The PRT's feedback as STACK shows it, by the PRT's feedback style: 0 formative (text only),
+// 1 standard (standard feedback of the question options, then the text), 2 compact (symbol in
+// front of the text, inline), 3 symbolic (symbol only). Symbol and class by the score as Moodle's
+// question_state::graded_state_for_fraction(); no standard feedback when the PRT has errors.
+const PRT_SYMBOLS = {
+  correct: '<span style="font-size: 1.5em; color:green;"><i class="fa fa-check"></i></span>',
+  incorrect: '<span style="font-size: 1.5em; color:red;"><i class="fa fa-times"></i></span>',
+  partiallycorrect: '<span style="font-size: 1.5em; color:orange;"><i class="fa fa-adjust"></i></span>',
+};
+function prtFeedbackHTML(name, p, score, fb, blocks) {
+  const style = parseInt(p.feedbackstyle ?? "1", 10);
+  const cls = score >= 1 - 1e-7 ? "correct" : score <= 1e-7 ? "incorrect" : "partiallycorrect";
+  let std = "";
+  if (!p.errors.length) {
+    if (style === 2 || style === 3) std = `<span class="${cls}">${PRT_SYMBOLS[cls]}</span>`;
+    else if (style === 1) {
+      const key = "prt" + cls, t = ((result.texts || {})[key] || {})[lang] || "";
+      if (t.trim()) std = `<div class="${cls}">${toHTML(t, (result.formats || {})[key] || "html", blocks)}</div>`;
+    }
+  }
+  const inner = style === 0 ? fb : style === 3 ? std : std + fb;
+  if (!inner) return "";
+  const tag = style === 2 || style === 3 ? "span" : "div";
+  return `<${tag} class="stackprtfeedback stackprtfeedback-${esc(name)}">${inner}</${tag}>`;
 }
 // model answer as a student would type it (as STACK shows it): stackunits(8, cm) -> 8*cm; with a
 // decimal comma, decimals get a comma and the list separator becomes ";" (the input processing
@@ -1282,6 +1385,10 @@ function fillModelAnswers() {
     let v = inp.tans_raw;
     if (v == null) continue;
     if (inp.type === "string" || inp.type === "notes") { try { v = JSON.parse(v); } catch (e) { /* not a string literal */ } }
+    else if (MCQ_TYPES.includes(inp.type) && inp.choices) {
+      const ok = inp.choices.filter((c) => c.correct).map((c) => c.value);
+      v = inp.type === "checkbox" ? (ok.length ? JSON.stringify(ok) : "") : (ok[0] ?? "");
+    }
     else if (inp.type === "matrix") { const mc = matrixModelCells(inp); if (!mc) continue; v = JSON.stringify(mc.map((r) => r.map(studentSyntax))); }
     else v = studentSyntax(v);
     inputValues[inp.name] = v;
@@ -1359,6 +1466,55 @@ async function inputOp(body) {
   }
 }
 
+// ---------------------------------------------------------------- graphic at the cursor: interactive or static
+// The [[jsxgraph]] blocks of a text with the inputs they bind (input-ref-...), as qfile.jsx_blocks().
+function jsxBlocks(text) {
+  const out = [], open = /\[\[\s*jsxgraph\b([^\]]*)\]\]/g;
+  let m;
+  while ((m = open.exec(text))) {
+    const close = /\[\[\s*\/\s*jsxgraph\s*\]\]/g;
+    close.lastIndex = open.lastIndex;
+    const c = close.exec(text);
+    const refs = [...m[1].matchAll(/input-ref-([A-Za-z0-9_]+)\s*=/g)].map((r) => r[1]);
+    out.push({ start: m.index, end: c ? close.lastIndex : text.length, refs });
+  }
+  return out;
+}
+async function switchScene() {
+  if (!file || qindex === null) return;
+  const ed = editors.questiontext, text = ed.get();
+  const pos = ed.cm ? ed.cm.indexFromPos(ed.cm.getCursor()) : (document.querySelector('#editView [data-field="questiontext"]').selectionStart ?? -1);
+  const blocks = jsxBlocks(text);
+  const k = blocks.findIndex((b) => pos >= b.start && pos <= b.end);
+  if (k < 0) { showMessages([{ cls: "warn", text: "Put the cursor into the [[jsxgraph]] block of the question text that you want to switch." }]); return; }
+  const to = blocks[k].refs.length ? "static" : "interactive";
+  if (!(await flush())) return;
+  try {
+    const d = await postJSON("/api/q/scene", { path: file.path, index: qindex, rev: file.rev, block: k, to, dry: true });
+    const p = d.plan;
+    if (p.error) { showMessages([{ cls: "err", text: `Graphic ${k + 1}: ${p.error}.` }]); return; }
+    const what = to === "static"
+      ? `Make graphic ${k + 1} static?\n\nThe input-ref attributes are removed, "var stateRef;" is added to the block` +
+        (p.inputs.length ? `, and the input(s) ${p.inputs.join(", ")} are deleted with their placeholders.` : ".")
+      : `Make graphic ${k + 1} interactive?\n\nNew hidden inputs ${p.inputs.join(" and ")} (as in the meclib template) with ` +
+        `their placeholders before the block; the block is bound to them.` +
+        (p.tans ? ` Model answer of ${p.inputs[0]}: ${p.tans}.` : `\n\nNo question variable tans or init found: the model answer of ${p.inputs[0]} is "" - set it in the inputs table.`);
+    if (!confirm(what)) return;
+    const backup = !backedUp.has(file.path);
+    const r = await postJSON("/api/q/scene", { path: file.path, index: qindex, rev: file.rev, block: k, to, backup });
+    if (r.plan && r.plan.error) { showMessages([{ cls: "err", text: `Graphic ${k + 1}: ${r.plan.error}.` }]); return; }
+    if (backup) backedUp.add(file.path);
+    file.rev = r.rev;
+    fillEditor(r.fields);
+    showHistory(r.history);
+    showMessages([{ cls: "info", text: `Graphic ${k + 1} is ${to} now` + (p.inputs.length ? ` (inputs ${p.inputs.join(", ")} ${to === "static" ? "deleted" : "added"}).` : ".") }]);
+    evaluate(false);
+  } catch (e) {
+    if (e.conflict) { conflict = true; showConflict(); }
+    else showMessages([{ cls: "err", text: e.message }]);
+  }
+}
+
 function openInputDialog() {
   if (!file || qindex === null) return;
   $("inName").value = ""; $("inTans").value = ""; $("inTans").placeholder = "same as name"; $("inTol").value = "0.005";
@@ -1370,7 +1526,13 @@ function openInputDialog() {
   if (!$("inputDialog").open) $("inputDialog").show();
   $("inName").focus();
 }
-const MATRIX_KINDS = ["matrix", "matrixexpr"];
+const MATRIX_KINDS = ["matrix", "matrixexpr"], CHOICE_KINDS = ["dropdown", "radio"];
+// model answer of a choice input: a list variable, by default <name>_mcq
+function inputTans(n, kind) { return $("inTans").value.trim() || (CHOICE_KINDS.includes(kind) && n ? n + "_mcq" : n); }
+function choiceTemplate(tans, name) {
+  return `/* choices of S_${name}: [value, correct, display] (see wiki "Multiple Choice Questions") */\n` +
+    `${tans}: [[1, true, "…"], [2, false, "…"], [3, false, "…"]];\n`;
+}
 // names assigned in the last evaluation, or in the question variables as they are now
 function questionVariableNames() {
   const names = (result && result.variables || []).map((v) => v.name);
@@ -1380,11 +1542,12 @@ function questionVariableNames() {
 }
 function updateInputDialog() {
   const n = $("inName").value.trim(), kind = $("inKind").value, isMatrix = MATRIX_KINDS.includes(kind);
-  $("inTolRow").hidden = kind === "expression" || kind === "matrixexpr";
+  const isChoice = CHOICE_KINDS.includes(kind);
+  $("inTolRow").hidden = kind === "expression" || kind === "matrixexpr" || isChoice;
   $("inMatrix").hidden = !isMatrix;
-  $("inTans").placeholder = n || "same as name";
+  $("inTans").placeholder = (isChoice && n ? n + "_mcq" : n) || "same as name";
   const names = questionVariableNames();
-  const tans = $("inTans").value.trim() || n;
+  const tans = inputTans(n, kind);
   const isVar = /^[A-Za-z][A-Za-z0-9_]*$/.test(tans), missing = isVar && !names.includes(tans);
   $("inSizeRow").hidden = !(isMatrix && missing);
   const lines = [];
@@ -1393,7 +1556,9 @@ function updateInputDialog() {
   if (clash) lines.push(`<span class="bad">There is already an input S_${esc(n)} or a PRT ${esc(n)}: choose another name.</span>`);
   if (n && !clash && isMatrix) lines.push(`creates input S_${n}, PRT ${n}, and a table row (label | matrix | unit | validation) with [[feedback:${n}]] below it at the cursor in the question text`);
   else if (n && !clash) lines.push(`creates input S_${n}, PRT ${n}, and [[input:S_${n}]] [[validation:S_${n}]] [[feedback:${n}]] at the cursor in the question text`);
-  if (n && isMatrix && missing) lines.push(`${tans} is not (yet) a question variable: a ${$("inRows").value}×${$("inCols").value} placeholder matrix is added to the question variables (the size of the model answer sets the size of the input)`);
+  if (n && isChoice && missing) lines.push(`${tans} is not (yet) a question variable: a list of choices to fill in is added at the beginning of the question variables:\n${choiceTemplate(tans, n).trimEnd()}`);
+  else if (n && isChoice) lines.push(`${tans} must be the list of choices [[value, true/false, display], ...]; the PRT compares with mcq_correct(${tans})[1]`);
+  else if (n && isMatrix && missing) lines.push(`${tans} is not (yet) a question variable: a ${$("inRows").value}×${$("inCols").value} placeholder matrix is added to the question variables (the size of the model answer sets the size of the input)`);
   else if (n && missing)
     lines.push(`note: ${tans} is not (yet) a question variable` + (kind === "units" ? " - for this type it must include the unit, e.g. " + tans + ": 720*N;" : ""));
   $("inInfo").innerHTML = lines.map((l) => l.startsWith("<span") ? l : esc(l)).join("\n");
@@ -1410,7 +1575,12 @@ function matrixInputText(name) {
 }
 async function createInput() {
   const name = $("inName").value.trim(), kind = $("inKind").value, isMatrix = MATRIX_KINDS.includes(kind);
-  const tans = $("inTans").value.trim() || name;
+  const tans = inputTans(name, kind);
+  if (CHOICE_KINDS.includes(kind) && /^[A-Za-z][A-Za-z0-9_]*$/.test(tans) && !questionVariableNames().includes(tans)) {
+    // the list of choices, at the beginning (the cursor is in the question text, not here)
+    const ed = editors.questionvariables;
+    ed.set(choiceTemplate(tans, name) + ed.get());
+  }
   if (isMatrix && /^[A-Za-z][A-Za-z0-9_]*$/.test(tans) && !questionVariableNames().includes(tans)) {
     // placeholder model answer of the requested size, to be replaced by the author
     const rows = Math.max(1, Math.min(9, parseInt($("inRows").value, 10) || 1));
@@ -1419,7 +1589,7 @@ async function createInput() {
     const ed = editors.questionvariables, qv = ed.get();
     ed.set(qv + (qv && !qv.endsWith("\n") ? "\n" : "") + `${tans}: matrix(${Array(rows).fill(row).join(", ")}); /* model answer of S_${name} (placeholder) */\n`);
   }
-  const r = await inputOp({ op: "add", name, kind, tans: $("inTans").value.trim(), tol: $("inTol").value.trim() || "0.005",
+  const r = await inputOp({ op: "add", name, kind, tans: CHOICE_KINDS.includes(kind) ? tans : $("inTans").value.trim(), tol: $("inTol").value.trim() || "0.005",
     labels: isMatrix ? $("inComp").value.trim() : "" });
   if (!r) return;
   saved.inputs = r.fields.inputs; saved.prts = r.fields.prts;
@@ -1442,10 +1612,10 @@ async function deleteInput(iname) {
   evaluate(false);
 }
 
-function gotoLine(field, line) {
+function gotoLine(field, line, ch) {
   if (!editors[field]) return;
   setTab("edit");
-  editors[field].focusLine(line);
+  editors[field].focusLine(line, ch);
 }
 
 // side by side on wide screens, tabs (Edit / Preview) on narrow ones
@@ -1701,6 +1871,7 @@ function toHTML(text, format, blocks) {
   t = t.replace(/\[\[\s*input:([A-Za-z0-9_]+)\s*\]\]/g, (m, n) => {
     const inp = (result.inputs || []).find((x) => x.name === n) || {};
     if (inp.type === "matrix") return matrixInputHTML(inp);
+    if (MCQ_TYPES.includes(inp.type) && inp.choices) return choiceInputHTML(inp);
     const box = parseInt(inp.boxsize, 10) || 15;   // STACK: width (boxsize * 0.9 + 0.1) em, size boxsize * 1.1
     const opts = String(inp.options || "").split(",").map((o) => o.trim().toLowerCase());
     const cls = "stack-input" + (opts.includes("monospace") ? " mono" : "") + (opts.includes("align:right") ? " right" : "");
@@ -1710,7 +1881,7 @@ function toHTML(text, format, blocks) {
   });
   t = t.replace(/\[\[\s*validation:([A-Za-z0-9_]+)\s*\]\]/g, (m, n) => `<span class="stack-validation" data-input="${esc(n)}"></span>`);
   t = t.replace(/\[\[\s*feedback:([A-Za-z0-9_]+)\s*\]\]/g, (m, n) =>
-    `<div class="stack-prt" data-prt="${esc(n)}"><span class="hint">PRT <b>${esc(n)}</b> - "Check" shows the feedback here</span></div>`);
+    `<span class="stack-prt" data-prt="${esc(n)}"><span class="hint">PRT <b>${esc(n)}</b> - "Check" shows the feedback here</span></span>`);
   return t;
 }
 
@@ -1737,6 +1908,47 @@ function matrixModelCells(inp) {
   const rows = split(m[1]).map((r) => /^\[(.*)\]$/s.exec(r)).filter(Boolean).map((r) => split(r[1]));
   return rows.length ? rows : null;
 }
+// Choice inputs (STACK types dropdown, radio, checkbox): the entries of the model answer
+// [[value, correct, display], ...] come evaluated from the server (inp.choices). The value kept in
+// inputValues and sent to "Check" is the chosen entry's value (Maxima text) - for a checkbox the
+// JSON list of the ticked values, "" when none is ticked.
+const MCQ_TYPES = ["dropdown", "radio", "checkbox"];
+function choiceOptions(inp) { return String(inp.options || "").split(",").map((o) => o.trim().toLowerCase()); }
+function choiceInputHTML(inp) {
+  const n = esc(inp.name), none = !choiceOptions(inp).includes("nonotanswered");
+  if (inp.type === "dropdown")      // as STACK: plain text, no math in a <select>
+    return `<select class="stack-choice" data-input="${n}">${none ? '<option value=""></option>' : ""}` +
+      inp.choices.map((c, k) => `<option value="${k}">${esc(c.display || c.value)}</option>`).join("") + "</select>";
+  const label = (c) => c.display || `\\(${c.tex}\\)`;   // the display is castext (HTML, math)
+  const type = inp.type === "radio" ? "radio" : "checkbox";
+  let h = inp.choices.map((c, k) =>
+    `<label><input type="${type}" class="stack-choice" name="mcq-${n}" data-input="${n}" value="${k}"> ${label(c)}</label>`).join("");
+  if (type === "radio" && none)
+    h += `<label><input type="radio" class="stack-choice" name="mcq-${n}" data-input="${n}" value=""> <i>${lang === "en" ? "(Clear my choice)" : "(Auswahl aufheben)"}</i></label>`;
+  return `<span class="stack-choices">${h}</span>`;
+}
+function choiceValue(name) {
+  const inp = (result.inputs || []).find((x) => x.name === name) || {};
+  const els = [...document.querySelectorAll(`.stack-choice[data-input="${CSS.escape(name)}"]`)];
+  if (inp.type === "checkbox") {
+    const vals = els.filter((e) => e.checked).map((e) => inp.choices[+e.value].value);
+    return vals.length ? JSON.stringify(vals) : "";
+  }
+  const el = inp.type === "dropdown" ? els[0] : els.find((e) => e.checked);
+  return el && el.value !== "" ? inp.choices[+el.value].value : "";
+}
+function showChoice(name, value) {
+  const inp = (result.inputs || []).find((x) => x.name === name) || {};
+  if (!inp.choices) return;
+  let picked = [];
+  if (inp.type === "checkbox") { try { picked = JSON.parse(value || "[]"); } catch (e) { picked = []; } }
+  else picked = [value];
+  const on = (k) => picked.includes(inp.choices[k].value);
+  for (const el of document.querySelectorAll(`.stack-choice[data-input="${CSS.escape(name)}"]`)) {
+    if (el.tagName === "SELECT") { const k = inp.choices.findIndex((c) => c.value === value); el.value = k >= 0 ? String(k) : ""; }
+    else el.checked = el.value === "" ? !value : on(+el.value);
+  }
+}
 function matrixInputHTML(inp) {
   const cells = matrixModelCells(inp) || [[""]];
   const parens = ((saved && saved.options) || {}).matrixparens ?? "[";
@@ -1762,6 +1974,7 @@ function matrixCell(value, r, c) {
 function setInputValue(name, value) {
   inputValues[name] = value;
   for (const el of document.querySelectorAll(`input.stack-input[data-input="${CSS.escape(name)}"]:not(.matrix-cell)`)) if (el.value !== value) el.value = value;
+  showChoice(name, value);
   const cell = document.querySelector(`#inputs [data-current="${CSS.escape(name)}"]`);
   if (cell) cell.textContent = value;
 }
@@ -1778,12 +1991,25 @@ async function renderInto(container, text, format) {
     el.value = inputValues[el.dataset.input] || el.dataset.initial || "";
     el.addEventListener("input", () => setInputValue(el.dataset.input, el.value));
   }
+  const choices = new Set();
+  for (const el of container.querySelectorAll(".stack-choice")) {
+    choices.add(el.dataset.input);
+    el.addEventListener("change", () => setInputValue(el.dataset.input, choiceValue(el.dataset.input)));
+  }
+  for (const n of choices) showChoice(n, inputValues[n] || "");
   if (window.MathJax && MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, container]);
+  await runGraphics(container, blocks);
+}
+// [[jsxgraph]] blocks of a rendered text (toHTML leaves a .jsx-slot for each): run them
+async function runGraphics(container, blocks) {
   if (!blocks.length) return;
+  // the slots of this text, taken before waiting for meclib: slots added to the container
+  // later (e.g. PRT feedback placed in the specific feedback) belong to other block lists
+  const slots = [...container.querySelectorAll(".jsx-slot")];
   let src;
   try { src = await F.loadMeclib($("src").value); }
   catch (e) { showMessages([{ cls: "err", text: e.message }], true); return; }
-  for (const slot of container.querySelectorAll(".jsx-slot")) {
+  for (const slot of slots) {
     // the graphic starts from the current value of its objects input (e.g. after "Model answers")
     const ref = /input-ref-([A-Za-z0-9_]+)\s*=\s*["']stateRef["']/.exec(blocks[+slot.dataset.jsx]);
     const startState = ref ? inputValues[ref[1]] || "" : "";
@@ -1815,8 +2041,10 @@ function render(keepValues) {
     `format: ${esc(fmt)}`,
     `seed: ${result.seed}`, `language shown: ${esc(result.picked ? result.picked[lang] || "none" : lang)}`,
     `PRTs: ${byTextOrder(result.prts || [], "feedback").map((p) => esc(p.name)).join(", ") || "-"}`,
-  ].map((x) => `<span>${x}</span>`).join("");
+  ].map((x) => `<span>${x}</span>`).join("") + '<span id="qtime"></span>';
+  renderTiming();
   renderInto($("qtext"), pick("questiontext"), fmt);
+  if (!lastCheck) $("sfb").hidden = true;
   renderInto($("gfb"), pick("generalfeedback"), (result.formats || {}).generalfeedback || "html");
   if (pick("questionnote")) renderInto($("qnote"), pick("questionnote"), (result.formats || {}).questionnote || "html");
   else $("qnote").textContent = "-";
@@ -1867,21 +2095,60 @@ function renderInputs() {
 function renderMessages() {
   const msgs = [];
   for (const s of result.statements || []) {
-    if (s.note) msgs.push({ cls: "warn", text: `question variables, line ${s.line}: ${s.note}`, line: s.line });
+    if (s.note) msgs.push({ cls: "warn", text: `question variables, line ${s.line}: ${s.note}`, line: s.line, ch: s.ch });
     else if (s.error) msgs.push({ cls: "err", text: `question variables, line ${s.line}: ${s.source}\n${s.error}`, line: s.line });
     else if (s.output) msgs.push({ cls: "info", text: `question variables, line ${s.line} printed:\n${s.output}` });
   }
   for (const [k, v] of Object.entries(result.castext_errors || {})) msgs.push({ cls: "err", text: `${k}: ${v}` });
+  for (const inp of result.inputs || []) {      // STACK refuses choice inputs without a proper list
+    if (!MCQ_TYPES.includes(inp.type)) continue;
+    if (!inp.choices) msgs.push({ cls: "err", text: `input ${inp.name} (${inp.type}): the model answer ${inp.tans} must be a list of choices [[value, true/false, display], ...]` });
+    else if (!inp.choices.some((c) => c.correct)) msgs.push({ cls: "err", text: `input ${inp.name} (${inp.type}): no choice in ${inp.tans} is marked true` });
+  }
   if (!result.languages || !result.languages.length)
     msgs.push({ cls: "warn", text: "The question text has no [[lang]] block, so STACK sets no language: [[lang]] blocks (e.g. in the meclib feedback functions' texts) stay empty - as in Moodle." });
   for (const inc of result.includes || []) msgs.push({ cls: "info", text: `stack_include ${inc}\n→ follows the meclib source selector (${$("src").value})` });
-  // where Maxima spent the time (last Update or Check): the slowest parts
-  if (result.timing && result.timing.length) {
-    const total = result.timing.reduce((a, t) => a + t[1], 0);
-    const top = result.timing.filter((t) => t[1] >= 0.05).sort((a, b) => b[1] - a[1]).slice(0, 6);
-    msgs.push({ cls: "info", text: `Maxima time ${total.toFixed(1)} s` + (top.length ? ": " + top.map(([l, v]) => `${l} ${v.toFixed(2)} s`).join(" · ") : "") });
+  // where Maxima spent the time (last Update or Check): the parts in the order they ran, then
+  // the slow lines of the question variables in line order (the PRTs' times are at their feedback)
+  const tm = timingSummary();
+  if (tm) {
+    msgs.push({ cls: "info", text: tm });
+    for (const [l, v] of result.timing) {
+      const m = /^question variables, line (\d+)$/.exec(l);
+      if (m && v >= 0.05) msgs.push({ cls: "info", text: `${l}: ${v.toFixed(2)} s`, line: parseInt(m[1], 10) });
+    }
   }
   showMessages(msgs.length ? msgs : [{ cls: "info", text: "no messages" }]);
+  renderTiming();
+}
+
+// ---------------------------------------------------------------- Maxima times
+// result.timing: [[label, seconds], ...] in the order the parts ran (stack_question.tick)
+function timingPart(label) {
+  if (label.startsWith("PRT ")) return "PRTs";
+  if (label === "answers") return "answers";
+  if (/^(question variables|values of the question variables|model answers)/.test(label)) return "variables";
+  return "texts";
+}
+function timingSummary() {
+  if (!result || !result.timing || !result.timing.length) return "";
+  const parts = new Map();
+  let total = 0;
+  for (const [l, v] of result.timing) { const k = timingPart(l); parts.set(k, (parts.get(k) || 0) + v); total += v; }
+  return `Maxima ${total.toFixed(2)} s` + (result.first_run ? " (first run after start)" : "") + ": " +
+    [...parts].map(([k, v]) => `${k} ${v.toFixed(2)}`).join(" · ");
+}
+function renderTiming() {
+  const el = $("qtime");
+  if (!el) return;
+  const t = timingSummary();
+  el.textContent = t;
+  el.title = result && result.first_run ? "includes Maxima's warm-up (about 0.2 s, mostly in the first PRT): run again to compare times" : "";
+}
+function prtTimes(name) {
+  const get = (what) => ((lastCheck.timing || []).find(([l]) => l === `PRT ${name}: ${what}`) || [])[1];
+  const v = get("feedback variables"), n = get("nodes");
+  return (v === undefined ? "" : `<span>Variables ${v.toFixed(2)} s</span>`) + (n === undefined ? "" : `<span>Nodes ${n.toFixed(2)} s</span>`);
 }
 
 function showMessages(list, append) {
@@ -1889,7 +2156,7 @@ function showMessages(list, append) {
   if (!append) box.innerHTML = "";
   for (const m of list) {
     const d = document.createElement("div"); d.className = "msg " + m.cls; d.textContent = m.text;
-    if (m.line) { d.classList.add("goto"); d.title = "go to line " + m.line; d.addEventListener("click", () => gotoLine("questionvariables", m.line)); }
+    if (m.line) { d.classList.add("goto"); d.title = "go to line " + m.line; d.addEventListener("click", () => gotoLine("questionvariables", m.line, m.ch)); }
     box.appendChild(d);
   }
 }
@@ -1924,14 +2191,22 @@ async function start() {
     if (r.ok) MeclibEditor.setHelp(await r.json());
   } catch (e) { showMessages([{ cls: "warn", text: "syntax help not loaded: " + e.message }], true); }
   {
-    const eo = Object.assign({ autocomplete: true, closeBrackets: true, semicolon: true }, stored(QSTORE_KEY).editor || {});
+    const EO = { autocomplete: true, closeBrackets: true, semicolon: true, helpBox: true };
+    const eo = Object.assign({}, EO, stored(QSTORE_KEY).editor || {});
     MeclibEditor.configure(eo);
-    $("optAutocomplete").checked = eo.autocomplete; $("optCloseBrackets").checked = eo.closeBrackets; $("optSemicolon").checked = eo.semicolon;
-    for (const [id, key] of [["optAutocomplete", "autocomplete"], ["optCloseBrackets", "closeBrackets"], ["optSemicolon", "semicolon"]])
+    const OPTS = [["optAutocomplete", "autocomplete"], ["optCloseBrackets", "closeBrackets"], ["optSemicolon", "semicolon"], ["optHelpBox", "helpBox"]];
+    for (const [id, key] of OPTS) {
+      $(id).checked = eo[key];
       $(id).addEventListener("change", () => {
-        const v = Object.assign({ autocomplete: true, closeBrackets: true, semicolon: true }, stored(QSTORE_KEY).editor || {}, { [key]: $(id).checked });
+        const v = Object.assign({}, EO, stored(QSTORE_KEY).editor || {}, { [key]: $(id).checked });
         store(QSTORE_KEY, { editor: v }); MeclibEditor.configure(v);
       });
+    }
+    // F2 in an editor
+    document.addEventListener("meclib-editor-settings", (ev) => {
+      $("optHelpBox").checked = ev.detail.helpBox;
+      store(QSTORE_KEY, { editor: Object.assign({}, EO, stored(QSTORE_KEY).editor || {}, { helpBox: ev.detail.helpBox }) });
+    });
   }
   const q = stored(QSTORE_KEY);
   setLang(q.lang || "de");
@@ -1998,6 +2273,7 @@ $("lang-en").addEventListener("click", () => setLang("en"));
 $("tab-edit").addEventListener("click", () => setTab("edit"));
 $("tab-preview").addEventListener("click", () => setTab("preview"));
 $("addInput").addEventListener("click", openInputDialog);
+$("sceneSwitch").addEventListener("click", switchScene);
 $("snippetBtn").addEventListener("click", openSnippets);
 $("checkBtn").addEventListener("click", check);
 $("fillBtn").addEventListener("click", fillModelAnswers);

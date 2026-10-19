@@ -226,6 +226,252 @@ fb_coeffs(%_sans, %_tans, %_tol, %_description):=block(
   return([castext_concat(%_txt, str_equation_ok), true])
 );
 
+/* https://github.com/mkraska/meclib/wiki/fb_floats */
+/* Symbolic answers with decimal coefficients (rounded values of exact coefficients such as
+   3*sqrt(5)-6), of any structure (products, powers, roots, functions). Both answers are
+   normalised with expand(float(...)): exact constants become decimal numbers, integer exponents
+   stay integers; products of roots are combined first (rootscontract), so that sqrt(2)*sqrt(x)
+   and sqrt(2*x) agree. Both are split into summands, each a number (coefficient with sign) times a
+   variable part; the summands are paired by their variable parts (decimal numbers inside it
+   replaced by a placeholder), and the numbers of each pair are compared one by one with fb_unit()
+   and the relative tolerance %_tol. Extra summands of the answer are underlined in the evaluated
+   form, with fb_vars() against the summands of the model answer without a partner and, if
+   fb_dims declares the units of the variables, a unit check; a summand of the model answer left
+   over is reported as missing. Without any pair, the whole answer gets the unit check, fb_vars()
+   or a general hint. Returns [text, ok]; the text is empty if everything matches. */
+/* the decimal numbers of an expression replaced by %_N, collected in fb_floats_nums
+   (block variable of fb_floats, dynamically bound); simp:false keeps the order of the parts,
+   inflag:true walks the internal form, where the sign of a term is part of its number
+   (g - 0.3*x is g + (-0.3)*x), so that a wrong sign is a wrong number, not another skeleton */
+fb_floats_walk(%_x) := if floatnump(%_x) then (fb_floats_nums: endcons(%_x, fb_floats_nums), '%_N)
+  else if atom(%_x) then %_x
+  else block([simp: false, inflag: true], apply(op(%_x), map(fb_floats_walk, args(%_x))));
+/* normal form: rootscontract() (sqrt(2)*sqrt(x) -> sqrt(2*x), also sqrt(a)*sqrt(...) as Maxima
+   splits sqrt(a*(...)) for a positive a), then expand(float(...)). The decimal numbers are hidden
+   behind subscripted symbols %_P[i] during rootscontract(), which would turn them into fractions. */
+fb_floats_hide(%_x) := if floatnump(%_x) then (fb_floats_nums: endcons(%_x, fb_floats_nums), %_P[length(fb_floats_nums)])
+  else if atom(%_x) then %_x
+  else block([simp: false, inflag: true], apply(op(%_x), map(fb_floats_hide, args(%_x))));
+fb_floats_norm(%_e) := block([fb_floats_nums: [], %_h, %_i],
+  %_h: rootscontract(ev(fb_floats_hide(%_e), simp)),
+  for %_i thru length(fb_floats_nums) do %_h: subst(%_P[%_i] = fb_floats_nums[%_i], %_h),
+  expand(float(%_h)));
+/* display of the evaluated answer: numbers with 4 significant figures, the deviating ones (their
+   positions in fb_floats_bad, counted as by fb_floats_walk) underlined by fb_floats_mark() */
+/* underlined, not coloured: \color needs MathJax's color extension, which Moodle's MathJax 3
+   may fail to load ("Extension color failed to load" instead of the whole formula) */
+texput(fb_floats_mark, lambda([%_e], sconcat("{\\underline{", tex1(first(%_e)), "}}")));
+fb_floats_show(%_x) := if floatnump(%_x) then block([%_v],
+    fb_floats_k: fb_floats_k + 1, %_v: significantfigures(%_x, 4),
+    if member(fb_floats_k, fb_floats_bad) then (if %_v < 0 then -fb_floats_mark(-%_v) else fb_floats_mark(%_v)) else %_v)
+  else if atom(%_x) then %_x
+  else block([inflag: true], apply(op(%_x), map(fb_floats_show, args(%_x))));
+/* numbers of a display with 4 significant figures */
+fb_floats_round(%_x) := if floatnump(%_x) then significantfigures(%_x, 4)
+  else if atom(%_x) then %_x
+  else block([inflag: true], apply(op(%_x), map(fb_floats_round, args(%_x))));
+/* the summands of a normalised expression, each as [key, numbers, coefficient, rest]: coefficient
+   is the numeric factor of the summand (with its sign, 1 if there is none), rest the product of
+   the other factors, key the rest with its decimal numbers replaced by %_N, numbers the
+   coefficient followed by the decimal numbers of rest. Summands with the same key are the
+   same term of the answer, up to their numbers. */
+fb_floats_terms(%_e) := block([inflag: true, %_L],
+  %_L: if not atom(%_e) and op(%_e) = "+" then args(%_e) else [%_e],
+  map(lambda([%_x], block([%_c: 1, %_r: [], %_k, %_rest],
+      if numberp(%_x) then %_c: %_x
+      else if not atom(%_x) and op(%_x) = "*" then
+        (for %_f in args(%_x) do if numberp(%_f) then %_c: %_c*%_f else %_r: endcons(%_f, %_r))
+      else %_r: [%_x],
+      %_rest: apply("*", %_r),
+      fb_floats_nums: [], %_k: fb_floats_walk(%_rest),
+      [%_k, cons(%_c, fb_floats_nums), %_c, %_rest])), %_L));
+/* display of a summand: all of it marked (%_whole), or the numbers at the positions %_pos
+   (1 = coefficient), a minus sign outside of the mark */
+fb_floats_tshow(%_T, %_whole, %_pos) := block([%_c: fb_floats_round(%_T[3]), %_v, fb_floats_k: 1, fb_floats_bad: %_pos],
+  if %_whole then (%_v: fb_floats_round(%_T[3]*%_T[4]),
+    return(if is(%_c < 0) then -fb_floats_mark(-%_v) else fb_floats_mark(%_v))),
+  if member(1, %_pos) then %_c: (if is(%_c < 0) then -fb_floats_mark(-%_c) else fb_floats_mark(%_c)),
+  %_c*fb_floats_show(%_T[4]));
+
+/* https://github.com/mkraska/meclib/wiki/fb_floats (section Units) */
+/* Physical dimensions. The question declares the units of its variables as strings, e.g.
+   fb_dims: [a = "m", c = "N/m", m = "kg", g = "m/s^2"]; the names on the left may be strings, too
+   (needed for a name that has a value). The strings are read by the parser below, not by Maxima,
+   so a unit such as m (metre) never meets a variable m (mass). A dimension is a product of powers
+   of %_dL (length), %_dM (mass), %_dT (time), %_dI (current), %_dK (temperature), %_dN (amount);
+   1 is dimensionless. Special values: %_dunk (an undeclared variable or an unknown unit: no
+   check), %_dsum (a sum of different dimensions), %_dfun (a function or exponent whose argument
+   has a dimension). */
+fb_dims_unittab() := ["m" = %_dL, "g" = %_dM, "s" = %_dT, "A" = %_dI, "K" = %_dK, "mol" = %_dN,
+  "N" = %_dM*%_dL/%_dT^2, "J" = %_dM*%_dL^2/%_dT^2, "W" = %_dM*%_dL^2/%_dT^3, "Pa" = %_dM/(%_dL*%_dT^2),
+  "bar" = %_dM/(%_dL*%_dT^2), "Hz" = 1/%_dT, "C" = %_dI*%_dT, "V" = %_dM*%_dL^2/(%_dT^3*%_dI),
+  "Ohm" = %_dM*%_dL^2/(%_dT^3*%_dI^2), "min" = %_dT, "h" = %_dT, "d" = %_dT, "t" = %_dM,
+  "l" = %_dL^3, "L" = %_dL^3, "rad" = 1, "deg" = 1, "rpm" = 1/%_dT];
+fb_dims_name(%_n) := block([%_a: assoc(%_n, fb_dims_unittab())],
+  if %_a = false and slength(%_n) > 1 and member(charat(%_n, 1), ["p", "n", "u", "m", "c", "d", "h", "k", "M", "G", "T"]) then
+    %_a: assoc(substring(%_n, 2), fb_dims_unittab()),
+  if %_a = false then '%_dunk else %_a);
+/* a unit string: names, products (*, blank, ·), quotients (/), powers (^2, ^-1, ^(1/2)) and
+   parentheses, e.g. "kg*m/s^2", "N/m", "kg/(m s^2)". Tokens: ["u", name], ["n", integer] or one
+   of the characters * / ^ ( ) - */
+fb_dims_tokens(%_s) := block([%_t: [], %_w: "", %_n: -1, %_ch],
+  for %_ch in endcons(" ", charlist(%_s)) do (
+    if alphacharp(%_ch) then (if %_n >= 0 then (%_t: endcons(["n", %_n], %_t), %_n: -1), %_w: sconcat(%_w, %_ch))
+    else if digitcharp(%_ch) and %_w = "" then %_n: max(%_n, 0)*10 + cint(%_ch) - cint("0")
+    else (
+      if %_w # "" then (%_t: endcons(["u", %_w], %_t), %_w: ""),
+      if %_n >= 0 then (%_t: endcons(["n", %_n], %_t), %_n: -1),
+      if member(%_ch, ["*", "/", "^", "(", ")", "-"]) then %_t: endcons(%_ch, %_t)
+      else if %_ch = "·" or %_ch = "." then %_t: endcons("*", %_t)
+      else if %_ch # " " then %_t: endcons("?", %_t))),
+  %_t);
+/* recursive descent over the tokens %_P from position %_k (bound in fb_dims_unit) */
+fb_dims_tok() := if %_k <= length(%_P) then %_P[%_k] else "";
+fb_dims_pexpr() := block([%_v: fb_dims_pfac(), %_t],
+  while (%_t: fb_dims_tok(), %_t = "*" or %_t = "/" or %_t = "(" or listp(%_t)) do (
+    if %_t = "*" or %_t = "/" then %_k: %_k + 1,
+    if %_t = "/" then %_v: %_v/fb_dims_pfac() else %_v: %_v*fb_dims_pfac()),
+  %_v);
+fb_dims_pfac() := block([%_v: fb_dims_pprim(), %_p: false, %_s: 1, %_n: 1, %_d: 1, %_t],
+  if fb_dims_tok() = "^" then (
+    %_k: %_k + 1,
+    if fb_dims_tok() = "(" then (%_p: true, %_k: %_k + 1),
+    if fb_dims_tok() = "-" then (%_s: -1, %_k: %_k + 1),
+    %_t: fb_dims_tok(),
+    if listp(%_t) and %_t[1] = "n" then (%_n: %_t[2], %_k: %_k + 1) else %_fail: true,
+    if %_p and fb_dims_tok() = "/" then (%_k: %_k + 1, %_t: fb_dims_tok(),
+      if listp(%_t) and %_t[1] = "n" and %_t[2] > 0 then (%_d: %_t[2], %_k: %_k + 1) else %_fail: true),
+    if %_p then (if fb_dims_tok() = ")" then %_k: %_k + 1 else %_fail: true),
+    if not %_fail then %_v: %_v^(%_s*%_n/%_d)),
+  %_v);
+fb_dims_pprim() := block([%_t: fb_dims_tok(), %_v],
+  if listp(%_t) then (%_k: %_k + 1, if %_t[1] = "u" then fb_dims_name(%_t[2]) else 1)
+  else if %_t = "(" then (%_k: %_k + 1, %_v: fb_dims_pexpr(),
+    if fb_dims_tok() = ")" then %_k: %_k + 1 else %_fail: true, %_v)
+  else (%_fail: true, %_k: length(%_P) + 1, 1));
+fb_dims_unit(%_s) := block([simp: true, %_P: fb_dims_tokens(%_s), %_k: 1, %_fail: false, %_v],
+  %_v: fb_dims_pexpr(),
+  if %_fail or %_k <= length(%_P) or not freeof('%_dunk, %_v) then '%_dunk else %_v);
+/* the table [name = dimension] of fb_dims, [] if fb_dims is not a list */
+fb_dims_table() := if not listp(fb_dims) then []
+  else map(lambda([%_e], (if stringp(lhs(%_e)) then lhs(%_e) else string(lhs(%_e))) =
+    (if stringp(rhs(%_e)) then fb_dims_unit(rhs(%_e)) else if numberp(rhs(%_e)) then 1 else '%_dunk)), fb_dims);
+/* a decimal exponent (sqrt() is ^0.5 after float()) as a fraction with a small denominator */
+fb_dims_q(%_x) := block([%_d],
+  if not floatnump(%_x) then return(%_x),
+  for %_d thru 12 do if abs(%_x*%_d - round(%_x*%_d)) < 1e-9 then return(round(%_x*%_d)/%_d),
+  %_x);
+fb_dims_bad(%_d) := member(%_d, ['%_dunk, '%_dsum, '%_dfun]);
+/* the dimension of an expression with the table %_tab */
+fb_dims_of(%_x, %_tab) := block([simp: true, inflag: true, radexpand: all, %_o, %_a, %_d, %_e],
+  if numberp(%_x) or constantp(%_x) then return(1),
+  if symbolp(%_x) or subvarp(%_x) then
+    (%_a: assoc(string(%_x), %_tab), return(if %_a = false then '%_dunk else %_a)),
+  if atom(%_x) then return('%_dunk),
+  %_o: op(%_x), %_a: args(%_x),
+  %_d: map(lambda([%_y], fb_dims_of(%_y, %_tab)), %_a),
+  if member('%_dunk, %_d) then return('%_dunk),
+  %_e: sublist(%_d, lambda([%_y], %_y = '%_dsum or %_y = '%_dfun)),
+  if %_e # [] then return(first(%_e)),
+  if %_o = "+" then return(if every(lambda([%_y], is(%_y = first(%_d))), %_d) then first(%_d) else '%_dsum),
+  if %_o = "*" then return(apply("*", %_d)),
+  if %_o = "^" then (
+    if %_d[2] # 1 then return('%_dfun),
+    if %_d[1] = 1 then return(1),
+    return(if numberp(%_a[2]) then %_d[1]^fb_dims_q(%_a[2]) else '%_dfun)),
+  if %_o = abs then return(%_d[1]),
+  if every(lambda([%_y], is(%_y = 1)), %_d) then 1 else '%_dfun);
+/* a dimension written in SI base units, for the feedback */
+texput(%_um, "\\mathrm{m}")$ texput(%_ukg, "\\mathrm{kg}")$ texput(%_us, "\\mathrm{s}")$
+texput(%_uA, "\\mathrm{A}")$ texput(%_uK, "\\mathrm{K}")$ texput(%_umol, "\\mathrm{mol}")$
+fb_dims_show(%_d) := subst(['%_dL = '%_um, '%_dM = '%_ukg, '%_dT = '%_us, '%_dI = '%_uA, '%_dK = '%_uK, '%_dN = '%_umol], %_d);
+/* feedback on the dimension of a whole answer, "" if it is right or cannot be checked */
+fb_dimension(%_sans, %_tans) := block([simp: true, %_tab: fb_dims_table(), %_ds, %_dt, %_du, %_tu],
+  if %_tab = [] then return(""),
+  %_dt: fb_dims_of(float(%_tans), %_tab), %_ds: fb_dims_of(float(%_sans), %_tab),
+  if fb_dims_bad(%_dt) or %_ds = '%_dunk or is(%_ds = %_dt) then return(""),
+  if %_ds = '%_dsum then return(castext("[[lang code='de']]&nbsp;In Ihrem Ergebnis werden Gr&ouml;&szlig;en verschiedener Einheiten addiert.[[/lang]][[lang code='en,other']]&nbsp;Your result adds quantities of different units.[[/lang]]")),
+  if %_ds = '%_dfun then return(castext("[[lang code='de']]&nbsp;In Ihrem Ergebnis hat eine Funktion (z.&nbsp;B. sin, exp, ln) oder ein Exponent ein Argument mit Einheit.[[/lang]][[lang code='en,other']]&nbsp;In your result, a function (e.g. sin, exp, ln) or an exponent has an argument with a unit.[[/lang]]")),
+  %_du: fb_dims_show(%_ds), %_tu: fb_dims_show(%_dt),
+  castext("[[lang code='de']]&nbsp;Ihr Ergebnis hat die Einheit {@%_du@} statt {@%_tu@}.[[/lang]][[lang code='en,other']]&nbsp;Your result has the unit {@%_du@} instead of {@%_tu@}.[[/lang]]"));
+
+fb_floats(%_sans, %_tans, %_tol) := block([simp: true, %_s, %_t, %_sT, %_tT, %_used, %_pairs: [], %_us, %_ut: [],
+    %_bad: [], %_txt: "", %_r, %_i, %_j, %_p, %_disp, %_tab, %_dt, %_ds, %_du, %_tu, %_v, %_dimtxt: "", %_vt: "", %_nd: [],
+    fb_floats_nums,
+    str_value: castext("[[lang code='de']]&nbsp;Zahlenwert [[/lang]][[lang code='en,other']]&nbsp;Number [[/lang]]"),
+    str_marked: castext("[[lang code='de']]&nbsp;Markierter Zahlenwert [[/lang]][[lang code='en,other']]&nbsp;Marked number [[/lang]]"),
+    str_structure: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie, wie Ihr Ergebnis von den gegebenen Gr&ouml;&szlig;en abh&auml;ngt (Produkte, Potenzen, Vorzeichen).[[/lang]][[lang code='en,other']]&nbsp;Check how your result depends on the given quantities (products, powers, signs).[[/lang]]"),
+    str_term: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie den markierten Term.[[/lang]][[lang code='en,other']]&nbsp;Check the marked term.[[/lang]]"),
+    str_terms: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie die markierten Terme.[[/lang]][[lang code='en,other']]&nbsp;Check the marked terms.[[/lang]]"),
+    str_missing: castext("[[lang code='de']]&nbsp;Ihr Ergebnis ist bis auf einen fehlenden Term richtig.[[/lang]][[lang code='en,other']]&nbsp;Your result is right except for a missing term.[[/lang]]"),
+    str_missings: castext("[[lang code='de']]&nbsp;Ihr Ergebnis ist bis auf fehlende Terme richtig.[[/lang]][[lang code='en,other']]&nbsp;Your result is right except for missing terms.[[/lang]]"),
+    str_also: castext("[[lang code='de']]&nbsp;Au&szlig;erdem fehlt ein Term.[[/lang]][[lang code='en,other']]&nbsp;Also, a term is missing.[[/lang]]"),
+    str_alsos: castext("[[lang code='de']]&nbsp;Au&szlig;erdem fehlen Terme.[[/lang]][[lang code='en,other']]&nbsp;Also, terms are missing.[[/lang]]"),
+    str_dsum: castext("[[lang code='de']]&nbsp;Im markierten Term werden Gr&ouml;&szlig;en verschiedener Einheiten addiert.[[/lang]][[lang code='en,other']]&nbsp;The marked term adds quantities of different units.[[/lang]]"),
+    str_dfun: castext("[[lang code='de']]&nbsp;Im markierten Term hat eine Funktion (z.&nbsp;B. sin, exp, ln) oder ein Exponent ein Argument mit Einheit.[[/lang]][[lang code='en,other']]&nbsp;In the marked term, a function (e.g. sin, exp, ln) or an exponent has an argument with a unit.[[/lang]]")
+  ],
+  %_s: fb_floats_norm(%_sans), %_t: fb_floats_norm(%_tans),
+  %_sT: fb_floats_terms(%_s), %_tT: fb_floats_terms(%_t),
+  /* each summand of the model answer gets the first free summand of the answer with its key */
+  %_used: makelist(false, length(%_sT)),
+  for %_j thru length(%_tT) do block([%_m: 0],
+    for %_i thru length(%_sT) do
+      if %_m = 0 and not %_used[%_i] and is(%_sT[%_i][1] = %_tT[%_j][1]) then %_m: %_i,
+    if %_m > 0 then (%_used[%_m]: true, %_pairs: endcons([%_m, %_j], %_pairs)) else %_ut: endcons(%_j, %_ut)),
+  %_us: sublist(makelist(%_i, %_i, length(%_sT)), lambda([%_i], not %_used[%_i])),
+  /* no summand in common: feedback on the whole answer (dimension, variables or a general hint) */
+  if %_pairs = [] then (
+    %_txt: castext_concat(fb_dimension(%_sans, %_tans), fb_vars(%_sans, %_tans)),
+    if %_txt = "" then %_txt: str_structure,
+    return([%_txt, false])),
+  /* the numbers of the common summands; fb_unit() reports the deviation also for a matching
+     number: only numbers outside the tolerance, as [summand of the answer, position, numbers] */
+  for %_p in %_pairs do block([%_a: %_sT[%_p[1]][2], %_b: %_tT[%_p[2]][2], %_k],
+    for %_k thru length(%_b) do
+      if is(abs(%_a[%_k] - %_b[%_k]) > %_tol*abs(%_b[%_k])) then %_bad: endcons([%_p[1], %_k, %_a[%_k], %_b[%_k]], %_bad)),
+  if %_bad = [] and %_us = [] and %_ut = [] then return(["", true]),
+  /* the extra summands: their dimension, if fb_dims is declared. A summand with a wrong unit makes
+     the numbers meaningless: then they are neither marked nor named */
+  if %_us # [] then (
+    %_tab: fb_dims_table(),
+    %_dt: if %_tab = [] then '%_dunk else fb_dims_of(%_t, %_tab),
+    if not fb_dims_bad(%_dt) then for %_i in %_us do (
+      %_ds: fb_dims_of(%_sT[%_i][3]*%_sT[%_i][4], %_tab),
+      if %_ds = '%_dsum then %_dimtxt: castext_concat(%_dimtxt, str_dsum)
+      else if %_ds = '%_dfun then %_dimtxt: castext_concat(%_dimtxt, str_dfun)
+      else if %_ds # '%_dunk and not is(%_ds = %_dt) then (
+        %_du: fb_dims_show(%_ds), %_tu: fb_dims_show(%_dt),
+        if length(%_us) = 1 then %_dimtxt: castext_concat(%_dimtxt, castext("[[lang code='de']]&nbsp;Der markierte Term hat die Einheit {@%_du@}, das Ergebnis aber {@%_tu@}.[[/lang]][[lang code='en,other']]&nbsp;The marked term has the unit {@%_du@}, the result {@%_tu@}.[[/lang]]"))
+        else (%_v: fb_floats_round(%_sT[%_i][3]*%_sT[%_i][4]),
+          %_dimtxt: castext_concat(%_dimtxt, castext("[[lang code='de']]&nbsp;Der Term {@%_v@} hat die Einheit {@%_du@}, das Ergebnis aber {@%_tu@}.[[/lang]][[lang code='en,other']]&nbsp;The term {@%_v@} has the unit {@%_du@}, the result {@%_tu@}.[[/lang]]"))))),
+    if %_dimtxt # "" then %_bad: []),
+  /* the evaluated form with the deviating numbers and the extra summands marked: for marked
+     summands, and for an answer that differs from its evaluated form (exact constants, factored
+     forms), so that the numbers below can be found */
+  if %_us # [] or (%_bad # [] and not is(%_sans = %_s)) then (
+    %_disp: apply("+", makelist(fb_floats_tshow(%_sT[%_i], member(%_i, %_us),
+      map(second, sublist(%_bad, lambda([%_b], %_b[1] = %_i)))), %_i, length(%_sT))),
+    %_txt: castext("[[lang code='de']]&nbsp;Ausgewertet entspricht Ihre Eingabe {@%_disp@}.[[/lang]][[lang code='en,other']]&nbsp;Evaluated, your answer is {@%_disp@}.[[/lang]]"),
+    str_value: str_marked),
+  /* fb_vars() for the extra summands against the summands of the model answer without a partner */
+  if %_us # [] then (
+    %_vt: fb_vars(apply("+", map(lambda([%_i], %_sT[%_i][3]*%_sT[%_i][4]), %_us)),
+                  apply("+", map(lambda([%_j], %_tT[%_j][3]*%_tT[%_j][4]), %_ut))),
+    %_txt: castext_concat(%_txt, castext_concat(%_dimtxt, %_vt)),
+    if %_dimtxt = "" and %_vt = "" then %_txt: castext_concat(%_txt, if length(%_us) = 1 then str_term else str_terms)),
+  for %_b in %_bad do (
+    %_r: fb_unit(%_b[3], %_b[4], %_tol),
+    /* the number with 4 significant figures (an exact answer gives long decimals) */
+    %_txt: castext_concat(%_txt, castext_concat(castext_concat(str_value, castext("{@significantfigures(%_b[3], 4)@}:")), %_r))
+  ),
+  /* summands of the model answer without a partner, beyond those that the extra summands may stand for */
+  if length(%_ut) > length(%_us) then
+    %_txt: castext_concat(%_txt,
+      if %_us = [] and %_bad = [] then (if length(%_ut) = 1 then str_missing else str_missings)
+      else (if length(%_ut) - length(%_us) = 1 then str_also else str_alsos)),
+  [%_txt, false]
+);
+
 /* https://github.com/mkraska/meclib/wiki/fb_number */
 fb_number(%_sans, %_tans, %_tol) := fb_unit(%_sans, %_tans, %_tol);
 /* this should return true if the check passes, false otherwise */

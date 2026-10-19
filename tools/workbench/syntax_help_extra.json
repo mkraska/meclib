@@ -181,7 +181,7 @@
     "expr",
     "list"
    ],
-   "text": "List with expr added at the end.",
+   "text": "List with expr added at the end. E.g. deactivating an object of a copied initdata: gfbdata[2]: endcons(\"HIDE\", gfbdata[2]) (see copylist).",
    "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-endcons"
   },
   {
@@ -307,6 +307,1015 @@
    ],
    "text": "Converts a Maxima list structure into a JSON string; meclib questions use it for the graphic's initial objects: init: stackjson_stringify(initdata).",
    "url": "https://docs.stack-assessment.org/en/Authoring/JSON/"
+  },
+  {
+   "name": "last",
+   "kind": "maxima",
+   "sig": "last(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Last element of list (also of an expression: its last argument).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-last"
+  },
+  {
+   "name": "second",
+   "kind": "maxima",
+   "sig": "second(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Second element (third ... tenth likewise). Same as list[2].",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-second"
+  },
+  {
+   "name": "part",
+   "kind": "maxima",
+   "sig": "part(expr, n_1, ..., n_k)",
+   "args": [
+    "expr",
+    "n_1",
+    "...",
+    "n_k"
+   ],
+   "text": "Part of an expression or nested list: part(initdata, 3, 2) is initdata[3][2], the name of the third object. Index n from 1.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-part"
+  },
+  {
+   "name": "delete",
+   "kind": "maxima",
+   "sig": "delete(expr, list)",
+   "args": [
+    "expr",
+    "list"
+   ],
+   "text": "list without all elements equal to expr, e.g. delete([\"dim\",\"a\",[3,0.5],[4,0.5],0], initdata). delete(expr, list, n) removes the first n of them.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-delete"
+  },
+  {
+   "name": "member",
+   "kind": "maxima",
+   "sig": "member(expr, list)",
+   "args": [
+    "expr",
+    "list"
+   ],
+   "text": "true if expr is an element of list, e.g. member(o[1], [\"beam\", \"wall\"]) to test the type of an object o.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-member"
+  },
+  {
+   "name": "assoc",
+   "kind": "maxima",
+   "sig": "assoc(key, list, default)",
+   "args": [
+    "key",
+    "list",
+    "default"
+   ],
+   "text": "Value for key in a list of equations or two-element lists: assoc(\"b\", [\"a\"=1, \"b\"=2]) gives 2; default (optional, else false) if key is missing.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-assoc",
+   "optional_from": 2
+  },
+  {
+   "name": "reverse",
+   "kind": "maxima",
+   "sig": "reverse(list)",
+   "args": [
+    "list"
+   ],
+   "text": "list in reverse order.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-reverse"
+  },
+  {
+   "name": "sort",
+   "kind": "maxima",
+   "sig": "sort(list, P)",
+   "args": [
+    "list",
+    "P"
+   ],
+   "text": "Sorted copy of list; P (optional) is the ordering predicate, e.g. sort(L, lambda([a, b], a[2] < b[2])) sorts points by y.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sort",
+   "optional_from": 1
+  },
+  {
+   "name": "unique",
+   "kind": "maxima",
+   "sig": "unique(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Sorted list of the distinct elements.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-unique"
+  },
+  {
+   "name": "flatten",
+   "kind": "maxima",
+   "sig": "flatten(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Nested lists turned into one flat list: flatten([[1,2],[3]]) is [1,2,3].",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-flatten"
+  },
+  {
+   "name": "join",
+   "kind": "maxima",
+   "sig": "join(list_1, list_2)",
+   "args": [
+    "list_1",
+    "list_2"
+   ],
+   "text": "Alternating elements: join([a,b],[c,d]) is [a,c,b,d].",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-join"
+  },
+  {
+   "name": "firstn",
+   "kind": "maxima",
+   "sig": "firstn(list, n)",
+   "args": [
+    "list",
+    "n"
+   ],
+   "text": "The first n elements of list (lastn(list, n): the last n).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-firstn"
+  },
+  {
+   "name": "lmax",
+   "kind": "maxima",
+   "sig": "lmax(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Largest element of a list of numbers (lmin: smallest), e.g. for grid limits from point coordinates.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-lmax"
+  },
+  {
+   "name": "lmin",
+   "kind": "maxima",
+   "sig": "lmin(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Smallest element of a list of numbers (lmax: largest).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-lmin"
+  },
+  {
+   "name": "emptyp",
+   "kind": "maxima",
+   "sig": "emptyp(list)",
+   "args": [
+    "list"
+   ],
+   "text": "true for an empty list (or set or matrix).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-emptyp"
+  },
+  {
+   "name": "create_list",
+   "kind": "maxima",
+   "sig": "create_list(expr, x_1, list_1, ..., x_n, list_n)",
+   "args": [
+    "expr",
+    "x_1",
+    "list_1",
+    "...",
+    "x_n",
+    "list_n"
+   ],
+   "text": "Like makelist with several loop variables: create_list([i, j], i, [1, 2], j, [0, 1]).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-create_list"
+  },
+  {
+   "name": "sum",
+   "kind": "maxima",
+   "sig": "sum(expr, i, i_0, i_1)",
+   "args": [
+    "expr",
+    "i",
+    "i_0",
+    "i_1"
+   ],
+   "text": "Sum of expr for i from i_0 to i_1. For lists of vectors: lsum(p, p, points) adds them.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sum"
+  },
+  {
+   "name": "lsum",
+   "kind": "maxima",
+   "sig": "lsum(expr, x, list)",
+   "args": [
+    "expr",
+    "x",
+    "list"
+   ],
+   "text": "Sum of expr for x running through list, e.g. lsum(p, p, [P1, P2, P3])/3 is the centroid of three points.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-lsum"
+  },
+  {
+   "name": "every",
+   "kind": "maxima",
+   "sig": "every(p, list)",
+   "args": [
+    "p",
+    "list"
+   ],
+   "text": "true if the predicate p is true for all elements (some: for at least one).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-every"
+  },
+  {
+   "name": "some",
+   "kind": "maxima",
+   "sig": "some(p, list)",
+   "args": [
+    "p",
+    "list"
+   ],
+   "text": "true if the predicate p is true for at least one element (every: for all).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-some"
+  },
+  {
+   "name": "lreduce",
+   "kind": "maxima",
+   "sig": "lreduce(f, list, init)",
+   "args": [
+    "f",
+    "list",
+    "init"
+   ],
+   "text": "Combines the elements from the left with the binary function f: lreduce(\"+\", L) is the sum of L; init (optional) is the start value.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-lreduce",
+   "optional_from": 2
+  },
+  {
+   "name": "apply",
+   "kind": "maxima",
+   "sig": "apply(f, list)",
+   "args": [
+    "f",
+    "list"
+   ],
+   "text": "Calls f with the elements of list as arguments: apply(max, [1, 5, 3]) is 5, apply(\"+\", L) the sum.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-apply"
+  },
+  {
+   "name": "maplist",
+   "kind": "maxima",
+   "sig": "maplist(f, list)",
+   "args": [
+    "f",
+    "list"
+   ],
+   "text": "Like map, but always returns a list.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-maplist"
+  },
+  {
+   "name": "outermap",
+   "kind": "maxima",
+   "sig": "outermap(f, list_1, list_2)",
+   "args": [
+    "f",
+    "list_1",
+    "list_2"
+   ],
+   "text": "f for all combinations of the elements of the lists (nested lists).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-outermap"
+  },
+  {
+   "name": "setify",
+   "kind": "maxima",
+   "sig": "setify(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Set of the distinct elements (listify: back to a list).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-setify"
+  },
+  {
+   "name": "listify",
+   "kind": "maxima",
+   "sig": "listify(set)",
+   "args": [
+    "set"
+   ],
+   "text": "List of the elements of a set.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-listify"
+  },
+  {
+   "name": "simplode",
+   "kind": "maxima",
+   "sig": "simplode(list, delim)",
+   "args": [
+    "list",
+    "delim"
+   ],
+   "text": "Strings of list joined with delim (optional): simplode([\"a\",\"b\"], \", \").",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-simplode",
+   "optional_from": 1
+  },
+  {
+   "name": "ssubst",
+   "kind": "maxima",
+   "sig": "ssubst(new, old, string)",
+   "args": [
+    "new",
+    "old",
+    "string"
+   ],
+   "text": "string with every occurrence of old replaced by new.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-ssubst"
+  },
+  {
+   "name": "sequal",
+   "kind": "maxima",
+   "sig": "sequal(s_1, s_2)",
+   "args": [
+    "s_1",
+    "s_2"
+   ],
+   "text": "true if the two strings are equal.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sequal"
+  },
+  {
+   "name": "slength",
+   "kind": "maxima",
+   "sig": "slength(string)",
+   "args": [
+    "string"
+   ],
+   "text": "Number of characters.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-slength"
+  },
+  {
+   "name": "substring",
+   "kind": "maxima",
+   "sig": "substring(string, start, end)",
+   "args": [
+    "string",
+    "start",
+    "end"
+   ],
+   "text": "Characters from start (from 1) up to end-1; without end: to the end.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-substring",
+   "optional_from": 2
+  },
+  {
+   "name": "sposition",
+   "kind": "maxima",
+   "sig": "sposition(char, string)",
+   "args": [
+    "char",
+    "string"
+   ],
+   "text": "Position of the first char in string, false if missing.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sposition"
+  },
+  {
+   "name": "split",
+   "kind": "maxima",
+   "sig": "split(string, delim)",
+   "args": [
+    "string",
+    "delim"
+   ],
+   "text": "List of the parts of string between the delimiters (delim optional, default blank).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-split",
+   "optional_from": 1
+  },
+  {
+   "name": "strim",
+   "kind": "maxima",
+   "sig": "strim(chars, string)",
+   "args": [
+    "chars",
+    "string"
+   ],
+   "text": "string without the characters of chars at both ends.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-strim"
+  },
+  {
+   "name": "supcase",
+   "kind": "maxima",
+   "sig": "supcase(string)",
+   "args": [
+    "string"
+   ],
+   "text": "string in capitals (sdowncase: in small letters).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-supcase"
+  },
+  {
+   "name": "charat",
+   "kind": "maxima",
+   "sig": "charat(string, n)",
+   "args": [
+    "string",
+    "n"
+   ],
+   "text": "The n-th character (from 1).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-charat"
+  },
+  {
+   "name": "sqrt",
+   "kind": "maxima",
+   "sig": "sqrt(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Square root. Length of a vector v: sqrt(v . v).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sqrt"
+  },
+  {
+   "name": "abs",
+   "kind": "maxima",
+   "sig": "abs(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Absolute value.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-abs"
+  },
+  {
+   "name": "sin",
+   "kind": "maxima",
+   "sig": "sin(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Sine of x in radians; for degrees sin(alpha*%pi/180).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sin"
+  },
+  {
+   "name": "cos",
+   "kind": "maxima",
+   "sig": "cos(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Cosine of x in radians; for degrees cos(alpha*%pi/180).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-cos"
+  },
+  {
+   "name": "tan",
+   "kind": "maxima",
+   "sig": "tan(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Tangent of x in radians.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-tan"
+  },
+  {
+   "name": "asin",
+   "kind": "maxima",
+   "sig": "asin(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Arc sine, in radians (-%pi/2 ... %pi/2).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-asin"
+  },
+  {
+   "name": "acos",
+   "kind": "maxima",
+   "sig": "acos(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Arc cosine, in radians (0 ... %pi).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-acos"
+  },
+  {
+   "name": "atan",
+   "kind": "maxima",
+   "sig": "atan(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Arc tangent, in radians (-%pi/2 ... %pi/2); for the angle of a vector use atan2.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-atan"
+  },
+  {
+   "name": "atan2",
+   "kind": "maxima",
+   "sig": "atan2(y, x)",
+   "args": [
+    "y",
+    "x"
+   ],
+   "text": "Angle of the vector [x, y] in radians (-%pi ... %pi), all quadrants; in degrees: float(atan2(y, x)*180/%pi), e.g. the angle of a force for meclib objects.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-atan2",
+   "argdocs": {
+    "y": "y component (first!)",
+    "x": "x component"
+   }
+  },
+  {
+   "name": "exp",
+   "kind": "maxima",
+   "sig": "exp(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Exponential function e^x.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-exp"
+  },
+  {
+   "name": "log",
+   "kind": "maxima",
+   "sig": "log(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Natural logarithm (log(x)/log(10) for base 10).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-log"
+  },
+  {
+   "name": "floor",
+   "kind": "maxima",
+   "sig": "floor(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Largest integer <= x (ceiling: smallest integer >= x).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-floor"
+  },
+  {
+   "name": "ceiling",
+   "kind": "maxima",
+   "sig": "ceiling(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Smallest integer >= x (floor: largest integer <= x).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-ceiling"
+  },
+  {
+   "name": "truncate",
+   "kind": "maxima",
+   "sig": "truncate(x)",
+   "args": [
+    "x"
+   ],
+   "text": "x without its decimal places (towards zero).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-truncate"
+  },
+  {
+   "name": "mod",
+   "kind": "maxima",
+   "sig": "mod(x, y)",
+   "args": [
+    "x",
+    "y"
+   ],
+   "text": "Remainder of x/y with the sign of y, e.g. mod(angle, 360).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-mod"
+  },
+  {
+   "name": "max",
+   "kind": "maxima",
+   "sig": "max(x_1, ..., x_n)",
+   "args": [
+    "x_1",
+    "...",
+    "x_n"
+   ],
+   "text": "Largest of the arguments (for a list: lmax or apply(max, L)).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-max"
+  },
+  {
+   "name": "min",
+   "kind": "maxima",
+   "sig": "min(x_1, ..., x_n)",
+   "args": [
+    "x_1",
+    "...",
+    "x_n"
+   ],
+   "text": "Smallest of the arguments (for a list: lmin or apply(min, L)).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-min"
+  },
+  {
+   "name": "signum",
+   "kind": "maxima",
+   "sig": "signum(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Sign: -1, 0 or 1.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-signum"
+  },
+  {
+   "name": "rationalize",
+   "kind": "maxima",
+   "sig": "rationalize(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Exact fraction of a decimal number (binary exact: rationalize(0.1) is not 1/10).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-rationalize"
+  },
+  {
+   "name": "expand",
+   "kind": "maxima",
+   "sig": "expand(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Multiplies out products and powers.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-expand"
+  },
+  {
+   "name": "factor",
+   "kind": "maxima",
+   "sig": "factor(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Factors a polynomial (or an integer).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-factor"
+  },
+  {
+   "name": "fullratsimp",
+   "kind": "maxima",
+   "sig": "fullratsimp(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "ratsimp repeated until nothing changes.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-fullratsimp"
+  },
+  {
+   "name": "radcan",
+   "kind": "maxima",
+   "sig": "radcan(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Simplifies roots, logarithms and exponentials into a canonical form.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-radcan"
+  },
+  {
+   "name": "rootscontract",
+   "kind": "maxima",
+   "sig": "rootscontract(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Combines products of roots: sqrt(2)*sqrt(x) -> sqrt(2*x).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-rootscontract"
+  },
+  {
+   "name": "trigexpand",
+   "kind": "maxima",
+   "sig": "trigexpand(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Expands sums of angles: sin(a+b) -> sin(a)*cos(b)+cos(a)*sin(b).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-trigexpand"
+  },
+  {
+   "name": "trigreduce",
+   "kind": "maxima",
+   "sig": "trigreduce(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Products and powers of sin and cos into sums of multiple angles.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-trigreduce"
+  },
+  {
+   "name": "num",
+   "kind": "maxima",
+   "sig": "num(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Numerator of a fraction (denom: denominator).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-num"
+  },
+  {
+   "name": "denom",
+   "kind": "maxima",
+   "sig": "denom(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Denominator of a fraction (num: numerator).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-denom"
+  },
+  {
+   "name": "coeff",
+   "kind": "maxima",
+   "sig": "coeff(expr, x, n)",
+   "args": [
+    "expr",
+    "x",
+    "n"
+   ],
+   "text": "Coefficient of x^n in the expanded expr (n optional, default 1).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-coeff",
+   "optional_from": 2
+  },
+  {
+   "name": "ratsubst",
+   "kind": "maxima",
+   "sig": "ratsubst(a, b, expr)",
+   "args": [
+    "a",
+    "b",
+    "expr"
+   ],
+   "text": "Substitutes a for b also where b is not a part of expr as written, e.g. ratsubst(1-sin(x)^2, cos(x)^2, expr).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-ratsubst"
+  },
+  {
+   "name": "at",
+   "kind": "maxima",
+   "sig": "at(expr, [x = a, ...])",
+   "args": [
+    "expr",
+    "[x = a, ...]"
+   ],
+   "text": "expr evaluated at x = a (also for derivatives).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-at"
+  },
+  {
+   "name": "psubst",
+   "kind": "maxima",
+   "sig": "psubst([a_1 = b_1, ...], expr)",
+   "args": [
+    "[a_1 = b_1, ...]",
+    "expr"
+   ],
+   "text": "Parallel substitution: psubst([x = y, y = x], expr) swaps x and y (subst would substitute one after the other).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-psubst"
+  },
+  {
+   "name": "diff",
+   "kind": "maxima",
+   "sig": "diff(expr, x, n)",
+   "args": [
+    "expr",
+    "x",
+    "n"
+   ],
+   "text": "n-th derivative with respect to x (n optional, default 1).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-diff",
+   "optional_from": 2
+  },
+  {
+   "name": "integrate",
+   "kind": "maxima",
+   "sig": "integrate(expr, x, a, b)",
+   "args": [
+    "expr",
+    "x",
+    "a",
+    "b"
+   ],
+   "text": "Integral with respect to x; with a, b the definite integral.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-integrate",
+   "optional_from": 2
+  },
+  {
+   "name": "limit",
+   "kind": "maxima",
+   "sig": "limit(expr, x, a)",
+   "args": [
+    "expr",
+    "x",
+    "a"
+   ],
+   "text": "Limit of expr for x -> a.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-limit"
+  },
+  {
+   "name": "lhs",
+   "kind": "maxima",
+   "sig": "lhs(eq)",
+   "args": [
+    "eq"
+   ],
+   "text": "Left-hand side of an equation (rhs: right-hand side), e.g. rhs(solve(eq, x)[1]).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-lhs"
+  },
+  {
+   "name": "rhs",
+   "kind": "maxima",
+   "sig": "rhs(eq)",
+   "args": [
+    "eq"
+   ],
+   "text": "Right-hand side of an equation (lhs: left-hand side), e.g. rhs(solve(eq, x)[1]).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-rhs"
+  },
+  {
+   "name": "linsolve",
+   "kind": "maxima",
+   "sig": "linsolve([eq_1, ...], [x_1, ...])",
+   "args": [
+    "[eq_1, ...]",
+    "[x_1, ...]"
+   ],
+   "text": "Solves a system of linear equations; result is a list of equations x_i = ...",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-linsolve"
+  },
+  {
+   "name": "realpart",
+   "kind": "maxima",
+   "sig": "realpart(z)",
+   "args": [
+    "z"
+   ],
+   "text": "Real part (imagpart: imaginary part, cabs: absolute value, carg: angle).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-realpart"
+  },
+  {
+   "name": "listofvars",
+   "kind": "maxima",
+   "sig": "listofvars(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "List of the variables in expr.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-listofvars"
+  },
+  {
+   "name": "freeof",
+   "kind": "maxima",
+   "sig": "freeof(x, expr)",
+   "args": [
+    "x",
+    "expr"
+   ],
+   "text": "true if x does not occur in expr.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-freeof"
+  },
+  {
+   "name": "matrix",
+   "kind": "maxima",
+   "sig": "matrix(row_1, ..., row_n)",
+   "args": [
+    "row_1",
+    "...",
+    "row_n"
+   ],
+   "text": "Matrix from rows, e.g. rotation matrix R: matrix([cos(t), -sin(t)], [sin(t), cos(t)]); R . [x, y] rotates a point (result is a column matrix: list_matrix_entries makes a list).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-matrix"
+  },
+  {
+   "name": "list_matrix_entries",
+   "kind": "maxima",
+   "sig": "list_matrix_entries(M)",
+   "args": [
+    "M"
+   ],
+   "text": "All entries of a matrix as a list, row by row, e.g. a rotated point back to [x, y].",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-list_matrix_entries"
+  },
+  {
+   "name": "transpose",
+   "kind": "maxima",
+   "sig": "transpose(M)",
+   "args": [
+    "M"
+   ],
+   "text": "Transposed matrix (of a list: a column).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-transpose"
+  },
+  {
+   "name": "determinant",
+   "kind": "maxima",
+   "sig": "determinant(M)",
+   "args": [
+    "M"
+   ],
+   "text": "Determinant of a square matrix.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-determinant"
+  },
+  {
+   "name": "invert",
+   "kind": "maxima",
+   "sig": "invert(M)",
+   "args": [
+    "M"
+   ],
+   "text": "Inverse matrix.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-invert"
+  },
+  {
+   "name": "col",
+   "kind": "maxima",
+   "sig": "col(M, i)",
+   "args": [
+    "M",
+    "i"
+   ],
+   "text": "i-th column of M (row(M, i): i-th row).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-col"
+  },
+  {
+   "name": "row",
+   "kind": "maxima",
+   "sig": "row(M, i)",
+   "args": [
+    "M",
+    "i"
+   ],
+   "text": "i-th row of M (col(M, i): i-th column).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-row"
+  },
+  {
+   "name": "genmatrix",
+   "kind": "maxima",
+   "sig": "genmatrix(a, m, n)",
+   "args": [
+    "a",
+    "m",
+    "n"
+   ],
+   "text": "m x n matrix of the elements a[i, j] (a can be a lambda).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-genmatrix"
+  },
+  {
+   "name": "zeromatrix",
+   "kind": "maxima",
+   "sig": "zeromatrix(m, n)",
+   "args": [
+    "m",
+    "n"
+   ],
+   "text": "m x n matrix of zeros (ident(n): unit matrix).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-zeromatrix"
+  },
+  {
+   "name": "ident",
+   "kind": "maxima",
+   "sig": "ident(n)",
+   "args": [
+    "n"
+   ],
+   "text": "n x n unit matrix.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-ident"
+  },
+  {
+   "name": "numberp",
+   "kind": "maxima",
+   "sig": "numberp(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "true for a number (integer, fraction, float); not for %pi or sqrt(2).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-numberp"
+  },
+  {
+   "name": "integerp",
+   "kind": "maxima",
+   "sig": "integerp(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "true for an integer.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-integerp"
+  },
+  {
+   "name": "floatnump",
+   "kind": "maxima",
+   "sig": "floatnump(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "true for a decimal number (float).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-floatnump"
+  },
+  {
+   "name": "atom",
+   "kind": "maxima",
+   "sig": "atom(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "true for a number, symbol or string (not a list or expression).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-atom"
+  },
+  {
+   "name": "evenp",
+   "kind": "maxima",
+   "sig": "evenp(n)",
+   "args": [
+    "n"
+   ],
+   "text": "true for an even integer (oddp: odd).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-evenp"
+  },
+  {
+   "name": "copylist",
+   "kind": "maxima",
+   "sig": "copylist(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Copy of a list. Needed before changing elements: after b: a, both names are the same list, and b[2]: ... changes a too. Freischnitt from the sketch: gfbdata: copylist(initdata); gfbdata[2]: endcons(\"HIDE\", gfbdata[2]); gfbdata: append(gfbdata, [forces]).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-copylist"
   }
  ]
 }

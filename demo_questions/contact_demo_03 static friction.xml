@@ -322,7 +322,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[obj: stackjson_parse(objects);
+        <text><![CDATA[obj: fb_objects(objects);
 [textA, okA]: fb_contact(obj, names, i_A, "Kontakt A: ", "smooth", ["N_A", "N"]);
 [textB, okB]: fb_contact(obj, names, i_B, "Kontakt B: ", "static", ["N_B", "N"], ["R_B", "R", "H", "H_B", "F_H"]);
 [txtFBD, okFBD, partsFBD]: fb_fbd(obj, names, [sys = [i_beam], env = [i_floor, i_top, i_side],
@@ -411,13 +411,13 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[obj: stackjson_parse(objects);
+        <text><![CDATA[obj: fb_objects(objects);
 [txt, ok]: fb_EE(S_GGx, sumF(obj, names, [1,0], [contacts = [i_A, i_B]]),
                         [subst = [alpha = atan(yB/xA)], kind = "x"]);]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
-        <description></description>
+        <description>Konsistenz mit Freischnitt</description>
         <answertest>AlgEquiv</answertest>
         <sans>ok</sans>
         <tans>true</tans>
@@ -447,14 +447,14 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[obj: stackjson_parse(objects);
+        <text><![CDATA[obj: fb_objects(objects);
 [txt, ok]: fb_EE(S_GGy, 
   sumF(obj, names, [0,1], [contacts = [i_A, i_B]]),
   [subst = [alpha = atan(yB/xA)], kind = "y"] );]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
-        <description></description>
+        <description>Konsistenz mit Freischnitt</description>
         <answertest>AlgEquiv</answertest>
         <sans>ok</sans>
         <tans>true</tans>
@@ -484,14 +484,14 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[obj: stackjson_parse(objects);
+        <text><![CDATA[obj: fb_objects(objects);
 [txt, ok]: fb_EE(S_GGM, 
   sumM(obj, names, names[i_P], a, [contacts = [i_A, i_B], at = [[i_G, pA*a + rS]]]),
   [subst = [alpha = atan(yB/xA)], kind = "M"]);]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
-        <description></description>
+        <description>Konsistenz mit Freischnitt</description>
         <answertest>AlgEquiv</answertest>
         <sans>ok</sans>
         <tans>true</tans>
@@ -525,7 +525,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       </feedbackvariables>
       <node>
         <name>0</name>
-        <description></description>
+        <description>Schwerpunktlage</description>
         <answertest>AlgEquiv</answertest>
         <sans>S_rSmat</sans>
         <tans>rSmat</tans>

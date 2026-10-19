@@ -169,7 +169,7 @@
   }
 
   // ------------------------------------------------------------------ syntax help
-  const settings = { autocomplete: true, closeBrackets: true, semicolon: true };
+  const settings = { autocomplete: true, closeBrackets: true, semicolon: true, helpBox: true };
   let help = { functions: new Map(), objects: new Map(), list: [] };
 
   function setHelp(data) {
@@ -180,7 +180,13 @@
       help.list.push(e);
     }
   }
-  function configure(s) { Object.assign(settings, s || {}); }
+  function configure(s) { Object.assign(settings, s || {}); if (!settings.helpBox) hideBox(); }
+  // F2 in an editor: help box off / on; the page hears of it (to update and store its setting)
+  function toggleHelpBox(cm) {
+    settings.helpBox = !settings.helpBox;
+    if (settings.helpBox) updateBox(cm); else hideBox();
+    document.dispatchEvent(new CustomEvent("meclib-editor-settings", { detail: Object.assign({}, settings) }));
+  }
 
   function openHelp(url) {
     if (!url) return;
@@ -256,8 +262,11 @@
     return ctx.kind === "object" ? n - 1 : n;
   }
 
-  let box = null, boxHover = false, boxCtx = null;
-  function hideBox() { if (box) box.style.display = "none"; boxCtx = null; }
+  let box = null, boxHover = false, boxCtx = null, boxCm = null;   // boxCm: the editor the box is for
+  // boxPin: page position the user dragged the box to; it stays there (with changing content)
+  // until a double click on it lets it follow the cursor again
+  let boxPin = null;
+  function hideBox() { if (box) box.style.display = "none"; boxCtx = null; boxCm = null; }
   function escHTML(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
   function codeSpans(s) { return escHTML(s).replace(/`([^`]+)`/g, "<code>$1</code>"); }
   function sigHTML(e, arg) {
@@ -277,10 +286,12 @@
     return `<div class="hb-sig">${e.returns ? `<span class="hb-ret">${escHTML(e.returns)}:</span> ` : ""}${sigHTML(e, arg)}</div>` +
       (ad ? `<div class="hb-arg"><b>${escHTML(a)}</b>: ${codeSpans(ad)}</div>` : "") +
       (e.text ? `<div class="hb-text">${codeSpans(e.text)}</div>` : "") +
-      `<div class="hb-foot">${e.url ? `<a href="#" data-url="${escHTML(e.url)}">${src} ↗</a> <span>F1</span>` : ""}<span class="hb-src">${escHTML(e.source || "")}</span></div>`;
+      `<div class="hb-foot">${e.url ? `<a href="#" data-url="${escHTML(e.url)}">${src} ↗</a> <span>F1</span>` : ""}` +
+      `<span class="hb-keys" title="drag the box to move it out of the way; double click: it follows the cursor again; F2 in the editor: box off / on">` +
+      `${boxPin ? "double click: follow cursor" : "drag: move"} · F2: off</span><span class="hb-src">${escHTML(e.source || "")}</span></div>`;
   }
   function updateBox(cm) {
-    if (cm.state.completionActive) { hideBox(); return; }
+    if (!settings.helpBox || cm.state.completionActive) { hideBox(); return; }
     const ctx = contextAt(cm);
     if (!ctx) { hideBox(); return; }
     const arg = argIndex(cm, ctx);
@@ -289,14 +300,29 @@
       box.addEventListener("mouseenter", () => { boxHover = true; });
       box.addEventListener("mouseleave", () => { boxHover = false; });
       box.addEventListener("mousedown", (ev) => {
+        ev.preventDefault();                   // the editor keeps the focus
         const a = ev.target.closest("a[data-url]");
-        if (a) { ev.preventDefault(); openHelp(a.dataset.url); }
+        if (a) { openHelp(a.dataset.url); return; }
+        // drag the box out of the way
+        const x0 = ev.pageX, y0 = ev.pageY, l0 = box.offsetLeft, t0 = box.offsetTop;
+        const move = (e) => { box.style.left = (l0 + e.pageX - x0) + "px"; box.style.top = (t0 + e.pageY - y0) + "px"; };
+        const up = (e) => {
+          document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up);
+          if (Math.abs(e.pageX - x0) + Math.abs(e.pageY - y0) > 3) {
+            boxPin = { left: box.offsetLeft, top: box.offsetTop };
+            if (boxCm) updateBox(boxCm);
+          }
+        };
+        document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
       });
+      box.addEventListener("dblclick", () => { boxPin = null; if (boxCm) updateBox(boxCm); });
       document.body.appendChild(box);
     }
     box.innerHTML = boxHTML(ctx.entry, arg);
     boxCtx = ctx;
+    boxCm = cm;
     box.style.display = "block";
+    if (boxPin) { box.style.left = boxPin.left + "px"; box.style.top = boxPin.top + "px"; return; }
     const c = cm.cursorCoords(null, "page");
     const h = box.offsetHeight;
     let top = c.top - h - 6;
@@ -605,12 +631,14 @@
       mode: kind, lineNumbers: true, lineWrapping: true, matchBrackets: true, indentUnit: 2, tabSize: 2,
       viewportMargin: 50,
       extraKeys: Object.assign({ Tab: (c) => c.replaceSelection("  "), "Shift-Tab": "indentLess",
-        "Ctrl-Space": (c) => complete(c, kind, opts, true), F1: (c) => openHelpAtCursor(c), Esc: (c) => hideBox() },
+        "Ctrl-Space": (c) => complete(c, kind, opts, true), F1: (c) => openHelpAtCursor(c), F2: (c) => toggleHelpBox(c),
+        Esc: (c) => hideBox() },
         bracketKeys(kind, opts)),
     });
     cm.meclibKind = kind;
     cm.on("cursorActivity", (c) => updateBox(c));
-    cm.on("blur", () => setTimeout(() => { if (!boxHover) hideBox(); }, 150));
+    // only the box of this editor: a click into another field shows that field's box at once
+    cm.on("blur", () => setTimeout(() => { if (!boxHover && boxCm === cm) hideBox(); }, 150));
     cm.on("inputRead", (c, change) => onInputRead(c, change, kind, opts));
     const wrap = cm.getWrapperElement();
     wrap.classList.add("cm-resizable");
@@ -626,9 +654,9 @@
       set: (v) => { if (cm.getValue() !== v) cm.setValue(v); cm.clearHistory(); },
       refresh: () => cm.refresh(),
       insert: (text) => { cm.replaceSelection(text); cm.focus(); },   // at the cursor (kept while the editor is not focused)
-      focusLine: (n) => {
+      focusLine: (n, ch) => {     // ch: column of the cursor (default: start of the line)
         const line = Math.max(0, n - 1);
-        cm.focus(); cm.setCursor({ line, ch: 0 });
+        cm.focus(); cm.setCursor({ line, ch: ch || 0 });
         cm.scrollIntoView({ line, ch: 0 }, 80);
         cm.addLineClass(line, "background", "cm-flash-line");
         setTimeout(() => cm.removeLineClass(line, "background", "cm-flash-line"), 1500);

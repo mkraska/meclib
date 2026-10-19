@@ -150,10 +150,15 @@ def question_data(q):
         "questionvariables": text_of(q, "questionvariables/text"),
         "questiontext": text_of(q, "questiontext/text"),
         "formats": {k: (q.find(k).get("format") or "html") if q.find(k) is not None else "html"
-                    for k in ("questiontext", "generalfeedback", "specificfeedback", "questionnote")},
+                    for k in ("questiontext", "generalfeedback", "specificfeedback", "questionnote",
+                              "prtcorrect", "prtpartiallycorrect", "prtincorrect")},
         "generalfeedback": text_of(q, "generalfeedback/text"),
         "specificfeedback": text_of(q, "specificfeedback/text"),
         "questionnote": text_of(q, "questionnote/text"),
+        # standard feedback of the PRTs with feedback style "standard" (shown above the PRT's feedback)
+        "prtcorrect": text_of(q, "prtcorrect/text"),
+        "prtpartiallycorrect": text_of(q, "prtpartiallycorrect/text"),
+        "prtincorrect": text_of(q, "prtincorrect/text"),
         "questionsimplify": text_of(q, "questionsimplify", "1") != "0",
         "decimals": text_of(q, "decimals", ".") or ".",
         "options": {k: text_of(q, k, d) or d for k, d in STACK_OPTION_DEFAULTS.items()},
@@ -168,11 +173,11 @@ def question_data(q):
 NEW_STATEMENT = re.compile(r"\s*[A-Za-z_%][A-Za-z0-9_%]*\s*(:|\()")
 
 
-def insert_missing_semicolons(src):
-    """src with a ; inserted wherever split_statements() assumes a missing statement separator
-    (right after the last code character of the statement, before a trailing comment).
-    Returns (new src, [line numbers of the statements that got a ;])."""
-    ins, lines, i, n = [], [], 0, len(src)
+def missing_semicolons(src):
+    """Where split_statements() assumes a missing statement separator, in order: [(index, line,
+    column)] of the place for the ; - right after the last code character of the statement,
+    before a trailing comment (line 1-based, column 0-based as in the editor)."""
+    out, i, n = [], 0, len(src)
     in_str, depth, last_code, has_code = False, 0, None, False
     while i < n:
         c = src[i]
@@ -188,8 +193,8 @@ def insert_missing_semicolons(src):
         if c in ";$":
             depth, has_code, last_code = 0, False, None; i += 1; continue
         if c == "\n" and depth == 0 and has_code and NEW_STATEMENT.match(src, i + 1):
-            ins.append(last_code + 1)
-            lines.append(src.count("\n", 0, last_code) + 1)
+            out.append((last_code + 1, src.count("\n", 0, last_code) + 1,
+                        last_code + 1 - (src.rfind("\n", 0, last_code) + 1)))
             has_code, last_code = False, None; i += 1; continue
         if not c.isspace():
             has_code, last_code = True, i
@@ -200,9 +205,16 @@ def insert_missing_semicolons(src):
         elif c in ")]}":
             depth = max(0, depth - 1)
         i += 1
-    for k in reversed(ins):
+    return out
+
+
+def insert_missing_semicolons(src):
+    """src with a ; inserted wherever split_statements() assumes a missing statement separator
+    (see missing_semicolons). Returns (new src, [line numbers of the statements that got a ;])."""
+    places = missing_semicolons(src)
+    for k, _l, _c in reversed(places):
         src = src[:k] + ";" + src[k:]
-    return src, lines
+    return src, [l for _k, l, _c in places]
 
 
 def split_statements(src):
@@ -501,6 +513,18 @@ def uses_units(data):
         n["answertest"].startswith("Units") for p in data["prts"] for n in p["nodes"])
 
 
+def mcq_choices(text):
+    """The entries of a choice input's model answer: [{value, correct, display, tex}], or None."""
+    if not text:
+        return None
+    import json
+    try:
+        rows = json.loads(text)
+    except ValueError:
+        return None
+    return [{"value": r[0], "correct": r[1] == "true", "display": r[2], "tex": r[3]} for r in rows]
+
+
 def matrix_cells(text):
     """The cells of a matrix model answer as rows of strings (from stackjson_stringify), or None."""
     if not text:
@@ -550,6 +574,40 @@ def student_value(inp, raw, decimals):
     return v
 
 
+MCQ_TYPES = ("dropdown", "radio", "checkbox")
+
+
+def mcq_value(inp, raw):
+    """The Maxima expression of a choice input's answer: the value of the chosen entry (dropdown,
+    radio) or the list of the ticked ones (checkbox, raw: JSON list of the values)."""
+    if inp.get("type") == "checkbox":
+        import json
+        try:
+            vals = json.loads(raw)
+        except ValueError:
+            vals = []
+        return "[%s]" % ",".join(vals)
+    return raw.strip()
+
+
+def allows_empty(inp):
+    """Extra option allowempty: a blank answer is valid (STACK's input options)."""
+    return "allowempty" in [o.strip().lower() for o in (inp.get("options") or "").split(",")]
+
+
+def empty_value(inp):
+    """The value of a blank input with allowempty (STACK doc, Input options): EMPTYANSWER,
+    "" for string inputs, [EMPTYANSWER] for textarea/equiv, [] for checkboxes."""
+    t = inp.get("type")
+    if t in ("string", "notes"):
+        return '""'
+    if t in ("textarea", "equiv"):
+        return "[EMPTYANSWER]"
+    if t == "checkbox":
+        return "[]"
+    return "EMPTYANSWER"
+
+
 def prt_required_inputs(prt, input_names):
     used = set(IDENT.findall(prt["feedbackvariables"]))
     for n in prt["nodes"]:
@@ -588,6 +646,7 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
     if others:
         code.append("kill(%s)$" % ",".join(others))
     code.append("simp: %s$" % ("true" if prt["autosimplify"] else "false"))
+    code.append("%stack_prt_stop_p: false$")   # STACK: set false before the feedback variables
     fvnames = []
     for k, (stmt, line, _ins) in enumerate(split_statements(prt["feedbackvariables"])):
         clean = strip_comments(stmt)
@@ -616,7 +675,10 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
     roots = [n["name"] for n in prt["nodes"] if n["name"] not in targets]
     root = roots[0] if roots else (prt["nodes"][0]["name"] if prt["nodes"] else "-1")
     code.append("simp: true$")
-    code += ["%s: %s$" % (v("node"), mstring(root)), "%s: 0$" % v("score"), "%s: 0$" % v("pen"),
+    # %stack_prt_stop_p true after the feedback variables: the PRT bails out (no score, no
+    # penalty, no feedback, answer note "<name>-bail"), as STACK's compiled PRT
+    code.append('if %%stack_prt_stop_p = true then meclib_out(%s, "1")$' % mstring("prt:%s:bail" % P))
+    code += ["%s: if %%stack_prt_stop_p = true then \"-1\" else %s$" % (v("node"), mstring(root)), "%s: 0$" % v("score"), "%s: 0$" % v("pen"),
              "%s: []$" % v("path"), "%s: []$" % v("fb"), "%s: []$" % v("atfb"), "%s: 0$" % v("guard")]
     branches = []
     for n in prt["nodes"]:
@@ -688,12 +750,14 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
         code.append("stack_unit_si_declare(true)$")
     code.append("stack_randseed(%d)$" % seed)
     stmt_info = []
+    places = iter(missing_semicolons(data["questionvariables"]))    # one per inserted statement
     code.append(tick("start"))
     for k, (stmt, line, inserted) in enumerate(statements):
         clean = strip_comments(stmt)
         if inserted:
-            stmt_info.append({"index": "s%d" % k, "line": line, "source": clean[:200],
-                              "note": "missing ; before this line assumed (as STACK's parser does)"})
+            _i, sline, scol = next(places, (None, line, None))
+            stmt_info.append({"index": "s%d" % k, "line": sline, "ch": scol, "source": clean[:200],
+                              "note": "no ; at the end of this line, STACK assumes one"})
         try:
             clean = INCLUDE.sub(lambda m: "load(%s)" % mpath(resolver.local_file(m.group(1))), clean)
             for m in INCLUDE.finditer(strip_comments(stmt)):
@@ -706,8 +770,10 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
             stmt_info.append({"index": k, "line": line, "source": clean[:200], "error": forbidden_message(bad)})
             continue
         m = ASSIGN.match(clean) or FUNDEF.match(clean)
-        if m and m.group(1) not in names:
-            names.append(m.group(1))
+        ml = LISTASSIGN.match(clean)          # [a, b]: rand([...]) assigns a and b
+        for nm in [m.group(1)] if m else [x.strip() for x in ml.group(1).split(",")] if ml else []:
+            if re.match(r"^[A-Za-z_%][A-Za-z0-9_%]*$", nm) and nm not in names:
+                names.append(nm)
         stmt_info.append({"index": k, "line": line, "source": clean[:200]})
         # each statement separately through eval_string(): a syntax error then only affects
         # this statement (in one batch file it would stop everything after it). The explicit
@@ -727,6 +793,18 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
     security = security_findings(data)
     for inp in data["inputs"]:
         tans = inp.get("tans") or ""
+        if tans.strip() and "model answer of %s" % inp["name"] not in security and inp.get("type") in MCQ_TYPES:
+            # choice inputs: the model answer is the list [[value, correct, display], ...]; the
+            # teacher's answer is the correct value (dropdown, radio) or the list of them (checkbox)
+            pick = "%_l" if inp["type"] == "checkbox" else "first(%_l)"
+            code.append('block([%%_v: errcatch(%s), %%_l], if %%_v # [] and listp(%%_v[1]) then ('
+                        'meclib_out(%s, stackjson_stringify(map(lambda([%%_e], [string(%%_e[1]), string(is(second(%%_e) = true)),'
+                        ' if length(%%_e) > 2 then (if stringp(%%_e[3]) then %%_e[3] else string(%%_e[3])) else "", tex1(%%_e[1])]), %%_v[1]))),'
+                        ' %%_l: errcatch(mcq_correct(%%_v[1])), if %%_l # [] and %%_l[1] # [] then (%%_l: %%_l[1],'
+                        ' meclib_out(%s, string(%s)), meclib_out(%s, fb_tmpl_tostring(%s)))))$'
+                        % (tans, mstring("mcq:" + inp["name"]), mstring("tans:" + inp["name"]), pick,
+                           mstring("tanstex:" + inp["name"]), pick))
+            continue
         if tans.strip() and "model answer of %s" % inp["name"] not in security:
             code.append('block([%%_v: errcatch(%s)], if %%_v # [] then (meclib_out(%s, string(%%_v[1])),'
                         ' meclib_out(%s, fb_tmpl_tostring(%%_v[1]))))$'
@@ -751,7 +829,8 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
                            mstring("hint:en:" + inp["name"]), mstring(pick_lang("en", langs_q))))
     code.append(tick("model answers, syntax hints"))
     texts = {"questiontext": data["questiontext"], "generalfeedback": data["generalfeedback"],
-             "questionnote": data["questionnote"]}
+             "questionnote": data["questionnote"], "prtcorrect": data["prtcorrect"],
+             "prtpartiallycorrect": data["prtpartiallycorrect"], "prtincorrect": data["prtincorrect"]}
     langs = languages_used(data["questiontext"])
     for key, txt in texts.items():
         if not txt.strip() or key in security:
@@ -814,7 +893,7 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
         "includes": includes,
         "inputs": [dict(inp, tans_raw=first("tans:" + inp["name"]), tans_tex=first("tanstex:" + inp["name"]),
                         hint_de=first("hint:de:" + inp["name"]), hint_en=first("hint:en:" + inp["name"]),
-                        mcells=matrix_cells(first("mcells:" + inp["name"])))
+                        mcells=matrix_cells(first("mcells:" + inp["name"])), choices=mcq_choices(first("mcq:" + inp["name"])))
                    for inp in data["inputs"]],
         "texts": {key: {"de": first(key + ":de"), "en": first(key + ":en")} for key in texts if texts[key].strip()},
         "castext_errors": castext_errors,
@@ -844,8 +923,19 @@ def answer_code(data, answers, langs, resolver, checked, qv_names=()):
                 inputs[n] = {"state": mstate}
                 continue
         elif not raw.strip():
-            inputs[n] = {"state": "blank"}
+            if not allows_empty(inp):
+                inputs[n] = {"state": "blank"}
+                continue
+            value = empty_value(inp)     # allowempty: a blank answer is valid
+            inputs[n] = {"state": "?", "value": value, "empty": True}
+            code.append('%s: %s$' % (n, value))
+            code.append('meclib_out(%s, "valid")$' % mstring("ans:%s:state" % n))
             continue
+        elif inp.get("type") in MCQ_TYPES:
+            value = mcq_value(inp, raw)
+            if value == "[]" and not allows_empty(inp):     # no box ticked: not answered (STACK)
+                inputs[n] = {"state": "blank"}
+                continue
         else:
             value = student_value(inp, raw, data["decimals"])
         inputs[n] = {"state": "?", "value": value}
@@ -876,6 +966,25 @@ def answer_code(data, answers, langs, resolver, checked, qv_names=()):
         # an input that does not parse makes the PRT invalid (reported after the run), as in STACK
         code.append("simp: false$")
         code += prt_code(prt, raw_by_input, data.get("penalty") or "0.1", pick_lang("de", langs), pick_lang("en", langs), includes, fv_all)
+    # specific feedback, shown below the question: STACK evaluates its CAS parts once when the
+    # question starts (question.php, "CAS bits inside the specific feedback"), with the question
+    # variables only - not the inputs, not the PRTs' feedback variables. The answers reach it
+    # only through [[feedback:..]] of PRTs placed in it (filled in by the page).
+    sfb = data.get("specificfeedback") or ""
+    if sfb.strip():
+        gone = fv_all + [n for n in names if n not in fv_all]
+        if gone:
+            code.append("kill(%s)$" % ",".join(gone))
+        code.append("simp: %s$" % ("false" if str(data.get("questionsimplify", "1")) == "0" else "true"))
+        md = data["formats"].get("specificfeedback") == "markdown"
+        code.append('fb_tmpl_md: %s$' % ("true" if md else "false"))
+        code.append('%%_c: errcatch(castext(%s))$' % mstring(mark_html_blocks(sfb) if md else sfb))
+        code.append('fb_tmpl_md: false$')
+        code.append('if %%_c = [] then print("@@CTERR specificfeedback@@") else (meclib_out("sfb:de", '
+                    'stack_resolve_lang(%%_c[1], %s)), meclib_out("sfb:en", stack_resolve_lang(%%_c[1], %s)))$'
+                    % (mstring(pick_lang("de", langs)), mstring(pick_lang("en", langs))))
+        code.append(tick("specific feedback"))
+        checked["sfb"] = True
     return code
 
 
@@ -895,6 +1004,8 @@ def check_results(checked, results, stdout, data):
     for n, info in checked["inputs"].items():
         state = first("ans:%s:state" % n, info["state"]) if info["state"] != "blank" else "blank"
         out["inputs"][n] = {"state": state, "tex": first("ans:%s:tex" % n), "value": info.get("value")}
+        if info.get("empty"):
+            out["inputs"][n]["empty"] = True     # blank, valid by allowempty
     errors = {}
     current, said = None, []
     for line in stdout.splitlines():
@@ -933,7 +1044,14 @@ def check_results(checked, results, stdout, data):
         }
         if invalid:
             res = {"skipped": "invalid input: " + ", ".join(invalid)}
+        elif first("prt:%s:bail" % name):
+            res = {"skipped": "bailed out (%%stack_prt_stop_p true): no score, no penalty, no feedback; note %s-bail" % name,
+                   "bail": True, "variables": res["variables"], "errors": res["errors"]}
         out["prts"][name] = res
+    if checked.get("sfb"):
+        out["specificfeedback"] = {"de": first("sfb:de", ""), "en": first("sfb:en", ""),
+                                   "format": data["formats"].get("specificfeedback", "html"),
+                                   "error": "specific feedback: castext error" if "@@CTERR specificfeedback@@" in stdout else ""}
     return out
 
 

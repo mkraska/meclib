@@ -1,5 +1,49 @@
 ### Dev Branch
 
+2026 10 19
+- [[Meclib Workbench]], Questions page, "Input ...": types "choice: dropdown list" and "choice: radio buttons" (model answer `X_mcq`, a list of choices added as a template at the beginning of the question variables; PRT `S_X` = `mcq_correct(X_mcq)[1]`); the messages report a choice list that is not a list or has no correct choice
+- [[Meclib Workbench]], Questions page: choice inputs (dropdown, radio, checkbox) in the preview, with the entries of the evaluated model answer `[[value, correct, display], ...]`; "TAns" picks the correct entries, "Check" passes the chosen value (checkbox: the list of the ticked values) to the PRTs
+- [[Meclib Workbench]], Questions page: the note on a missing `;` in the question variables names the line where it is missing ("no ; at the end of this line"); a click puts the cursor right where the `;` belongs
+
+2026 10 18
+- [[fb_floats()]]: the deviating numbers and extra summands are underlined instead of red (`\color` needs a MathJax extension that Moodle's MathJax 3 may fail to load; the whole formula was replaced by an error message)
+- [[fb_floats()]]: no feedback on the numbers when a summand has a wrong unit (with `fb_dims`)
+- [[Meclib Workbench]], Questions page: "Graphic: interactive ⇄ static" switches the `[[jsxgraph]]` block at the cursor (inputs `objects`/`names` deleted or added, `input-ref-...` and `var stateRef;` adjusted; refused while a PRT uses the inputs); new review rules for graphics bound to missing inputs, interactive graphics in the feedback and left-over graphic inputs
+
+2026 10 17
+- New feedback function [[fb_floats()]] in `fb_value.mac`: symbolic answers with rounded coefficients of any structure (products, powers, roots); both answers are normalised with `expand(float(...))`, the expressions without their numbers must agree, and the numbers are compared one by one with a relative tolerance (feedback per deviating number, via [[fb_unit]])
+  - the evaluated form of the answer is shown with the deviating numbers underlined, if the answer differs from it
+  - the summands are compared one by one: an extra summand is underlined, with the [[fb_vars]] feedback for it ("Check the marked term." otherwise); a missing summand is reported ("right except for a missing term")
+  - optional unit check: with `fb_dims: [a = "m", c = "N/m", ...]` (units as strings, no clash with variables such as `m`) a marked summand or the whole answer is checked for its unit (wrong unit, sum of different units, function of a quantity with a unit); `fb_dimension(sans, tans)` for the whole answer alone
+- [[Meclib Workbench]], Questions page: a change of the open file on disk is noticed when the page gets the focus again; without unsaved edits the file is reloaded, otherwise the conflict box ("Reload from disk" / "Apply my edits") appears; a renamed or deleted file is reported
+- `fb_floats()`: no `concat()` any more (forbidden in STACK questions; the decimal numbers are hidden behind `%_P[i]` instead)
+- offline tests (`Maxima/tests`): new test `test_security.mac` - no function of the meclib files may call a function or use a variable that STACK forbids in every question (from STACK's security map)
+- [[Meclib Workbench]], syntax help: about 90 more Maxima functions (lists such as `copylist`, `member`, `delete`, `assoc`, `sort`, `lsum`, `apply`; strings; `sqrt`, `atan2` and the other elementary functions; algebra such as `expand`, `coeff`, `rhs`, `linsolve`; vectors and matrices; predicates), with short examples for working with `initdata`
+
+2026 10 16
+- [[Meclib Workbench]], Graphic page:
+  - "Edit points": a red handle on each point argument of the objects (taken from the object signatures of the syntax help); dragging one changes initdata and redraws the graphic, snapping to 1, 0.5 or 0.1 grid units or free
+  - shelf of object types (supports, bodies, loads, kinematics, annotation): drag one onto the graphic, or click it and then into the graphic; it is added to initdata at that point with default arguments (signature and description as tooltip)
+  - the initdata field is a code editor with the syntax help of the Questions page (signature box, autocomplete of object names after `["`)
+  - the help box of a code field no longer disappears when another field had the focus before
+- [[Meclib Workbench]], Graphic page: the shelf buttons show icons of the objects (`shelf_icons.json`, made by `tools/workbench/build_shelf_icons.py` with the workbench server and Playwright; run it again after a change of the shelf or of the drawing of an object)
+- [[Meclib Workbench]], code editors: the help box can be dragged out of the way (it stays there, double click: it follows the cursor again); F2 switches it off and on (Questions page: also in the editor settings)
+- [[Meclib Workbench]], Tests page: timing summary next to the pass count (sum and median of the initialisation times, slowest case, wall time) and a table of the runs of the session, to compare JSXGraph or meclib versions
+
+2026 10 15
+- [[Meclib Workbench]]: the variables table of the preview lists names assigned by a list assignment such as `[aa, bb]: rand([[1,4], [2,3]])` (they were missing)
+- Wiki sync (`tools/wiki_sync.py`): a page last changed by the sync itself is no longer taken for an edit on GitHub (the run of 2026 10 15 failed on History for this reason)
+
+2026 10 13
+- [[fb_EE()]]: the feedback for an equation with wrong terms ("Prüfen Sie den Term mit ...") showed as raw castext (`["%root", ...]`) in Moodle; fixed
+- [[Meclib Workbench]]:
+  - Maxima times in the preview header (variables, texts, answers, PRTs) and per PRT below its feedback (feedback variables, nodes); the first run after a Maxima start is marked, since it includes Maxima's warm-up
+  - PRT trees run left to right when they fit the column, with the description of each node
+  - meclib scenes (`[[jsxgraph]]`) in PRT feedback are shown in the preview; the specific feedback is evaluated with the answers and shown below the question
+  - review rule "Multilingual syntax hint" adds `stack_include` of `fb_value.mac` when the question lacks it
+- Wiki pages are published from the drafts in `doc/wiki` by a GitHub Action on every push to `dev2026` (`tools/wiki_sync.py`); pages edited on GitHub since are not overwritten but reported
+- Top level `.gitignore` (workbench history and backups, logs, Python caches)
+
 2026 10 12
 - [[Meclib Workbench]]: 
   - MathJax 3.2.2 (default of Moodle 5) can be chosen for the graphics

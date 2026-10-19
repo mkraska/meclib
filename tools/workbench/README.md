@@ -115,7 +115,7 @@ its sections, always in reach while the column scrolls.
 - Editor bar: ↶ / ↷ (undo, redo), Snippet, Graphic ↗, then the sections Review,
   Variables, Text, Inputs, Options, General FB, Specific FB, Note, PRTs and
   each PRT by name.
-- Preview bar: Update (save and evaluate, Ctrl+Enter), Check, TAns (model answers), Restart, de / en, `0.5` / `0,5`,
+- Preview bar: Restart, Update (save and evaluate, Ctrl+Enter), TAns (model answers), Check, de / en, `0.5` / `0,5`,
   simp, then the sections Question, General FB, Note, Messages, Inputs, PRT
   graphs, Variables.
 - `⋯` at the top of a bar: the side of the bar (left or right of its column;
@@ -146,8 +146,12 @@ expectations stay valid.
 
 **PRT graphs** (right column): each PRT as a tree, nodes in layers from the
 first node; green the true, red the false branch, a branch that ends the PRT
-with its score. After "Check" the branches taken (by their answer notes) are
-drawn bold. Warnings: branches to missing nodes, loops (STACK refuses them),
+with its score. The layers run from left to right (true branches leave
+upwards, false ones downwards) when they fit the width of the column, else from
+top to bottom; the layout follows when the column is resized. Each node shows
+its answer test and its description (shortened to the space available; full
+text and the test's arguments in the tooltip). After "Check" the branches taken
+(by their answer notes) are drawn bold. Warnings: branches to missing nodes, loops (STACK refuses them),
 nodes not reachable from the first one. A click on a node shows it in the
 editor.
 
@@ -175,6 +179,7 @@ question variable `X` (another expression can be given). Types and defaults
 | expression | algebraic, size 15, syntax hint `{@meclib_h_alg@}`, insert stars 3, forbid float | AlgEquiv | `fb_vars(S_X, X)` |
 | vector / matrix of numbers | matrix, size 4, insert stars 3 | feedback variables `[txt, isOK]: fb_unit_matrix(S_X, X, tol, labels);`, AlgEquiv `isOK` = `true` | `txt` |
 | vector / matrix of expressions | matrix, size 8, insert stars 3, forbid float | feedback variables `txt: fb_vars_matrix(S_X, X, [], labels);`, AlgEquiv `S_X` = `X` | `txt` |
+| choice: dropdown list / radio buttons | dropdown / radio, model answer `X_mcq`, not verified, no validation | AlgEquiv `S_X` = `mcq_correct(X_mcq)[1]` | none |
 
 The syntax hints are the multilingual ones from `fb_value.mac` (wiki page
 "Multilingual questions"); the preview shows them in the language chosen.
@@ -194,6 +199,15 @@ question variable, a placeholder `X: matrix([0],[0]);` of the size given in
 the dialog is added to the question variables; the size of the model answer
 sets the size of the input. See the wiki drafts `doc/wiki/fb_unit_matrix().md`
 and `doc/wiki/fb_vars_matrix().md`.
+
+The two choice types take a list of choices `[[value, true/false, display], ...]`
+as model answer (wiki "Multiple Choice Questions"), by default the question
+variable `X_mcq`. If it does not exist yet, a template with three choices is
+added at the beginning of the question variables (the cursor is usually in
+the question text). The preview shows the choices with the current seed and
+reports a model answer that is not such a list or has no choice marked true
+(STACK refuses to save such an input). Checkboxes are not offered: their
+answer is a list of values and needs another test.
 
 The dialog is not modal: the editor stays usable while it is open (e.g. to
 look up a variable); the model answer field suggests the question variables.
@@ -235,8 +249,21 @@ whose inputs are all answered runs its feedback variables and its nodes from
 the first one along the true/false branches with STACK's own answer test
 functions (`ATAlgEquiv`, `ATUnitsRelative`, ...), score mode, score and
 penalty per branch. The feedback of the branches taken appears in place of
-`[[feedback:...]]`, in the language chosen, with score, mark, penalty and
-the answer notes below it; errors in feedback variables, answer tests or
+`[[feedback:...]]`, in the language chosen (including `[[jsxgraph]]` scenes
+in the feedback, e.g. a meclib sketch of the student's answer). The specific
+feedback is shown below the question; as in STACK its CAS parts know only the
+question variables, not the answers (the review warns about an input used
+there) - what depends on the answers comes from PRTs whose `[[feedback:...]]`
+stands in it, e.g. a formative PRT drawing a sketch. An input with the extra
+option `allowempty` counts as answered when blank (value `EMPTYANSWER`), and a
+PRT whose feedback variables set `%stack_prt_stop_p: true` bails out (no
+score, no penalty, no feedback, note `<name>-bail`), both as in STACK. The
+feedback looks as in Moodle, by the PRT's feedback style: compact = symbol (✔ green,
+✖ red, half circle orange, by the PRT's score) in front of the text in a light
+yellow box, inline (after the validation when there is room), standard = the question's standard feedback ("Richtig." ...) above the
+text, symbolic = symbol only, formative = text only; so a feedback text that starts
+with a line break or a paragraph shows as in Moodle. Score,
+mark, penalty and the answer notes are below it, in small grey print; errors in feedback variables, answer tests or
 feedback texts are listed there too, with Maxima's message (e.g. "feedback
 variables, line 4: apply: subscript must be an integer; found: i_beam").
 Next to the inputs the answer is shown typeset (or "invalid input" if it
@@ -247,10 +274,18 @@ the inputs, but not the feedback variables of the other PRTs (they are deleted
 before each PRT); a PRT that uses `obj` without computing it fails here as in
 Moodle.
 
-**Time**: the messages list where Maxima spent the time of the last Update or
-Check (question variables by line, texts, the feedback variables and nodes of
-each PRT), e.g. `stackjson_parse(objects)` in every PRT; `fb_objects()` reads
-the objects much faster.
+**Time**: where Maxima spent the time of the last Update or Check. The
+preview's header line sums it up in the order the parts ran (`Maxima 0.46 s:
+variables 0.11 · texts 0.03 · answers 0.00 · PRTs 0.32`; variables = question
+variables, model answers and syntax hints); the same line is in the messages,
+followed by the lines of the question variables that took 0.05 s or more (click
+to go to the line). Each PRT's info line under its feedback shows the time of
+its feedback variables and of its nodes (`Variables 0.02 s · Nodes 0.01 s`).
+The first Update and the first Check after a Maxima start are marked "first run
+after start": they include Maxima's warm-up (about 0.2 s, mostly in the first
+PRT), so run again before comparing. A typical cost is
+`stackjson_parse(objects)` in every PRT; `fb_objects()` reads the objects much
+faster.
 
 **Feedback variables**: after a Check, the Variables section has a tab for
 each PRT (also as sub-buttons under "Variables" in the preview bar) with the
@@ -280,7 +315,7 @@ converts a decimal comma to a point (and `;` to `,`), inserts `*` for spaces
 and implied products according to "insert stars", and accepts whatever then
 parses in Maxima (no forbidden words, no syntax checks). Answer test feedback
 appears as STACK's message keys (e.g. `ATAlgEquiv_SA_not_logic`), not
-translated. A `[[jsxgraph]]` block inside PRT feedback is not rendered.
+translated.
 
 **Forbidden identifiers**: STACK refuses to save a question that uses an
 identifier its security map forbids everywhere (variables such as `values`,
@@ -314,7 +349,8 @@ Current rules: forbidden identifiers; broken `style=style="..."` attributes;
 margin of right/left floating blocks (graphic); empty `[[lang]]` declaration when meclib feedback is used;
 obsolete `fb_*_EN.mac`; settings of the graphic's inputs (objects, names);
 input settings (insert stars: spaces only, none for numbers; placeholder hint;
-validation compact; students must verify); multilingual syntax hints; PRT
+validation compact; students must verify); multilingual syntax hints (the fix
+adds `stack_include` of `fb_value.mac` if the question lacks it); PRT
 feedback style compact, feedback format html (Markdown suppresses the yellow
 feedback background), quiet answer test with meclib
 feedback, simplification off with `fb_unit`; relative tolerance other than

@@ -1,0 +1,375 @@
+/* generated from Maxima/fb_value.mac by tools/build_dist.py - do not edit */
+fb_value_version: "2026 10 11";
+deg2rad(expr):= subst(deg=%pi/180, expr);
+fb_strip_list(_list_of_things):= castext("[[define _first='true'/]][[foreach _thing='_list_of_things']][[if test='not _first']], [[else]][[define _first='false'/]][[/if]]{@_thing@}[[/foreach]]");
+fb_vars(%_sans,%_tans, [%_opt] ) := block(
+[%_vars, %_label, %_tol, %_tansvar,%_sansvar,%_extras, %_missing, simp, %_txt, %_L,
+str_unexpected_variable: castext("[[lang code='de']]&nbsp;Unerwartete Variable [[/lang]][[lang code='en,other']]&nbsp;Unexpected variable [[/lang]]"),
+str_missing_variable: castext("[[lang code='de']]&nbsp;Fehlende Variable [[/lang]][[lang code='en,other']]&nbsp;Missing variable [[/lang]]"),
+str_check_term: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie den Term mit [[/lang]][[lang code='en,other']]&nbsp;Check the term with [[/lang]]"),
+str_check_terms: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie die Terme mit [[/lang]][[lang code='en,other']]&nbsp;Check the terms with [[/lang]]")
+],
+simp: true,
+if length(%_opt)>0 then %_vars: %_opt[1] else %_vars: [],
+if length(%_opt)>1 then %_label: %_opt[2] else %_label: "",
+if length(%_opt)>2 then %_tol: %_opt[3] else %_tol: 0,
+%_txt: %_label,
+%_sansvar: setify(listofvars(%_sans)),
+%_tansvar: setify(listofvars(%_tans)),
+if %_tol > 0 then (
+%_sansvar: subset(%_sansvar, lambda([%_v], is(abs(float(coeff(%_sans, %_v, 1))) > %_tol))),
+%_tansvar: subset(%_tansvar, lambda([%_v], is(abs(float(coeff(%_tans, %_v, 1))) > %_tol)))
+),
+if (emptyp(%_tansvar) and %_tans=0) then return(""),
+%_extras: setdifference(%_sansvar, %_tansvar),
+if length(%_extras) > 0 then (
+%_txt: castext_concat(%_txt, str_unexpected_variable),
+%_txt: castext_concat(%_txt, fb_strip_list(listify(%_extras)) ),
+%_txt: castext_concat(%_txt, "."  ) ),
+%_missing: setdifference(%_tansvar, %_sansvar),
+if length(%_missing) > 0 then  (
+%_txt: castext_concat(%_txt, str_missing_variable ),
+%_txt: castext_concat(%_txt, fb_strip_list(listify(%_missing)) ),
+%_txt: castext_concat(%_txt,  castext(" (<code>{@stack_disp_comma_separate(listify(%_missing))@}</code>)." ))),
+if %_txt # %_label then return(%_txt),
+%_L: sublist (%_vars, lambda ([x], diff(%_sans-%_tans, x)#0)),
+if length(%_L)=0 then return(""),
+if length(%_L)=1 then (
+%_txt: castext_concat( %_txt, str_check_term ),
+return( castext_concat (%_txt, castext("{@%_L[1]@}.") ) )
+),
+%_txt: castext_concat( %_txt, str_check_terms ),
+%_txt: castext_concat( %_txt, fb_strip_list(%_L) ),
+castext_concat(%_txt, "." )
+);
+fb_varsOK(%_sans,%_tans, [%_opt] ):= block([%_res],
+if length(%_opt)=0 then %_res: fb_vars(%_sans,%_tans ),
+if length(%_opt)=1 then %_res: fb_vars(%_sans,%_tans, %_opt[1] ),
+if length(%_opt)=2 then %_res: fb_vars(%_sans,%_tans, %_opt[1], %_opt[2] ),
+if length(%_opt)=3 then %_res: fb_vars(%_sans,%_tans, %_opt[1], %_opt[2], %_opt[3] ),
+stringp(%_res));
+fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom, %_mnt, %_d, %_d0, simp, debug1,
+str_unexpected_base_unit: castext("[[lang code='de']]&nbsp;Unerwartete Basiseinheit [[/lang]][[lang code='en,other']]&nbsp;Unexpected base unit [[/lang]]"),
+str_not_dimensionless: castext("[[lang code='de']]&nbsp;Der Wert sollte nicht dimensionslos sein.[[/lang]][[lang code='en,other']]&nbsp;The value should not be dimensionless.[[/lang]]"),
+str_deviation: castext("[[lang code='de']]&nbsp;Abweichung: [[/lang]][[lang code='en,other']]&nbsp;Deviation: [[/lang]]"),
+str_value_too_large: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.[[/lang]][[lang code='en,other']]&nbsp;The absolute value is too large.[[/lang]]"),
+str_value_too_small: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.[[/lang]][[lang code='en,other']]&nbsp;The absolute value is too small.[[/lang]]"),
+str_sign: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie das Vorzeichen.[[/lang]][[lang code='en,other']]&nbsp;Check the sign.[[/lang]]"),
+str_mantissa: castext("[[lang code='de']]&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. [[/lang]][[lang code='en,other']]&nbsp;The mantissa is correct but the value is off by at least one order of magnitude. Check your unit conversion.[[/lang]]"),
+str_small_1: castext("[[lang code='de']]&nbsp;Der Betrag ist um mindestens [[/lang]][[lang code='en,other']]&nbsp;The value is too small by at least [[/lang]]"),
+str_small_2: castext("[[lang code='de']]% zu klein.[[/lang]][[lang code='en,other']]%.[[/lang]]"),
+str_large_1: castext("[[lang code='de']]&nbsp;Der Betrag ist um mindestens [[/lang]][[lang code='en,other']]&nbsp;The value is too large by at least [[/lang]]"),
+str_large_2: castext("[[lang code='de']]% zu gro&szlig;.[[/lang]][[lang code='en,other']]%.[[/lang]]")
+],
+simp:true,
+if debug then debug1: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)" else debug1:"",
+if member('units, features) then (
+%_snum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_sans)))),
+if %_snum = NULLNUM then %_snum:1.0,
+%_tnum: float(simplify(stack_units_nums(stack_unit_si_to_si_base(%_tans)))),
+if %_tnum = NULLNUM then %_tnum:1.0,
+%_sunit: stack_units_units(stack_unit_si_to_si_base(%_sans)),
+if %_sunit = NULLUNITS then %_sunit:0,
+%_tunit: stack_units_units(stack_unit_si_to_si_base(%_tans)),
+if %_tunit = NULLUNITS then %_tunit:0,
+if (%_sunit # %_tunit) and (%_sunit # 0) then return(
+castext_concat(str_unexpected_base_unit, castext("{@(stack_disp_fractions(\"i\"),%_sunit)@}")  ) ),
+if (%_sunit # %_tunit) and (%_sunit = 0) and (%_snum # 0.0) then return(str_not_dimensionless)
+) else (
+%_snum: float(%_sans),
+%_tnum: float(%_tans),
+if not real_numberp(%_snum) then
+return(sconcat("fb_unit: sans is not a real number (and the units feature is not declared): ", string(%_sans))),
+if not real_numberp(%_tnum) then
+return(sconcat("fb_unit: tans is not a real number (and the units feature is not declared): ", string(%_tans))),
+%_sunit: 0,
+%_tunit: 0
+),
+if (%_tol=0 or %_tol=0.0) and %_tnum # 0.0 then return(
+castext_concat(str_deviation,castext("{@ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp)@}%")) ),
+if %_tnum = 0.0  and %_snum  # 0.0 then return(str_value_too_large),
+if %_tnum = 0.0  then return(debug1),
+if %_snum = 0.0 then return(str_value_too_small),
+if ev(%_snum/%_tnum, simp) <0 then return(str_sign),
+if ev(abs((%_snum-%_tnum)/%_tnum),simp) < %_tol then (
+if debug then return(castext_concat(str_deviation, castext("{@ev( round((%_snum-%_tnum)/abs(%_tnum)*1000.0)/10.0, simp)@}% (display because debug=true. Would be empty otherwise.)")))
+else return("")
+),
+%_oom: ev(log(abs(%_snum/%_tnum))/log(10.0), simp),
+%_mnt: ev(10.0^( %_oom - round(%_oom)),simp),
+if ev(abs(1.0-%_mnt), simp) <%_tol and ev(abs(%_oom), simp)>0.1 then
+return(str_mantissa)
+else(
+%_d0: ev(abs((1.0-abs(%_snum)/abs(%_tnum)))*100.0, simp),
+%_oom: ev(10.0^round(log(%_d0)/log(10.)-0.5), simp),
+%_d: ev(round(floor(%_d0/%_oom))*%_oom, simp),
+if %_d>=1 then %_d: ev(round(%_d),simp),
+if ev(abs(%_snum)<abs(%_tnum), simp) then
+return(sconcat(str_small_1, %_d , str_small_2)) else
+return(sconcat(str_large_1, %_d , str_large_2))
+),
+[%_snum,%_tnum, %_oom, %_d, %_mnt, %_d0] );
+fb_unitOK(%_sans, %_tans, %_tol):=stringp(fb_unit(%_sans, %_tans, %_tol));
+fb_coeffs(%_sans, %_tans, %_tol, %_description):=block(
+[%_txt: %_description, %_vcheck, %_vars, %_v, %_cs, %_ct, %_cres, simp: true,
+str_coeff_at: castext("[[lang code='de']]&nbsp;Koeffizient bei [[/lang]][[lang code='en,other']]&nbsp;Coefficient of [[/lang]]"),
+str_equation_ok: castext("[[lang code='de']]&nbsp;Die Gleichung stimmt.[[/lang]][[lang code='en,other']]&nbsp;The equation is correct.[[/lang]]")
+],
+%_vcheck: fb_vars(%_sans, %_tans, [], "", %_tol),
+if %_vcheck # "" then return([castext_concat(%_txt, %_vcheck), false]),
+%_vars: listofvars(%_tans),
+if %_tol > 0 then %_vars: sublist(%_vars, lambda([%_v], is(abs(float(coeff(%_tans, %_v, 1))) > %_tol))),
+for %_v in %_vars do (
+%_cs: coeff(%_sans, %_v),
+%_ct: coeff(%_tans, %_v),
+%_cres: fb_unit(%_cs, %_ct, %_tol),
+if %_cres # "" then
+%_txt: castext_concat(%_txt, castext_concat(castext_concat(str_coeff_at, castext("{@string(%_v)@}:")), %_cres))
+),
+if %_txt # %_description then return([%_txt, false]),
+return([castext_concat(%_txt, str_equation_ok), true])
+);
+fb_floats_walk(%_x) := if floatnump(%_x) then (fb_floats_nums: endcons(%_x, fb_floats_nums), '%_N)
+else if atom(%_x) then %_x
+else block([simp: false, inflag: true], apply(op(%_x), map(fb_floats_walk, args(%_x))));
+fb_floats_hide(%_x) := if floatnump(%_x) then (fb_floats_nums: endcons(%_x, fb_floats_nums), %_P[length(fb_floats_nums)])
+else if atom(%_x) then %_x
+else block([simp: false, inflag: true], apply(op(%_x), map(fb_floats_hide, args(%_x))));
+fb_floats_norm(%_e) := block([fb_floats_nums: [], %_h, %_i],
+%_h: rootscontract(ev(fb_floats_hide(%_e), simp)),
+for %_i thru length(fb_floats_nums) do %_h: subst(%_P[%_i] = fb_floats_nums[%_i], %_h),
+expand(float(%_h)));
+texput(fb_floats_mark, lambda([%_e], sconcat("{\\underline{", tex1(first(%_e)), "}}")));
+fb_floats_show(%_x) := if floatnump(%_x) then block([%_v],
+fb_floats_k: fb_floats_k + 1, %_v: significantfigures(%_x, 4),
+if member(fb_floats_k, fb_floats_bad) then (if %_v < 0 then -fb_floats_mark(-%_v) else fb_floats_mark(%_v)) else %_v)
+else if atom(%_x) then %_x
+else block([inflag: true], apply(op(%_x), map(fb_floats_show, args(%_x))));
+fb_floats_round(%_x) := if floatnump(%_x) then significantfigures(%_x, 4)
+else if atom(%_x) then %_x
+else block([inflag: true], apply(op(%_x), map(fb_floats_round, args(%_x))));
+fb_floats_terms(%_e) := block([inflag: true, %_L],
+%_L: if not atom(%_e) and op(%_e) = "+" then args(%_e) else [%_e],
+map(lambda([%_x], block([%_c: 1, %_r: [], %_k, %_rest],
+if numberp(%_x) then %_c: %_x
+else if not atom(%_x) and op(%_x) = "*" then
+(for %_f in args(%_x) do if numberp(%_f) then %_c: %_c*%_f else %_r: endcons(%_f, %_r))
+else %_r: [%_x],
+%_rest: apply("*", %_r),
+fb_floats_nums: [], %_k: fb_floats_walk(%_rest),
+[%_k, cons(%_c, fb_floats_nums), %_c, %_rest])), %_L));
+fb_floats_tshow(%_T, %_whole, %_pos) := block([%_c: fb_floats_round(%_T[3]), %_v, fb_floats_k: 1, fb_floats_bad: %_pos],
+if %_whole then (%_v: fb_floats_round(%_T[3]*%_T[4]),
+return(if is(%_c < 0) then -fb_floats_mark(-%_v) else fb_floats_mark(%_v))),
+if member(1, %_pos) then %_c: (if is(%_c < 0) then -fb_floats_mark(-%_c) else fb_floats_mark(%_c)),
+%_c*fb_floats_show(%_T[4]));
+fb_dims_unittab() := ["m" = %_dL, "g" = %_dM, "s" = %_dT, "A" = %_dI, "K" = %_dK, "mol" = %_dN,
+"N" = %_dM*%_dL/%_dT^2, "J" = %_dM*%_dL^2/%_dT^2, "W" = %_dM*%_dL^2/%_dT^3, "Pa" = %_dM/(%_dL*%_dT^2),
+"bar" = %_dM/(%_dL*%_dT^2), "Hz" = 1/%_dT, "C" = %_dI*%_dT, "V" = %_dM*%_dL^2/(%_dT^3*%_dI),
+"Ohm" = %_dM*%_dL^2/(%_dT^3*%_dI^2), "min" = %_dT, "h" = %_dT, "d" = %_dT, "t" = %_dM,
+"l" = %_dL^3, "L" = %_dL^3, "rad" = 1, "deg" = 1, "rpm" = 1/%_dT];
+fb_dims_name(%_n) := block([%_a: assoc(%_n, fb_dims_unittab())],
+if %_a = false and slength(%_n) > 1 and member(charat(%_n, 1), ["p", "n", "u", "m", "c", "d", "h", "k", "M", "G", "T"]) then
+%_a: assoc(substring(%_n, 2), fb_dims_unittab()),
+if %_a = false then '%_dunk else %_a);
+fb_dims_tokens(%_s) := block([%_t: [], %_w: "", %_n: -1, %_ch],
+for %_ch in endcons(" ", charlist(%_s)) do (
+if alphacharp(%_ch) then (if %_n >= 0 then (%_t: endcons(["n", %_n], %_t), %_n: -1), %_w: sconcat(%_w, %_ch))
+else if digitcharp(%_ch) and %_w = "" then %_n: max(%_n, 0)*10 + cint(%_ch) - cint("0")
+else (
+if %_w # "" then (%_t: endcons(["u", %_w], %_t), %_w: ""),
+if %_n >= 0 then (%_t: endcons(["n", %_n], %_t), %_n: -1),
+if member(%_ch, ["*", "/", "^", "(", ")", "-"]) then %_t: endcons(%_ch, %_t)
+else if %_ch = "·" or %_ch = "." then %_t: endcons("*", %_t)
+else if %_ch # " " then %_t: endcons("?", %_t))),
+%_t);
+fb_dims_tok() := if %_k <= length(%_P) then %_P[%_k] else "";
+fb_dims_pexpr() := block([%_v: fb_dims_pfac(), %_t],
+while (%_t: fb_dims_tok(), %_t = "*" or %_t = "/" or %_t = "(" or listp(%_t)) do (
+if %_t = "*" or %_t = "/" then %_k: %_k + 1,
+if %_t = "/" then %_v: %_v/fb_dims_pfac() else %_v: %_v*fb_dims_pfac()),
+%_v);
+fb_dims_pfac() := block([%_v: fb_dims_pprim(), %_p: false, %_s: 1, %_n: 1, %_d: 1, %_t],
+if fb_dims_tok() = "^" then (
+%_k: %_k + 1,
+if fb_dims_tok() = "(" then (%_p: true, %_k: %_k + 1),
+if fb_dims_tok() = "-" then (%_s: -1, %_k: %_k + 1),
+%_t: fb_dims_tok(),
+if listp(%_t) and %_t[1] = "n" then (%_n: %_t[2], %_k: %_k + 1) else %_fail: true,
+if %_p and fb_dims_tok() = "/" then (%_k: %_k + 1, %_t: fb_dims_tok(),
+if listp(%_t) and %_t[1] = "n" and %_t[2] > 0 then (%_d: %_t[2], %_k: %_k + 1) else %_fail: true),
+if %_p then (if fb_dims_tok() = ")" then %_k: %_k + 1 else %_fail: true),
+if not %_fail then %_v: %_v^(%_s*%_n/%_d)),
+%_v);
+fb_dims_pprim() := block([%_t: fb_dims_tok(), %_v],
+if listp(%_t) then (%_k: %_k + 1, if %_t[1] = "u" then fb_dims_name(%_t[2]) else 1)
+else if %_t = "(" then (%_k: %_k + 1, %_v: fb_dims_pexpr(),
+if fb_dims_tok() = ")" then %_k: %_k + 1 else %_fail: true, %_v)
+else (%_fail: true, %_k: length(%_P) + 1, 1));
+fb_dims_unit(%_s) := block([simp: true, %_P: fb_dims_tokens(%_s), %_k: 1, %_fail: false, %_v],
+%_v: fb_dims_pexpr(),
+if %_fail or %_k <= length(%_P) or not freeof('%_dunk, %_v) then '%_dunk else %_v);
+fb_dims_table() := if not listp(fb_dims) then []
+else map(lambda([%_e], (if stringp(lhs(%_e)) then lhs(%_e) else string(lhs(%_e))) =
+(if stringp(rhs(%_e)) then fb_dims_unit(rhs(%_e)) else if numberp(rhs(%_e)) then 1 else '%_dunk)), fb_dims);
+fb_dims_q(%_x) := block([%_d],
+if not floatnump(%_x) then return(%_x),
+for %_d thru 12 do if abs(%_x*%_d - round(%_x*%_d)) < 1e-9 then return(round(%_x*%_d)/%_d),
+%_x);
+fb_dims_bad(%_d) := member(%_d, ['%_dunk, '%_dsum, '%_dfun]);
+fb_dims_of(%_x, %_tab) := block([simp: true, inflag: true, radexpand: all, %_o, %_a, %_d, %_e],
+if numberp(%_x) or constantp(%_x) then return(1),
+if symbolp(%_x) or subvarp(%_x) then
+(%_a: assoc(string(%_x), %_tab), return(if %_a = false then '%_dunk else %_a)),
+if atom(%_x) then return('%_dunk),
+%_o: op(%_x), %_a: args(%_x),
+%_d: map(lambda([%_y], fb_dims_of(%_y, %_tab)), %_a),
+if member('%_dunk, %_d) then return('%_dunk),
+%_e: sublist(%_d, lambda([%_y], %_y = '%_dsum or %_y = '%_dfun)),
+if %_e # [] then return(first(%_e)),
+if %_o = "+" then return(if every(lambda([%_y], is(%_y = first(%_d))), %_d) then first(%_d) else '%_dsum),
+if %_o = "*" then return(apply("*", %_d)),
+if %_o = "^" then (
+if %_d[2] # 1 then return('%_dfun),
+if %_d[1] = 1 then return(1),
+return(if numberp(%_a[2]) then %_d[1]^fb_dims_q(%_a[2]) else '%_dfun)),
+if %_o = abs then return(%_d[1]),
+if every(lambda([%_y], is(%_y = 1)), %_d) then 1 else '%_dfun);
+texput(%_um, "\\mathrm{m}")$ texput(%_ukg, "\\mathrm{kg}")$ texput(%_us, "\\mathrm{s}")$
+texput(%_uA, "\\mathrm{A}")$ texput(%_uK, "\\mathrm{K}")$ texput(%_umol, "\\mathrm{mol}")$
+fb_dims_show(%_d) := subst(['%_dL = '%_um, '%_dM = '%_ukg, '%_dT = '%_us, '%_dI = '%_uA, '%_dK = '%_uK, '%_dN = '%_umol], %_d);
+fb_dimension(%_sans, %_tans) := block([simp: true, %_tab: fb_dims_table(), %_ds, %_dt, %_du, %_tu],
+if %_tab = [] then return(""),
+%_dt: fb_dims_of(float(%_tans), %_tab), %_ds: fb_dims_of(float(%_sans), %_tab),
+if fb_dims_bad(%_dt) or %_ds = '%_dunk or is(%_ds = %_dt) then return(""),
+if %_ds = '%_dsum then return(castext("[[lang code='de']]&nbsp;In Ihrem Ergebnis werden Gr&ouml;&szlig;en verschiedener Einheiten addiert.[[/lang]][[lang code='en,other']]&nbsp;Your result adds quantities of different units.[[/lang]]")),
+if %_ds = '%_dfun then return(castext("[[lang code='de']]&nbsp;In Ihrem Ergebnis hat eine Funktion (z.&nbsp;B. sin, exp, ln) oder ein Exponent ein Argument mit Einheit.[[/lang]][[lang code='en,other']]&nbsp;In your result, a function (e.g. sin, exp, ln) or an exponent has an argument with a unit.[[/lang]]")),
+%_du: fb_dims_show(%_ds), %_tu: fb_dims_show(%_dt),
+castext("[[lang code='de']]&nbsp;Ihr Ergebnis hat die Einheit {@%_du@} statt {@%_tu@}.[[/lang]][[lang code='en,other']]&nbsp;Your result has the unit {@%_du@} instead of {@%_tu@}.[[/lang]]"));
+fb_floats(%_sans, %_tans, %_tol) := block([simp: true, %_s, %_t, %_sT, %_tT, %_used, %_pairs: [], %_us, %_ut: [],
+%_bad: [], %_txt: "", %_r, %_i, %_j, %_p, %_disp, %_tab, %_dt, %_ds, %_du, %_tu, %_v, %_dimtxt: "", %_vt: "", %_nd: [],
+fb_floats_nums,
+str_value: castext("[[lang code='de']]&nbsp;Zahlenwert [[/lang]][[lang code='en,other']]&nbsp;Number [[/lang]]"),
+str_marked: castext("[[lang code='de']]&nbsp;Markierter Zahlenwert [[/lang]][[lang code='en,other']]&nbsp;Marked number [[/lang]]"),
+str_structure: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie, wie Ihr Ergebnis von den gegebenen Gr&ouml;&szlig;en abh&auml;ngt (Produkte, Potenzen, Vorzeichen).[[/lang]][[lang code='en,other']]&nbsp;Check how your result depends on the given quantities (products, powers, signs).[[/lang]]"),
+str_term: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie den markierten Term.[[/lang]][[lang code='en,other']]&nbsp;Check the marked term.[[/lang]]"),
+str_terms: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie die markierten Terme.[[/lang]][[lang code='en,other']]&nbsp;Check the marked terms.[[/lang]]"),
+str_missing: castext("[[lang code='de']]&nbsp;Ihr Ergebnis ist bis auf einen fehlenden Term richtig.[[/lang]][[lang code='en,other']]&nbsp;Your result is right except for a missing term.[[/lang]]"),
+str_missings: castext("[[lang code='de']]&nbsp;Ihr Ergebnis ist bis auf fehlende Terme richtig.[[/lang]][[lang code='en,other']]&nbsp;Your result is right except for missing terms.[[/lang]]"),
+str_also: castext("[[lang code='de']]&nbsp;Au&szlig;erdem fehlt ein Term.[[/lang]][[lang code='en,other']]&nbsp;Also, a term is missing.[[/lang]]"),
+str_alsos: castext("[[lang code='de']]&nbsp;Au&szlig;erdem fehlen Terme.[[/lang]][[lang code='en,other']]&nbsp;Also, terms are missing.[[/lang]]"),
+str_dsum: castext("[[lang code='de']]&nbsp;Im markierten Term werden Gr&ouml;&szlig;en verschiedener Einheiten addiert.[[/lang]][[lang code='en,other']]&nbsp;The marked term adds quantities of different units.[[/lang]]"),
+str_dfun: castext("[[lang code='de']]&nbsp;Im markierten Term hat eine Funktion (z.&nbsp;B. sin, exp, ln) oder ein Exponent ein Argument mit Einheit.[[/lang]][[lang code='en,other']]&nbsp;In the marked term, a function (e.g. sin, exp, ln) or an exponent has an argument with a unit.[[/lang]]")
+],
+%_s: fb_floats_norm(%_sans), %_t: fb_floats_norm(%_tans),
+%_sT: fb_floats_terms(%_s), %_tT: fb_floats_terms(%_t),
+%_used: makelist(false, length(%_sT)),
+for %_j thru length(%_tT) do block([%_m: 0],
+for %_i thru length(%_sT) do
+if %_m = 0 and not %_used[%_i] and is(%_sT[%_i][1] = %_tT[%_j][1]) then %_m: %_i,
+if %_m > 0 then (%_used[%_m]: true, %_pairs: endcons([%_m, %_j], %_pairs)) else %_ut: endcons(%_j, %_ut)),
+%_us: sublist(makelist(%_i, %_i, length(%_sT)), lambda([%_i], not %_used[%_i])),
+if %_pairs = [] then (
+%_txt: castext_concat(fb_dimension(%_sans, %_tans), fb_vars(%_sans, %_tans)),
+if %_txt = "" then %_txt: str_structure,
+return([%_txt, false])),
+for %_p in %_pairs do block([%_a: %_sT[%_p[1]][2], %_b: %_tT[%_p[2]][2], %_k],
+for %_k thru length(%_b) do
+if is(abs(%_a[%_k] - %_b[%_k]) > %_tol*abs(%_b[%_k])) then %_bad: endcons([%_p[1], %_k, %_a[%_k], %_b[%_k]], %_bad)),
+if %_bad = [] and %_us = [] and %_ut = [] then return(["", true]),
+if %_us # [] then (
+%_tab: fb_dims_table(),
+%_dt: if %_tab = [] then '%_dunk else fb_dims_of(%_t, %_tab),
+if not fb_dims_bad(%_dt) then for %_i in %_us do (
+%_ds: fb_dims_of(%_sT[%_i][3]*%_sT[%_i][4], %_tab),
+if %_ds = '%_dsum then %_dimtxt: castext_concat(%_dimtxt, str_dsum)
+else if %_ds = '%_dfun then %_dimtxt: castext_concat(%_dimtxt, str_dfun)
+else if %_ds # '%_dunk and not is(%_ds = %_dt) then (
+%_du: fb_dims_show(%_ds), %_tu: fb_dims_show(%_dt),
+if length(%_us) = 1 then %_dimtxt: castext_concat(%_dimtxt, castext("[[lang code='de']]&nbsp;Der markierte Term hat die Einheit {@%_du@}, das Ergebnis aber {@%_tu@}.[[/lang]][[lang code='en,other']]&nbsp;The marked term has the unit {@%_du@}, the result {@%_tu@}.[[/lang]]"))
+else (%_v: fb_floats_round(%_sT[%_i][3]*%_sT[%_i][4]),
+%_dimtxt: castext_concat(%_dimtxt, castext("[[lang code='de']]&nbsp;Der Term {@%_v@} hat die Einheit {@%_du@}, das Ergebnis aber {@%_tu@}.[[/lang]][[lang code='en,other']]&nbsp;The term {@%_v@} has the unit {@%_du@}, the result {@%_tu@}.[[/lang]]"))))),
+if %_dimtxt # "" then %_bad: []),
+if %_us # [] or (%_bad # [] and not is(%_sans = %_s)) then (
+%_disp: apply("+", makelist(fb_floats_tshow(%_sT[%_i], member(%_i, %_us),
+map(second, sublist(%_bad, lambda([%_b], %_b[1] = %_i)))), %_i, length(%_sT))),
+%_txt: castext("[[lang code='de']]&nbsp;Ausgewertet entspricht Ihre Eingabe {@%_disp@}.[[/lang]][[lang code='en,other']]&nbsp;Evaluated, your answer is {@%_disp@}.[[/lang]]"),
+str_value: str_marked),
+if %_us # [] then (
+%_vt: fb_vars(apply("+", map(lambda([%_i], %_sT[%_i][3]*%_sT[%_i][4]), %_us)),
+apply("+", map(lambda([%_j], %_tT[%_j][3]*%_tT[%_j][4]), %_ut))),
+%_txt: castext_concat(%_txt, castext_concat(%_dimtxt, %_vt)),
+if %_dimtxt = "" and %_vt = "" then %_txt: castext_concat(%_txt, if length(%_us) = 1 then str_term else str_terms)),
+for %_b in %_bad do (
+%_r: fb_unit(%_b[3], %_b[4], %_tol),
+%_txt: castext_concat(%_txt, castext_concat(castext_concat(str_value, castext("{@significantfigures(%_b[3], 4)@}:")), %_r))
+),
+if length(%_ut) > length(%_us) then
+%_txt: castext_concat(%_txt,
+if %_us = [] and %_bad = [] then (if length(%_ut) = 1 then str_missing else str_missings)
+else (if length(%_ut) - length(%_us) = 1 then str_also else str_alsos)),
+[%_txt, false]
+);
+fb_number(%_sans, %_tans, %_tol) := fb_unit(%_sans, %_tans, %_tol);
+fb_numberOK(%_snum, %_tnum, %_tol):=stringp(fb_number(%_snum, %_tnum, %_tol));
+fb_matrix_label(%_i, %_j, %_n, %_m, %_labels) := block([%_k, %_lab, %_c],
+%_k: (%_i - 1)*%_m + %_j,
+if matrixp(%_labels) then %_labels: flatten(args(%_labels)),
+if listp(%_labels) and %_k <= length(%_labels) then (
+%_lab: %_labels[%_k],
+return(castext("<br>{@%_lab@}:"))
+),
+if %_n = 1 or %_m = 1 then (
+if %_labels # "index" and %_n*%_m <= 3 then (
+%_c: ['x, 'y, 'z][%_k],
+return(castext("<br>{@%_c@}[[lang code='de']]-Komponente:[[/lang]][[lang code='en,other']]-component:[[/lang]]"))
+),
+return(castext("<br>Element {#%_k#}:"))
+),
+castext("<br>[[lang code='de']]Zeile {#%_i#}, Spalte {#%_j#}:[[/lang]][[lang code='en,other']]Row {#%_i#}, column {#%_j#}:[[/lang]]")
+);
+fb_matrix_shape(%_sans, %_tans) := block(
+[str_not_matrix: castext("<br>[[lang code='de']]Die Eingabe ist keine Matrix.[[/lang]][[lang code='en,other']]The input is not a matrix.[[/lang]]"),
+str_size: castext("<br>[[lang code='de']]Die Matrix hat nicht die erwartete Gr&ouml;&szlig;e.[[/lang]][[lang code='en,other']]The matrix does not have the expected size.[[/lang]]")],
+if not matrixp(%_sans) then return(str_not_matrix),
+if matrix_size(%_sans) # matrix_size(%_tans) then return(str_size),
+""
+);
+fb_unit_matrix(%_sans, %_tans, %_tol, [%_opt]) := block(
+[%_labels, %_txt: "", %_ok: true, %_n, %_m, %_r, %_r0, %_shape],
+%_labels: if length(%_opt) > 0 then %_opt[1] else "xyz",
+if listp(%_sans) then %_sans: transpose(matrix(%_sans)),
+if listp(%_tans) then %_tans: transpose(matrix(%_tans)),
+%_shape: fb_matrix_shape(%_sans, %_tans),
+if %_shape # "" then return([%_shape, false]),
+[%_n, %_m]: matrix_size(%_tans),
+for %_i thru %_n do for %_j thru %_m do (
+%_r0: block([debug: false], fb_unit(%_sans[%_i, %_j], %_tans[%_i, %_j], %_tol)),
+if %_r0 # "" then %_ok: false,
+%_r: if debug = true then fb_unit(%_sans[%_i, %_j], %_tans[%_i, %_j], %_tol) else %_r0,
+if %_r # "" then
+%_txt: castext_concat(%_txt, castext_concat(fb_matrix_label(%_i, %_j, %_n, %_m, %_labels), %_r))
+),
+[%_txt, %_ok]
+);
+fb_vars_matrix(%_sans, %_tans, [%_opt]) := block(
+[%_vars, %_labels, %_tol, %_txt: "", %_n, %_m, %_r, %_shape],
+%_vars: if length(%_opt) > 0 then %_opt[1] else [],
+%_labels: if length(%_opt) > 1 then %_opt[2] else "xyz",
+%_tol: if length(%_opt) > 2 then %_opt[3] else 0,
+if listp(%_sans) then %_sans: transpose(matrix(%_sans)),
+if listp(%_tans) then %_tans: transpose(matrix(%_tans)),
+%_shape: fb_matrix_shape(%_sans, %_tans),
+if %_shape # "" then return(%_shape),
+[%_n, %_m]: matrix_size(%_tans),
+for %_i thru %_n do for %_j thru %_m do (
+%_r: fb_vars(%_sans[%_i, %_j], %_tans[%_i, %_j], %_vars, "", %_tol),
+if %_r # "" then
+%_txt: castext_concat(%_txt, castext_concat(fb_matrix_label(%_i, %_j, %_n, %_m, %_labels), %_r))
+),
+%_txt
+);
+fb_dim(%_res, %_vars, %_dims):=rat(subst(map("=", %_vars, map("*", %_vars, %_dims)),%_res)/%_res);
+meclib_h_number: castext("[[lang code='de']]Zahl[[/lang]][[lang code='en,other']]number[[/lang]]");
+meclib_h_unit: castext("[[lang code='de']]Zahl mit Einheit[[/lang]][[lang code='en,other']]number with unit[[/lang]]");
+meclib_h_alg: castext("[[lang code='de']]Ausdruck[[/lang]][[lang code='en,other']]expression[[/lang]]");

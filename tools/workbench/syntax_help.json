@@ -1,7 +1,7 @@
 {
- "generated": "2026-10-12",
+ "generated": "2026-10-17",
  "sources": {
-  "wiki": "../../../wiki",
+  "wiki": "/tmp/claude-0/-home-claude-meclib/d7911bb2-49c6-5e23-b283-67729fee0f43/scratchpad/ws/wiki",
   "wiki_drafts": [
    "angle1",
    "beam",
@@ -12,6 +12,7 @@
    "fb_contact_reactions()",
    "fb_ee()",
    "fb_fbd()",
+   "fb_floats()",
    "fb_name()",
    "fb_objects()",
    "fb_reaction_name()",
@@ -223,6 +224,19 @@
    }
   },
   {
+   "name": "fb_dimension",
+   "kind": "meclib",
+   "sig": "fb_dimension(sans, tans)",
+   "args": [
+    "sans",
+    "tans"
+   ],
+   "text": "feedback on the dimension of a whole answer, \"\" if it is right or cannot be checked",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_floats()",
+   "source": "Maxima/fb_value.mac",
+   "argdocs": {}
+  },
+  {
    "name": "fb_dir",
    "kind": "meclib",
    "sig": "fb_dir(o, n, i_dir, tol, desc)",
@@ -251,7 +265,7 @@
    "url": "https://github.com/mkraska/meclib/wiki/fb_EE()",
    "source": "Maxima/fb_fbd.mac",
    "argdocs": {
-    "S": "the student's expression for one equation of equilibrium (the sum, `= 0` implied), e.g. the input `S_GGx`",
+    "S": "the student's expression for one Equation of Equilibrium (the sum, `= 0` implied), e.g. the input `S_GGx`",
     "T": "the reference, e.g. `sumF(...)` or `sumM(...)` of the student's own free-body diagram, see Sums of Forces and Moments",
     "options": "(optional) list of options `name = value`; `subst` substitutions applied to both sides before comparing, e.g. `[alpha = atan(yB/xA)]`: symbols of the problem that stand for numbers of the sketch, so that `sin(alpha)` and `2/sqrt(13)` count as equal; `kind` what is summed, for the hint on a wrong sign: `\"M\"` for moments, otherwise the name of the direction, e.g. `\"x\"`, `\"y\"`, `\"\\\\xi\"`; `title` LaTeX title put in front of a message, e.g. `\"\\\\Sigma F_x\"` (only needed if several equations share one feedback)"
    },
@@ -446,6 +460,36 @@
     "n": "names field",
     "i": "index of `fix1` object"
    }
+  },
+  {
+   "name": "fb_floats",
+   "kind": "meclib",
+   "sig": "fb_floats(sans, tans, tol)",
+   "args": [
+    "sans",
+    "tans",
+    "tol"
+   ],
+   "text": "`fb_floats()` checks a symbolic answer whose numbers may be rounded, e.g. `0.708*c*a` for the exact `(3*sqrt(5)-6)*c*a`. Unlike fb_coeffs(), the expression need not be linear in its variables: products, powers, roots and functions are fine.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_floats()",
+   "source": "Maxima/fb_value.mac",
+   "argdocs": {
+    "sans": "student's answer",
+    "tans": "teacher's answer (exact or decimal)",
+    "tol": "relative tolerance of each number, e.g. `0.01` for 1 %"
+   },
+   "returns": "[text, ok]"
+  },
+  {
+   "name": "fb_floats_walk",
+   "kind": "meclib",
+   "sig": "fb_floats_walk(x)",
+   "args": [
+    "x"
+   ],
+   "text": "`fb_floats()` checks a symbolic answer whose numbers may be rounded, e.g. `0.708*c*a` for the exact `(3*sqrt(5)-6)*c*a`. Unlike fb_coeffs(), the expression need not be linear in its variables: products, powers, roots and functions are fine.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_floats()",
+   "source": "Maxima/fb_value.mac"
   },
   {
    "name": "fb_force",
@@ -1019,23 +1063,17 @@
   {
    "name": "sumM",
    "kind": "meclib",
-   "sig": "sumM(obj, names, rp, lu, options?)",
+   "sig": "sumM(o, n, p, lu, [options])",
    "args": [
-    "obj",
-    "names",
-    "rp",
+    "o",
+    "n",
+    "p",
     "lu",
-    "options"
+    "[options]"
    ],
    "text": "sumM(o, n, p, lu [, options]): sum of the moments about p (sketch coordinates) of all forces and moments, counterclockwise positive; lu: length unit of the sketch.",
-   "url": "https://github.com/mkraska/meclib/wiki/Sums-of-Forces-and-Moments",
-   "source": "Maxima/fb_fbd.mac",
-   "argdocs": {
-    "options": "(optional) list of options `name = value`; `contacts` indices of \"contact\" objects. A force found at one of them (normal or tangential, with the tolerance of Feedback for \"contact\") gets the exact normal or tangent direction of the contact, with the sense of the drawn arrow, and the contact point as point of application. Drawn arrows snap to 0.1 grid units and are only roughly along the contact, so without this option a correct equation such as `N_B*sin(alpha)` may not match `7/sqrt(149)*N_B`. Give the direction of the contact with exact numbers, e.g. `[-2, -3]`.; `at` (`sumM`) list of `[k, r]`: load `k` acts at point `r`, given in length units (like `rp*lu`), e.g. a centre of gravity that depends on symbols of the problem: `at = i_G, pA*a + rS`."
-   },
-   "optional": [
-    4
-   ]
+   "url": "https://github.com/mkraska/meclib/wiki/fb_EE()",
+   "source": "Maxima/fb_fbd.mac"
   },
   {
    "name": "unitvec",
@@ -1310,7 +1348,7 @@
     "startgap": "(optional, default `0`) space in pixels between `[x1, y1]` and the start of the line"
    },
    "text": "Label with a leader line, e.g. a friction coefficient pointing at a rough surface.",
-   "url": "https://github.com/mkraska/meclib/wiki/description",
+   "url": "https://github.com/mkraska/meclib/wiki/%22description%22",
    "source": "meclib.js",
    "optional": [
     3,
@@ -1641,7 +1679,7 @@
     "[x1,y1]": ", `[x2,y2]` initial locations of the control points (in scaled units)",
     "\"nlabel\"": "(optional, default: none) label for an optional perpendicular line through the first point. This argument earlier was a scaling factor, which is obsolete. The infobox uses the settings of the \"grid\" object."
    },
-   "text": "line with two draggable points, meant for Mohr's circle construction.",
+   "text": "line with two draggable points, meant for Mohr's circle construction or as helper for finding the center of rotation.",
    "url": "https://github.com/mkraska/meclib/wiki/%22line2p%22",
    "source": "meclib.js",
    "optional": [
@@ -1974,6 +2012,28 @@
    ]
   },
   {
+   "name": "abs",
+   "kind": "maxima",
+   "sig": "abs(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Absolute value.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-abs",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "acos",
+   "kind": "maxima",
+   "sig": "acos(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Arc cosine, in radians (0 ... %pi).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-acos",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "add2HTML",
    "kind": "stack",
    "sig": "add2HTML(string, fileappend)",
@@ -2046,6 +2106,57 @@
    "source": "syntax_help_extra.json"
   },
   {
+   "name": "apply",
+   "kind": "maxima",
+   "sig": "apply(f, list)",
+   "args": [
+    "f",
+    "list"
+   ],
+   "text": "Calls f with the elements of list as arguments: apply(max, [1, 5, 3]) is 5, apply(\"+\", L) the sum.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-apply",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "asin",
+   "kind": "maxima",
+   "sig": "asin(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Arc sine, in radians (-%pi/2 ... %pi/2).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-asin",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "assoc",
+   "kind": "maxima",
+   "sig": "assoc(key, list, default?)",
+   "args": [
+    "key",
+    "list",
+    "default"
+   ],
+   "text": "Value for key in a list of equations or two-element lists: assoc(\"b\", [\"a\"=1, \"b\"=2]) gives 2; default (optional, else false) if key is missing.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-assoc",
+   "source": "syntax_help_extra.json",
+   "optional": [
+    2
+   ]
+  },
+  {
+   "name": "at",
+   "kind": "maxima",
+   "sig": "at(expr, [x = a, ...])",
+   "args": [
+    "expr",
+    "[x = a, ...]"
+   ],
+   "text": "expr evaluated at x = a (also for derivatives).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-at",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "ATAlgEquiv",
    "kind": "stack",
    "sig": "ATAlgEquiv(SA, SB)",
@@ -2056,6 +2167,33 @@
    "text": "The default \"model answer\" for input `ans1` is `ta1` (this need not be changed).; The default potential response tree checks `ATAlgEquiv(ans1, ta1)` (this need not be changed).",
    "url": "https://docs.stack-assessment.org/en/STACK_question_admin/Authoring_workflow/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "atan",
+   "kind": "maxima",
+   "sig": "atan(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Arc tangent, in radians (-%pi/2 ... %pi/2); for the angle of a vector use atan2.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-atan",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "atan2",
+   "kind": "maxima",
+   "sig": "atan2(y, x)",
+   "args": [
+    "y",
+    "x"
+   ],
+   "text": "Angle of the vector [x, y] in radians (-%pi ... %pi), all quadrants; in degrees: float(atan2(y, x)*180/%pi), e.g. the angle of a force for meclib objects.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-atan2",
+   "argdocs": {
+    "y": "y component (first!)",
+    "x": "x component"
+   },
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "ATCasEqual",
@@ -2105,6 +2243,17 @@
    "text": "1. Every answer test in STACK has a corresponding function in Maxima. The Maxima function name of AlgEquiv is `ATAlgEquiv`, et. 2. The Maxima code for every answer in STACK returns a list of four elements. The _second_ element is the result of the test. See the documentation for details of the other elements.",
    "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Answer_tests/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "atom",
+   "kind": "maxima",
+   "sig": "atom(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "true for a number, symbol or string (not a list or expression).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-atom",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "ATSRegExp",
@@ -2176,6 +2325,29 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "ceiling",
+   "kind": "maxima",
+   "sig": "ceiling(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Smallest integer >= x (floor: largest integer <= x).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-ceiling",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "charat",
+   "kind": "maxima",
+   "sig": "charat(string, n)",
+   "args": [
+    "string",
+    "n"
+   ],
+   "text": "The n-th character (from 1).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-charat",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "chem_data",
    "kind": "stack",
    "sig": "chem_data(element, dp)",
@@ -2222,6 +2394,22 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "coeff",
+   "kind": "maxima",
+   "sig": "coeff(expr, x, n?)",
+   "args": [
+    "expr",
+    "x",
+    "n"
+   ],
+   "text": "Coefficient of x^n in the expanded expr (n optional, default 1).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-coeff",
+   "source": "syntax_help_extra.json",
+   "optional": [
+    2
+   ]
+  },
+  {
    "name": "coeff_list",
    "kind": "stack",
    "sig": "coeff_list(ex, v)",
@@ -2244,6 +2432,18 @@
    "text": "This function takes an expression `ex` and returns a list of nonzero coefficients of `v`.",
    "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "col",
+   "kind": "maxima",
+   "sig": "col(M, i)",
+   "args": [
+    "M",
+    "i"
+   ],
+   "text": "i-th column of M (row(M, i): i-th row).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-col",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "col_vecp",
@@ -2349,6 +2549,44 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "copylist",
+   "kind": "maxima",
+   "sig": "copylist(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Copy of a list. Needed before changing elements: after b: a, both names are the same list, and b[2]: ... changes a too. Freischnitt from the sketch: gfbdata: copylist(initdata); gfbdata[2]: endcons(\"HIDE\", gfbdata[2]); gfbdata: append(gfbdata, [forces]).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-copylist",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "cos",
+   "kind": "maxima",
+   "sig": "cos(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Cosine of x in radians; for degrees cos(alpha*%pi/180).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-cos",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "create_list",
+   "kind": "maxima",
+   "sig": "create_list(expr, x_1, list_1, ..., x_n, list_n)",
+   "args": [
+    "expr",
+    "x_1",
+    "list_1",
+    "...",
+    "x_n",
+    "list_n"
+   ],
+   "text": "Like makelist with several loop variables: create_list([i, j], i, [1, 2], j, [0, 1]).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-create_list",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "crossproduct",
    "kind": "stack",
    "sig": "crossproduct(a, b)",
@@ -2385,6 +2623,29 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "delete",
+   "kind": "maxima",
+   "sig": "delete(expr, list)",
+   "args": [
+    "expr",
+    "list"
+   ],
+   "text": "list without all elements equal to expr, e.g. delete([\"dim\",\"a\",[3,0.5],[4,0.5],0], initdata). delete(expr, list, n) removes the first n of them.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-delete",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "denom",
+   "kind": "maxima",
+   "sig": "denom(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Denominator of a fraction (num: numerator).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-denom",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "destackvector",
    "kind": "stack",
    "sig": "destackvector(ex)",
@@ -2396,6 +2657,17 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "determinant",
+   "kind": "maxima",
+   "sig": "determinant(M)",
+   "args": [
+    "M"
+   ],
+   "text": "Determinant of a square matrix.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-determinant",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "diagp",
    "kind": "stack",
    "sig": "diagp(M)",
@@ -2405,6 +2677,22 @@
    "text": "`diagp(M)` Predicate to determine whether a matrix is diagonal. `M` need not be square.",
    "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "diff",
+   "kind": "maxima",
+   "sig": "diff(expr, x, n?)",
+   "args": [
+    "expr",
+    "x",
+    "n"
+   ],
+   "text": "n-th derivative with respect to x (n optional, default 1).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-diff",
+   "source": "syntax_help_extra.json",
+   "optional": [
+    2
+   ]
   },
   {
    "name": "diffp",
@@ -2500,6 +2788,17 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "emptyp",
+   "kind": "maxima",
+   "sig": "emptyp(list)",
+   "args": [
+    "list"
+   ],
+   "text": "true for an empty list (or set or matrix).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-emptyp",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "endcons",
    "kind": "maxima",
    "sig": "endcons(expr, list)",
@@ -2507,7 +2806,7 @@
     "expr",
     "list"
    ],
-   "text": "List with expr added at the end.",
+   "text": "List with expr added at the end. E.g. deactivating an object of a copied initdata: gfbdata[2]: endcons(\"HIDE\", gfbdata[2]) (see copylist).",
    "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-endcons",
    "source": "syntax_help_extra.json"
   },
@@ -2546,6 +2845,29 @@
    "source": "syntax_help_extra.json"
   },
   {
+   "name": "evenp",
+   "kind": "maxima",
+   "sig": "evenp(n)",
+   "args": [
+    "n"
+   ],
+   "text": "true for an even integer (oddp: odd).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-evenp",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "every",
+   "kind": "maxima",
+   "sig": "every(p, list)",
+   "args": [
+    "p",
+    "list"
+   ],
+   "text": "true if the predicate p is true for all elements (some: for at least one).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-every",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "exdowncase",
    "kind": "stack",
    "sig": "exdowncase(ex)",
@@ -2555,6 +2877,28 @@
    "text": "`exdowncase(ex)` | Takes the expression `ex` and substitutes all variables for their lower case version (cf `sdowncase(ex)` in Maxima). This is very useful if you don't care if a student uses the wrong case, just apply this function to their answer before using an answer test. Note, of course, that `exdowncase(X)-x=0.`",
    "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "exp",
+   "kind": "maxima",
+   "sig": "exp(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Exponential function e^x.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-exp",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "expand",
+   "kind": "maxima",
+   "sig": "expand(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Multiplies out products and powers.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-expand",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "expandp",
@@ -2577,6 +2921,17 @@
    "text": "Determines if \\(ex\\) is _not_ a matrix, list, set, equation, function or inequality.",
    "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "factor",
+   "kind": "maxima",
+   "sig": "factor(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Factors a polynomial (or an integer).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-factor",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "factorlist",
@@ -2612,6 +2967,29 @@
    "source": "syntax_help_extra.json"
   },
   {
+   "name": "firstn",
+   "kind": "maxima",
+   "sig": "firstn(list, n)",
+   "args": [
+    "list",
+    "n"
+   ],
+   "text": "The first n elements of list (lastn(list, n): the last n).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-firstn",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "flatten",
+   "kind": "maxima",
+   "sig": "flatten(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Nested lists turned into one flat list: flatten([[1,2],[3]]) is [1,2,3].",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-flatten",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "float",
    "kind": "maxima",
    "sig": "float(expr)",
@@ -2620,6 +2998,51 @@
    ],
    "text": "Converts numbers in expr to floating point.",
    "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-float",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "floatnump",
+   "kind": "maxima",
+   "sig": "floatnump(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "true for a decimal number (float).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-floatnump",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "floor",
+   "kind": "maxima",
+   "sig": "floor(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Largest integer <= x (ceiling: smallest integer >= x).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-floor",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "freeof",
+   "kind": "maxima",
+   "sig": "freeof(x, expr)",
+   "args": [
+    "x",
+    "expr"
+   ],
+   "text": "true if x does not occur in expr.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-freeof",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "fullratsimp",
+   "kind": "maxima",
+   "sig": "fullratsimp(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "ratsimp repeated until nothing changes.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-fullratsimp",
    "source": "syntax_help_extra.json"
   },
   {
@@ -2632,6 +3055,19 @@
    "text": "Determines if \\(ex\\) is a function definition, using the operator `:=`.",
    "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "genmatrix",
+   "kind": "maxima",
+   "sig": "genmatrix(a, m, n)",
+   "args": [
+    "a",
+    "m",
+    "n"
+   ],
+   "text": "m x n matrix of the elements a[i, j] (a can be a lambda).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-genmatrix",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "get_ops",
@@ -2654,6 +3090,17 @@
    "text": "We also have a function `get_safe_ops(ex)` which returns a set of \"`safe_op`s\" in the expression. Atoms are ignored.",
    "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "ident",
+   "kind": "maxima",
+   "sig": "ident(n)",
+   "args": [
+    "n"
+   ],
+   "text": "n x n unit matrix.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-ident",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "imag_numberp",
@@ -2721,6 +3168,35 @@
    "text": "Because \\( \\int \\frac{1}{x}dx = \\log(|x|) \\) is OK on either the negative or positive real axis, but it is not OK in the complex plane. There is a switch that controls this, however.",
    "url": "https://docs.stack-assessment.org/en/Authoring/Author_FAQ/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "integerp",
+   "kind": "maxima",
+   "sig": "integerp(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "true for an integer.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-integerp",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "integrate",
+   "kind": "maxima",
+   "sig": "integrate(expr, x, a?, b?)",
+   "args": [
+    "expr",
+    "x",
+    "a",
+    "b"
+   ],
+   "text": "Integral with respect to x; with a, b the definite integral.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-integrate",
+   "source": "syntax_help_extra.json",
+   "optional": [
+    2,
+    3
+   ]
   },
   {
    "name": "intersectionp",
@@ -2882,6 +3358,17 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "invert",
+   "kind": "maxima",
+   "sig": "invert(M)",
+   "args": [
+    "M"
+   ],
+   "text": "Inverse matrix.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-invert",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "is",
    "kind": "maxima",
    "sig": "is(expr)",
@@ -2904,6 +3391,18 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "join",
+   "kind": "maxima",
+   "sig": "join(list_1, list_2)",
+   "args": [
+    "list_1",
+    "list_2"
+   ],
+   "text": "Alternating elements: join([a,b],[c,d]) is [a,c,b,d].",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-join",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "lambda",
    "kind": "maxima",
    "sig": "lambda([x_1, ..., x_n], expr_1, ..., expr_n)",
@@ -2913,6 +3412,17 @@
    ],
    "text": "Anonymous function, e.g. lambda([x], x^2).",
    "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-lambda",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "last",
+   "kind": "maxima",
+   "sig": "last(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Last element of list (also of an expression: its last argument).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-last",
    "source": "syntax_help_extra.json"
   },
   {
@@ -2974,6 +3484,30 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "lhs",
+   "kind": "maxima",
+   "sig": "lhs(eq)",
+   "args": [
+    "eq"
+   ],
+   "text": "Left-hand side of an equation (rhs: right-hand side), e.g. rhs(solve(eq, x)[1]).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-lhs",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "limit",
+   "kind": "maxima",
+   "sig": "limit(expr, x, a)",
+   "args": [
+    "expr",
+    "x",
+    "a"
+   ],
+   "text": "Limit of expr for x -> a.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-limit",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "linear_combination_p",
    "kind": "stack",
    "sig": "linear_combination_p(ex, p)",
@@ -2998,6 +3532,18 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "linsolve",
+   "kind": "maxima",
+   "sig": "linsolve([eq_1, ...], [x_1, ...])",
+   "args": [
+    "[eq_1, ...]",
+    "[x_1, ...]"
+   ],
+   "text": "Solves a system of linear equations; result is a list of equations x_i = ...",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-linsolve",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "list_cancel",
    "kind": "stack",
    "sig": "list_cancel(ex)",
@@ -3018,6 +3564,28 @@
    "text": "Create a list with all parts for which `numberp(ex)=true`.",
    "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "list_matrix_entries",
+   "kind": "maxima",
+   "sig": "list_matrix_entries(M)",
+   "args": [
+    "M"
+   ],
+   "text": "All entries of a matrix as a list, row by row, e.g. a rotated point back to [x, y].",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-list_matrix_entries",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "listify",
+   "kind": "maxima",
+   "sig": "listify(set)",
+   "args": [
+    "set"
+   ],
+   "text": "List of the elements of a set.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-listify",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "listofnonunits",
@@ -3042,6 +3610,17 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "listofvars",
+   "kind": "maxima",
+   "sig": "listofvars(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "List of the variables in expr.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-listofvars",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "listp",
    "kind": "maxima",
    "sig": "listp(expr)",
@@ -3050,6 +3629,39 @@
    ],
    "text": "true if expr is a list.",
    "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-listp",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "lmax",
+   "kind": "maxima",
+   "sig": "lmax(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Largest element of a list of numbers (lmin: smallest), e.g. for grid limits from point coordinates.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-lmax",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "lmin",
+   "kind": "maxima",
+   "sig": "lmin(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Smallest element of a list of numbers (lmax: largest).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-lmin",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "log",
+   "kind": "maxima",
+   "sig": "log(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Natural logarithm (log(x)/log(10) for base 10).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-log",
    "source": "syntax_help_extra.json"
   },
   {
@@ -3062,6 +3674,35 @@
    "text": "Determines if a fraction \\(ex\\) is in lowest terms.",
    "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "lreduce",
+   "kind": "maxima",
+   "sig": "lreduce(f, list, init?)",
+   "args": [
+    "f",
+    "list",
+    "init"
+   ],
+   "text": "Combines the elements from the left with the binary function f: lreduce(\"+\", L) is the sum of L; init (optional) is the start value.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-lreduce",
+   "source": "syntax_help_extra.json",
+   "optional": [
+    2
+   ]
+  },
+  {
+   "name": "lsum",
+   "kind": "maxima",
+   "sig": "lsum(expr, x, list)",
+   "args": [
+    "expr",
+    "x",
+    "list"
+   ],
+   "text": "Sum of expr for x running through list, e.g. lsum(p, p, [P1, P2, P3])/3 is the centroid of three points.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-lsum",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "make_less_ineq",
@@ -3123,6 +3764,18 @@
    "source": "syntax_help_extra.json"
   },
   {
+   "name": "maplist",
+   "kind": "maxima",
+   "sig": "maplist(f, list)",
+   "args": [
+    "f",
+    "list"
+   ],
+   "text": "Like map, but always returns a list.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-maplist",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "mat_solve",
    "kind": "stack",
    "sig": "mat_solve(A, b, [lstsq])",
@@ -3136,6 +3789,19 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "matrix",
+   "kind": "maxima",
+   "sig": "matrix(row_1, ..., row_n)",
+   "args": [
+    "row_1",
+    "...",
+    "row_n"
+   ],
+   "text": "Matrix from rows, e.g. rotation matrix R: matrix([cos(t), -sin(t)], [sin(t), cos(t)]); R . [x, y] rotates a point (result is a column matrix: list_matrix_entries makes a list).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-matrix",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "matrix_to_cols",
    "kind": "stack",
    "sig": "matrix_to_cols(M)",
@@ -3145,6 +3811,19 @@
    "text": "`matrix_to_cols(M)` Takes a matrix and returns a list of its column vectors.",
    "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Linear_algebra_core/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "max",
+   "kind": "maxima",
+   "sig": "max(x_1, ..., x_n)",
+   "args": [
+    "x_1",
+    "...",
+    "x_n"
+   ],
+   "text": "Largest of the arguments (for a list: lmax or apply(max, L)).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-max",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "mcq_correct",
@@ -3179,6 +3858,43 @@
    "text": "`mediant(ex1,ex2)` calculates the mediant of two rational expressions. The mediant of two fractions",
    "url": "https://docs.stack-assessment.org/en/CAS/Buggy_rules/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "member",
+   "kind": "maxima",
+   "sig": "member(expr, list)",
+   "args": [
+    "expr",
+    "list"
+   ],
+   "text": "true if expr is an element of list, e.g. member(o[1], [\"beam\", \"wall\"]) to test the type of an object o.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-member",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "min",
+   "kind": "maxima",
+   "sig": "min(x_1, ..., x_n)",
+   "args": [
+    "x_1",
+    "...",
+    "x_n"
+   ],
+   "text": "Smallest of the arguments (for a list: lmin or apply(min, L)).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-min",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "mod",
+   "kind": "maxima",
+   "sig": "mod(x, y)",
+   "args": [
+    "x",
+    "y"
+   ],
+   "text": "Remainder of x/y with the sign of y, e.g. mod(angle, 360).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-mod",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "natural_domain",
@@ -3236,6 +3952,17 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "num",
+   "kind": "maxima",
+   "sig": "num(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Numerator of a fraction (denom: denominator).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-num",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "num_ensure_rational",
    "kind": "stack",
    "sig": "num_ensure_rational(ex)",
@@ -3258,6 +3985,17 @@
    "text": "Is \\(sa\\) within \\(tol\\) of \\(ta\\)? I.e. \\( - sa-ta - <tol \\)",
    "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "numberp",
+   "kind": "maxima",
+   "sig": "numberp(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "true for a number (integer, fraction, float); not for %pi or sqrt(2).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-numberp",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "numexactp",
@@ -3296,6 +4034,19 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "outermap",
+   "kind": "maxima",
+   "sig": "outermap(f, list_1, list_2)",
+   "args": [
+    "f",
+    "list_1",
+    "list_2"
+   ],
+   "text": "f for all combinations of the elements of the lists (nested lists).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-outermap",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "parsons_answer",
    "kind": "stack",
    "sig": "parsons_answer(proof_ans, proof_steps)",
@@ -3328,6 +4079,20 @@
    "text": "1. The maxima function `parsons_encode(proof_steps)` will convert a list of `proof_steps` into a JSON string with hashed keys. 2. The maxima function `parsons_decode(ans1)` will convert a JSON string into a proof construction function.",
    "url": "https://docs.stack-assessment.org/en/Specialist_tools/Drag_and_drop/Question_block/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "part",
+   "kind": "maxima",
+   "sig": "part(expr, n_1, ..., n_k)",
+   "args": [
+    "expr",
+    "n_1",
+    "...",
+    "n_k"
+   ],
+   "text": "Part of an expression or nested list: part(initdata, 3, 2) is initdata[3][2], the name of the third object. Index n from 1.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-part",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "pinv",
@@ -3481,6 +4246,29 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "psubst",
+   "kind": "maxima",
+   "sig": "psubst([a_1 = b_1, ...], expr)",
+   "args": [
+    "[a_1 = b_1, ...]",
+    "expr"
+   ],
+   "text": "Parallel substitution: psubst([x = y, y = x], expr) swaps x and y (subst would substitute one after the other).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-psubst",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "radcan",
+   "kind": "maxima",
+   "sig": "radcan(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Simplifies roots, logarithms and exponentials into a canonical form.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-radcan",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "rand",
    "kind": "maxima",
    "sig": "rand(n)",
@@ -3586,6 +4374,17 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "rationalize",
+   "kind": "maxima",
+   "sig": "rationalize(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Exact fraction of a decimal number (binary exact: rationalize(0.1) is not 1/10).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-rationalize",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "rationalized",
    "kind": "stack",
    "sig": "rationalized(ex)",
@@ -3608,6 +4407,19 @@
    "source": "syntax_help_extra.json"
   },
   {
+   "name": "ratsubst",
+   "kind": "maxima",
+   "sig": "ratsubst(a, b, expr)",
+   "args": [
+    "a",
+    "b",
+    "expr"
+   ],
+   "text": "Substitutes a for b also where b is not a part of expr as written, e.g. ratsubst(1-sin(x)^2, cos(x)^2, expr).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-ratsubst",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "real_numberp",
    "kind": "stack",
    "sig": "real_numberp(ex)",
@@ -3617,6 +4429,17 @@
    "text": "Determines if \\(ex\\) is a real number (whether in float form or not).",
    "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "realpart",
+   "kind": "maxima",
+   "sig": "realpart(z)",
+   "args": [
+    "z"
+   ],
+   "text": "Real part (imagpart: imaginary part, cabs: absolute value, carg: angle).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-realpart",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "realsetp",
@@ -3699,6 +4522,28 @@
    "source": "syntax_help_extra.json"
   },
   {
+   "name": "reverse",
+   "kind": "maxima",
+   "sig": "reverse(list)",
+   "args": [
+    "list"
+   ],
+   "text": "list in reverse order.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-reverse",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "rhs",
+   "kind": "maxima",
+   "sig": "rhs(eq)",
+   "args": [
+    "eq"
+   ],
+   "text": "Right-hand side of an equation (lhs: left-hand side), e.g. rhs(solve(eq, x)[1]).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-rhs",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "root",
    "kind": "stack",
    "sig": "root([ex])",
@@ -3710,6 +4555,17 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "rootscontract",
+   "kind": "maxima",
+   "sig": "rootscontract(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Combines products of roots: sqrt(2)*sqrt(x) -> sqrt(2*x).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-rootscontract",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "round",
    "kind": "maxima",
    "sig": "round(x)",
@@ -3718,6 +4574,18 @@
    ],
    "text": "Nearest integer.",
    "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-round",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "row",
+   "kind": "maxima",
+   "sig": "row(M, i)",
+   "args": [
+    "M",
+    "i"
+   ],
+   "text": "i-th row of M (col(M, i): i-th column).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-row",
    "source": "syntax_help_extra.json"
   },
   {
@@ -3863,6 +4731,17 @@
    "source": "syntax_help_extra.json"
   },
   {
+   "name": "second",
+   "kind": "maxima",
+   "sig": "second(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Second element (third ... tenth likewise). Same as list[2].",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-second",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "select",
    "kind": "stack",
    "sig": "select(p1, ex)",
@@ -3886,6 +4765,29 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "sequal",
+   "kind": "maxima",
+   "sig": "sequal(s_1, s_2)",
+   "args": [
+    "s_1",
+    "s_2"
+   ],
+   "text": "true if the two strings are equal.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sequal",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "setify",
+   "kind": "maxima",
+   "sig": "setify(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Set of the distinct elements (listify: back to a list).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-setify",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "significantfigures",
    "kind": "stack",
    "sig": "significantfigures(x, n)",
@@ -3896,6 +4798,17 @@
    "text": "Truncate \\(x\\) to \\(n\\) significant figures (does perform rounding).",
    "url": "https://docs.stack-assessment.org/en/CAS/Numbers/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "signum",
+   "kind": "maxima",
+   "sig": "signum(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Sign: -1, 0 or 1.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-signum",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "simp_floatnump",
@@ -3942,6 +4855,43 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "simplode",
+   "kind": "maxima",
+   "sig": "simplode(list, delim?)",
+   "args": [
+    "list",
+    "delim"
+   ],
+   "text": "Strings of list joined with delim (optional): simplode([\"a\",\"b\"], \", \").",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-simplode",
+   "source": "syntax_help_extra.json",
+   "optional": [
+    1
+   ]
+  },
+  {
+   "name": "sin",
+   "kind": "maxima",
+   "sig": "sin(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Sine of x in radians; for degrees sin(alpha*%pi/180).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sin",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "slength",
+   "kind": "maxima",
+   "sig": "slength(string)",
+   "args": [
+    "string"
+   ],
+   "text": "Number of characters.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-slength",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "solve",
    "kind": "maxima",
    "sig": "solve(eqs, vars)",
@@ -3951,6 +4901,71 @@
    ],
    "text": "Solves equations, e.g. solve([x+y=1, x-y=0], [x, y]).",
    "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-solve",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "some",
+   "kind": "maxima",
+   "sig": "some(p, list)",
+   "args": [
+    "p",
+    "list"
+   ],
+   "text": "true if the predicate p is true for at least one element (every: for all).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-some",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "sort",
+   "kind": "maxima",
+   "sig": "sort(list, P?)",
+   "args": [
+    "list",
+    "P"
+   ],
+   "text": "Sorted copy of list; P (optional) is the ordering predicate, e.g. sort(L, lambda([a, b], a[2] < b[2])) sorts points by y.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sort",
+   "source": "syntax_help_extra.json",
+   "optional": [
+    1
+   ]
+  },
+  {
+   "name": "split",
+   "kind": "maxima",
+   "sig": "split(string, delim?)",
+   "args": [
+    "string",
+    "delim"
+   ],
+   "text": "List of the parts of string between the delimiters (delim optional, default blank).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-split",
+   "source": "syntax_help_extra.json",
+   "optional": [
+    1
+   ]
+  },
+  {
+   "name": "sposition",
+   "kind": "maxima",
+   "sig": "sposition(char, string)",
+   "args": [
+    "char",
+    "string"
+   ],
+   "text": "Position of the first char in string, false if missing.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sposition",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "sqrt",
+   "kind": "maxima",
+   "sig": "sqrt(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Square root. Length of a vector v: sqrt(v . v).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sqrt",
    "source": "syntax_help_extra.json"
   },
   {
@@ -3975,6 +4990,19 @@
    "text": "1. To trim whitespace and full stops from each end of a string, you can define `sans1:strim(\" .\",ans1);` in the feedback variables. 2. STACK provides a function `sremove_chars(rem, st)` which removes all occurrences of each _character_ in the string `rem` from the string `st`. For example to remove all selected punctuation characters use `sremove_chars(\".,!?\", ans1)`. 3.",
    "url": "https://docs.stack-assessment.org/en/Topics/Levenshtein_distance/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "ssubst",
+   "kind": "maxima",
+   "sig": "ssubst(new, old, string)",
+   "args": [
+    "new",
+    "old",
+    "string"
+   ],
+   "text": "string with every occurrence of old replaced by new.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-ssubst",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "stack_chemistry_declare",
@@ -4222,6 +5250,18 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "strim",
+   "kind": "maxima",
+   "sig": "strim(chars, string)",
+   "args": [
+    "chars",
+    "string"
+   ],
+   "text": "string without the characters of chars at both ends.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-strim",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "string",
    "kind": "maxima",
    "sig": "string(expr)",
@@ -4281,6 +5321,47 @@
    "source": "syntax_help_extra.json"
   },
   {
+   "name": "substring",
+   "kind": "maxima",
+   "sig": "substring(string, start, end?)",
+   "args": [
+    "string",
+    "start",
+    "end"
+   ],
+   "text": "Characters from start (from 1) up to end-1; without end: to the end.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-substring",
+   "source": "syntax_help_extra.json",
+   "optional": [
+    2
+   ]
+  },
+  {
+   "name": "sum",
+   "kind": "maxima",
+   "sig": "sum(expr, i, i_0, i_1)",
+   "args": [
+    "expr",
+    "i",
+    "i_0",
+    "i_1"
+   ],
+   "text": "Sum of expr for i from i_0 to i_1. For lists of vectors: lsum(p, p, points) adds them.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-sum",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "supcase",
+   "kind": "maxima",
+   "sig": "supcase(string)",
+   "args": [
+    "string"
+   ],
+   "text": "string in capitals (sdowncase: in small letters).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-supcase",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "table_zip_with",
    "kind": "stack",
    "sig": "table_zip_with(fn, T1, T2)",
@@ -4294,6 +5375,17 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "tan",
+   "kind": "maxima",
+   "sig": "tan(x)",
+   "args": [
+    "x"
+   ],
+   "text": "Tangent of x in radians.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-tan",
+   "source": "syntax_help_extra.json"
+  },
+  {
    "name": "texboldatoms",
    "kind": "stack",
    "sig": "texboldatoms(ex)",
@@ -4303,6 +5395,39 @@
    "text": "`texboldatoms(ex)` Displays all non-numeric atoms in bold. Useful for vector questions.",
    "url": "https://docs.stack-assessment.org/en/Topics/Linear_algebra/Vectors/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "transpose",
+   "kind": "maxima",
+   "sig": "transpose(M)",
+   "args": [
+    "M"
+   ],
+   "text": "Transposed matrix (of a list: a column).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-transpose",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "trigexpand",
+   "kind": "maxima",
+   "sig": "trigexpand(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Expands sums of angles: sin(a+b) -> sin(a)*cos(b)+cos(a)*sin(b).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-trigexpand",
+   "source": "syntax_help_extra.json"
+  },
+  {
+   "name": "trigreduce",
+   "kind": "maxima",
+   "sig": "trigreduce(expr)",
+   "args": [
+    "expr"
+   ],
+   "text": "Products and powers of sin and cos into sums of multiple angles.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-trigreduce",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "trigsimp",
@@ -4325,6 +5450,17 @@
    "text": "1. `intervalp(ex)` returns true if `ex` is a single simple interval. Does not check `ex` is variable free, so `oo(a,b)` is a simple interval. `{}`, `none`, `all` and singleton sets are not considered \"intervals\" by this predicate, use `realsetp` instead. The primary purpose of this predicate is to detect intervals `oo`, `oc` etc within code. 2.",
    "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "truncate",
+   "kind": "maxima",
+   "sig": "truncate(x)",
+   "args": [
+    "x"
+   ],
+   "text": "x without its decimal places (towards zero).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-truncate",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "truth_table",
@@ -4369,6 +5505,17 @@
    "text": "1. `intervalp(ex)` returns true if `ex` is a single simple interval. Does not check `ex` is variable free, so `oo(a,b)` is a simple interval. `{}`, `none`, `all` and singleton sets are not considered \"intervals\" by this predicate, use `realsetp` instead. The primary purpose of this predicate is to detect intervals `oo`, `oc` etc within code. 2.",
    "url": "https://docs.stack-assessment.org/en/CAS/Real_Intervals/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "unique",
+   "kind": "maxima",
+   "sig": "unique(list)",
+   "args": [
+    "list"
+   ],
+   "text": "Sorted list of the distinct elements.",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-unique",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "unitsp",
@@ -4446,6 +5593,18 @@
    "text": "Each rule is a named function in Maxima, and each rule has an associated predicate function to decide if the rule is applicable at the top level of an expression. E.g. `zeroAddp(0+x)` would return `true` and `zeroAdd(0+x)` would return `x`.",
    "url": "https://docs.stack-assessment.org/en/Authoring/Answer_Tests/Rule_based/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "zeromatrix",
+   "kind": "maxima",
+   "sig": "zeromatrix(m, n)",
+   "args": [
+    "m",
+    "n"
+   ],
+   "text": "m x n matrix of zeros (ident(n): unit matrix).",
+   "url": "https://maxima.sourceforge.io/docs/manual/maxima_singlepage.html#index-zeromatrix",
+   "source": "syntax_help_extra.json"
   },
   {
    "name": "zeroMulp",
