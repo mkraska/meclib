@@ -33,8 +33,8 @@ fb_check(fb_floats(0.708*c, (3*sqrt(5)-6)*c*a, 0.01), false,
 
 /* ---- same variables, other structure: general hint ---- */
 fb_check(fb_floats(0.708*c*a^2, (3*sqrt(5)-6)*c*a, 0.01), false,
-  "&nbsp;Pr&uuml;fen Sie, wie Ihr Ergebnis von den gegebenen Gr&ouml;&szlig;en abh&auml;ngt (Produkte, Potenzen, Vorzeichen).",
-  "&nbsp;Check how your result depends on the given quantities (products, powers, signs).",
+  "&nbsp;Tut mir leid, leider habe ich keine konkreteren Hinweise.",
+  "&nbsp;Sorry, I have no more specific hints.",
   "fb_floats: other power");
 
 /* ---- sign errors: the sign belongs to the number (internal form), so fb_unit() reports it ---- */
@@ -97,6 +97,47 @@ fb_check(fb_floats(g-0.3*a*c/m-a*c, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
   "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({-\\frac{{\\underline{0.3}}\\,a\\,c}{m}+g-{\\underline{a\\,c}}}\\).&nbsp;Pr&uuml;fen Sie den markierten Term.&nbsp;Markierter Zahlenwert \\({-0.3}\\):&nbsp;Der Betrag ist um mindestens 5% zu klein.",
   "&nbsp;Evaluated, your answer is \\({-\\frac{{\\underline{0.3}}\\,a\\,c}{m}+g-{\\underline{a\\,c}}}\\).&nbsp;Check the marked term.&nbsp;Marked number \\({-0.3}\\):&nbsp;The value is too small by at least 5%.",
   "fb_floats: wrong number and extra summand");
+
+/* ---- function arguments (sin, cos, ..., exp, log, roots): the calls are paired by function and
+   their arguments compared by fb_floats() itself; the case of TM3 05 05 (block on a half cylinder),
+   v = sqrt(v_0^2+2*g*r*(1-cos(alpha))) ---- */
+fb_check(fb_floats(sqrt(v_0^2+2*(1-cos(2*alpha))*g*r), sqrt(v_0^2+2*g*r*(1-cos(alpha))), 0.01), false,
+  "&nbsp;Unter der Wurzel:&nbsp;Im Argument von \\({\\cos \\left( 2\\,\\alpha \\right)}\\):&nbsp;Zahlenwert \\({2}\\):&nbsp;Der Betrag ist um mindestens 100% zu gro&szlig;.",
+  "&nbsp;Under the root:&nbsp;In the argument of \\({\\cos \\left( 2\\,\\alpha \\right)}\\):&nbsp;Number \\({2}\\):&nbsp;The value is too large by at least 100%.",
+  "fb_floats: wrong number in the argument of cos under the root");
+fb_check(fb_floats(sqrt(v_0^2+2*(1-cos(alpha/2))*g*r), sqrt(v_0^2+2*g*r*(1-cos(alpha))), 0.01), false,
+  "&nbsp;Unter der Wurzel:&nbsp;Im Argument von \\({\\cos \\left( 0.5\\,\\alpha \\right)}\\):&nbsp;Zahlenwert \\({0.5}\\):&nbsp;Der Betrag ist um mindestens 50% zu klein.",
+  "&nbsp;Under the root:&nbsp;In the argument of \\({\\cos \\left( 0.5\\,\\alpha \\right)}\\):&nbsp;Number \\({0.5}\\):&nbsp;The value is too small by at least 50%.",
+  "fb_floats: argument of cos too small");
+fb_check(fb_floats(sqrt(v_0^2+2*(2-cos(2*alpha))*g*r), sqrt(v_0^2+2*g*r*(1-cos(alpha))), 0.01), false,
+  "&nbsp;Unter der Wurzel:&nbsp;Ausgewertet entspricht Ihre Eingabe \\({{{v}_{0}}^2-2\\,{\\underline{\\cos \\left( 2\\,\\alpha \\right)}}\\,g\\,r+
+ {\\underline{4}}\\,g\\,r}\\).&nbsp;Im Argument von \\({\\cos \\left( 2\\,\\alpha \\right)}\\):&nbsp;Zahlenwert \\({2}\\):&nbsp;Der Betrag ist um mindestens 100% zu gro&szlig;.&nbsp;Markierter Zahlenwert \\({4}\\):&nbsp;Der Betrag ist um mindestens 100% zu gro&szlig;.",
+  "&nbsp;Under the root:&nbsp;Evaluated, your answer is \\({v_{0}^2-2\\,{\\underline{\\cos \\left( 2\\,\\alpha \\right)}}\\,g\\,r+
+ {\\underline{4}}\\,g\\,r}\\).&nbsp;In the argument of \\({\\cos \\left( 2\\,\\alpha \\right)}\\):&nbsp;Number \\({2}\\):&nbsp;The value is too large by at least 100%.&nbsp;Marked number \\({4}\\):&nbsp;The value is too large by at least 100%.",
+  "fb_floats: wrong argument and wrong number under the root");
+fb_check(fb_floats(sqrt(v_0^2+2*(1-sin(alpha))*g*r), sqrt(v_0^2+2*g*r*(1-cos(alpha))), 0.01), false,
+  "&nbsp;Unter der Wurzel:&nbsp;Ausgewertet entspricht Ihre Eingabe \\({{{v}_{0}}^2-{\\underline{2\\,\\sin \\left( \\alpha \\right)\\,g\\,r}}+2\\,g
+ \\,r}\\).&nbsp;Pr&uuml;fen Sie den markierten Term.",
+  "&nbsp;Under the root:&nbsp;Evaluated, your answer is \\({v_{0}^2-{\\underline{2\\,\\sin \\left( \\alpha \\right)\\,g\\,r}}+2\\,g\\,r}\\).&nbsp;Check the marked term.",
+  "fb_floats: other function: the term is marked");
+fb_check(fb_floats(sqrt(v_0^2+2*(1-cos(1.0001*alpha))*g*r), sqrt(v_0^2+2*g*r*(1-cos(alpha))), 0.01), true,
+  "",
+  "",
+  "fb_floats: argument within the tolerance");
+fb_check(fb_floats(sqrt(v_0^2+2*(1-cos(alpha))*g*r)+cos(3*alpha), sqrt(v_0^2+2*g*r*(1-cos(alpha))), 0.01), false,
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({\\sqrt{v_{0}^2-2\\,\\cos \\left( \\alpha \\right)\\,g\\,r+2\\,g\\,r}+
+ {\\underline{\\cos \\left( 3\\,\\alpha \\right)}}}\\).&nbsp;Pr&uuml;fen Sie den markierten Term.",
+  "&nbsp;Evaluated, your answer is \\({\\sqrt{v_{0}^2-2\\,\\cos \\left( \\alpha \\right)\\,g\\,r+2\\,g\\,r}+
+ {\\underline{\\cos \\left( 3\\,\\alpha \\right)}}}\\).&nbsp;Check the marked term.",
+  "fb_floats: extra summand with a function");
+fb_check(fb_floats(3*exp(-2*x), 3*exp(-x), 0.01), false,
+  "&nbsp;Im Exponenten von \\({e^ {- 2\\,x }}\\):&nbsp;Zahlenwert \\({-2}\\):&nbsp;Der Betrag ist um mindestens 100% zu gro&szlig;.",
+  "&nbsp;In the exponent of \\({e^ {- 2\\,x }}\\):&nbsp;Number \\({-2}\\):&nbsp;The value is too large by at least 100%.",
+  "fb_floats: wrong number in the exponent of exp");
+fb_check(fb_floats(a*sin(0.5236*x), a*sin(%pi/6*x), 0.01), true,
+  "",
+  "",
+  "fb_floats: rounded number in an argument");
 
 /* ---- units: with fb_dims declared, a marked summand (or the whole answer) is checked for its
    unit; an undeclared variable switches the check off ---- */

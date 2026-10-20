@@ -177,6 +177,7 @@ question variable `X` (another expression can be given). Types and defaults
 | number with unit | units, size 8, syntax hint `{@meclib_h_unit@}`, insert stars 3 | UnitsRelative, rel. tolerance 0.005, simplify off | `fb_unit(S_X, X, tol)` / `fb_unit(S_X, X, 0)` |
 | number without unit | numerical, size 8, syntax hint `{@meclib_h_number@}` | NumRelative, rel. tolerance 0.005 | `fb_unit(S_X, X, tol)` / `fb_unit(S_X, X, 0)` |
 | expression | algebraic, size 15, syntax hint `{@meclib_h_alg@}`, insert stars 3, forbid float | AlgEquiv | `fb_vars(S_X, X)` |
+| expression with rounded numbers | algebraic, size 15, syntax hint `{@meclib_h_alg@}`, insert stars 3, floats allowed | feedback variables `[txt, isOK]: fb_floats(S_X, X, tol);`, AlgEquiv `isOK` = `true` | `txt` |
 | vector / matrix of numbers | matrix, size 4, insert stars 3 | feedback variables `[txt, isOK]: fb_unit_matrix(S_X, X, tol, labels);`, AlgEquiv `isOK` = `true` | `txt` |
 | vector / matrix of expressions | matrix, size 8, insert stars 3, forbid float | feedback variables `txt: fb_vars_matrix(S_X, X, [], labels);`, AlgEquiv `S_X` = `X` | `txt` |
 | choice: dropdown list / radio buttons | dropdown / radio, model answer `X_mcq`, not verified, no validation | AlgEquiv `S_X` = `mcq_correct(X_mcq)[1]` | none |

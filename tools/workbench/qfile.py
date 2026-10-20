@@ -295,6 +295,14 @@ INPUT_KINDS = {
         "prt": {"autosimplify": "1", "answertest": "AlgEquiv", "options": False,
                 "true": "{@fb_vars(%(s)s, %(t)s)@}", "false": "{@fb_vars(%(s)s, %(t)s)@}"},
     },
+    # expression with rounded coefficients: numbers compared one by one with a relative tolerance
+    "floats": {
+        "input": {"type": "algebraic", "boxsize": "15", "insertstars": "3", "syntaxhint": "{@meclib_h_alg@}",
+                  "syntaxattribute": "1", "forbidfloat": "0", "mustverify": "1", "showvalidation": "3"},
+        "prt": {"autosimplify": "1", "answertest": "AlgEquiv", "options": False, "sans": "isOK", "tans": "true",
+                "fv": "[txt, isOK]: fb_floats(%(s)s, %(t)s, %(tol)s);",
+                "true": "{@txt@}", "false": "{@txt@}"},
+    },
     # matrix inputs: grid size from the model answer; element-wise feedback (fb_value.mac)
     "matrix": {
         "input": {"type": "matrix", "boxsize": "4", "insertstars": "3", "syntaxhint": "",

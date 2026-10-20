@@ -1,5 +1,10 @@
 ### Dev Branch
 
+2026 10 20
+- [[fb_floats()]]: the general hint (no summand in common, nothing else to say) is now "Tut mir leid, leider habe ich keine konkreteren Hinweise." / "Sorry, I have no more specific hints."
+- [[fb_floats()]]: feedback on the arguments of functions (sin, cos, ..., log, exp) and under roots: the calls are paired with those of the model answer and their arguments compared recursively ("Under the root: In the argument of cos(2·α): Number 2: ..."); a call without a partner marks its term
+- [[Meclib Workbench]], Questions page, "Input ...": type "expression with rounded numbers (fb_floats)" (algebraic input, floats allowed; PRT `[txt, isOK]: fb_floats(S_X, X, tol)` with the relative tolerance of the dialog)
+
 2026 10 19
 - [[Meclib Workbench]], Questions page, "Input ...": types "choice: dropdown list" and "choice: radio buttons" (model answer `X_mcq`, a list of choices added as a template at the beginning of the question variables; PRT `S_X` = `mcq_correct(X_mcq)[1]`); the messages report a choice list that is not a list or has no correct choice
 - [[Meclib Workbench]], Questions page: choice inputs (dropdown, radio, checkbox) in the preview, with the entries of the evaluated model answer `[[value, correct, display], ...]`; "TAns" picks the correct entries, "Check" passes the chosen value (checkbox: the list of the ticked values) to the PRTs
