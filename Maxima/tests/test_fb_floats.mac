@@ -116,10 +116,10 @@ fb_check(fb_floats(sqrt(v_0^2+2*(2-cos(2*alpha))*g*r), sqrt(v_0^2+2*g*r*(1-cos(a
  {\\underline{4}}\\,g\\,r}\\).&nbsp;In the argument of \\({\\cos \\left( 2\\,\\alpha \\right)}\\):&nbsp;Number \\({2}\\):&nbsp;The value is too large by at least 100%.&nbsp;Marked number \\({4}\\):&nbsp;The value is too large by at least 100%.",
   "fb_floats: wrong argument and wrong number under the root");
 fb_check(fb_floats(sqrt(v_0^2+2*(1-sin(alpha))*g*r), sqrt(v_0^2+2*g*r*(1-cos(alpha))), 0.01), false,
-  "&nbsp;Unter der Wurzel:&nbsp;Ausgewertet entspricht Ihre Eingabe \\({{{v}_{0}}^2-{\\underline{2\\,\\sin \\left( \\alpha \\right)\\,g\\,r}}+2\\,g
- \\,r}\\).&nbsp;Pr&uuml;fen Sie den markierten Term.",
-  "&nbsp;Under the root:&nbsp;Evaluated, your answer is \\({v_{0}^2-{\\underline{2\\,\\sin \\left( \\alpha \\right)\\,g\\,r}}+2\\,g\\,r}\\).&nbsp;Check the marked term.",
-  "fb_floats: other function: the term is marked");
+  "&nbsp;Unter der Wurzel:&nbsp;Ausgewertet entspricht Ihre Eingabe \\({-2\\,g\\,r\\,{\\underline{\\sin }}\\left( \\alpha \\right)+{{v}_{0}}^2+2\\,g
+ \\,r}\\).&nbsp;Pr&uuml;fen Sie die Funktion.",
+  "&nbsp;Under the root:&nbsp;Evaluated, your answer is \\({-2\\,g\\,r\\,{\\underline{\\sin }}\\left( \\alpha \\right)+v_{0}^2+2\\,g\\,r}\\).&nbsp;Check the function.",
+  "fb_floats: other function, right argument, under the root");
 fb_check(fb_floats(sqrt(v_0^2+2*(1-cos(1.0001*alpha))*g*r), sqrt(v_0^2+2*g*r*(1-cos(alpha))), 0.01), true,
   "",
   "",
@@ -138,6 +138,20 @@ fb_check(fb_floats(a*sin(0.5236*x), a*sin(%pi/6*x), 0.01), true,
   "",
   "",
   "fb_floats: rounded number in an argument");
+
+fb_check(fb_floats(asin(v_0^2/(3*g*r)+2/3), acos(2/3+v_0^2/(3*g*r)), 0.01), false,
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({
+ {\\underline{{\\rm asin}}}\\left( \\frac{0.3333\\,{{v}_{0}}^2}{g\\,r}+0.6667 \\right)}\\).&nbsp;Pr&uuml;fen Sie die Funktion.",
+  "&nbsp;Evaluated, your answer is \\({
+ {\\underline{{\\rm asin}}}\\left( \\frac{0.3333\\,v_{0}^2}{g\\,r}+0.6667 \\right)}\\).&nbsp;Check the function.",
+  "fb_floats: other function, right argument");
+
+fb_check(fb_floats(asin(v_0^2/(2*g*r)+2/3), acos(2/3+v_0^2/(3*g*r)), 0.01), false,
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({
+ {\\underline{{\\rm asin}\\left( \\frac{0.5\\,{{v}_{0}}^2}{g\\,r}+0.6667 \\right)}}}\\).&nbsp;Pr&uuml;fen Sie den markierten Term.",
+  "&nbsp;Evaluated, your answer is \\({
+ {\\underline{{\\rm asin}\\left( \\frac{0.5\\,v_{0}^2}{g\\,r}+0.6667 \\right)}}}\\).&nbsp;Check the marked term.",
+  "fb_floats: other function, wrong argument");
 
 /* ---- units: with fb_dims declared, a marked summand (or the whole answer) is checked for its
    unit; an undeclared variable switches the check off ---- */

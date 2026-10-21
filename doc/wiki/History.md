@@ -1,6 +1,8 @@
 ### Dev Branch
 
 2026 10 20
+- [[fb_floats()]]: a wrong function with the right argument (e.g. `asin(x)` for `acos(x)`): only the function name is underlined, "Check the function."
+- [[fb_floats()]]: a call without a partner is also marked when no summand has a partner (e.g. `asin(...)` for `acos(...)`), instead of the general hint
 - [[fb_floats()]]: the general hint (no summand in common, nothing else to say) is now "Tut mir leid, leider habe ich keine konkreteren Hinweise." / "Sorry, I have no more specific hints."
 - [[fb_floats()]]: feedback on the arguments of functions (sin, cos, ..., log, exp) and under roots: the calls are paired with those of the model answer and their arguments compared recursively ("Under the root: In the argument of cos(2·α): Number 2: ..."); a call without a partner marks its term
 - [[Meclib Workbench]], Questions page, "Input ...": type "expression with rounded numbers (fb_floats)" (algebraic input, floats allowed; PRT `[txt, isOK]: fb_floats(S_X, X, tol)` with the relative tolerance of the dialog)

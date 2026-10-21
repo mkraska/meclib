@@ -411,6 +411,17 @@ fb_floats_call(%_x) := if atom(%_x) then false else block([inflag: true, %_o, %_
   else if %_o = "^" and numberp(second(%_a)) and not integerp(second(%_a))
           and not (floatnump(second(%_a)) and second(%_a) = round(second(%_a))) then [["root", float(second(%_a))], first(%_a)]
   else false);
+/* a call with only its function marked (its argument is right): fb_floats_fmark(f, argument),
+   shown as the function name underlined; roots and exp are marked as a whole */
+texput(fb_floats_fmark, lambda([%_e], block([%_h: tex1(funmake(first(%_e), ['x])), %_k],
+  %_k: ssearch("\\left(", %_h),
+  if integerp(%_k) then sconcat("{\\underline{", substring(%_h, 1, %_k), "}}\\left( ", tex1(second(%_e)), " \\right)")
+  else sconcat("{\\underline{", tex1(funmake(first(%_e), [second(%_e)])), "}}"))));
+fb_floats_fmark_of(%_c) := block([inflag: true],
+  if symbolp(op(%_c)) and member(op(%_c), fb_floats_funs()) then fb_floats_fmark(op(%_c), first(args(%_c)))
+  else fb_floats_mark(%_c));
+/* true if the expression contains none of the calls %_L */
+fb_floats_nofcall(%_x, %_L) := every(lambda([%_c], freeof(%_c, %_x)), %_L);
 /* the outermost calls of an expression, in the order of fb_floats_repl() */
 fb_floats_calls(%_x) := if fb_floats_call(%_x) # false then [%_x] else if atom(%_x) then []
   else block([inflag: true], apply(append, map(fb_floats_calls, args(%_x))));
@@ -426,7 +437,7 @@ fb_floats(%_sans, %_tans, %_tol) := fb_floats_main(%_sans, %_tans, %_tol, false)
    numbers if it has more than one summand, since the student typed the argument in another form */
 fb_floats_main(%_sans, %_tans, %_tol, %_inner) := block([simp: true, %_s, %_t, %_sT, %_tT, %_used, %_pairs: [], %_us, %_ut: [],
     %_bad: [], %_txt: "", %_r, %_i, %_j, %_p, %_disp, %_tab, %_dt, %_ds, %_du, %_tu, %_v, %_dimtxt: "", %_vt: "", %_nd: [],
-    %_s0, %_sc, %_tc, %_tu2, %_argtxt: "", %_back: [], fb_floats_nums, fb_floats_rnew, fb_floats_rk,
+    %_s0, %_sc, %_tc, %_tu2, %_argtxt: "", %_back: [], %_lone: [], %_fcalls: [], %_fraw: [], %_others, fb_floats_nums, fb_floats_rnew, fb_floats_rk,
     str_value: castext("[[lang code='de']]&nbsp;Zahlenwert [[/lang]][[lang code='en,other']]&nbsp;Number [[/lang]]"),
     str_marked: castext("[[lang code='de']]&nbsp;Markierter Zahlenwert [[/lang]][[lang code='en,other']]&nbsp;Marked number [[/lang]]"),
     str_structure: castext("[[lang code='de']]&nbsp;Tut mir leid, leider habe ich keine konkreteren Hinweise.[[/lang]][[lang code='en,other']]&nbsp;Sorry, I have no more specific hints.[[/lang]]"),
@@ -438,7 +449,8 @@ fb_floats_main(%_sans, %_tans, %_tol, %_inner) := block([simp: true, %_s, %_t, %
     str_alsos: castext("[[lang code='de']]&nbsp;Au&szlig;erdem fehlen Terme.[[/lang]][[lang code='en,other']]&nbsp;Also, terms are missing.[[/lang]]"),
     str_dsum: castext("[[lang code='de']]&nbsp;Im markierten Term werden Gr&ouml;&szlig;en verschiedener Einheiten addiert.[[/lang]][[lang code='en,other']]&nbsp;The marked term adds quantities of different units.[[/lang]]"),
     str_dfun: castext("[[lang code='de']]&nbsp;Im markierten Term hat eine Funktion (z.&nbsp;B. sin, exp, ln) oder ein Exponent ein Argument mit Einheit.[[/lang]][[lang code='en,other']]&nbsp;In the marked term, a function (e.g. sin, exp, ln) or an exponent has an argument with a unit.[[/lang]]"),
-    str_root: castext("[[lang code='de']]&nbsp;Unter der Wurzel:[[/lang]][[lang code='en,other']]&nbsp;Under the root:[[/lang]]")
+    str_root: castext("[[lang code='de']]&nbsp;Unter der Wurzel:[[/lang]][[lang code='en,other']]&nbsp;Under the root:[[/lang]]"),
+    str_fun: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie die Funktion.[[/lang]][[lang code='en,other']]&nbsp;Check the function.[[/lang]]")
   ],
   %_s: fb_floats_norm(%_sans), %_t: fb_floats_norm(%_tans), %_s0: %_s,
   /* function arguments: the calls of the answer are paired in order with those of the model answer
@@ -451,6 +463,7 @@ fb_floats_main(%_sans, %_tans, %_tol, %_inner) := block([simp: true, %_s, %_t, %
   for %_i thru length(%_sc) do block([%_cs: fb_floats_call(%_sc[%_i]), %_m: 0, %_ct, %_rr, %_c],
     for %_j thru length(%_tc) do
       if %_m = 0 and not %_tu2[%_j] and is(first(fb_floats_call(%_tc[%_j])) = first(%_cs)) then %_m: %_j,
+    if %_m = 0 then %_lone: endcons(fb_floats_round(%_sc[%_i]), %_lone),
     if %_m > 0 then (
       %_tu2[%_m]: true, %_ct: fb_floats_call(%_tc[%_m]),
       if not is(second(%_cs) = second(%_ct)) then (
@@ -464,6 +477,14 @@ fb_floats_main(%_sans, %_tans, %_tol, %_inner) := block([simp: true, %_s, %_t, %
             else if first(%_cs) = "exp" then castext("[[lang code='de']]&nbsp;Im Exponenten von {@%_c@}:[[/lang]][[lang code='en,other']]&nbsp;In the exponent of {@%_c@}:[[/lang]]")
             else castext("[[lang code='de']]&nbsp;Im Argument von {@%_c@}:[[/lang]][[lang code='en,other']]&nbsp;In the argument of {@%_c@}:[[/lang]]"),
             %_rr[1])))))),
+  /* a call without a partner whose argument is that of a call of the model answer without a
+     partner (e.g. asin(x) for acos(x)): only the function is wrong */
+  for %_i thru length(%_sc) do block([%_cs: fb_floats_call(%_sc[%_i]), %_m: 0],
+    if member(fb_floats_round(%_sc[%_i]), %_lone) then (
+      for %_j thru length(%_tc) do
+        if %_m = 0 and not %_tu2[%_j] and second(fb_floats_main(second(%_cs), second(fb_floats_call(%_tc[%_j])), %_tol, true)) then %_m: %_j,
+      if %_m > 0 then (%_tu2[%_m]: true,
+        %_fcalls: endcons(fb_floats_round(%_sc[%_i]), %_fcalls), %_fraw: endcons(%_sc[%_i], %_fraw)))),
   if %_back # [] then (fb_floats_rk: 0, %_s: expand(fb_floats_repl(%_s))),
   %_sT: fb_floats_terms(%_s), %_tT: fb_floats_terms(%_t),
   /* each summand of the model answer gets the first free summand of the answer with its key */
@@ -476,6 +497,16 @@ fb_floats_main(%_sans, %_tans, %_tol, %_inner) := block([simp: true, %_s, %_t, %
   /* no summand in common: feedback on the whole answer (dimension, variables or a general hint) */
   if %_pairs = [] then (
     %_txt: castext_concat(fb_dimension(%_sans, %_tans), fb_vars(%_sans, %_tans)),
+    /* nothing else to say, but calls without a partner (e.g. asin where the model answer has
+       acos): the evaluated form with these calls marked */
+    if %_txt = "" and %_argtxt = "" and %_lone # [] then (
+      %_disp: fb_floats_round(%_s),
+      for %_p in %_back do %_disp: subst(if %_p[3] then fb_floats_mark(%_p[2]) else %_p[2], %_p[1], %_disp),
+      for %_p in %_lone do %_disp: block([simp: false], subst(if member(%_p, %_fcalls) then fb_floats_fmark_of(%_p) else fb_floats_mark(%_p), %_p, %_disp)),
+      %_others: sublist(%_lone, lambda([%_p], not member(%_p, %_fcalls))),
+      %_txt: castext_concat(castext("[[lang code='de']]&nbsp;Ausgewertet entspricht Ihre Eingabe {@%_disp@}.[[/lang]][[lang code='en,other']]&nbsp;Evaluated, your answer is {@%_disp@}.[[/lang]]"),
+        castext_concat(if %_fcalls # [] then str_fun else "",
+          if %_others = [] then "" else if length(%_others) = 1 then str_term else str_terms))),
     if %_txt = "" and %_argtxt = "" then %_txt: str_structure,
     return([castext_concat(%_argtxt, %_txt), false])),
   /* the numbers of the common summands; fb_unit() reports the deviation also for a matching
@@ -503,10 +534,13 @@ fb_floats_main(%_sans, %_tans, %_tol, %_inner) := block([simp: true, %_s, %_t, %
      summands, and for an answer that differs from its evaluated form (exact constants, factored
      forms), so that the numbers below can be found */
   if %_us # [] or (%_bad # [] and (if %_inner then length(%_sT) > 1 else not is(%_sans = %_s0))) then (
-    %_disp: apply("+", makelist(fb_floats_tshow(%_sT[%_i], member(%_i, %_us),
+    /* an extra summand whose only fault is a function (its argument right) gets only the function
+       marked, not the whole summand */
+    %_disp: apply("+", makelist(fb_floats_tshow(%_sT[%_i], member(%_i, %_us) and fb_floats_nofcall(%_sT[%_i][4], %_fraw),
       map(second, sublist(%_bad, lambda([%_b], %_b[1] = %_i)))), %_i, length(%_sT))),
     /* the student's calls instead of those of the model answer, the wrong ones marked */
     for %_p in %_back do %_disp: subst(if %_p[3] then fb_floats_mark(%_p[2]) else %_p[2], %_p[1], %_disp),
+    for %_p in %_fcalls do %_disp: block([simp: false], subst(fb_floats_fmark_of(%_p), %_p, %_disp)),   /* keep the order */
     %_txt: castext("[[lang code='de']]&nbsp;Ausgewertet entspricht Ihre Eingabe {@%_disp@}.[[/lang]][[lang code='en,other']]&nbsp;Evaluated, your answer is {@%_disp@}.[[/lang]]"),
     str_value: str_marked),
   %_txt: castext_concat(%_txt, %_argtxt),
@@ -515,7 +549,10 @@ fb_floats_main(%_sans, %_tans, %_tol, %_inner) := block([simp: true, %_s, %_t, %
     %_vt: fb_vars(apply("+", map(lambda([%_i], %_sT[%_i][3]*%_sT[%_i][4]), %_us)),
                   apply("+", map(lambda([%_j], %_tT[%_j][3]*%_tT[%_j][4]), %_ut))),
     %_txt: castext_concat(%_txt, castext_concat(%_dimtxt, %_vt)),
-    if %_dimtxt = "" and %_vt = "" then %_txt: castext_concat(%_txt, if length(%_us) = 1 then str_term else str_terms)),
+    %_others: sublist(%_us, lambda([%_i], fb_floats_nofcall(%_sT[%_i][4], %_fraw))),
+    if %_dimtxt = "" and %_vt = "" then %_txt: castext_concat(%_txt, castext_concat(
+      if %_fcalls # [] then str_fun else "",
+      if %_others = [] then "" else if length(%_others) = 1 then str_term else str_terms))),
   for %_b in %_bad do (
     %_r: fb_unit(%_b[3], %_b[4], %_tol),
     /* the number with 4 significant figures (an exact answer gives long decimals) */
