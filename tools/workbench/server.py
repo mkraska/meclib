@@ -21,6 +21,8 @@ Endpoints
   GET /vendor/<path>        static files from ./vendor/ (optional local copies,
                             e.g. MathJax for offline use; not in the repo)
   GET /api/config           merged configuration (see workbench_config.json)
+  POST /api/maxima          {path} the Maxima version of the sessions (one of maxima_list in
+                            /api/config, kept in .cache/workbench_state.json); closes the sessions
   GET /api/meclib?src=X     meclib.js as text, X = local | dev | main
   GET /proxy?url=U          whitelisted URL, cached in ./.cache/, served with
                             a content type derived from the file extension
@@ -28,6 +30,17 @@ Endpoints
   GET /api/cases/<name>     one scene (tests/scenes/<name>.json)
   POST /api/cases/<name>    write a scene (whole file, formatted by dump_scene()) and
                             regenerate Maxima/tests/fixtures/scenes.mac
+  GET /api/mtests           the offline Maxima tests (Maxima/tests/test_*.mac) as data: groups,
+                            files with their cases (label, line, call, expected result, setup),
+                            read from the files without running Maxima (mtests.py)
+  GET /api/mtests/tex?file=&sep= sans and tans of the answer-feedback cases of a test file, typeset
+                            as the validation shows them: {"<n>": [sans, tans]} (Maxima, no test run);
+                            sep "," for the decimal comma
+  POST /api/mtests/run      {file, sep} runs one test file in Maxima (meclib files fresh from the working
+                            copy) -> {cases: {n: {pass, ok, de, en, value, expect, obj, names, err,
+                            point}}, passed, failed, sep, points, seconds, maxima}; sep "," runs with the
+                            decimal comma (texts compared after {,} -> ., point: a number with a
+                            decimal point left in the text)
   GET /api/usage            which Maxima test files use which scene/case
                             (scene_obj/scene_names/scene_init calls in
                             Maxima/tests/test_*.mac)
@@ -100,11 +113,12 @@ USAGE_CALL = re.compile(r'\bscene_(obj|names|init)\(\s*"([^"]+)"(?:\s*,\s*"([^"]
 
 sys.path.insert(0, str(HERE))
 import scenes_to_maxima  # noqa: E402  (fixture generator, same folder)
+import mtests  # noqa: E402
 import stack_question  # noqa: E402
 import qfile  # noqa: E402
 import rules  # noqa: E402
 import history  # noqa: E402
-from maxima_session import MaximaSession, MaximaError  # noqa: E402
+from maxima_session import MaximaSession, MaximaError, list_maxima  # noqa: E402
 
 INBOX = CACHE / "questions"      # copies of files dropped onto the page
 STATE = qfile.State(CACHE / "workbench_state.json")
@@ -145,6 +159,27 @@ class SessionPool:
 
 
 POOL = SessionPool()
+
+
+def current_maxima(cfg=None):
+    """The Maxima executable the sessions use: the one chosen in the page header (kept in the
+    workbench state) if it is still installed, else the configured one, else the first found."""
+    cfg = cfg or load_config()
+    found = maxima_list(cfg)
+    chosen = STATE.data.get("maxima")
+    if chosen and any(p == chosen for _l, p in found):
+        return chosen
+    return cfg.get("maxima") or (found[0][1] if found else None)
+
+
+_MAXIMA_LIST = []
+
+
+def maxima_list(cfg=None, refresh=False):
+    """[[label, path]] of the Maxima installations (searched once per server run)."""
+    if refresh or not _MAXIMA_LIST:
+        _MAXIMA_LIST[:] = list_maxima((cfg or load_config()).get("maxima") or None)
+    return _MAXIMA_LIST
 
 
 def question_folders(cfg):
@@ -344,6 +379,8 @@ class Handler(SimpleHTTPRequestHandler):
             cfg = load_config()
             cfg["local_branch"] = git_branch()
             cfg["repo_path"] = str(REPO)
+            cfg["maxima_list"] = maxima_list(cfg)
+            cfg["maxima_current"] = current_maxima(cfg)
             return self.send_json(cfg)
         if parsed.path == "/api/meclib":
             return self.serve_meclib(query.get("src", ["local"])[0])
@@ -353,6 +390,28 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json(list_scenes())
         if parsed.path == "/api/usage":
             return self.send_json(scene_usage())
+        if parsed.path == "/api/mtests":
+            return self.send_json(mtests.listing(MAXIMA_TESTS))
+        if parsed.path == "/api/mtests/tex":
+            name = urllib.parse.parse_qs(parsed.query).get("file", [""])[0]
+            path = MAXIMA_TESTS / name
+            if not re.fullmatch(r"test_[A-Za-z0-9_]+\.mac", name) or not path.exists():
+                return self.send_json({"error": "no test file " + name}, 404)
+            sep = urllib.parse.parse_qs(parsed.query).get("sep", ["."])[0]
+            code = mtests.tex_code(mtests.parse_file(path), stack_question.mstring, sep)
+            out = {}
+            if code:
+                try:
+                    session = POOL.get("mtests:tex", current_maxima())[0]
+                    _stdout, results = session.run_with_results("\n".join(code))
+                except (MaximaError, OSError) as err:
+                    return self.send_json({"error": str(err)}, 500)
+                for key, vals in results.items():
+                    if not key.startswith("tex:"):
+                        continue
+                    _t, n, k = key.split(":")
+                    out.setdefault(n, ["", ""])[int(k)] = vals[0]
+            return self.send_json(out)
         if parsed.path == "/api/q/folders":
             return self.send_json(self.folder_listing())
         if parsed.path == "/api/snippets":
@@ -387,6 +446,28 @@ class Handler(SimpleHTTPRequestHandler):
             folders.append({"path": str(path.resolve() if path.exists() else path), "source": source,
                             "exists": path.is_dir(), "files": files})
         return {"folders": folders, "recent": STATE.data["recent"]}
+
+    def mtests_run(self):
+        """POST /api/mtests/run: one Maxima test file, run case by case (mtests.run_code)."""
+        try:
+            req = json.loads(self.read_body() or "{}")
+            name = req.get("file", "")
+            sep = "," if req.get("sep") == "," else "."
+            target = MAXIMA_TESTS / name
+            if not re.fullmatch(r"test_[A-Za-z0-9_]+\.mac", name) or not target.exists():
+                return self.send_json({"error": "no test file " + name}, 404)
+            info = mtests.parse_file(target)
+            t0 = time.time()
+            maxima = current_maxima()
+            session = POOL.get("mtests:run", maxima)[0]
+            stdout, results = session.run_with_results(
+                mtests.run_code(target, info, stack_question.mstring, REPO, sep), timeout=600)
+            res = mtests.run_results(info, stdout, results, sep)
+            res["seconds"] = round(time.time() - t0, 2)
+            res["maxima"] = next((label for label, p in maxima_list() if p == maxima), maxima)
+            return self.send_json(res)
+        except (ValueError, OSError, MaximaError) as err:
+            return self.send_json({"error": str(err)}, 500)
 
     def question_post(self, path):
         cfg = load_config()
@@ -448,7 +529,7 @@ class Handler(SimpleHTTPRequestHandler):
                 index, src = int(req["index"]), req.get("src", "local")
                 qel = stack_question.question_element(text, index)
                 data = stack_question.question_data(qel)
-                entry = POOL.get("%s:%d:%s" % (target, index, src), cfg.get("maxima"))
+                entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg))
                 resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
                 answers = req.get("answers") if path == "/api/q/check" else None
                 result = stack_question.evaluate(entry[0], data, int(req.get("seed", 1)), resolver, entry[2], answers)
@@ -618,6 +699,17 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_json({"path": pick_folder(req.get("title") or "Choose a folder", req.get("initial") or "")})
             except (OSError, subprocess.SubprocessError, RuntimeError) as err:
                 return self.send_json({"error": "no folder dialog available (%s) - type or paste the path instead" % err}, 400)
+        if parsed.path == "/api/mtests/run":
+            return self.mtests_run()
+        if parsed.path == "/api/maxima":
+            req = json.loads(self.read_body() or "{}")
+            path = req.get("path", "")
+            if not any(p == path for _l, p in maxima_list()):
+                return self.send_json({"error": "not a Maxima found by the workbench: " + path}, 400)
+            STATE.data["maxima"] = path
+            STATE.save()
+            POOL.close_all()          # the next run starts a session with the chosen version
+            return self.send_json({"maxima_current": path})
         if parsed.path.startswith("/api/q/"):
             return self.question_post(parsed.path)
         if not parsed.path.startswith("/api/cases/"):

@@ -366,6 +366,34 @@ ${editorAddon(edit)}
     return diffs;
   }
 
+  // the Maxima select of the page header (Questions, Tests): the installations the server found
+  // (config.maxima_list), the one in use (config.maxima_current); a change is sent to the server,
+  // which uses it for all pages and starts new sessions; onChange(path) after the switch
+  function initMaximaSelect(sel, config, onChange) {
+    const list = config.maxima_list || [];
+    sel.innerHTML = "";
+    for (const [label, path] of list) {
+      const o = document.createElement("option"); o.value = path; o.textContent = label; o.title = path; sel.appendChild(o);
+    }
+    if (!list.length) {
+      const o = document.createElement("option"); o.textContent = "not found"; sel.appendChild(o); sel.disabled = true;
+    }
+    sel.value = config.maxima_current || "";
+    sel.title = "Maxima of the question evaluation and the tests: " + (config.maxima_current || "not found");
+    sel.addEventListener("change", async () => {
+      const resp = await fetch("/api/maxima", { method: "POST", headers: { "Content-Type": "application/json", "X-Workbench": "1" },
+        body: JSON.stringify({ path: sel.value }) });
+      const r = await resp.json();
+      if (r.error) {
+        const st = document.getElementById("status"); if (st) st.textContent = r.error;
+        sel.value = config.maxima_current; return;
+      }
+      config.maxima_current = r.maxima_current;
+      sel.title = "Maxima of the question evaluation and the tests: " + r.maxima_current;
+      if (onChange) onChange(r.maxima_current);
+    });
+  }
+
   return { BLOCK_PRESETS, normalizeInit, parseInit, formatObjects, parseBlock, resolveUrl,
-           loadMeclib, buildFrameDoc, run, diffObjects };
+           loadMeclib, buildFrameDoc, run, diffObjects, initMaximaSelect };
 })();

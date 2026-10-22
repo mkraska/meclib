@@ -1,5 +1,8 @@
 ### Dev Branch
 
+2026 10 21
+- [[Meclib Workbench]], Tests page: tree of the test cases in a left column (scenes, and the offline Maxima tests grouped by free-body-diagram feedback, answer feedback and other functions); a Maxima test file shows its cases with call, sans/tans, set-up statements and the expected result, feedback texts formatted (de/en); not run yet. Compact rows: flag as symbol, feedback in STACK's yellow box, sans/tans typeset as in the validation, set-up shared by several cases shown once. "Run" per file and "Run all Maxima tests": the cases run in Maxima (meclib files of the working copy), passed/failed per case, actual result with the difference marked; thumbnails of the objects of the diagram tests
+
 2026 10 20
 - [[fb_floats()]]: a wrong function with the right argument (e.g. `asin(x)` for `acos(x)`): only the function name is underlined, "Check the function."
 - [[fb_floats()]]: a call without a partner is also marked when no summand has a partner (e.g. `asin(...)` for `acos(...)`), instead of the general hint

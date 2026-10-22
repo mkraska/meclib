@@ -12,6 +12,7 @@ Maxima side to a separate output file instead of stdout, see meclib_out() in PRE
 import glob
 import os
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -43,6 +44,56 @@ def find_maxima(configured=None):
             if hits:
                 return hits[-1]
     return None
+
+
+_VERSIONS = {}   # path -> version text (maxima --version, asked once)
+
+
+def maxima_version(path):
+    """Version of a Maxima executable: from its folder name (maxima-5.48.1), else maxima --version."""
+    m = re.search(r"maxima-(\d+(?:\.\d+)+)", str(path), re.I)
+    if m:
+        return m.group(1)
+    if path not in _VERSIONS:
+        try:
+            out = subprocess.run([path, "--version"], capture_output=True, text=True, timeout=15).stdout
+            m = re.search(r"(\d+\.\d+(?:\.\d+)?)", out)
+            _VERSIONS[path] = m.group(1) if m else ""
+        except (OSError, subprocess.SubprocessError):
+            _VERSIONS[path] = ""
+    return _VERSIONS[path]
+
+
+def list_maxima(configured=None):
+    """All Maxima installations found: [[label, path]] - the configured one, PATH, the usual
+    Windows locations (every C:\\maxima-*, Program Files, LOCALAPPDATA), newest version first."""
+    found = [configured] if configured else []
+    for name in ("maxima", "maxima.bat"):
+        hit = shutil.which(name)
+        if hit:
+            found.append(hit)
+    if os.name == "nt":
+        patterns = [r"C:\maxima-*\bin\maxima.bat",
+                    os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "maxima-*", "bin", "maxima.bat"),
+                    os.path.join(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"), "maxima-*", "bin", "maxima.bat"),
+                    os.path.join(os.environ.get("LOCALAPPDATA", ""), "maxima-*", "bin", "maxima.bat"),
+                    os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "maxima-*", "bin", "maxima.bat")]
+        for pattern in patterns:
+            found.extend(sorted(glob.glob(pattern)))
+    out, seen = [], set()
+    for path in found:
+        key = os.path.normcase(os.path.realpath(path))
+        if key in seen or not Path(path).exists() and not shutil.which(path):
+            continue
+        seen.add(key)
+        version = maxima_version(path)
+        out.append(["Maxima " + version if version else path, path])
+    labels = [label for label, _p in out]
+    for entry in out:      # the same version twice: the path tells them apart
+        if labels.count(entry[0]) > 1:
+            entry[0] += " (" + entry[1] + ")"
+    vkey = lambda e: [int(x) for x in re.findall(r"\d+", maxima_version(e[1]))] or [0]
+    return sorted(out, key=vkey, reverse=True)
 
 
 def stack_library_dir():

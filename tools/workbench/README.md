@@ -506,8 +506,14 @@ language), Markdown format. It has no PRT yet and therefore default mark 0.
 ### Evaluation
 
 Maxima is found on the PATH or in the usual Windows install locations
-(`C:\maxima-*`, `Program Files`); otherwise set `"maxima"` in
-`workbench_config.local.json` to the full path of `maxima.bat`. The first
+(every `C:\maxima-*`, `Program Files`, `LOCALAPPDATA`); otherwise set
+`"maxima"` in `workbench_config.local.json` to the full path of `maxima.bat`.
+With several versions installed, the "Maxima" select in the header of the
+Questions and Tests pages chooses one (newest first, labelled with the version
+from the folder name or `maxima --version`). The choice holds for all pages,
+is kept in `.cache/workbench_state.json` and closes the running sessions, so
+the next evaluation or test run starts with the chosen version. The Tests page
+shows the version of each run in the title row of a file. The first
 evaluation starts Maxima and loads the library (a few seconds); later ones
 take a fraction of a second.
 
@@ -545,7 +551,7 @@ regenerates `Maxima/tests/fixtures/scenes.mac`.
 with a live thumbnail, expected and actual names, status, initialisation
 time, and on failure the differences (names, and objects one by one) plus
 console errors. Warnings are listed collapsed. Each case shows which Maxima
-test files use it. "Run all" or "Run scene" runs against the meclib.js
+test files use it. The Run button or "Run scene" runs against the meclib.js
 version selected in the header, so the same cases can be run against the
 local copy, dev and main. Per case:
 - **Open on Graphic page** loads the scene and the case's state for
@@ -556,6 +562,71 @@ local copy, dev and main. Per case:
 
 Numbers in objects are compared with a relative tolerance of 1e-9 (floating
 point noise), everything else exactly.
+
+**Tree of the test cases** (left column of the Tests page): the scenes with
+their cases, and the offline Maxima tests (`Maxima/tests/test_*.mac`), grouped
+into feedback on free-body diagrams (files with object lists or scene
+fixtures), feedback on answers (sans against tans: fb_unit, fb_vars,
+fb_floats, ...) and other functions, each file with its cases in the order of
+`run_tests.mac`. The filter field shows the cases whose label or function
+contains the text. A click on a scene or a case scrolls to it; a click on a
+Maxima test file or case shows the file: its header comment, the functions it
+tests, the set-up shared by several cases (e.g. an object list), and per
+case the label (line as tooltip), the call, its own set-up, and the expected
+result as the question preview shows it: the flag as a symbol, the feedback
+in STACK's yellow box (de/en in the title row, which stays at the top while
+scrolling). For answer feedback, sans and tans are typeset as the validation
+shows them (parsed, not evaluated: GET `/api/mtests/tex`, one Maxima call per
+file, no test run).
+
+**The Run button** in the header acts on what is marked in the tree and names
+it with the number of cases: all scenes, one scene or one scene case; all
+Maxima tests, a group, a file. A marked Maxima case runs its whole file (the
+cases build on its earlier statements) and then shows the case. Nothing
+marked: the scenes and all Maxima tests. The title row of a file has its own
+Run button. A click on a group or on "Maxima tests" shows the first file of
+it, so the results of a run are in view (the file shown is refreshed as soon
+as it has run).
+
+**Decimal separator** (0.5 / 0,5 in the title row of a file): with the comma,
+the run sets `stackfltsep: ","` and `texput_decimal(",")` as a question with
+the decimal comma does, sans and tans are typeset with it, and the expected
+feedback (written with the point in the test files) is shown with the comma.
+The actual texts are compared after `{,}` -> `.`, so the expected texts serve
+both separators. A case whose actual text still has a number with a decimal
+point is marked "point" (orange, also in the tree): the function is not
+separator-aware; the actual text is shown with the number marked. Results of
+a run with the other separator are not shown (Run again).
+
+**Expected values that refer to the set-up** (e.g. `GG_sx[1]`, a result of an
+earlier statement): before a run marked "(value after Run)", after a run shown
+as `GG_sx[1] = <value>`.
+
+**Running the Maxima tests** (Run button, see above): the file runs in a Maxima session of the server
+(POST `/api/mtests/run`) with the meclib files and scene fixtures of the
+working copy, loaded fresh for each run, so a change in `fb_value.mac` shows
+at once. The checks are redefined to record the actual result instead of
+printing it; each statement runs on its own, so an error stops only its case
+(the Maxima message is shown). Each case gets passed/failed; a failed case
+shows the actual result below the expected one, the raw text with the part
+from the first difference on marked. The tree marks files and cases green or
+red. For the diagram feedback, the objects list of the call (its first
+argument) is drawn as a thumbnail by meclib - as input of the test, not
+compared with anything; a list without a grid gets one around all its points,
+optional parameters left out before the state (label offset of a force, the
+points of a moment) are completed for the drawing; the names list is the
+tooltip. The drawing area follows the points of the objects (plus one unit),
+also for a grid of the list (its range and pixels are replaced, display only):
+at most 40 pixels per unit and about 400 x 300 pixels, drawn unscaled. Each case draws its objects in its own row, with the name of the set-up
+variable below (if the list is one). Object lists of the set-up that no case
+draws (e.g. `o_sx`, which `sum_xyM()` reads before the checks) are shown at
+the top of the file. Not covered: checks inside loops or blocks of a
+test file, and `test_security.mac` (no single checks) - run `run_tests.mac`
+for the complete suite. The files are read, not run (GET `/api/mtests`, `mtests.py`): a
+check is a call of `fb_check`, `fb_check_str`, `fb_check_val` or of a helper
+of the file that calls `fb_check` (e.g. `cr_check`). "used by" links of a
+scene case open the Maxima test file. The tree (`tree.js`) is a component of
+its own, meant for the question folders of the Questions page, too.
 
 ## How closely the graphic matches STACK
 
@@ -610,6 +681,8 @@ content of the npm package `codemirror@5.65.16`).
 - `frame.js` - builds and runs a graphic in a STACK-like frame (shared by the
   pages)
 - `style.css` - shared styles
+- `tree.js` - collapsible tree of the side column (Tests page)
+- `mtests.py` - reads the Maxima test files for the Tests page
 - `server.py` - local server (listens on this computer only; writing
   requests need the header `X-Workbench: 1`, which other web sites cannot
   send): serves the pages; shows the folder dialog; reads and writes the

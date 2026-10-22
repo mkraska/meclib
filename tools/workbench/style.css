@@ -88,3 +88,23 @@ iframe { border: 1px solid var(--line); background: #fff; display: block; box-si
 .CodeMirror-hints { font-size: 12px; max-width: 640px; z-index: 60; }
 .CodeMirror-hint .hs { color: #888; font-size: 11px; } .CodeMirror-hint .hk { color: #aaa; font-size: 10px; margin-left: 6px; }
 li.CodeMirror-hint-active .hs, li.CodeMirror-hint-active .hk { color: #e8eef8; }
+
+/* tree of the side column (tree.js): roots like the question folders, branches indented */
+.tree { font-size: 13px; }
+.tree ul.tlist { list-style: none; margin: 2px 0 0; padding: 0 0 0 12px; }
+.tree details.troot { margin-top: 8px; }
+.tree details.troot > ul.tlist { padding-left: 4px; }
+.tree summary { cursor: pointer; padding: 2px 4px; border-radius: 4px; word-break: break-word; }
+.tree details.troot > summary { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+.tree li.tleaf { padding: 2px 6px; border-radius: 4px; cursor: pointer; word-break: break-word; }
+.tree li.tleaf:hover, .tree summary:hover { background: #eef2f7; }
+.tree li.tinert { cursor: default; color: var(--muted); font-style: italic; }
+.tree li.tinert:hover { background: none; }
+.tree li.tsel, .tree details.tsel > summary { background: #e3ecf6; font-weight: 600; }
+.tree li.tsub { padding: 0; }
+.tree .thint { color: var(--muted); font-size: 11px; font-weight: normal; }
+.tree .ttools { display: flex; gap: 6px; margin: 4px 0 0 14px; }
+.tree li.tfail, .tree details.tfail > summary .tlabel { color: var(--err); }
+.tree li.tpass, .tree details.tpass > summary .tlabel { color: var(--ok); }
+.tree li.tpass.tpoint, .tree details.tpass.tpoint > summary .tlabel { color: #9a5b00; }   /* passed, but a decimal point with the comma */
+header select { max-width: 210px; }   /* long version names: the full name in the list */
