@@ -141,14 +141,18 @@ for %_i thru length(fb_floats_nums) do %_h: subst(%_P[%_i] = fb_floats_nums[%_i]
 expand(float(%_h)));
 fb_floats_mark_tex(%_e) := sconcat("{\\underline{", tex1(first(%_e)), "}}");
 texput(fb_floats_mark, fb_floats_mark_tex);
+fb_sigfig(%_x, %_n) := if floatnump(%_x) and %_x # 0.0 and (abs(%_x) < 1e-3 or abs(%_x) >= 1e6)
+then (if %_x < 0 then -scientific_notation(-%_x, %_n - 1) else scientific_notation(%_x, %_n - 1))
+else significantfigures(%_x, %_n);
 fb_floats_show(%_x) := if floatnump(%_x) and abs(%_x - float(%e)) < 1e-12 then %e
 else if floatnump(%_x) then block([%_v],
 fb_floats_k: fb_floats_k + 1, %_v: significantfigures(%_x, 4),
-if member(fb_floats_k, fb_floats_bad) then (if %_v < 0 then -fb_floats_mark(-%_v) else fb_floats_mark(%_v)) else %_v)
+if member(fb_floats_k, fb_floats_bad) then (if %_v < 0 then -fb_floats_mark(fb_sigfig(-%_v, 4)) else fb_floats_mark(fb_sigfig(%_v, 4)))
+else fb_sigfig(%_v, 4))
 else if atom(%_x) then %_x
 else block([inflag: true], apply(op(%_x), map(fb_floats_show, args(%_x))));
 fb_floats_round(%_x) := if floatnump(%_x) and abs(%_x - float(%e)) < 1e-12 then %e
-else if floatnump(%_x) then significantfigures(%_x, 4)
+else if floatnump(%_x) then fb_sigfig(%_x, 4)
 else if atom(%_x) then %_x
 else block([inflag: true], apply(op(%_x), map(fb_floats_round, args(%_x))));
 fb_floats_terms(%_e) := block([inflag: true, %_L],
@@ -161,10 +165,10 @@ else %_r: [%_x],
 %_rest: apply("*", %_r),
 fb_floats_nums: [], %_k: fb_floats_walk(%_rest),
 [%_k, cons(%_c, fb_floats_nums), %_c, %_rest])), %_L));
-fb_floats_tshow(%_T, %_whole, %_pos) := block([%_c: fb_floats_round(%_T[3]), %_v, fb_floats_k: 1, fb_floats_bad: %_pos],
-if %_whole then (%_v: fb_floats_round(%_T[3]*%_T[4]),
-return(if is(%_c < 0) then -fb_floats_mark(-%_v) else fb_floats_mark(%_v))),
-if member(1, %_pos) then %_c: (if is(%_c < 0) then -fb_floats_mark(-%_c) else fb_floats_mark(%_c)),
+fb_floats_tshow(%_T, %_whole, %_pos) := block([%_neg: is(%_T[3] < 0), %_c: fb_floats_round(%_T[3]), %_v, fb_floats_k: 1, fb_floats_bad: %_pos],
+if %_whole then
+return(if %_neg then -fb_floats_mark(fb_floats_round(-%_T[3]*%_T[4])) else fb_floats_mark(fb_floats_round(%_T[3]*%_T[4]))),
+if member(1, %_pos) then %_c: (if %_neg then -fb_floats_mark(fb_floats_round(-%_T[3])) else fb_floats_mark(%_c)),
 %_c*fb_floats_show(%_T[4]));
 fb_dims_unittab() := ["m" = %_dL, "g" = %_dM, "s" = %_dT, "A" = %_dI, "K" = %_dK, "mol" = %_dN,
 "N" = %_dM*%_dL/%_dT^2, "J" = %_dM*%_dL^2/%_dT^2, "W" = %_dM*%_dL^2/%_dT^3, "Pa" = %_dM/(%_dL*%_dT^2),
@@ -372,7 +376,7 @@ if %_fcalls # [] then str_fun else "",
 if %_others = [] then "" else if length(%_others) = 1 then str_term else str_terms))),
 for %_b in %_bad do (
 %_r: fb_unit(%_b[3], %_b[4], %_tol),
-%_txt: castext_concat(%_txt, castext_concat(castext_concat(str_value, castext("{@significantfigures(%_b[3], 4)@}:")), %_r))
+%_txt: castext_concat(%_txt, castext_concat(castext_concat(str_value, castext("{@fb_sigfig(%_b[3], 4)@}:")), %_r))
 ),
 if length(%_ut) > length(%_us) then
 %_txt: castext_concat(%_txt,
@@ -448,7 +452,7 @@ return(castext("[[lang code='de']] Die Hypotenuse ({@%_h@}) muss gr&ouml;&szlig;
 if is(%_H >= %_G + %_A) then
 return(castext("[[lang code='de']] Die Hypotenuse ({@%_h@}) muss kleiner als die Summe der beiden Katheten ({@%_a@} + {@%_g@} = {@%_s@}) sein.[[/lang]][[lang code='en,other']] The hypotenuse ({@%_h@}) must be shorter than the sum of the two legs ({@%_a@} + {@%_g@} = {@%_s@}).[[/lang]]")),
 "");
-fb_HAG_round(%_x) := if floatnump(%_x) then significantfigures(%_x, 3)
+fb_HAG_round(%_x) := if floatnump(%_x) then fb_sigfig(%_x, 3)
 else if atom(%_x) then %_x
 else block([inflag: true], apply(op(%_x), map(fb_HAG_round, args(%_x))));
 meclib_h_number: castext("[[lang code='de']]Zahl[[/lang]][[lang code='en,other']]number[[/lang]]");

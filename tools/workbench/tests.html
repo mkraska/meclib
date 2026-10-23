@@ -248,6 +248,15 @@ function updateRunButton() {
   $("runAll").title = (sc.note ? sc.note + "; " : "") + "runs what is marked in the tree (nothing marked: everything)";
   $("runAll").disabled = running || mrunning || !sc.n;
 }
+// tests.html#mtest=<file>&case=<n> (the "tests" link of the syntax help): that file and case
+function openFromHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  const file = p.get("mtest");
+  if (!file || !mtests.files.some((f) => f.file === file)) return;
+  const n = p.get("case") ? Number(p.get("case")) : undefined;
+  if (tree) tree.reveal("m:" + file + (n !== undefined ? "#" + n : ""));
+  showMFile(file, n);
+}
 function showView(v) {
   $("scenes").hidden = v !== "scenes"; $("runs").hidden = v !== "scenes"; $("mtest").hidden = v !== "mtest";
 }
@@ -793,6 +802,8 @@ async function start() {
   document.head.appendChild(s);
   document.documentElement.style.setProperty("--hdr", document.querySelector("header").offsetHeight + "px");
   await loadAll();
+  openFromHash();
+  window.addEventListener("hashchange", openFromHash);
 }
 $("runAll").addEventListener("click", () => runScope().run());
 $("failuresOnly").addEventListener("change", applyFilter);

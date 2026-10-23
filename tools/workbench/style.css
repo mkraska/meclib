@@ -107,7 +107,7 @@ li.CodeMirror-hint-active .hs, li.CodeMirror-hint-active .hk { color: #e8eef8; }
 .tree li.tfail, .tree details.tfail > summary .tlabel { color: var(--err); }
 .tree li.tpass, .tree details.tpass > summary .tlabel { color: var(--ok); }
 .tree li.tpass.tpoint, .tree details.tpass.tpoint > summary .tlabel { color: #9a5b00; }   /* passed, but a decimal point with the comma */
-header select { max-width: 210px; }
+header select { max-width: 210px; }   /* options are short (version numbers), see compactSelect() in frame.js */
 header img.hlogo { height: 20px; width: auto; vertical-align: middle; }
 header .hwarn { color: #c07000; font-size: 15px; cursor: help; }
 .hpanel { padding: 6px 16px; background: #fff4dc; border-bottom: 1px solid var(--line); font-size: 13px; }   /* long version names: the full name in the list */

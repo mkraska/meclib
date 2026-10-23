@@ -1,6 +1,8 @@
 ### Dev Branch
 
 2026 10 23
+- [[fb_floats()]], [[fb_HAG]]: very small or large numbers in the feedback are shown in scientific notation (as the question option says, e.g. 1.500×10⁻¹⁴, with the question's decimal separator) instead of STACK's plain float display 1.5E-14
+- [[Meclib Workbench]]: the header dropdowns show version numbers only (details as tooltip); Questions page: the folders as a tree with a filter field (as on the Tests page); syntax help: "tests (n)" opens the Tests page at the tests of the function; review: an unused embedded file names where it is stored and which text shows another file of its type instead
 - [[fb_HAG]] is now part of `fb_value.mac` (before: a copy in each question): texts in German and English, values as formulas with 3 significant figures and the question's decimal separator ([issue #70](https://github.com/mkraska/meclib/issues/70)); the workbench review offers to replace the local copies
 - `fb_value.mac`: no `funmake()` any more (forbidden in STACK questions): STACK refused every question that included the dev version of `fb_value.mac` ("Error(s) in question-variables"); the TeX output of the marks of [[fb_floats()]] is now done by named functions, which the security test checks
 - `fb_force()`: the deviation of the direction and the distance of the line of action are written with the question's decimal separator (`90,0°` with the decimal comma)

@@ -207,3 +207,21 @@ fb_check_str(fb_dimension(a+g, sqrt(a*g)),
 fb_dims: ["m" = "kg", a = 1]$
 fb_check_val(if fb_dims_table() = ["m" = %_dM, "a" = 1] then 0 else 1, 0, "fb_dims: names as strings, dimensionless");
 kill(fb_dims)$
+
+/* ---- very small or large numbers: shown in scientific notation, as the question option says
+   (here "*10", STACK's default) - a plain float would show as 1.5E-14 ---- */
+texput_scientificnotation("*10")$
+fb_check(fb_floats(1.5e-14*a, 1.0e-14*a, 0.01), false,
+  "&nbsp;Zahlenwert \\({1.500 \\times 10^{-14}}\\):&nbsp;Der Betrag ist um mindestens 50% zu gro&szlig;.",
+  "&nbsp;Number \\({1.500 \\times 10^{-14}}\\):&nbsp;The value is too large by at least 50%.",
+  "fb_floats: scientific notation of a small number");
+fb_check(fb_floats(sqrt(2)*1e-7*a, 2e-7*a, 0.01), false,
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({{\\underline{1.414 \\times 10^{-7}}}\\,a}\\).&nbsp;Markierter Zahlenwert \\({1.414 \\times 10^{-7}}\\):&nbsp;Der Betrag ist um mindestens 20% zu klein.",
+  "&nbsp;Evaluated, your answer is \\({{\\underline{1.414 \\times 10^{-7}}}\\,a}\\).&nbsp;Marked number \\({1.414 \\times 10^{-7}}\\):&nbsp;The value is too small by at least 20%.",
+  "fb_floats: scientific notation in the evaluated form");
+stackfltsep: ","$
+fb_check(fb_floats(1.5e-14*a, 1.0e-14*a, 0.01), false,
+  "&nbsp;Zahlenwert \\({1{,}500 \\times 10^{-14}}\\):&nbsp;Der Betrag ist um mindestens 50% zu gro&szlig;.",
+  "&nbsp;Number \\({1{,}500 \\times 10^{-14}}\\):&nbsp;The value is too large by at least 50%.",
+  "fb_floats: scientific notation with the decimal comma");
+stackfltsep: "."$

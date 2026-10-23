@@ -390,7 +390,10 @@ several nodes or other feedback text get a hint only.
 
 Unused embedded files (`files.unused`): files stored in the question (`<file>`
 elements of its texts) that no text shows as `@@PLUGINFILE@@/name` - usually
-leftovers of earlier versions edited in Moodle. The review shows the image;
+leftovers of earlier versions edited in Moodle (an image replaced in the editor
+keeps the old file). The message names where the file is stored and which
+text shows another file of the same type instead (probably its newer
+version). The review shows the image;
 the fix removes all copies of that file from the question.
 
 meclib from a branch other than main (`include.branch`, a hint): a
@@ -442,7 +445,10 @@ functions:
   signature with the current argument in bold (optional arguments in gray with a trailing `?`, taken from "(optional ..." in the wiki),
   the description of that argument and a short text, with a link to the meclib
   wiki, the STACK documentation or the Maxima manual. The link and **F1** open
-  the page in a small separate window (always the same one). Esc closes the box.
+  the page in a small separate window (always the same one). For a function
+  with offline Maxima tests, "tests (n)" opens the Tests page at its first
+  case (`tests.html#mtest=<file>&case=<n>`): examples of what it returns.
+  Esc closes the box.
 - **Autocomplete**: after two characters of a name, a list of matching
   functions with their signatures (meclib first, then STACK and Maxima);
   after `["` the meclib object types. **Ctrl+Space** opens the list at any time.

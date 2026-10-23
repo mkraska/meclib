@@ -89,11 +89,9 @@
   .qlist li.other { color: var(--muted); cursor: default; font-style: italic; }
   .qlist li .cat { display: block; color: var(--muted); font-size: 11px; font-weight: normal; }
   .files li { font-family: var(--mono); font-size: 12px; word-break: break-all; }
-  .folder { margin-top: 8px; }
-  .folder > summary { font-size: 12px; word-break: break-all; }
-  .folder > summary .src { font-size: 11px; color: var(--muted); }
-  .folder.cur > summary { color: var(--accent); }
-  .folder .tools { display: flex; gap: 6px; margin: 4px 0 0 14px; }
+  /* the folder tree (tree.js): folder names as written, the folder files are dropped into marked */
+  #folders details.troot > summary { text-transform: none; letter-spacing: 0; word-break: break-all; }
+  #folders details.troot.cur > summary .tlabel { color: var(--accent); }
   .recent li { font-size: 12px; }
   .qlist.files li.subdir { color: var(--muted); font-size: 11.5px; cursor: default; padding-top: 4px; }
   .qlist.files li.subdir:hover { background: none; }
@@ -273,7 +271,8 @@
       <h2>Files</h2>
       <div id="drop">Drop a Moodle XML file here or click<br><span id="dropTarget" class="hint"></span></div>
       <input type="file" id="file" accept=".xml" hidden>
-      <div id="folders"></div>
+      <input type="text" id="folderFilter" placeholder="filter (file name)" spellcheck="false" style="width:100%;margin-top:6px">
+      <div id="folders" class="tree"></div>
       <div class="btnrow">
         <button id="pickFolder" class="small" title="choose a folder in the system's folder dialog">Add folder ...</button>
       </div>
@@ -443,6 +442,7 @@
   </form>
 </dialog>
 <script src="frame.js"></script>
+<script src="tree.js"></script>
 <script src="editor.js"></script>
 <script>
 "use strict";
@@ -508,58 +508,55 @@ function saveAsFolder() {
   if (last && own.some((d) => samePath(d.path, last))) return last;
   return own.length ? own[0].path : "";
 }
+// the question folders as a tree (tree.js, as on the Tests page): a folder per root, its
+// subfolders as branches, the .xml files as leaves; open/closed state kept by the tree
+let qtree = null;
 async function loadFolders() {
   let data;
   try { data = await (await fetch("/api/q/folders")).json(); } catch (e) { return; }
   folderList = data.folders;
-  const box = $("folders"); box.innerHTML = "";
   // short folder names (full path as tooltip): the last part, or the last two where that is ambiguous
   const parts = (p) => String(p).split(/[\\/]/).filter(Boolean);
   const short = (p, n) => parts(p).slice(-n).join("/");
   const shortName = (p) => data.folders.filter((x) => short(x.path, 1) === short(p, 1)).length > 1 ? short(p, 2) : short(p, 1);
-  const openFolders = stored(QSTORE_KEY).openFolders;   // undefined: all folders open except the inbox
-  for (const d of data.folders) {
-    const det = document.createElement("details");
-    det.className = "folder" + (d.path === currentFolder ? " cur" : "");
-    det.open = openFolders ? openFolders.includes(d.path) : d.source !== "inbox";
-    const label = d.source === "inbox" ? "workbench inbox (copies of dropped files)" : shortName(d.path);
-    det.innerHTML = `<summary title="${esc(d.path)}">${esc(label)} <span class="src">${d.source === "config" ? "(config)" : ""}${d.exists ? "" : " - not found"}</span></summary>`;
-    det.addEventListener("toggle", () => {
-      const list = new Set(stored(QSTORE_KEY).openFolders || [...document.querySelectorAll(".folder[open] > summary")].map((x) => x.title));
-      if (det.open) list.add(d.path); else list.delete(d.path);
-      store(QSTORE_KEY, { openFolders: [...list] });
-      if (det.open) setFolder(d.path);
-    });
-    const ul = document.createElement("ul"); ul.className = "qlist files";
-    let lastSub = "";
-    for (const f of d.files) {
-      // files in subfolders (e.g. split by category): the subfolder once as a heading, files indented
-      const cut = f.lastIndexOf("/"), sub = cut < 0 ? "" : f.slice(0, cut);
-      if (sub && sub !== lastSub) {
-        const h = document.createElement("li"); h.className = "subdir"; h.textContent = sub + "/"; h.title = d.path + "/" + sub;
-        ul.appendChild(h);
+  const roots = data.folders.map((d) => {
+    const root = { id: "q:" + d.path, label: d.source === "inbox" ? "workbench inbox (copies of dropped files)" : shortName(d.path),
+      hint: (d.source === "config" ? "(config)" : "") + (d.exists ? "" : " - not found"), title: d.path,
+      open: d.source !== "inbox", cls: samePath(d.path, currentFolder || "") ? "cur" : "",
+      onClick: () => setFolder(d.path), children: [],
+      tools: [{ label: "New file", onClick: () => newFile(d.path) }].concat(d.source === "added"
+        ? [{ label: "Remove", title: "remove from this list (the folder stays on disk)",
+             onClick: async () => { await postJSON("/api/q/folders", { remove: d.path }); loadFolders(); } }] : []) };
+    const branch = (sub) => {          // the node of a subfolder ("a/b"), created on demand
+      let node = root, acc = "";
+      for (const part of sub.split("/")) {
+        acc += (acc ? "/" : "") + part;
+        let c = node.children.find((x) => x.children && x.sub === acc);
+        if (!c) {
+          c = { id: "q:" + d.path + "/" + acc + "/", label: part + "/", title: d.path + "/" + acc, sub: acc, open: true,
+                onClick: () => setFolder(d.path), children: [] };
+          node.children.push(c);
+        }
+        node = c;
       }
-      lastSub = sub;
-      const li = document.createElement("li");
-      li.textContent = f.slice(cut + 1);
-      if (sub) li.classList.add("insub");
-      li.title = d.path + "/" + f;
-      const full = d.path + "/" + f;
-      if (file && samePath(file.path, full)) li.classList.add("sel");
-      li.addEventListener("click", () => { setFolder(d.path); openFile(full); });
-      ul.appendChild(li);
+      return node;
+    };
+    for (const f of d.files) {
+      const cut = f.lastIndexOf("/"), full = d.path + "/" + f;
+      (cut < 0 ? root : branch(f.slice(0, cut))).children.push({ id: "f:" + full, label: f.slice(cut + 1), title: full,
+        onClick: () => { setFolder(d.path); openFile(full); } });
     }
-    if (!d.files.length) ul.innerHTML = '<li class="other">no .xml files</li>';
-    det.appendChild(ul);
-    const tools = document.createElement("div"); tools.className = "tools";
-    tools.innerHTML = '<button class="small" data-a="newfile">New file</button>' +
-      (d.source === "added" ? '<button class="small" data-a="remove" title="remove from this list (the folder stays on disk)">Remove</button>' : "");
-    tools.querySelector('[data-a="newfile"]').addEventListener("click", () => newFile(d.path));
-    const rm = tools.querySelector('[data-a="remove"]');
-    if (rm) rm.addEventListener("click", async () => { await postJSON("/api/q/folders", { remove: d.path }); loadFolders(); });
-    det.appendChild(tools);
-    box.appendChild(det);
+    if (!d.files.length) root.children.push({ id: "q:" + d.path + "#none", label: "no .xml files" });
+    return root;
+  });
+  if (!qtree) {
+    qtree = MeclibTree.create($("folders"), { storeKey: "meclib-questions-tree" });
+    $("folderFilter").addEventListener("input", () => qtree.filter($("folderFilter").value));
   }
+  qtree.render(roots);
+  // the open file marked (paths compared as on Windows: either slash, any case)
+  if (file) for (const d of data.folders) for (const f of d.files)
+    if (samePath(file.path, d.path + "/" + f)) qtree.select("f:" + d.path + "/" + f, true);
   const rec = $("recent"); rec.innerHTML = "";
   for (const r of data.recent.slice(0, 10)) {
     const li = document.createElement("li");
@@ -574,7 +571,10 @@ function samePath(a, b) { return String(a).replace(/\\/g, "/").toLowerCase() ===
 function setFolder(path, quiet) {
   currentFolder = path;
   $("dropTarget").textContent = "copied into " + path;
-  if (!quiet) for (const det of document.querySelectorAll(".folder")) det.classList.toggle("cur", det.querySelector("summary").title === path);
+  if (!quiet) for (const sum of document.querySelectorAll("#folders details.troot")) {
+    const t = sum.querySelector("summary").title;
+    sum.classList.toggle("cur", samePath(t, path));
+  }
 }
 
 // errors and notes of the Files section are shown there (the Messages column is about the question)
@@ -2242,22 +2242,19 @@ async function pickFolder(title, initial) {
 }
 async function addFolder(p) {
   const clean = p.trim().replace(/^["']|["']$/g, "");
-  const before = [...document.querySelectorAll(".folder > summary")].map((x) => x.title);
+  const before = (folderList || []).map((d) => d.path);
   try {
     const r = await postJSON("/api/q/folders", { add: clean });
     const added = r.folders.find((d) => samePath(d.path, clean)) || r.folders.find((d) => !before.some((b) => samePath(b, d.path)));
     $("newFolder").value = "";
     if (!added) { fileMsg("Folder added: " + clean, "info"); loadFolders(); return; }
     const known = before.some((b) => samePath(b, added.path));
-    // show the folder opened and highlighted
-    const open = new Set(stored(QSTORE_KEY).openFolders || before);
-    open.add(added.path); store(QSTORE_KEY, { openFolders: [...open] });
+    // show the folder highlighted
     setFolder(added.path);
     await loadFolders();
     fileMsg((known ? "Already in the list: " : "Folder added: ") + added.path +
       (added.files.length ? "" : "\nIt has no .xml files yet - \"New file\" below the folder creates one with a first question."), "info");
-    const det = [...document.querySelectorAll(".folder")].find((d) => samePath(d.querySelector("summary").title, added.path));
-    if (det) det.scrollIntoView({ block: "nearest" });
+    if (qtree) qtree.reveal("q:" + added.path);
   } catch (e) { fileMsg(e.message.replace(/^ValueError: /, "")); }
 }
 $("addFolder").addEventListener("click", async () => {

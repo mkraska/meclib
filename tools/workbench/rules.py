@@ -867,10 +867,25 @@ def r_matrix_inputs(Q_):
 # image; the fix removes them (all <file> elements of that name in the question).
 def r_unused_files(Q_):
     import urllib.parse
-    used = set()
+    # where each file is stored and which texts show which files: field names as in Moodle's form
+    parent = {c: p for p in Q_.el.iter() for c in p}
+
+    nice = {"questiontext": "the question text", "generalfeedback": "the general feedback",
+            "specificfeedback": "the specific feedback", "questionnote": "the question note",
+            "truefeedback": "a PRT's feedback", "falsefeedback": "a PRT's feedback",
+            "prtcorrect": "the standard feedback", "prtpartiallycorrect": "the standard feedback",
+            "prtincorrect": "the standard feedback"}
+
+    def field(el):
+        while el is not None and el is not Q_.el:
+            if el.tag in nice:
+                return nice[el.tag]
+            el = parent.get(el)
+        return "the question"
+    used = {}
     for t in Q_.el.iter("text"):
         for m in re.finditer(r"@@PLUGINFILE@@/([^\"'()\s<>]+)", t.text or ""):
-            used.add(urllib.parse.unquote(m.group(1)))
+            used.setdefault(urllib.parse.unquote(m.group(1)), set()).add(field(t))
     files = {}
     for f in Q_.el.iter("file"):
         name = f.get("name") or ""
@@ -882,13 +897,21 @@ def r_unused_files(Q_):
         ext = name.rsplit(".", 1)[-1].lower()
         mime = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "gif": "image/gif",
                 "svg": "image/svg+xml", "webp": "image/webp"}.get(ext)
+        stored = sorted({field(parent.get(e)) for e in els})
+        # files of the same kind that the texts do show: probably the newer version
+        others = sorted(u for u in used if u.rsplit(".", 1)[-1].lower() == ext)
+        shown = ""
+        if others:
+            shown = " " + "; ".join("%s shows %s" % (" and ".join(sorted(used[u])), u) for u in others)
+            shown = shown[:2].upper() + shown[2:] + " - probably a newer version of it."
 
         def fix(q, name=name):
             return qfile._remove_block(q, r'<file name="%s"[^>]*>.*?</file>' % re.escape(name))
         f = F("files.unused", name, "recommended", "Unused embedded file",
-              "%s (%d kB%s) is stored in the question but no text shows it - probably left over from an earlier "
-              "version. Remove it." % (name, len(data) * 3 // 4 // 1024,
-                                       ", %d copies" % len(els) if len(els) > 1 else ""), fix)
+              "%s (%d kB%s) is stored in %s, but no text shows it - left over from an earlier version "
+              "(e.g. an image replaced in Moodle's editor, which keeps the old file).%s Remove it." % (
+                  name, len(data) * 3 // 4 // 1024, ", %d copies" % len(els) if len(els) > 1 else "",
+                  " and ".join(stored), shown), fix)
         f["image"] = "data:%s;base64,%s" % (mime, data) if mime and data else ""
         out.append(f)
     return out

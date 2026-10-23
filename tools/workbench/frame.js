@@ -380,6 +380,7 @@ ${editorAddon(edit)}
     }
     sel.value = config.maxima_current || "";
     sel.title = "Maxima of the question evaluation and the tests: " + (config.maxima_current || "not found");
+    sel.dataset.ownTitle = "1";
     sel.addEventListener("change", async () => {
       const resp = await fetch("/api/maxima", { method: "POST", headers: { "Content-Type": "application/json", "X-Workbench": "1" },
         body: JSON.stringify({ path: sel.value }) });
@@ -494,6 +495,34 @@ ${editorAddon(edit)}
     });
     document.querySelector("header").after(panel);
   }
+  // the options of the header selects shortened to their version numbers (as the STACK select),
+  // with a short tag where two would read the same; the full label is the tooltip of the option
+  // and of the select
+  function shortLabel(label) {
+    const t = String(label);
+    let m = t.match(/^local working copy\s*\(([^)]*)\)/i);
+    if (m) return ["local", ""];
+    m = t.match(/^GitHub\s+\S+\s*\(([^)]*)\)/i);
+    if (m) return [m[1], ""];
+    if (/\blatest\b/i.test(t)) return ["latest", /CDN/i.test(t) ? "CDN" : ""];
+    m = t.match(/JSXGraph\s+(\d+(?:\.\d+)+)/i) || t.match(/(\d+(?:\.\d+)+)/);
+    const tag = /bundled/i.test(t) ? "STACK" : /local/i.test(t) ? "local" : /CDN/i.test(t) ? "CDN" : "";
+    return m ? [m[1], tag] : [t, ""];
+  }
+  function compactSelect(sel) {
+    if (!sel || sel.dataset.compact) return;
+    sel.dataset.compact = "1";
+    const opts = [...sel.options];
+    const parts = opts.map((o) => { o.title = o.title || o.textContent; return shortLabel(o.textContent); });
+    opts.forEach((o, i) => {
+      const [v, tag] = parts[i];
+      const dup = parts.filter((p) => p[0] === v).length > 1;
+      o.textContent = dup && tag ? v + " " + tag : v;
+    });
+    const tip = () => { const o = sel.selectedOptions[0]; if (o && !sel.dataset.ownTitle) sel.title = o.title; };
+    tip();
+    sel.addEventListener("change", tip);
+  }
   // the header of a page: logos, STACK and Maxima selects (if the page has them), marks
   function initHeader(config, { onStack, onMaxima } = {}) {
     headerLogos(config);
@@ -502,6 +531,7 @@ ${editorAddon(edit)}
     if (mx) initMaximaSelect(mx, config, onMaxima);
     if (jsx) jsx.addEventListener("change", () => markProfile(config));
     markProfile(config);
+    for (const id of ["src", "jsx", "mathjax", "maxima"]) compactSelect(document.getElementById(id));
   }
 
   return { BLOCK_PRESETS, normalizeInit, parseInit, formatObjects, parseBlock, resolveUrl,

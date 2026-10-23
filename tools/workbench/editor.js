@@ -188,6 +188,27 @@
     document.dispatchEvent(new CustomEvent("meclib-editor-settings", { detail: Object.assign({}, settings) }));
   }
 
+  // the offline Maxima tests by function (GET /api/mtests, once): name -> [{file, n}], for the
+  // "tests" link of the help box, which opens the Tests page at the first case of the function
+  let testsByFunction = null;
+  function loadTests() {
+    if (testsByFunction) return;
+    testsByFunction = new Map();
+    fetch("/api/mtests").then((r) => r.json()).then((d) => {
+      for (const f of d.files || [])
+        for (const c of f.cases || [])
+          if (c.function) {
+            if (!testsByFunction.has(c.function)) testsByFunction.set(c.function, []);
+            testsByFunction.get(c.function).push({ file: f.file, n: c.n });
+          }
+    }).catch(() => {});
+  }
+  function openTests(name) {
+    const t = (testsByFunction && testsByFunction.get(name)) || [];
+    if (!t.length) return;
+    const win = window.open("tests.html#mtest=" + encodeURIComponent(t[0].file) + "&case=" + t[0].n, "meclib-tests");
+    if (win) win.focus();
+  }
   function openHelp(url) {
     if (!url) return;
     const w = 720, h = Math.min(860, screen.availHeight - 80);
@@ -287,10 +308,13 @@
       (ad ? `<div class="hb-arg"><b>${escHTML(a)}</b>: ${codeSpans(ad)}</div>` : "") +
       (e.text ? `<div class="hb-text">${codeSpans(e.text)}</div>` : "") +
       `<div class="hb-foot">${e.url ? `<a href="#" data-url="${escHTML(e.url)}">${src} ↗</a> <span>F1</span>` : ""}` +
+      (testsByFunction && testsByFunction.has(e.name) ? `<a href="#" data-tests="${escHTML(e.name)}" title="the offline Maxima tests of ${escHTML(e.name)}: examples of what it returns (Tests page)">` +
+        `tests (${testsByFunction.get(e.name).length}) ↗</a>` : "") +
       `<span class="hb-keys" title="drag the box to move it out of the way; double click: it follows the cursor again; F2 in the editor: box off / on">` +
       `${boxPin ? "double click: follow cursor" : "drag: move"} · F2: off</span><span class="hb-src">${escHTML(e.source || "")}</span></div>`;
   }
   function updateBox(cm) {
+    loadTests();
     if (!settings.helpBox || cm.state.completionActive) { hideBox(); return; }
     const ctx = contextAt(cm);
     if (!ctx) { hideBox(); return; }
@@ -303,6 +327,8 @@
         ev.preventDefault();                   // the editor keeps the focus
         const a = ev.target.closest("a[data-url]");
         if (a) { openHelp(a.dataset.url); return; }
+        const tl = ev.target.closest("a[data-tests]");
+        if (tl) { openTests(tl.dataset.tests); return; }
         // drag the box out of the way
         const x0 = ev.pageX, y0 = ev.pageY, l0 = box.offsetLeft, t0 = box.offsetTop;
         const move = (e) => { box.style.left = (l0 + e.pageX - x0) + "px"; box.style.top = (t0 + e.pageY - y0) + "px"; };
