@@ -1,13 +1,16 @@
 /* generated from Maxima/fb_value.mac by tools/build_dist.py - do not edit */
 fb_value_version: "2026 10 11";
+fb_lang(%_de, %_en) := if fb_lang_tags = true
+then sconcat("[[lang code='de']]", %_de, "[[/lang]][[lang code='en,other']]", %_en, "[[/lang]]")
+else sconcat(if is_lang("de") then %_de else "", if is_lang("en") or is_lang("other") then %_en else "");
 deg2rad(expr):= subst(deg=%pi/180, expr);
 fb_strip_list(_list_of_things):= castext("[[define _first='true'/]][[foreach _thing='_list_of_things']][[if test='not _first']], [[else]][[define _first='false'/]][[/if]]{@_thing@}[[/foreach]]");
 fb_vars(%_sans,%_tans, [%_opt] ) := block(
 [%_vars, %_label, %_tol, %_tansvar,%_sansvar,%_extras, %_missing, simp, %_txt, %_L,
-str_unexpected_variable: castext("[[lang code='de']]&nbsp;Unerwartete Variable [[/lang]][[lang code='en,other']]&nbsp;Unexpected variable [[/lang]]"),
-str_missing_variable: castext("[[lang code='de']]&nbsp;Fehlende Variable [[/lang]][[lang code='en,other']]&nbsp;Missing variable [[/lang]]"),
-str_check_term: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie den Term mit [[/lang]][[lang code='en,other']]&nbsp;Check the term with [[/lang]]"),
-str_check_terms: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie die Terme mit [[/lang]][[lang code='en,other']]&nbsp;Check the terms with [[/lang]]")
+str_unexpected_variable: fb_lang("&nbsp;Unerwartete Variable ", "&nbsp;Unexpected variable "),
+str_missing_variable: fb_lang("&nbsp;Fehlende Variable ", "&nbsp;Missing variable "),
+str_check_term: fb_lang("&nbsp;Pr&uuml;fen Sie den Term mit ", "&nbsp;Check the term with "),
+str_check_terms: fb_lang("&nbsp;Pr&uuml;fen Sie die Terme mit ", "&nbsp;Check the terms with ")
 ],
 simp: true,
 if length(%_opt)>0 then %_vars: %_opt[1] else %_vars: [],
@@ -49,17 +52,17 @@ if length(%_opt)=2 then %_res: fb_vars(%_sans,%_tans, %_opt[1], %_opt[2] ),
 if length(%_opt)=3 then %_res: fb_vars(%_sans,%_tans, %_opt[1], %_opt[2], %_opt[3] ),
 stringp(%_res));
 fb_unit(%_sans, %_tans, %_tol) := block([%_snum, %_tnum, %_sunit, %_tunit, %_oom, %_mnt, %_d, %_d0, simp, debug1,
-str_unexpected_base_unit: castext("[[lang code='de']]&nbsp;Unerwartete Basiseinheit [[/lang]][[lang code='en,other']]&nbsp;Unexpected base unit [[/lang]]"),
-str_not_dimensionless: castext("[[lang code='de']]&nbsp;Der Wert sollte nicht dimensionslos sein.[[/lang]][[lang code='en,other']]&nbsp;The value should not be dimensionless.[[/lang]]"),
-str_deviation: castext("[[lang code='de']]&nbsp;Abweichung: [[/lang]][[lang code='en,other']]&nbsp;Deviation: [[/lang]]"),
-str_value_too_large: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.[[/lang]][[lang code='en,other']]&nbsp;The absolute value is too large.[[/lang]]"),
-str_value_too_small: castext("[[lang code='de']]&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.[[/lang]][[lang code='en,other']]&nbsp;The absolute value is too small.[[/lang]]"),
-str_sign: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie das Vorzeichen.[[/lang]][[lang code='en,other']]&nbsp;Check the sign.[[/lang]]"),
-str_mantissa: castext("[[lang code='de']]&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. [[/lang]][[lang code='en,other']]&nbsp;The mantissa is correct but the value is off by at least one order of magnitude. Check your unit conversion.[[/lang]]"),
-str_small_1: castext("[[lang code='de']]&nbsp;Der Betrag ist um mindestens [[/lang]][[lang code='en,other']]&nbsp;The value is too small by at least [[/lang]]"),
-str_small_2: castext("[[lang code='de']]% zu klein.[[/lang]][[lang code='en,other']]%.[[/lang]]"),
-str_large_1: castext("[[lang code='de']]&nbsp;Der Betrag ist um mindestens [[/lang]][[lang code='en,other']]&nbsp;The value is too large by at least [[/lang]]"),
-str_large_2: castext("[[lang code='de']]% zu gro&szlig;.[[/lang]][[lang code='en,other']]%.[[/lang]]")
+str_unexpected_base_unit: fb_lang("&nbsp;Unerwartete Basiseinheit ", "&nbsp;Unexpected base unit "),
+str_not_dimensionless: fb_lang("&nbsp;Der Wert sollte nicht dimensionslos sein.", "&nbsp;The value should not be dimensionless."),
+str_deviation: fb_lang("&nbsp;Abweichung: ", "&nbsp;Deviation: "),
+str_value_too_large: fb_lang("&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu gro&szlig;.", "&nbsp;The absolute value is too large."),
+str_value_too_small: fb_lang("&nbsp;Der Wert ist betragsm&auml;&szlig;ig zu klein.", "&nbsp;The absolute value is too small."),
+str_sign: fb_lang("&nbsp;Pr&uuml;fen Sie das Vorzeichen.", "&nbsp;Check the sign."),
+str_mantissa: fb_lang("&nbsp;Die Mantisse stimmt, die Zehnerpotenz weicht aber um mindestens eine Gr&ouml;&szlig;enordnung ab. Pr&uuml;fen Sie Ihre Einheitenumrechnung. ", "&nbsp;The mantissa is correct but the value is off by at least one order of magnitude. Check your unit conversion."),
+str_small_1: fb_lang("&nbsp;Der Betrag ist um mindestens ", "&nbsp;The value is too small by at least "),
+str_small_2: fb_lang("% zu klein.", "%."),
+str_large_1: fb_lang("&nbsp;Der Betrag ist um mindestens ", "&nbsp;The value is too large by at least "),
+str_large_2: fb_lang("% zu gro&szlig;.", "%.")
 ],
 simp:true,
 if debug then debug1: "tnum=0 and snum=0 (because debug=true. Would be empty otherwise.)" else debug1:"",
@@ -112,8 +115,8 @@ return(sconcat(str_large_1, %_d , str_large_2))
 fb_unitOK(%_sans, %_tans, %_tol):=stringp(fb_unit(%_sans, %_tans, %_tol));
 fb_coeffs(%_sans, %_tans, %_tol, %_description):=block(
 [%_txt: %_description, %_vcheck, %_vars, %_v, %_cs, %_ct, %_cres, simp: true,
-str_coeff_at: castext("[[lang code='de']]&nbsp;Koeffizient bei [[/lang]][[lang code='en,other']]&nbsp;Coefficient of [[/lang]]"),
-str_equation_ok: castext("[[lang code='de']]&nbsp;Die Gleichung stimmt.[[/lang]][[lang code='en,other']]&nbsp;The equation is correct.[[/lang]]")
+str_coeff_at: fb_lang("&nbsp;Koeffizient bei ", "&nbsp;Coefficient of "),
+str_equation_ok: fb_lang("&nbsp;Die Gleichung stimmt.", "&nbsp;The equation is correct.")
 ],
 %_vcheck: fb_vars(%_sans, %_tans, [], "", %_tol),
 if %_vcheck # "" then return([castext_concat(%_txt, %_vcheck), false]),
@@ -249,8 +252,8 @@ fb_dimension(%_sans, %_tans) := block([simp: true, %_tab: fb_dims_table(), %_ds,
 if %_tab = [] then return(""),
 %_dt: fb_dims_of(float(%_tans), %_tab), %_ds: fb_dims_of(float(%_sans), %_tab),
 if fb_dims_bad(%_dt) or %_ds = '%_dunk or is(%_ds = %_dt) then return(""),
-if %_ds = '%_dsum then return(castext("[[lang code='de']]&nbsp;In Ihrem Ergebnis werden Gr&ouml;&szlig;en verschiedener Einheiten addiert.[[/lang]][[lang code='en,other']]&nbsp;Your result adds quantities of different units.[[/lang]]")),
-if %_ds = '%_dfun then return(castext("[[lang code='de']]&nbsp;In Ihrem Ergebnis hat eine Funktion (z.&nbsp;B. sin, exp, ln) oder ein Exponent ein Argument mit Einheit.[[/lang]][[lang code='en,other']]&nbsp;In your result, a function (e.g. sin, exp, ln) or an exponent has an argument with a unit.[[/lang]]")),
+if %_ds = '%_dsum then return(fb_lang("&nbsp;In Ihrem Ergebnis werden Gr&ouml;&szlig;en verschiedener Einheiten addiert.", "&nbsp;Your result adds quantities of different units.")),
+if %_ds = '%_dfun then return(fb_lang("&nbsp;In Ihrem Ergebnis hat eine Funktion (z.&nbsp;B. sin, exp, ln) oder ein Exponent ein Argument mit Einheit.", "&nbsp;In your result, a function (e.g. sin, exp, ln) or an exponent has an argument with a unit.")),
 %_du: fb_dims_show(%_ds), %_tu: fb_dims_show(%_dt),
 castext("[[lang code='de']]&nbsp;Ihr Ergebnis hat die Einheit {@%_du@} statt {@%_tu@}.[[/lang]][[lang code='en,other']]&nbsp;Your result has the unit {@%_du@} instead of {@%_tu@}.[[/lang]]"));
 fb_floats_funs() := [sin, cos, tan, cot, sec, csc, asin, acos, atan, acot, sinh, cosh, tanh, coth, asinh, acosh, atanh, log];
@@ -281,19 +284,19 @@ fb_floats(%_sans, %_tans, %_tol) := fb_floats_main(%_sans, %_tans, %_tol, false)
 fb_floats_main(%_sans, %_tans, %_tol, %_inner) := block([simp: true, %_s, %_t, %_sT, %_tT, %_used, %_pairs: [], %_us, %_ut: [],
 %_bad: [], %_txt: "", %_r, %_i, %_j, %_p, %_disp, %_tab, %_dt, %_ds, %_du, %_tu, %_v, %_dimtxt: "", %_vt: "", %_nd: [],
 %_s0, %_sc, %_tc, %_tu2, %_argtxt: "", %_back: [], %_lone: [], %_fcalls: [], %_fraw: [], %_others, fb_floats_nums, fb_floats_rnew, fb_floats_rk,
-str_value: castext("[[lang code='de']]&nbsp;Zahlenwert [[/lang]][[lang code='en,other']]&nbsp;Number [[/lang]]"),
-str_marked: castext("[[lang code='de']]&nbsp;Markierter Zahlenwert [[/lang]][[lang code='en,other']]&nbsp;Marked number [[/lang]]"),
-str_structure: castext("[[lang code='de']]&nbsp;Tut mir leid, leider habe ich keine konkreteren Hinweise.[[/lang]][[lang code='en,other']]&nbsp;Sorry, I have no more specific hints.[[/lang]]"),
-str_term: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie den markierten Term.[[/lang]][[lang code='en,other']]&nbsp;Check the marked term.[[/lang]]"),
-str_terms: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie die markierten Terme.[[/lang]][[lang code='en,other']]&nbsp;Check the marked terms.[[/lang]]"),
-str_missing: castext("[[lang code='de']]&nbsp;Ihr Ergebnis ist bis auf einen fehlenden Term richtig.[[/lang]][[lang code='en,other']]&nbsp;Your result is right except for a missing term.[[/lang]]"),
-str_missings: castext("[[lang code='de']]&nbsp;Ihr Ergebnis ist bis auf fehlende Terme richtig.[[/lang]][[lang code='en,other']]&nbsp;Your result is right except for missing terms.[[/lang]]"),
-str_also: castext("[[lang code='de']]&nbsp;Au&szlig;erdem fehlt ein Term.[[/lang]][[lang code='en,other']]&nbsp;Also, a term is missing.[[/lang]]"),
-str_alsos: castext("[[lang code='de']]&nbsp;Au&szlig;erdem fehlen Terme.[[/lang]][[lang code='en,other']]&nbsp;Also, terms are missing.[[/lang]]"),
-str_dsum: castext("[[lang code='de']]&nbsp;Im markierten Term werden Gr&ouml;&szlig;en verschiedener Einheiten addiert.[[/lang]][[lang code='en,other']]&nbsp;The marked term adds quantities of different units.[[/lang]]"),
-str_dfun: castext("[[lang code='de']]&nbsp;Im markierten Term hat eine Funktion (z.&nbsp;B. sin, exp, ln) oder ein Exponent ein Argument mit Einheit.[[/lang]][[lang code='en,other']]&nbsp;In the marked term, a function (e.g. sin, exp, ln) or an exponent has an argument with a unit.[[/lang]]"),
-str_root: castext("[[lang code='de']]&nbsp;Unter der Wurzel:[[/lang]][[lang code='en,other']]&nbsp;Under the root:[[/lang]]"),
-str_fun: castext("[[lang code='de']]&nbsp;Pr&uuml;fen Sie die Funktion.[[/lang]][[lang code='en,other']]&nbsp;Check the function.[[/lang]]")
+str_value: fb_lang("&nbsp;Zahlenwert ", "&nbsp;Number "),
+str_marked: fb_lang("&nbsp;Markierter Zahlenwert ", "&nbsp;Marked number "),
+str_structure: fb_lang("&nbsp;Tut mir leid, leider habe ich keine konkreteren Hinweise.", "&nbsp;Sorry, I have no more specific hints."),
+str_term: fb_lang("&nbsp;Pr&uuml;fen Sie den markierten Term.", "&nbsp;Check the marked term."),
+str_terms: fb_lang("&nbsp;Pr&uuml;fen Sie die markierten Terme.", "&nbsp;Check the marked terms."),
+str_missing: fb_lang("&nbsp;Ihr Ergebnis ist bis auf einen fehlenden Term richtig.", "&nbsp;Your result is right except for a missing term."),
+str_missings: fb_lang("&nbsp;Ihr Ergebnis ist bis auf fehlende Terme richtig.", "&nbsp;Your result is right except for missing terms."),
+str_also: fb_lang("&nbsp;Au&szlig;erdem fehlt ein Term.", "&nbsp;Also, a term is missing."),
+str_alsos: fb_lang("&nbsp;Au&szlig;erdem fehlen Terme.", "&nbsp;Also, terms are missing."),
+str_dsum: fb_lang("&nbsp;Im markierten Term werden Gr&ouml;&szlig;en verschiedener Einheiten addiert.", "&nbsp;The marked term adds quantities of different units."),
+str_dfun: fb_lang("&nbsp;Im markierten Term hat eine Funktion (z.&nbsp;B. sin, exp, ln) oder ein Exponent ein Argument mit Einheit.", "&nbsp;In the marked term, a function (e.g. sin, exp, ln) or an exponent has an argument with a unit."),
+str_root: fb_lang("&nbsp;Unter der Wurzel:", "&nbsp;Under the root:"),
+str_fun: fb_lang("&nbsp;Pr&uuml;fen Sie die Funktion.", "&nbsp;Check the function.")
 ],
 %_s: fb_floats_norm(%_sans), %_t: fb_floats_norm(%_tans), %_s0: %_s,
 %_sc: fb_floats_calls(%_s), %_tc: fb_floats_calls(%_t),
@@ -403,8 +406,8 @@ return(castext("<br>Element {#%_k#}:"))
 castext("<br>[[lang code='de']]Zeile {#%_i#}, Spalte {#%_j#}:[[/lang]][[lang code='en,other']]Row {#%_i#}, column {#%_j#}:[[/lang]]")
 );
 fb_matrix_shape(%_sans, %_tans) := block(
-[str_not_matrix: castext("<br>[[lang code='de']]Die Eingabe ist keine Matrix.[[/lang]][[lang code='en,other']]The input is not a matrix.[[/lang]]"),
-str_size: castext("<br>[[lang code='de']]Die Matrix hat nicht die erwartete Gr&ouml;&szlig;e.[[/lang]][[lang code='en,other']]The matrix does not have the expected size.[[/lang]]")],
+[str_not_matrix: sconcat("<br>", fb_lang("Die Eingabe ist keine Matrix.", "The input is not a matrix.")),
+str_size: sconcat("<br>", fb_lang("Die Matrix hat nicht die erwartete Gr&ouml;&szlig;e.", "The matrix does not have the expected size."))],
 if not matrixp(%_sans) then return(str_not_matrix),
 if matrix_size(%_sans) # matrix_size(%_tans) then return(str_size),
 ""
@@ -455,6 +458,6 @@ return(castext("[[lang code='de']] Die Hypotenuse ({@%_h@}) muss kleiner als die
 fb_HAG_round(%_x) := if floatnump(%_x) then fb_sigfig(%_x, 3)
 else if atom(%_x) then %_x
 else block([inflag: true], apply(op(%_x), map(fb_HAG_round, args(%_x))));
-meclib_h_number: castext("[[lang code='de']]Zahl[[/lang]][[lang code='en,other']]number[[/lang]]");
-meclib_h_unit: castext("[[lang code='de']]Zahl mit Einheit[[/lang]][[lang code='en,other']]number with unit[[/lang]]");
-meclib_h_alg: castext("[[lang code='de']]Ausdruck[[/lang]][[lang code='en,other']]expression[[/lang]]");
+meclib_h_number: fb_lang("Zahl", "number");
+meclib_h_unit: fb_lang("Zahl mit Einheit", "number with unit");
+meclib_h_alg: fb_lang("Ausdruck", "expression");

@@ -89,6 +89,20 @@
   .qlist li.other { color: var(--muted); cursor: default; font-style: italic; }
   .qlist li .cat { display: block; color: var(--muted); font-size: 11px; font-weight: normal; }
   .files li { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+  /* question tests: one button per test case below TAns/Check, coloured by the last run */
+  .qtests { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+  .qtests .qtl { width: 100%; font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .qtests button { min-width: 24px; padding: 1px 5px; font-size: 12px; }
+  .qtests button.qpass { background: #dcefdc; color: var(--ok); border-color: #9cc99c; }
+  .qtests button.qfail { background: #f8dcda; color: var(--err); border-color: #e3a19b; }
+  .qtests button.qcur { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .qtests button.spass { box-shadow: inset 0 -3px 0 #3a9a3a; }      /* result in STACK itself */
+  .qtests button.sfail { box-shadow: inset 0 -3px 0 #c0392b; }
+  .qtests .qtmsg.info { color: var(--muted); }
+  .qtests .qtform { width: 100%; display: flex; flex-direction: column; gap: 3px; margin-top: 3px; }
+  .qtests .qtform input { width: 100%; font-size: 12px; }
+  .qtests .qtmsg { width: 100%; font-size: 11px; white-space: pre-wrap; }
+  .qtests .qtmsg.bad { color: var(--err); }
   /* the folder tree (tree.js): folder names as written, the folder files are dropped into marked */
   #folders details.troot > summary { text-transform: none; letter-spacing: 0; word-break: break-all; }
   #folders details.troot > summary .tlabel, #folders details.tbranch > summary .tlabel { color: var(--accent); }
@@ -364,6 +378,7 @@
     <button id="evaluate" class="primary" title="Ctrl+Enter: save, evaluate the question and update the preview">Update</button>
     <button id="fillBtn" class="primary" title="Model answer: fill in the model answers (the graphic starts from the model answer of its objects input)">TAns</button>
     <button id="checkBtn" class="primary" title="evaluate the PRTs with the current answers (Alt+Enter)">Check</button>
+    <div id="qtestBar" class="qtests" title="question tests (STACK's &lt;qtest&gt;, exported to Moodle with the question)"></div>
     <span class="pair" title="language of the [[lang]] blocks"><button id="lang-de">de</button><button id="lang-en">en</button></span>
     <span class="pair" title="decimal separator (question option, saved in the file)"><button id="dec-point" class="dec">0<b>.</b>5</button><button id="dec-comma" class="dec">0<b>,</b>5</button></span>
     <button id="simpToggle" title="simplify (question option, saved in the file)">simp</button>
@@ -643,6 +658,10 @@ async function newFile(folder) {
 
 // ---------------------------------------------------------------- question selection and editor
 async function selectQuestion(index) {
+  for (const k of Object.keys(testResults)) delete testResults[k];     // the tests of another question
+  for (const k of Object.keys(stackResults)) delete stackResults[k];
+  stackSummary = "";
+  activeTest = null; testForm = null; testDeleteArmed = null;
   if (!(await flush())) return;
   if ($("inputDialog").open) $("inputDialog").close("");   // it belongs to the question it was opened for
   qindex = index; markSelected();
@@ -1792,6 +1811,263 @@ async function openSnippets() {
   $("snippetDialog").showModal();
 }
 
+// ---------------------------------------------------------------- question tests
+// STACK's question tests (<qtest>): inputs (CAS expressions, evaluated with the question variables
+// by the server: result.qtests[].values) and the expected score, penalty and answer note per PRT.
+// A test button fills the inputs with its values and checks (the fast check in Maxima); the
+// result is compared as STACK does (stack/questiontestresult.php).
+const testResults = {};       // testcase -> {pass, reasons}
+const stackResults = {};      // testcase -> {pass, reasons, seconds}: the same test graded by STACK itself
+let stackApi = null, stackRunning = false, stackSummary = "";   // GET /api/stackapi/status
+let activeTest = null, testForm = null, testDeleteArmed = null;   // testForm: null, "new" or a test case
+function answerText(inp, raw) {
+  if (raw == null) return "";
+  let v = String(raw);
+  if (inp.type === "string" || inp.type === "notes") { try { return JSON.parse(v); } catch (e) { return v; } }
+  if (MCQ_TYPES.includes(inp.type)) {
+    if (inp.type !== "checkbox") return v;
+    const m = /^\[(.*)\]$/s.exec(v.trim());
+    return m ? JSON.stringify(m[1].split(",").map((x) => x.trim()).filter(Boolean)) : v;
+  }
+  if (inp.type === "matrix") {
+    const mc = matrixModelCells({ tans_raw: v });
+    return mc ? JSON.stringify(mc.map((r) => r.map(studentSyntax))) : v;
+  }
+  return studentSyntax(v);
+}
+// STACK's test_answer_note(): the expected note may be a pattern "[a | b)": [ anchors the
+// first note, ) frees the last one, | lists notes that must appear in this order
+function testAnswerNote(expected, actual) {
+  let e = String(expected || "").trim();
+  if (e === "") return [false, ["expected answer note is empty (use NULL for a PRT that does not run)"]];
+  if (e === "()") return [true, []];
+  if (!actual.length) return e === "NULL" ? [true, []] : [false, ["got no result"]];
+  if (e === "NULL") return [false, ["expected no result, got " + actual[actual.length - 1]]];
+  const last = actual[actual.length - 1];
+  let anchorStart = false, anchorEnd = true;
+  if (e[0] === "[") { anchorStart = true; e = e.slice(1); }
+  if (e[0] === "(") e = e.slice(1);
+  if (e.endsWith("]")) e = e.slice(0, -1);
+  if (e.endsWith(")")) { anchorEnd = false; e = e.slice(0, -1); }
+  const notes = e.split("|").map((x) => x.trim());
+  const msgs = [];
+  if (anchorStart && notes[0] !== actual[0]) msgs.push(`first note ${actual[0]}, expected ${notes[0]}`);
+  if (anchorEnd && notes[notes.length - 1] !== last) msgs.push(`last note ${last}, expected ${notes[notes.length - 1]}`);
+  if (msgs.length) return [false, msgs];
+  let rest = actual.slice();
+  for (const n of notes) {
+    const k = rest.findIndex((a) => a.trim() === n);
+    if (k < 0) { msgs.push("missing note " + n); continue; }
+    rest = rest.slice(k + 1);
+  }
+  return [!msgs.length, msgs];
+}
+function compareTest(qt, chk) {
+  const reasons = [];
+  const num = (x) => (x === "" || x === null || x === undefined ? null : Math.round(parseFloat(x) * 10000) / 10000);
+  for (const [prt, exp] of Object.entries(qt.expected)) {
+    const r = (chk.prts || {})[prt] || { skipped: "not run" };
+    const notes = r.bail ? [prt + "-bail"] : r.skipped ? [] : String(r.notes || "").split(" | ").filter(Boolean);
+    const score = r.skipped ? null : num(r.score), pen = r.skipped ? null : num(r.penalty);
+    const es = num(exp.score);
+    if ((es === null) !== (score === null) || (es !== null && Math.abs(es - score) > 1e-6))
+      if (es !== -1) reasons.push(`${prt}: score ${score ?? "-"}, expected ${es ?? "-"}`);
+    const ep = exp.penalty === "" ? num(result.penalty) : num(exp.penalty);
+    if (exp.note !== "NULL" && exp.note !== prt + "-bail" && (pen === null || Math.abs(ep - pen) > 1e-6) && ep !== -1)
+      reasons.push(`${prt}: penalty ${pen ?? "-"}, expected ${ep}`);
+    const [ok, msgs] = testAnswerNote(exp.note, notes);
+    if (!ok) reasons.push(`${prt}: ` + msgs.join("; "));
+  }
+  return { pass: !reasons.length, reasons };
+}
+function renderTests() {
+  const bar = $("qtestBar");
+  if (!bar) return;
+  const tests = (result && result.qtests) || [];
+  bar.innerHTML = '<span class="qtl">Tests</span>';
+  for (const qt of tests) {
+    const b = document.createElement("button");
+    const sr = stackResults[qt.testcase];
+    b.className = "small" + (testResults[qt.testcase] ? (testResults[qt.testcase].pass ? " qpass" : " qfail") : "") +
+      (sr ? (sr.pass ? " spass" : " sfail") : "") +
+      (activeTest === qt.testcase ? " qcur" : "");
+    b.textContent = qt.testcase;
+    const r = testResults[qt.testcase];
+    b.title = (qt.description || "(no description)") + "\n" +
+      Object.entries(qt.inputs).map(([n, v]) => `${n} = ${v}`).join("\n") + "\nexpected: " +
+      Object.entries(qt.expected).map(([p, e]) => `${p}: ${e.note} (score ${e.score || "-"})`).join(", ") +
+      (r ? "\nfast check: " + (r.pass ? "passed" : "FAILED: " + r.reasons.join("; ")) : "") +
+      (sr ? "\nSTACK: " + (sr.pass ? "passed" : "FAILED: " + sr.reasons.join("; ")) + ` (${sr.seconds} s)` : "") + "\nclick: fill the inputs and check";
+    b.addEventListener("click", () => runTest(qt));
+    bar.appendChild(b);
+  }
+  const tool = (label, title, fn) => { const b = document.createElement("button"); b.className = "small"; b.textContent = label; b.title = title; b.addEventListener("click", fn); bar.appendChild(b); };
+  if (result && (result.inputs || []).length) tool("+", "new test case from the current answers and the result of their check", () => openTestForm(null));
+  if (tests.length) tool("▶", "run all tests (fast check in Maxima)", runAllTests);
+  if (tests.length) tool(stackRunning ? "STACK …" : "STACK ▶", stackApi && stackApi.built
+    ? `run all tests in STACK itself (STACK API in Docker: STACK ${(stackApi.settings || {}).release || ""}, Maxima ${(stackApi.settings || {}).maxima || ""}); ` +
+      "STACK compiles the question for every test, which takes seconds to a minute with large includes; the result shows as a line under each button"
+    : "STACK API not built yet - in tools/workbench: python stackapi.py build --maxima <the server's Maxima, e.g. 5.45.1> (Docker Desktop running), see README",
+    runTestsInStack);
+  if (activeTest !== null && tests.some((t) => t.testcase === activeTest)) {
+    tool("✎", `test ${activeTest}: replace its inputs and expected results by the current answers and their check, or change its description`, () => openTestForm(activeTest));
+    tool(testDeleteArmed === activeTest ? "✕?" : "✕", `delete test ${activeTest}` + (testDeleteArmed === activeTest ? " - click again to delete" : ""), () => deleteTest(activeTest));
+  }
+  const r = activeTest !== null && testResults[activeTest];
+  if (r && !r.pass) { const m = document.createElement("div"); m.className = "qtmsg bad"; m.textContent = `test ${activeTest} failed: ` + r.reasons.join("\n"); bar.appendChild(m); }
+  const sf = Object.entries(stackResults).filter(([tc, x]) => !x.pass && tests.some((t) => String(t.testcase) === tc));
+  if (stackSummary) { const m = document.createElement("div"); m.className = "qtmsg " + (sf.length ? "bad" : "info"); m.textContent = stackSummary +
+    (sf.length ? "\n" + sf.map(([tc, x]) => `test ${tc}: ` + x.reasons.join("; ")).join("\n") : ""); bar.appendChild(m); }
+  if (testForm !== null) bar.appendChild(testFormEl());
+}
+// a test's answers as the STACK API takes them: as typed (decimal separator of the question); a
+// choice input as the number of the chosen entry (checkbox: one key name_k per ticked entry), a
+// matrix input cell by cell (name_sub_r_c)
+function stackAnswers(qt) {
+  const out = {};
+  for (const inp of result.inputs || []) {
+    const v = qt.values && inp.name in qt.values ? answerText(inp, qt.values[inp.name]) : "";
+    if (MCQ_TYPES.includes(inp.type) && inp.choices) {
+      const vals = inp.choices.map((c) => c.value);
+      if (inp.type === "checkbox") {
+        let ticked = []; try { ticked = JSON.parse(v || "[]"); } catch (e) { /* none */ }
+        for (const t of ticked) { const k = vals.indexOf(t); if (k >= 0) out[inp.name + "_" + (k + 1)] = String(k + 1); }
+      } else { const k = vals.indexOf(v); out[inp.name] = k >= 0 ? String(k + 1) : ""; }
+    } else if (inp.type === "matrix") {
+      let rows = []; try { rows = JSON.parse(v || "[]"); } catch (e) { /* none */ }
+      rows.forEach((r, i) => r.forEach((c, j) => { out[`${inp.name}_sub_${i}_${j}`] = c; }));
+    } else out[inp.name] = v;
+  }
+  return out;
+}
+async function runTestsInStack() {
+  const tests = (result && result.qtests) || [];
+  if (!tests.length || stackRunning) return;
+  if (!(await flush())) return;
+  stackRunning = true; stackSummary = "STACK: starting the STACK API and grading " + tests.length + " test(s) ..."; renderTests();
+  const t0 = performance.now();
+  try {
+    const seed = parseInt($("seed").value, 10) || 1;
+    const r = await postJSON("/api/q/stackgrade", { path: file.path, index: qindex, seed, src: $("src").value, lang,
+      runs: tests.map((qt) => ({ testcase: qt.testcase, answers: stackAnswers(qt) })) });
+    if (r.error) { stackSummary = "STACK: " + r.error; return; }
+    let pass = 0;
+    for (const run of r.runs) {
+      const qt = tests.find((t) => t.testcase === run.testcase);
+      if (!qt) continue;
+      if (run.error) { stackResults[qt.testcase] = { pass: false, reasons: [run.error], seconds: run.seconds }; continue; }
+      const prts = {};
+      for (const [name, p] of Object.entries(run.prts)) {
+        const notes = p.notes || [];
+        prts[name] = notes.length === 1 && notes[0] === name + "-bail" ? { skipped: "bail", bail: true }
+          : p.score === null && !notes.length ? { skipped: "not run" }
+          : { score: p.score, penalty: p.penalty, notes: notes.join(" | ") };
+      }
+      const c = compareTest(qt, { prts });
+      stackResults[qt.testcase] = Object.assign(c, { seconds: run.seconds });
+      if (c.pass) pass++;
+    }
+    const api = r.api || {};
+    stackSummary = `STACK ${api.release || ""} (Maxima ${api.maxima || "?"}): ${pass} of ${tests.length} passed, ` +
+      `${((performance.now() - t0) / 1000).toFixed(0)} s`;
+  } catch (e) { stackSummary = "STACK: " + e.message; }
+  finally { stackRunning = false; renderTests(); }
+}
+async function runTest(qt, quiet) {
+  activeTest = qt.testcase; testDeleteArmed = null;
+  for (const inp of result.inputs || []) inputValues[inp.name] = qt.values && inp.name in qt.values ? answerText(inp, qt.values[inp.name]) : "";
+  lastCheck = null;
+  render(true);
+  await check();
+  if (lastCheck) testResults[qt.testcase] = compareTest(qt, lastCheck);
+  if (!quiet) renderTests();
+  return testResults[qt.testcase];
+}
+async function runAllTests() {
+  const tests = (result && result.qtests) || [];
+  let pass = 0;
+  for (const qt of tests) { const r = await runTest(qt, true); if (r && r.pass) pass++; }
+  renderTests();
+  $("status").textContent = `tests: ${pass} of ${tests.length} passed`;
+}
+function openTestForm(tc) { testForm = tc === null ? "new" : tc; renderTests(); const i = $("qtestDesc"); if (i) i.focus(); }
+function testFormEl() {
+  const qt = testForm !== "new" ? (result.qtests || []).find((t) => t.testcase === testForm) : null;
+  const f = document.createElement("div"); f.className = "qtform";
+  f.innerHTML = `<input type="text" id="qtestDesc" placeholder="description of the test case" value="${esc(qt ? qt.description : "")}">` +
+    (qt ? `<button class="small" data-a="replace" title="inputs and expected results from the current answers and their check">Replace test ${qt.testcase}</button>` +
+          `<button class="small" data-a="describe">Save description only</button>`
+        : `<button class="small" data-a="add" title="inputs and expected results from the current answers and their check">Add test</button>`) +
+    `<button class="small" data-a="cancel">Cancel</button>`;
+  f.addEventListener("click", (ev) => { const a = ev.target.dataset && ev.target.dataset.a; if (a) saveTest(a, qt, $("qtestDesc").value); });
+  return f;
+}
+// the current answers as test inputs (the Maxima expressions of the last check) and the results
+// of the PRTs as expected results (score, penalty, last answer note; NULL for a PRT that did not run)
+async function currentTestData() {
+  await check();
+  if (!lastCheck) return null;
+  const inputs = {}, expected = {};
+  for (const inp of result.inputs || []) {
+    const v = lastCheck.inputs[inp.name];
+    // an input with the model answer is stored as the model answer's expression (e.g. NN), as
+    // STACK's own default test does: it holds for every variant of a randomised question
+    if (inp.tans && inp.tans_raw != null && (inputValues[inp.name] ?? "") === answerText(inp, inp.tans_raw)) inputs[inp.name] = inp.tans;
+    else if (v && v.state !== "blank" && v.value != null) inputs[inp.name] = String(v.value);
+  }
+  for (const prt of result.prts || []) {
+    const r = lastCheck.prts[prt.name];
+    if (!r || r.skipped) expected[prt.name] = r && r.bail ? { score: "", penalty: "", note: prt.name + "-bail" } : { score: "", penalty: "", note: "NULL" };
+    else expected[prt.name] = { score: r.score, penalty: r.penalty, note: String(r.notes || "").split(" | ").filter(Boolean).pop() || "NULL" };
+  }
+  return { inputs, expected };
+}
+async function saveTest(action, qt, description) {
+  if (action === "cancel") { testForm = null; renderTests(); return; }
+  if (!(await flush())) return;
+  const body = { path: file.path, index: qindex, rev: file.rev, description };
+  if (action === "describe") Object.assign(body, { op: "describe", testcase: qt.testcase });
+  else {
+    const d = await currentTestData();
+    if (!d) return;
+    Object.assign(body, d, action === "add" ? { op: "add" } : { op: "replace", testcase: qt.testcase });
+  }
+  const backup = !backedUp.has(file.path);
+  body.backup = backup;
+  try {
+    const r = await postJSON("/api/q/qtest", body);
+    if (backup) backedUp.add(file.path);
+    file.rev = r.rev; showHistory(r.history);
+    testForm = null;
+    if (action !== "describe") {
+      const tc = action === "add" ? Math.max(...r.qtests.map((t) => t.testcase)) : qt.testcase;
+      activeTest = tc; testResults[tc] = { pass: true, reasons: [] };
+    }
+    showMessages([{ cls: "info", text: r.label + "." }]);
+    await evaluate(false);
+  } catch (e) {
+    if (e.conflict) { conflict = true; showConflict(); }
+    else showMessages([{ cls: "err", text: e.message }]);
+  }
+}
+async function deleteTest(tc) {
+  if (testDeleteArmed !== tc) { testDeleteArmed = tc; renderTests(); return; }
+  testDeleteArmed = null;
+  if (!(await flush())) return;
+  const backup = !backedUp.has(file.path);
+  try {
+    const r = await postJSON("/api/q/qtest", { path: file.path, index: qindex, rev: file.rev, op: "delete", testcase: tc, backup });
+    if (backup) backedUp.add(file.path);
+    file.rev = r.rev; showHistory(r.history);
+    delete testResults[tc]; activeTest = null;
+    showMessages([{ cls: "info", text: r.label + "." }]);
+    await evaluate(false);
+  } catch (e) {
+    if (e.conflict) { conflict = true; showConflict(); }
+    else showMessages([{ cls: "err", text: e.message }]);
+  }
+}
+
 // ---------------------------------------------------------------- evaluation
 async function evaluate(firstTime) {
   if (!file || qindex === null) return;
@@ -1814,6 +2090,7 @@ async function evaluate(firstTime) {
     if (keep) carryAnswers(prev);
     lastCheck = null;
     render(keep);
+    renderTests();
     if (keep && hadCheck) await check();
   } catch (e) {
     $("status").textContent = "";
@@ -2182,6 +2459,7 @@ async function start() {
   fillSelect($("src"), srcEntries, savedSel.src);
   fillSelect($("jsx"), Object.keys(config.jsxgraph).map((k) => [k, k]), savedSel.jsx);
   fillSelect($("mathjax"), Object.keys(config.mathjax).map((k) => [k, k]), savedSel.mathjax);
+  fetch("/api/stackapi/status").then((r) => r.json()).then((st) => { stackApi = st; renderTests(); }).catch(() => {});
   F.initHeader(config, { onStack: () => { if (result) evaluate(false); }, onMaxima: () => { if (result) evaluate(false); } });
   const mj = document.createElement("script"); mj.type = "text/x-mathjax-config";
   mj.text = 'MathJax.Hub.Config({messageStyle: "none", tex2jax: {inlineMath: [["\\\\(","\\\\)"]], displayMath: [["\\\\[","\\\\]"]], processEscapes: true}});';

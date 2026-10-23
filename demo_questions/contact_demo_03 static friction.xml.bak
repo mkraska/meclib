@@ -20,7 +20,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
 
 <p>Ein Balken (Länge \(b\), Dicke \(h\), Gewicht \(G\) im Schwerpunkt \(S\)) liegt bei \(A\) auf einem glatten Boden (\(\mu=0\)) und bei \(B\) auf der rauen Kante einer Stufe (Haftreibungskoeffizient \(\mu_0\)). Er ist in Ruhe. Die Lage von \(A\) und \(B\) entnehmen Sie dem Gitter (Gitterweite \(a\)).</p>
 
-<p>Schneiden Sie den Balken frei: Deaktivieren Sie Boden und Stufe und ersetzen Sie ihre Wirkung durch Reaktionskräfte. Bezeichnen Sie die Normalkräfte mit <code>N_A</code> und <code>N_B</code> und die Haftkraft mit <code>R_B</code>. Die Gewichtskraft \(G\) ist bereits eingezeichnet.</p>
+Schneiden Sie den Balken frei: Deaktivieren Sie Boden und Stufe und ersetzen Sie ihre Wirkung durch sinnvoll benannte Reaktionskräfte.
 
 [[lang code="de"]]
 <details><summary><strong>Bedienungshinweise</strong></summary>
@@ -100,7 +100,7 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
    zum Balken (nach oben rechts). */
 yB: 2;   /* Hoehe der Stufe in der Skizze (in der Aufgabe: b) */
 xA: 3;
-lAB: \sqrt(yB^2+xA^2);
+lAB: sqrt(yB^2+xA^2);
 tAB: [-xA, yB];
 nAB: [yB, xA];
 pA: [xA, 0];
@@ -120,18 +120,7 @@ en: [sin(alpha), cos(alpha)];
 rB: (pB - pA)*a;
 rS: b/2*et + h/2*en;
 rSmat: matrix([rS[1]],[rS[2]]);
-cross2(u, v):= u[1]*v[2] - u[2]*v[1];
-/* Moment um den Gitterpunkt P (Fadenkreuz, in Gittereinheiten); sR: Richtungssinn von R_B
-   (+1 zur Kante hin) */
-moment_ref(P, sR):= block([r0: (P - pA)*a],
-  cross2(-r0, [0, N_A]) + cross2(rB - r0, N_B*en) + cross2(rB - r0, sR*R_B*et) + cross2(rS - r0, [0, -G]));
-/* Vergleich: alpha wird durch den Winkel der Skizze ersetzt, damit sin(alpha) und 2/sqrt(13)
-   gleichwertig sind; beide Drehsinne bzw. Vorzeichen der Summe sind zulaessig */
-same_eq(u, v):= block([d: subst(alpha = atan(yB/xA), [u - v, u + v])],
-  is(ratsimp(trigsimp(d[1])) = 0) or is(ratsimp(trigsimp(d[2])) = 0));
-/* Vorzeichen: Kraefte in positiver x- bzw. y-Richtung und Momente gegen den Uhrzeigersinn
-   positiv (Standard der Lehrveranstaltung) */
-same_sign(u, v):= is(ratsimp(trigsimp(subst(alpha = atan(yB/xA), u - v))) = 0);
+
 /* Einheitsvektoren fuer die Musterloesung */
 eAB: float(tAB/sqrt(tAB.tAB));
 eN: float(nAB/sqrt(nAB.nAB));
@@ -333,7 +322,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[obj: stackjson_parse(objects);
+        <text><![CDATA[obj: fb_objects(objects);
 [textA, okA]: fb_contact(obj, names, i_A, "Kontakt A: ", "smooth", ["N_A", "N"]);
 [textB, okB]: fb_contact(obj, names, i_B, "Kontakt B: ", "static", ["N_B", "N"], ["R_B", "R", "H", "H_B", "F_H"]);
 [txtFBD, okFBD, partsFBD]: fb_fbd(obj, names, [sys = [i_beam], env = [i_floor, i_top, i_side],
@@ -422,7 +411,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[obj: stackjson_parse(objects);
+        <text><![CDATA[obj: fb_objects(objects);
 [txt, ok]: fb_EE(S_GGx, sumF(obj, names, [1,0], [contacts = [i_A, i_B]]),
                         [subst = [alpha = atan(yB/xA)], kind = "x"]);]]></text>
       </feedbackvariables>
@@ -458,15 +447,16 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[obj: stackjson_parse(objects);
-[txt, ok]: fb_EE(S_GGy, sumF(obj, names, [0,0], [contacts = [i_A, i_B]]),
-                        [subst = [alpha = atan(yB/xA)], kind = "y"] );]]></text>
+        <text><![CDATA[obj: fb_objects(objects);
+[txt, ok]: fb_EE(S_GGy, 
+  sumF(obj, names, [0,1], [contacts = [i_A, i_B]]),
+  [subst = [alpha = atan(yB/xA)], kind = "y"] );]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
         <description></description>
         <answertest>AlgEquiv</answertest>
-        <sans>okGGy</sans>
+        <sans>ok</sans>
         <tans>true</tans>
         <testoptions></testoptions>
         <quiet>0</quiet>
@@ -476,7 +466,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
         <truenextnode>-1</truenextnode>
         <trueanswernote>GGy-1-T</trueanswernote>
         <truefeedback format="html">
-          <text><![CDATA[<br>Die Gleichung stimmt.]]></text>
+          <text><![CDATA[{@txt@}]]></text>
         </truefeedback>
         <falsescoremode>=</falsescoremode>
         <falsescore>0</falsescore>
@@ -484,7 +474,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>GGy-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text><![CDATA[<br>{@textGGy@}]]></text>
+          <text><![CDATA[{@txt@}]]></text>
         </falsefeedback>
       </node>
     </prt>
@@ -494,26 +484,16 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       <autosimplify>1</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
-        <text><![CDATA[obj: stackjson_parse(objects);
-/* Richtungssinn der Haftkraft R_B aus dem Freischnitt: +1 zur Kante hin (Richtung A nach B) */
-iR: sublist_indices(names, lambda([x], x = R_B));
-iR: sublist(iR, lambda([k], obj[k][1] = "force"));
-if iR = [] then (
-  textGGM: "Vervollständigen Sie zuerst den Freischnitt (Haftkraft R_B fehlt).",
-  okGGM: false
-) else (
-  sR: signum(float(direction(obj[iR[1]]) . tAB)),
-  /* Bezugspunkt: Lage des Fadenkreuzes (Gitterpunkt) */
-  GGM_ref: moment_ref(names[i_P], sR),
-  okGGM: same_sign(S_GGM, GGM_ref),
-  textGGM: if okGGM then "" else if same_eq(S_GGM, GGM_ref) then "Zählen Sie Momente gegen den Uhrzeigersinn positiv." else fb_vars(S_GGM, GGM_ref, [N_A, N_B, R_B, G])
-);]]></text>
+        <text><![CDATA[obj: fb_objects(objects);
+[txt, ok]: fb_EE(S_GGM, 
+  sumM(obj, names, names[i_P], a, [contacts = [i_A, i_B], at = [[i_G, pA*a + rS]]]),
+  [subst = [alpha = atan(yB/xA)], kind = "M"]);]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
         <description></description>
         <answertest>AlgEquiv</answertest>
-        <sans>okGGM</sans>
+        <sans>ok</sans>
         <tans>true</tans>
         <testoptions></testoptions>
         <quiet>0</quiet>
@@ -523,7 +503,7 @@ if iR = [] then (
         <truenextnode>-1</truenextnode>
         <trueanswernote>GGM-1-T</trueanswernote>
         <truefeedback format="html">
-          <text><![CDATA[<br>Die Gleichung stimmt.]]></text>
+          <text><![CDATA[{@txt@}]]></text>
         </truefeedback>
         <falsescoremode>=</falsescoremode>
         <falsescore>0</falsescore>
@@ -531,7 +511,7 @@ if iR = [] then (
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>GGM-1-F</falseanswernote>
         <falsefeedback format="html">
-          <text><![CDATA[<br>{@textGGM@}]]></text>
+          <text><![CDATA[{@txt@}]]></text>
         </falsefeedback>
       </node>
     </prt>

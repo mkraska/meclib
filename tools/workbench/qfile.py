@@ -863,3 +863,98 @@ class State:
         recent.insert(0, {"path": path, "index": index, "name": name, "time": time.strftime("%Y-%m-%d %H:%M")})
         self.data["recent"] = recent[:15]
         self.save()
+
+
+# ---------------------------------------------------------------------- question tests
+# STACK's question tests as Moodle exports them: <qtest> with <testcase> (number), <description>,
+# <testinput> (name, value: a CAS expression, evaluated with the question variables) and
+# <expected> per PRT (score, penalty, answer note; the note may be a pattern, see
+# stack_question.test_answer_note).
+def qtests(block):
+    """[{testcase, description, inputs: {name: value}, expected: {prt: {score, penalty, note}}}]"""
+    out = []
+    for m in re.finditer(r"<qtest>(.*?)</qtest>", block, re.S):
+        body = m.group(1)
+
+        def tag(t, s):
+            x = re.search(r"<%s>(.*?)</%s>" % (t, t), s, re.S)
+            return _decode(x.group(1)).strip() if x else ""
+        tc = tag("testcase", body)
+        inputs = {tag("name", t.group(1)): tag("value", t.group(1))
+                  for t in re.finditer(r"<testinput>(.*?)</testinput>", body, re.S)}
+        expected = {}
+        for e in re.finditer(r"<expected>(.*?)</expected>", body, re.S):
+            s = e.group(1)
+            expected[tag("name", s)] = {"score": tag("expectedscore", s), "penalty": tag("expectedpenalty", s),
+                                        "note": tag("expectedanswernote", s)}
+        out.append({"testcase": int(tc) if tc.isdigit() else tc, "description": tag("description", body),
+                    "inputs": inputs, "expected": expected})
+    return out
+
+
+def _num7(x):
+    """A score or penalty as Moodle writes it (7 decimals); empty stays empty (the question's default)."""
+    if x is None or str(x).strip() == "":
+        return ""
+    return "%.7f" % float(x)
+
+
+def _qtest_xml(testcase, description, inputs, expected, nl):
+    i1, i2, i3 = "    ", "      ", "        "
+    lines = [i1 + "<qtest>", "%s<testcase>%s</testcase>" % (i2, testcase),
+             "%s<description>%s</description>" % (i2, encode_plain(description or "")) if description else i2 + "<description/>"]
+    for name, value in inputs.items():
+        lines += [i2 + "<testinput>", "%s<name>%s</name>" % (i3, name),
+                  "%s<value>%s</value>" % (i3, encode_plain(value)), i2 + "</testinput>"]
+    for prt, e in expected.items():
+        lines += [i2 + "<expected>", "%s<name>%s</name>" % (i3, prt),
+                  "%s<expectedscore>%s</expectedscore>" % (i3, _num7(e.get("score"))),
+                  "%s<expectedpenalty>%s</expectedpenalty>" % (i3, _num7(e.get("penalty"))),
+                  "%s<expectedanswernote>%s</expectedanswernote>" % (i3, encode_plain(e.get("note") or "")),
+                  i2 + "</expected>"]
+    lines.append(i1 + "</qtest>")
+    return nl.join(lines)
+
+
+def qtest_op(text, index, op):
+    """{op: add, description, inputs, expected} (a new test case, number = highest + 1),
+    {op: replace, testcase, description?, inputs, expected}, {op: delete, testcase},
+    {op: describe, testcase, description}. Returns (new text, label)."""
+    a, b, qtype = question_span(text, index)
+    if qtype != "stack":
+        raise ValueError("question %d is not a STACK question" % index)
+    nl = _newline(text)
+    q = text[a:b]
+    tests = {t["testcase"]: t for t in qtests(q)}
+    kind = op.get("op")
+
+    def span(tc):
+        for m in re.finditer(r"[ \t]*<qtest>(?:(?!</qtest>).)*?<testcase>\s*%s\s*</testcase>.*?</qtest>" % re.escape(str(tc)), q, re.S):
+            return m
+        raise ValueError("no test case %s" % tc)
+    if kind == "add":
+        tc = max([t for t in tests if isinstance(t, int)] + [0]) + 1
+        block = _qtest_xml(tc, op.get("description", ""), op.get("inputs") or {}, op.get("expected") or {}, nl)
+        q = _insert_after_last(q, "</qtest>", block, nl, ["<hint"]) if "</qtest>" in q else \
+            _insert_after_last(q, "</deployedseed>", block, nl, ["<hint"]) if "</deployedseed>" in q else \
+            _insert_after_last(q, "</prt>", block, nl, ["<hint"])
+        label = "test %d added" % tc
+    elif kind in ("replace", "describe"):
+        tc = int(op["testcase"])
+        old = tests.get(tc)
+        if not old:
+            raise ValueError("no test case %s" % tc)
+        m = span(tc)
+        desc = op["description"] if "description" in op else old["description"]
+        new = old if kind == "describe" else {"inputs": op.get("inputs") or {}, "expected": op.get("expected") or {}}
+        block = _qtest_xml(tc, desc, new["inputs"], new["expected"], nl)
+        q = q[:m.start()] + block + q[m.end():]
+        label = "test %d %s" % (tc, "replaced" if kind == "replace" else "described")
+    elif kind == "delete":
+        tc = int(op["testcase"])
+        span(tc)
+        q = _remove_block(q, r"<qtest>(?:(?!</qtest>).)*?<testcase>\s*%s\s*</testcase>.*?</qtest>" % re.escape(str(tc)))
+        label = "test %d deleted" % tc
+    else:
+        raise ValueError("unknown op")
+    return text[:a] + q + text[b:], label

@@ -115,7 +115,7 @@ its sections, always in reach while the column scrolls.
 - Editor bar: ↶ / ↷ (undo, redo), Snippet, Graphic ↗, then the sections Review,
   Variables, Text, Inputs, Options, General FB, Specific FB, Note, PRTs and
   each PRT by name.
-- Preview bar: Restart, Update (save and evaluate, Ctrl+Enter), TAns (model answers), Check, de / en, `0.5` / `0,5`,
+- Preview bar: Restart, Update (save and evaluate, Ctrl+Enter), TAns (model answers), Check, the question tests, de / en, `0.5` / `0,5`,
   simp, then the sections Question, General FB, Note, Messages, Inputs, PRT
   graphs, Variables.
 - `⋯` at the top of a bar: the side of the bar (left or right of its column;
@@ -301,7 +301,58 @@ as invalid (incomplete), as in STACK.
 
 **TAns** fills in the model answers of all inputs; the graphic
 starts from the model answer of its objects input. Then "Check" should give
-full marks.
+full marks. A model answer shown with STACK's display functions (`dispdp`,
+`dispsf`, `scientific_notation`) is filled in as the number it shows.
+
+**Question tests** (below TAns/Check): STACK's own question tests
+(`<qtest>` in the file, so Moodle imports them with the question), one button
+per test case with its description, inputs and expected results as tooltip.
+A click fills the inputs with the test's values (CAS expressions such as
+`NN`, evaluated with the question variables of the current variant) and
+checks; the button turns green or red, a failed test lists the reasons below
+the buttons. The comparison follows STACK: per PRT the score (-1: not
+compared), the penalty (empty: the question's penalty; -1: not compared; 0
+when the score is 1) and the answer note - the expected note is the last one
+of the PRT, or a pattern as in STACK (`[` anchors the first note, `)` frees
+the last one, `a | b` lists notes in order; `NULL`: the PRT does not run).
+The answer notes of the fast check are those of the nodes (STACK also lists
+the notes of the answer tests, which a pattern rarely names). "+" stores the
+current answers and the result of their check as a new test case (with a
+description); an input with the model answer is stored as its expression
+(e.g. `NN`), which holds for every variant, as STACK's default test. "✎"
+replaces the inputs and expected results of the selected test by the current
+ones or changes its description, "✕" (click twice) deletes it, "▶" runs all.
+The check is the workbench's fast one in Maxima. **STACK ▶** runs all tests in
+STACK itself (below): the buttons get a green or red line for that result,
+failures are listed under them.
+
+**STACK itself (STACK API in Docker)**: STACK's own PHP code without Moodle,
+with STACK's input validation, compilation and PRTs - for the question tests
+("STACK ▶") and for timing. It runs in Docker Desktop, in two containers built
+once on this machine for the STACK version of the Moodle server
+(`config/stack/<version>/`) and its Maxima version, plus a small web server
+that offers the Maxima files of the working copy to `stack_include` (meclib
+source "local working copy"; with dev or main the includes come from GitHub):
+
+    cd tools\workbench
+    python stackapi.py build --maxima 5.45.1      (once: 10-20 minutes)
+
+`build` clones STACK (the release tag from `profile.json`) and goemaxima (the
+Maxima server of STACK's own images) into `.cache/stackapi/`, builds the
+images `meclib-stackapi:<version>` (STACK's `api/docker/Dockerfile`, PHP 8.4)
+and `meclib-goemaxima:<version>-<maxima>` (Maxima compiled from source) and
+writes `.cache/stackapi/docker-compose.yml`. The workbench starts the
+containers on the first "STACK ▶" (Docker Desktop must be running); `python
+stackapi.py down` stops them, `status` reports. The API is
+`http://localhost:3080` (STACK's routes render, validate, grade, test).
+STACK compiles the question on every call (the API has no cache): a test takes
+seconds, with large includes up to a minute. The tests are graded with the
+route "grade" (the route "test" refuses questions for which STACK reports
+language warnings, e.g. PRT feedback without `[[lang]]` blocks next to
+multilingual feedback functions). `MECLIB_STACKAPI_URL` (environment variable
+of the workbench server) uses another STACK API instead, e.g. a manual
+installation with PHP (then without the includes container: meclib source dev
+or main).
 
 The answers stay when the question is evaluated again after an edit (save,
 PRT or input changes, Undo/Redo, review fixes), including the state of the

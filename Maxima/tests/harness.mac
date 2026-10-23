@@ -275,6 +275,11 @@ fb_tmpl_render(%ct_s):= block(
 
 castext(%ct_s) := fb_tmpl_render(%ct_s)$
 
+/* fb_lang(de, en) of the meclib files keeps its [[lang]] blocks here (in STACK it picks the
+   language with is_lang()), so that resolve_lang() / stack_resolve_lang() below can show
+   either language - as for castext("[[lang code='de']]...") */
+fb_lang_tags: true$
+
 /* ---- STACK's [[lang code='...']] selection rule, reimplemented ----
    Walks s left to right. Outside any [[lang]]...[[/lang]] block, text
    passes through unchanged (e.g. plain HTML markup, object names).

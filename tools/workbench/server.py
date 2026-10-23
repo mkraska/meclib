@@ -65,6 +65,12 @@ Endpoints
                             or {path, rev, name} appended to an existing file; optional
                             questionvariables, questiontext
   POST /api/q/duplicate     {path, index, rev} copy of a question, right after it
+  POST /api/q/stackgrade    {path, index, seed, src, lang, runs: [{testcase, answers}]} answers of
+                            question tests graded by STACK itself (STACK API in Docker, stackapi.py)
+  GET  /api/stackapi/status the STACK API: built, running, versions
+  POST /api/q/qtest         {path, index, rev, op: add | replace | delete | describe, testcase?,
+                            description?, inputs?, expected?} STACK question tests (<qtest>); eval
+                            returns the tests with the values of their inputs ("qtests")
   POST /api/q/input         {path, index, rev, op: "add", name, kind, tans?, tol?} new input S_<name>
                             with PRT <name> (qfile.INPUT_KINDS), or {op: "delete", input, prt?}
                             -> {rev, fields}
@@ -117,6 +123,7 @@ USAGE_CALL = re.compile(r'\bscene_(obj|names|init)\(\s*"([^"]+)"(?:\s*,\s*"([^"]
 sys.path.insert(0, str(HERE))
 import scenes_to_maxima  # noqa: E402  (fixture generator, same folder)
 import mtests  # noqa: E402
+import stackapi  # noqa: E402
 import stack_question  # noqa: E402
 import qfile  # noqa: E402
 import rules  # noqa: E402
@@ -434,6 +441,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json(list_scenes())
         if parsed.path == "/api/usage":
             return self.send_json(scene_usage())
+        if parsed.path == "/api/stackapi/status":
+            return self.send_json(stackapi.status())
         if parsed.path == "/api/mtests":
             return self.send_json(mtests.listing(MAXIMA_TESTS))
         if parsed.path == "/api/mtests/tex":
@@ -515,6 +524,50 @@ class Handler(SimpleHTTPRequestHandler):
         except (ValueError, OSError, MaximaError) as err:
             return self.send_json({"error": str(err)}, 500)
 
+    def stack_grade(self, cfg, req):
+        """POST /api/q/stackgrade {path, index, seed, src, lang, runs: [{testcase, answers}]}: the
+        answers of question tests graded by STACK itself (STACK API in Docker, stackapi.py), one
+        API call per test. The question goes to the API as it is in the file, with the seed as a
+        deployed variant and its meclib includes following the source selector (local working
+        copy: the includes container). -> {runs: [{testcase, seconds, prts: {name: {score,
+        penalty, notes}}, inputs: {name: status}, error}], api}"""
+        target = allowed_path(cfg, req["path"])
+        text, _ = qfile.read_file(target)
+        a, b, _ = qfile.question_span(text, int(req["index"]))
+        q = text[a:b]
+        seed = int(req.get("seed", 1))
+        if not re.search(r"<deployedseed>\s*%d\s*</deployedseed>" % seed, q):
+            q = q.replace("</question>", "<deployedseed>%d</deployedseed></question>" % seed)
+        src = req.get("src", "local")
+
+        def include(m):
+            branch, path = m.group(1), m.group(2)
+            if src == "local" and path.startswith("Maxima/"):
+                return stackapi.INCLUDE_BASE + path[len("Maxima/"):]
+            if src in cfg["branches"]:
+                return "https://raw.githubusercontent.com/mkraska/meclib/%s/%s" % (cfg["branches"][src], path)
+            return m.group(0)
+        q = re.sub(r"https://raw\.githubusercontent\.com/mkraska/meclib/([^/\s\"]+)/([^\s\"<]+)", include, q)
+        xml = '<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n' + q + '\n</quiz>\n'
+        try:
+            info = stackapi.up()
+        except (RuntimeError, OSError, subprocess.SubprocessError) as err:
+            return {"error": str(err)}
+        out = []
+        for run in req.get("runs", []):
+            secs, r = stackapi.call("grade", {"questionDefinition": xml, "seed": seed, "answers": run.get("answers") or {},
+                                             "lang": req.get("lang") or "de"})
+            res = {"testcase": run.get("testcase"), "seconds": secs}
+            if "prtresults" in r:
+                res["prts"] = {name: {"score": p.get("score"), "penalty": p.get("penalty"),
+                                      "notes": p.get("answernotes") or [], "errors": p.get("errors") or []}
+                               for name, p in r["prtresults"].items()}
+                res["summary"] = r.get("responsesummary", "")
+            else:
+                res["error"] = r.get("message") or r.get("error") or json.dumps(r)[:500]
+            out.append(res)
+        return {"runs": out, "api": info.get("settings")}
+
     def question_post(self, path):
         cfg = load_config()
         try:
@@ -587,7 +640,7 @@ class Handler(SimpleHTTPRequestHandler):
                 entry[3].add(kind)
                 result.update({"name": data["name"], "format": data["formats"]["questiontext"],
                                "formats": data["formats"], "prts": data["prts"],
-                               "seeds": data["seeds"], "decimals": data["decimals"],
+                               "seeds": data["seeds"], "decimals": data["decimals"], "penalty": data["penalty"],
                                "simplify": data["questionsimplify"], "maxima_start": round(entry[0].started, 1),
                                "files": stack_question.embedded_files(qel)})
                 return self.send_json(result)
@@ -673,6 +726,20 @@ class Handler(SimpleHTTPRequestHandler):
                 history.record(target, text, new, index, label)
                 return self.send_json({"rev": rev, "label": label, "fields": qfile.question_fields(new, index),
                                        "history": history.status(target, index)})
+            if path == "/api/q/qtest":
+                target = allowed_path(cfg, req["path"])
+                text, rev = qfile.read_file(target)
+                if req.get("rev") and req["rev"] != rev:
+                    raise qfile.ConflictError("the file was changed outside the workbench")
+                index = int(req["index"])
+                new, label = qfile.qtest_op(text, index, req)
+                rev = qfile.write_file(target, new, rev, bool(req.get("backup")))
+                history.record(target, text, new, index, label)
+                a, b, _ = qfile.question_span(new, index)
+                return self.send_json({"rev": rev, "label": label, "qtests": qfile.qtests(new[a:b]),
+                                       "history": history.status(target, index)})
+            if path == "/api/q/stackgrade":
+                return self.send_json(self.stack_grade(cfg, req))
             if path == "/api/q/duplicate":
                 target = allowed_path(cfg, req["path"])
                 text, rev = qfile.read_file(target)

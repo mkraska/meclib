@@ -166,7 +166,24 @@ def question_data(q):
         "inputs": inputs,
         "prts": prts,
         "seeds": seeds,
+        "qtests": question_tests(q),
     }
+
+
+def question_tests(q):
+    """STACK's question tests of a question element: [{testcase, description, inputs: {name:
+    CAS expression}, expected: {prt: {score, penalty, note}}}] (see qfile.qtests)."""
+    def t(el, tag):
+        x = el.find(tag)
+        return (x.text or "").strip() if x is not None else ""
+    out = []
+    for qt in q.findall("qtest"):
+        tc = t(qt, "testcase")
+        out.append({"testcase": int(tc) if tc.isdigit() else tc, "description": t(qt, "description"),
+                    "inputs": {t(i, "name"): t(i, "value") for i in qt.findall("testinput")},
+                    "expected": {t(e, "name"): {"score": t(e, "expectedscore"), "penalty": t(e, "expectedpenalty"),
+                                                "note": t(e, "expectedanswernote")} for e in qt.findall("expected")}})
+    return out
 
 
 # ---------------------------------------------------------------------- Maxima source handling
@@ -768,7 +785,10 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
                 % (v("node"), v("guard"), v("guard"), v("guard"), loop, v("node")))
     code.append("%s: ev(float(round(max(min(%s, 1.0), 0.0)*1000)/1000), simp)$" % (v("score"), v("score")))
     code.append('meclib_out(%s, string(%s))$' % (mstring("prt:%s:score" % P), v("score")))
-    code.append('meclib_out(%s, string(%s))$' % (mstring("prt:%s:penalty" % P), v("pen")))
+    # as STACK (prt.class.php, prt.evaluatable.class.php): the penalty rounded like the score,
+    # and 0 if the score is 1
+    code.append('meclib_out(%s, string(if %s = 1.0 then 0.0 else ev(float(round(max(min(%s, 1.0), 0.0)*1000)/1000), simp)))$'
+                % (mstring("prt:%s:penalty" % P), v("score"), v("pen")))
     code.append('meclib_out(%s, simplode(%s, " | "))$' % (mstring("prt:%s:notes" % P), v("path")))
     code.append('for %%_f in %s do (meclib_out(%s, %%_f[1]), meclib_out(%s, stack_resolve_lang(%%_f[2], %s)),'
                 ' meclib_out(%s, stack_resolve_lang(%%_f[2], %s)))$'
@@ -871,6 +891,23 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
                         ' meclib_out(%s, stack_resolve_lang(%%_c[1], %s))))$'
                         % (mstring(hint), mstring("hint:de:" + inp["name"]), mstring(pick_lang("de", langs_q)),
                            mstring("hint:en:" + inp["name"]), mstring(pick_lang("en", langs_q))))
+    # the inputs of the question tests: CAS expressions, evaluated with the question variables
+    # (as STACK does); their values become the answers when a test runs (the page sends them
+    # to Check like typed answers)
+    # A choice input given its list of choices (e.g. sb_mcq, as STACK's default test does) means
+    # its correct entries, as in STACK: the value of the first (dropdown, radio) or the list of
+    # them (checkbox)
+    itype = {i["name"]: i.get("type") for i in data["inputs"]}
+    for qt in data.get("qtests", []):
+        for name, expr in qt["inputs"].items():
+            if not expr.strip() or forbidden_identifiers(expr):
+                continue
+            pick = ""
+            if itype.get(name) in MCQ_TYPES:
+                pick = (', if %%_v # [] and listp(%%_v[1]) and %%_v[1] # [] and every(listp, %%_v[1]) then %%_v: [%s]'
+                        % ("mcq_correct(%_v[1])" if itype[name] == "checkbox" else "first(mcq_correct(%_v[1]))"))
+            code.append('block([%%_v: errcatch(%s)]%s, if %%_v # [] then meclib_out(%s, string(%%_v[1])))$'
+                        % (expr, pick, mstring("qt:%s:%s" % (qt["testcase"], name))))
     code.append(tick("model answers, syntax hints"))
     texts = {"questiontext": data["questiontext"], "generalfeedback": data["generalfeedback"],
              "questionnote": data["questionnote"], "prtcorrect": data["prtcorrect"],
@@ -940,6 +977,8 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
                         mcells=matrix_cells(first("mcells:" + inp["name"])), choices=mcq_choices(first("mcq:" + inp["name"])))
                    for inp in data["inputs"]],
         "texts": {key: {"de": first(key + ":de"), "en": first(key + ":en")} for key in texts if texts[key].strip()},
+        "qtests": [dict(qt, values={n: plain_tans(first("qt:%s:%s" % (qt["testcase"], n))) for n in qt["inputs"]})
+                   for qt in data.get("qtests", [])],
         "castext_errors": castext_errors,
         "languages": langs,
         "picked": {"de": pick_lang("de", langs), "en": pick_lang("en", langs)},
