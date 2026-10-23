@@ -901,6 +901,8 @@ else block([%_v: fb_vars(ratsimp(subst(%_sub, %_S)), ratsimp(subst(%_sub, %_T)),
 if %_v = "" then str_wrong else %_v),
 [castext_concat(sconcat("<br>", if stringp(%_title) then sconcat("\\(", %_title, "\\): ") else ""), %_msg), false]
 );
+fb_numtext(%_x) := block([%_s: if stringp(%_x) then %_x else string(%_x)],
+if is(stackfltsep = ",") then ssubst(",", ".", %_s) else %_s)$
 fb_force(%_o, %_name, %_point, %_dir, %_toldeg, %_toldist, %_description):=block(
 [%_txt: %_description, %_names, %_namestex, %_idx, %_i, %_dref, %_devDeg, %_devDist, %_mn,
 %_toldistval, %_tolunit, %_fx, %_fy,
@@ -923,7 +925,7 @@ if length(%_idx) > 1 then return([castext_concat(%_txt, sconcat(str_ambiguous_pr
 else ["force", 1, [0,0], [cos(%_dir*%pi/180), sin(%_dir*%pi/180)]],
 %_devDeg: ev(round(angle(%_dref, %_o[%_i])*180/%pi*10)/10.0, simp),
 if abs(%_devDeg) > %_toldeg then
-return([castext_concat(%_txt, sconcat("\\(", %_mn, str_wrong_direction_mid, %_devDeg, "°.")), false]),
+return([castext_concat(%_txt, sconcat("\\(", %_mn, str_wrong_direction_mid, fb_numtext(%_devDeg), "°.")), false]),
 %_devDist: ev(round(moment_of_force(%_point, %_o[%_i], 1, 1)*10)/10.0, simp),
 if listp(%_toldist) then (
 if %_o[1][1] # "grid" then
@@ -934,10 +936,10 @@ return([sconcat("fb_force(): grid scaling factors fx (", string(%_fx), ") and fy
 %_toldistval: %_toldist[1], %_tolunit: %_toldist[2],
 %_devDist: ev(round(%_devDist*%_fx*10)/10.0, simp),
 if abs(%_devDist) > %_toldistval then
-return([castext_concat(%_txt, sconcat(str_wrong_line_pre, %_mn, str_wrong_line_mid, %_devDist, " ", %_tolunit, ".")), false])
+return([castext_concat(%_txt, sconcat(str_wrong_line_pre, %_mn, str_wrong_line_mid, fb_numtext(%_devDist), " ", %_tolunit, ".")), false])
 ) else (
 if abs(%_devDist) > %_toldist then
-return([castext_concat(%_txt, sconcat(str_wrong_line_pre, %_mn, str_wrong_line_mid, %_devDist, ".")), false])
+return([castext_concat(%_txt, sconcat(str_wrong_line_pre, %_mn, str_wrong_line_mid, fb_numtext(%_devDist), ".")), false])
 ),
 [castext_concat(%_txt, sconcat("\\(", %_mn, str_found_post)), true]
 );

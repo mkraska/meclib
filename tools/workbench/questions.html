@@ -1292,7 +1292,8 @@ function showCheck() {
     const inp = (result.inputs || []).find((i) => i.name === name) || {};
     for (const el of document.querySelectorAll(`.stack-validation[data-input="${CSS.escape(name)}"]`)) {
       if (v.empty) el.innerHTML = "";   // blank, valid by allowempty (value EMPTYANSWER)
-      else if (v.state === "invalid") el.innerHTML = `<span class="val-bad">${inp.type === "matrix" ? "invalid input (incomplete or does not parse)" : "invalid input (does not parse)"}</span>`;
+      else if (v.state === "invalid") el.innerHTML = v.msg ? `<span class="val-bad" title="${esc(v.hint || "")}">This answer is invalid. ${esc(v.msg)}</span>`
+        : `<span class="val-bad">${inp.type === "matrix" ? "invalid input (incomplete or does not parse)" : "invalid input (does not parse)"}</span>`;
       else if (v.state === "valid" && inp.showvalidation !== "0" && inp.type !== "string") el.innerHTML = `<span class="val-ok ${inp.showvalidation === "3" ? "compact" : "standard"}">${esc(v.tex || "")}</span>`;
       else el.innerHTML = "";
     }

@@ -13,7 +13,7 @@ What is reproduced from STACK 4.13 (moodle-qtype_stack):
 - {#stackfltsep#} gives the question's decimal separator.
 
 Not reproduced: STACK's input validation (insert stars, syntax hints, forbidden words, units
-syntax) and castext blocks other than the ones listed above (they are left as text).
+syntax) - except the rejection of question variable names in answers (question_variable_words) and castext blocks other than the ones listed above (they are left as text).
 """
 
 import re
@@ -577,6 +577,22 @@ def student_value(inp, raw, decimals):
     return v
 
 
+def question_variable_words(inp, value, qv_names):
+    """Names of question variables used as variables in a student's answer: STACK rejects such
+    an answer as invalid ("Forbidden variable or constant"), unless the name is among the
+    input's allowed words (Authoring/Variables, Notes). Function calls are not counted."""
+    if not qv_names:
+        return []
+    allowed = {w.strip() for w in (inp.get("allowwords") or "").split(",") if w.strip()}
+    code = re.sub(r'"(?:[^"\\]|\\.)*"', '""', value)
+    found = []
+    for m in re.finditer(r"(?<![A-Za-z0-9_%])([A-Za-z%_][A-Za-z0-9_%]*)(?!\s*\()", code):
+        w = m.group(1)
+        if w in qv_names and w not in allowed and w not in found:
+            found.append(w)
+    return found
+
+
 MCQ_TYPES = ("dropdown", "radio", "checkbox")
 
 
@@ -941,6 +957,13 @@ def answer_code(data, answers, langs, resolver, checked, qv_names=()):
                 continue
         else:
             value = student_value(inp, raw, data["decimals"])
+            bad = question_variable_words(inp, value, qv_names) if inp.get("type") not in ("string", "notes") else []
+            if bad:
+                inputs[n] = {"state": "invalid", "value": value,
+                             "msg": "Forbidden variable or constant: %s." % ", ".join(bad),
+                             "hint": "STACK rejects names of question variables in answers (allow them with "
+                                     "the input option \"allowed words\")"}
+                continue
         inputs[n] = {"state": "?", "value": value}
         code.append('block([%%_p: errcatch(parse_string(%s))], if %%_p = [] then meclib_out(%s, "invalid") else ('
                     '%s: %%_p[1], meclib_out(%s, "valid"), meclib_out(%s, fb_tmpl_tostring(%s))))$'
@@ -964,6 +987,10 @@ def answer_code(data, answers, langs, resolver, checked, qv_names=()):
         missing = [n for n in req if inputs[n]["state"] == "blank"]
         if missing:
             checked["prts"][prt["name"]] = {"skipped": "not answered: " + ", ".join(missing)}
+            continue
+        invalid = [n for n in req if inputs[n]["state"] == "invalid"]
+        if invalid:        # rejected already here (question variable names): STACK does not run the PRT
+            checked["prts"][prt["name"]] = {"skipped": "invalid answer: " + ", ".join(invalid)}
             continue
         checked["prts"][prt["name"]] = {"inputs": req}
         # an input that does not parse makes the PRT invalid (reported after the run), as in STACK
@@ -1007,6 +1034,8 @@ def check_results(checked, results, stdout, data):
     for n, info in checked["inputs"].items():
         state = first("ans:%s:state" % n, info["state"]) if info["state"] != "blank" else "blank"
         out["inputs"][n] = {"state": state, "tex": first("ans:%s:tex" % n), "value": info.get("value")}
+        if info.get("msg"):
+            out["inputs"][n].update(msg=info["msg"], hint=info.get("hint"))
         if info.get("empty"):
             out["inputs"][n]["empty"] = True     # blank, valid by allowempty
     errors = {}

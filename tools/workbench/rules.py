@@ -277,6 +277,79 @@ def r_lang_includes(Q_):
     return out
 
 
+# Includes of meclib from a branch other than main (e.g. the dev branch while a feature is not
+# merged yet): a reminder to switch back after the merge; the fix only after it, as main may not
+# have the functions yet.
+def r_include_branch(Q_):
+    out = []
+    for url in Q_.includes:
+        m = re.match(r"(https://raw\.githubusercontent\.com/mkraska/meclib/)([^/]+)(/.*)$", url)
+        if not m or m.group(2) == "main":
+            continue
+        new_url = m.group(1) + "main" + m.group(3)
+
+        def fix(q, url=url, new_url=new_url):
+            return _set_text(q, "questionvariables", Q(q).qvars.replace(url, new_url))
+        out.append(F("include.branch", url.rsplit("/", 1)[-1], "hint", "Include from branch " + m.group(2),
+                     "%s is included from the branch %s, not from main. Switch to main once %s is "
+                     "merged into main (before that, main may lack functions the question uses)."
+                     % (url.rsplit("/", 1)[-1], m.group(2), m.group(2)), fix))
+    return out
+
+
+_MECLIB_FUNS = {}
+
+
+def meclib_functions():
+    """Functions defined in the meclib Maxima files of the working copy: name -> file."""
+    if not _MECLIB_FUNS:
+        for f in sorted((sq.REPO / "Maxima").glob("*.mac")):
+            for name in re.findall(r"(?m)^([A-Za-z_%][A-Za-z0-9_%]*)\s*\([^()]*\)\s*:=", f.read_text(encoding="utf-8", errors="replace")):
+                _MECLIB_FUNS.setdefault(name, f.name)
+    return _MECLIB_FUNS
+
+
+def _remove_definition(qvars, name):
+    """The question variables without the definition of function `name` (with its ;)."""
+    for text, _line, _ins in sq.split_statements(qvars):
+        if not re.match(r"\s*%s\s*\(" % re.escape(name), sq.strip_comments(text)):
+            continue
+        pos = qvars.find(text)
+        if pos < 0:
+            continue
+        start = pos + re.search(r"\b%s\s*\(" % re.escape(name), text).start()
+        end = pos + len(text)
+        m = re.match(r"\s*[;$][ \t]*\n?", qvars[end:])
+        return qvars[:start] + qvars[end + (m.end() if m else 0):]
+    return qvars
+
+
+# Old copies of meclib functions in the question variables (from the time before stack_include):
+# the include provides the current version; the local definition hides it or duplicates it.
+def r_legacy_functions(Q_):
+    funs = meclib_functions()
+    out = []
+    for text, _line, _ins in sq.split_statements(Q_.qvars):
+        m = re.match(r"\s*([A-Za-z_%][A-Za-z0-9_%]*)\s*\([^()]*\)\s*:=", sq.strip_comments(text))
+        if not m or m.group(1) not in funs:
+            continue
+        name, mac = m.group(1), funs[m.group(1)]
+        url = include_url(Q_, mac)
+        included = any(u.rsplit("/", 1)[-1] == mac for u in Q_.includes)
+        if not included and not name.startswith("fb_"):
+            continue        # a helper of the question that happens to share a name (e.g. angle)
+
+        def drop(q, name=name):
+            return _set_text(q, "questionvariables", _remove_definition(Q(q).qvars, name))
+        out.append(F("functions.legacy", name, "recommended", "Local copy of a meclib function",
+                     "The question variables define %s(), which meclib's %s provides%s. The local copy is "
+                     "probably an old version and hides the current one. Delete it%s." % (
+                         name, mac, "" if included else " (not included yet)",
+                         "" if included else " and include %s" % mac),
+                     _include_fix(url, drop), WIKI + "Home"))
+    return out
+
+
 def _input_fix(name, changes):
     def fix(q):
         for k, v in changes.items():
@@ -911,7 +984,8 @@ def r_scenes(Q_):
 
 
 RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_scenes, r_graphic_inputs, r_input_settings, r_prts,
-         r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_matrix_inputs, r_unused_files, r_semicolons]
+         r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_matrix_inputs, r_unused_files, r_semicolons,
+         r_include_branch, r_legacy_functions]
 
 
 # ---------------------------------------------------------------------- metadata in the description

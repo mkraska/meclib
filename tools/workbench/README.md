@@ -314,7 +314,11 @@ feedback by hand (as "Start again" in Moodle's preview).
 Approximations: STACK's input validation is not reproduced. The workbench
 converts a decimal comma to a point (and `;` to `,`), inserts `*` for spaces
 and implied products according to "insert stars", and accepts whatever then
-parses in Maxima (no forbidden words, no syntax checks). Answer test feedback
+parses in Maxima (no forbidden words, no syntax checks). One rule of STACK's
+validation is reproduced: an answer that uses the name of a question variable
+as a variable is invalid ("Forbidden variable or constant: v."), unless the
+name is among the input's allowed words; the PRTs that need that input do not
+run. Answer test feedback
 appears as STACK's message keys (e.g. `ATAlgEquiv_SA_not_logic`), not
 translated.
 
@@ -388,6 +392,18 @@ Unused embedded files (`files.unused`): files stored in the question (`<file>`
 elements of its texts) that no text shows as `@@PLUGINFILE@@/name` - usually
 leftovers of earlier versions edited in Moodle. The review shows the image;
 the fix removes all copies of that file from the question.
+
+meclib from a branch other than main (`include.branch`, a hint): a
+`stack_include` of `mkraska/meclib/<branch>/...` with a branch other than
+`main` (e.g. while a feature exists only on the dev branch). The fix switches
+the URL to main - only after the branch is merged, as main may lack the
+functions the question uses.
+
+Local copies of meclib functions (`functions.legacy`): a function defined in
+the question variables that a meclib Maxima file defines too (older questions
+carried their own copies of the feedback functions). Reported when that file
+is included (the local copy hides the current version) or the name starts
+with `fb_`. The fix deletes the definition and adds the include if missing.
 
 Missing `;` in Maxima code (`maxima.semicolon`): where a line ends a complete
 statement and the next line starts an assignment or call, STACK assumes a

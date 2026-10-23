@@ -1,5 +1,17 @@
 ### Dev Branch
 
+2026 10 23
+- `fb_value.mac`: no `funmake()` any more (forbidden in STACK questions): STACK refused every question that included the dev version of `fb_value.mac` ("Error(s) in question-variables"); the TeX output of the marks of [[fb_floats()]] is now done by named functions, which the security test checks
+- `fb_force()`: the deviation of the direction and the distance of the line of action are written with the question's decimal separator (`90,0°` with the decimal comma)
+- [[Meclib Workbench]], review on opening a question: reminder for meclib includes from a branch other than main (fix: switch to main after the merge); local copies of meclib functions in the question variables (fix: delete, include the file)
+- [[Meclib Workbench]], Questions page: an answer that uses the name of a question variable is invalid, as in STACK ("Forbidden variable or constant"), unless the name is among the input's allowed words
+- [[Meclib Workbench]]: STACK version in the header (from `config/stack/<version>/`, with `profile.json`: release, bundled JSXGraph, supported Maxima versions); a switch can set JSXGraph to the bundled version; JSXGraph or Maxima that do not match are marked; logos from `vendor/logos/`
+
+2026 10 22
+- [[Meclib Workbench]]: Maxima version selectable in the header of the Questions and Tests pages (all installations found, e.g. every `C:\maxima-*`)
+- offline tests: line breaks inside TeX math are ignored when feedback texts are compared (Maxima versions break long TeX output differently)
+- [[Meclib Workbench]], Tests page: Run button for the scope marked in the tree; decimal separator switch (0.5 / 0,5) for runs and display, numbers left with a decimal point marked; graphics of each case in its row; expected values that refer to the set-up shown evaluated after a run
+
 2026 10 21
 - [[Meclib Workbench]], Tests page: tree of the test cases in a left column (scenes, and the offline Maxima tests grouped by free-body-diagram feedback, answer feedback and other functions); a Maxima test file shows its cases with call, sans/tans, set-up statements and the expected result, feedback texts formatted (de/en); not run yet. Compact rows: flag as symbol, feedback in STACK's yellow box, sans/tans typeset as in the validation, set-up shared by several cases shown once. "Run" per file and "Run all Maxima tests": the cases run in Maxima (meclib files of the working copy), passed/failed per case, actual result with the difference marked; thumbnails of the objects of the diagram tests
 

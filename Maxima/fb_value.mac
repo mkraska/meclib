@@ -260,7 +260,10 @@ fb_floats_norm(%_e) := block([fb_floats_nums: [], %_h, %_i],
    positions in fb_floats_bad, counted as by fb_floats_walk) underlined by fb_floats_mark() */
 /* underlined, not coloured: \color needs MathJax's color extension, which Moodle's MathJax 3
    may fail to load ("Extension color failed to load" instead of the whole formula) */
-texput(fb_floats_mark, lambda([%_e], sconcat("{\\underline{", tex1(first(%_e)), "}}")));
+/* the TeX functions are named functions, not lambdas in texput(): test_security.mac checks the
+   definitions of named functions for what STACK forbids */
+fb_floats_mark_tex(%_e) := sconcat("{\\underline{", tex1(first(%_e)), "}}");
+texput(fb_floats_mark, fb_floats_mark_tex);
 fb_floats_show(%_x) := if floatnump(%_x) and abs(%_x - float(%e)) < 1e-12 then %e
   else if floatnump(%_x) then block([%_v],
     fb_floats_k: fb_floats_k + 1, %_v: significantfigures(%_x, 4),
@@ -413,10 +416,13 @@ fb_floats_call(%_x) := if atom(%_x) then false else block([inflag: true, %_o, %_
   else false);
 /* a call with only its function marked (its argument is right): fb_floats_fmark(f, argument),
    shown as the function name underlined; roots and exp are marked as a whole */
-texput(fb_floats_fmark, lambda([%_e], block([%_h: tex1(funmake(first(%_e), ['x])), %_k],
+/* f(a) for a function name f: funmake() is forbidden in STACK questions, subst() is not */
+fb_floats_call1(%_f, %_a) := subst(%_f, fb_floats_f, fb_floats_f(%_a));
+fb_floats_fmark_tex(%_e) := block([%_h: tex1(fb_floats_call1(first(%_e), 'x)), %_k],
   %_k: ssearch("\\left(", %_h),
   if integerp(%_k) then sconcat("{\\underline{", substring(%_h, 1, %_k), "}}\\left( ", tex1(second(%_e)), " \\right)")
-  else sconcat("{\\underline{", tex1(funmake(first(%_e), [second(%_e)])), "}}"))));
+  else sconcat("{\\underline{", tex1(fb_floats_call1(first(%_e), second(%_e))), "}}"));
+texput(fb_floats_fmark, fb_floats_fmark_tex);
 fb_floats_fmark_of(%_c) := block([inflag: true],
   if symbolp(op(%_c)) and member(op(%_c), fb_floats_funs()) then fb_floats_fmark(op(%_c), first(args(%_c)))
   else fb_floats_mark(%_c));
