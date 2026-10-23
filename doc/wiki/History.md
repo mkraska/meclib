@@ -1,6 +1,7 @@
 ### Dev Branch
 
 2026 10 23
+- [[fb_HAG]] is now part of `fb_value.mac` (before: a copy in each question): texts in German and English, values as formulas with 3 significant figures and the question's decimal separator ([issue #70](https://github.com/mkraska/meclib/issues/70)); the workbench review offers to replace the local copies
 - `fb_value.mac`: no `funmake()` any more (forbidden in STACK questions): STACK refused every question that included the dev version of `fb_value.mac` ("Error(s) in question-variables"); the TeX output of the marks of [[fb_floats()]] is now done by named functions, which the security test checks
 - `fb_force()`: the deviation of the direction and the distance of the line of action are written with the question's decimal separator (`90,0°` with the decimal comma)
 - [[Meclib Workbench]], review on opening a question: reminder for meclib includes from a branch other than main (fix: switch to main after the merge); local copies of meclib functions in the question variables (fix: delete, include the file)

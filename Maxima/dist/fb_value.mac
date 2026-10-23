@@ -440,6 +440,17 @@ if %_r # "" then
 %_txt
 );
 fb_dim(%_res, %_vars, %_dims):=rat(subst(map("=", %_vars, map("*", %_vars, %_dims)),%_res)/%_res);
+fb_HAG(%_H, %_A, %_G) := block([%_h, %_a, %_g, %_s,
+%_r: lambda([%_x], fb_HAG_round(float(%_x)))],
+%_h: %_r(%_H), %_a: %_r(%_A), %_g: %_r(%_G), %_s: %_r(%_A + %_G),
+if is(%_H <= max(%_G, %_A)) then
+return(castext("[[lang code='de']] Die Hypotenuse ({@%_h@}) muss gr&ouml;&szlig;er als die gr&ouml;&szlig;te der beiden Katheten ({@%_a@} und {@%_g@}) sein.[[/lang]][[lang code='en,other']] The hypotenuse ({@%_h@}) must be longer than the longer of the two legs ({@%_a@} and {@%_g@}).[[/lang]]")),
+if is(%_H >= %_G + %_A) then
+return(castext("[[lang code='de']] Die Hypotenuse ({@%_h@}) muss kleiner als die Summe der beiden Katheten ({@%_a@} + {@%_g@} = {@%_s@}) sein.[[/lang]][[lang code='en,other']] The hypotenuse ({@%_h@}) must be shorter than the sum of the two legs ({@%_a@} + {@%_g@} = {@%_s@}).[[/lang]]")),
+"");
+fb_HAG_round(%_x) := if floatnump(%_x) then significantfigures(%_x, 3)
+else if atom(%_x) then %_x
+else block([inflag: true], apply(op(%_x), map(fb_HAG_round, args(%_x))));
 meclib_h_number: castext("[[lang code='de']]Zahl[[/lang]][[lang code='en,other']]number[[/lang]]");
 meclib_h_unit: castext("[[lang code='de']]Zahl mit Einheit[[/lang]][[lang code='en,other']]number with unit[[/lang]]");
 meclib_h_alg: castext("[[lang code='de']]Ausdruck[[/lang]][[lang code='en,other']]expression[[/lang]]");

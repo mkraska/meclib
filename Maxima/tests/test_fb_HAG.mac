@@ -1,0 +1,35 @@
+/* Tests for fb_HAG(H, A, G): feedback on the sides of a right triangle (hypotenuse H, legs
+   A and G) - hypotenuse not longer than the longer leg, or not shorter than the sum of the legs;
+   values with 3 significant figures, with the question's decimal separator. */
+
+fb_check_str(fb_HAG(5, 3, 4), "", "", "fb_HAG ok");
+
+fb_check_str(fb_HAG(3, 4, 5),
+  " Die Hypotenuse (\\({3}\\)) muss gr&ouml;&szlig;er als die gr&ouml;&szlig;te der beiden Katheten (\\({4}\\) und \\({5}\\)) sein.",
+  " The hypotenuse (\\({3}\\)) must be longer than the longer of the two legs (\\({4}\\) and \\({5}\\)).",
+  "fb_HAG hypotenuse too short");
+
+fb_check_str(fb_HAG(10, 4, 5),
+  " Die Hypotenuse (\\({10}\\)) muss kleiner als die Summe der beiden Katheten (\\({4}\\) + \\({5}\\) = \\({9}\\)) sein.",
+  " The hypotenuse (\\({10}\\)) must be shorter than the sum of the two legs (\\({4}\\) + \\({5}\\) = \\({9}\\)).",
+  "fb_HAG hypotenuse too long");
+
+/* symbolic, the variable with a sign (as in TM1 05 02) */
+assume(a > 0)$
+fb_check_str(fb_HAG(sqrt(2)*a, 3*a, sqrt(5)*a),
+  " Die Hypotenuse (\\({1.41\\,a}\\)) muss gr&ouml;&szlig;er als die gr&ouml;&szlig;te der beiden Katheten (\\({3\\,a}\\) und \\({2.24\\,a}\\)) sein.",
+  " The hypotenuse (\\({1.41\\,a}\\)) must be longer than the longer of the two legs (\\({3\\,a}\\) and \\({2.24\\,a}\\)).",
+  "fb_HAG symbolic, too short");
+fb_check_str(fb_HAG(7*a, 3*a, sqrt(5)*a),
+  " Die Hypotenuse (\\({7\\,a}\\)) muss kleiner als die Summe der beiden Katheten (\\({3\\,a}\\) + \\({2.24\\,a}\\) = \\({5.24\\,a}\\)) sein.",
+  " The hypotenuse (\\({7\\,a}\\)) must be shorter than the sum of the two legs (\\({3\\,a}\\) + \\({2.24\\,a}\\) = \\({5.24\\,a}\\)).",
+  "fb_HAG symbolic, too long");
+
+/* decimal comma (question option, stackfltsep: ",") */
+stackfltsep: ","$
+fb_check_str(fb_HAG(sqrt(2)*a, 3*a, sqrt(5)*a),
+  " Die Hypotenuse (\\({1{,}41\\,a}\\)) muss gr&ouml;&szlig;er als die gr&ouml;&szlig;te der beiden Katheten (\\({3\\,a}\\) und \\({2{,}24\\,a}\\)) sein.",
+  " The hypotenuse (\\({1{,}41\\,a}\\)) must be longer than the longer of the two legs (\\({3\\,a}\\) and \\({2{,}24\\,a}\\)).",
+  "fb_HAG decimal comma");
+stackfltsep: "."$
+forget(a > 0)$

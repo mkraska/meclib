@@ -653,6 +653,26 @@ fb_vars_matrix(%_sans, %_tans, [%_opt]) := block(
 /* https://github.com/mkraska/meclib/wiki/fb_dim */
 fb_dim(%_res, %_vars, %_dims):=rat(subst(map("=", %_vars, map("*", %_vars, %_dims)),%_res)/%_res);
 
+/* https://github.com/mkraska/meclib/wiki/fb_HAG */
+/* Feedback on the sides of a right triangle: hypotenuse H, legs (Katheten) A and G, checked for
+   a hypotenuse that is not longer than the longer leg or not shorter than the sum of the legs.
+   Returns the feedback text ("" if neither applies), to be shown with {@fb_HAG(H, A, G)@}.
+   The values are shown as formulas with 3 significant figures and the question's decimal
+   separator; a symbolic variable in them needs a sign (e.g. assume(a > 0)).
+   (Moved into the library from the questions, which carried their own copies.) */
+fb_HAG(%_H, %_A, %_G) := block([%_h, %_a, %_g, %_s,
+   %_r: lambda([%_x], fb_HAG_round(float(%_x)))],
+  %_h: %_r(%_H), %_a: %_r(%_A), %_g: %_r(%_G), %_s: %_r(%_A + %_G),
+  if is(%_H <= max(%_G, %_A)) then
+    return(castext("[[lang code='de']] Die Hypotenuse ({@%_h@}) muss gr&ouml;&szlig;er als die gr&ouml;&szlig;te der beiden Katheten ({@%_a@} und {@%_g@}) sein.[[/lang]][[lang code='en,other']] The hypotenuse ({@%_h@}) must be longer than the longer of the two legs ({@%_a@} and {@%_g@}).[[/lang]]")),
+  if is(%_H >= %_G + %_A) then
+    return(castext("[[lang code='de']] Die Hypotenuse ({@%_h@}) muss kleiner als die Summe der beiden Katheten ({@%_a@} + {@%_g@} = {@%_s@}) sein.[[/lang]][[lang code='en,other']] The hypotenuse ({@%_h@}) must be shorter than the sum of the two legs ({@%_a@} + {@%_g@} = {@%_s@}).[[/lang]]")),
+  "");
+/* the numbers of an expression with 3 significant figures */
+fb_HAG_round(%_x) := if floatnump(%_x) then significantfigures(%_x, 3)
+  else if atom(%_x) then %_x
+  else block([inflag: true], apply(op(%_x), map(fb_HAG_round, args(%_x))));
+
 /* https://github.com/mkraska/meclib/wiki/Multilingual-questions#multilingual-syntax-hints */
 meclib_h_number: castext("[[lang code='de']]Zahl[[/lang]][[lang code='en,other']]number[[/lang]]");
 meclib_h_unit: castext("[[lang code='de']]Zahl mit Einheit[[/lang]][[lang code='en,other']]number with unit[[/lang]]");
