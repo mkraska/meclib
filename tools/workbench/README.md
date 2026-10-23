@@ -115,7 +115,7 @@ its sections, always in reach while the column scrolls.
 - Editor bar: ↶ / ↷ (undo, redo), Snippet, Graphic ↗, then the sections Review,
   Variables, Text, Inputs, Options, General FB, Specific FB, Note, PRTs and
   each PRT by name.
-- Preview bar: Restart, Update (save and evaluate, Ctrl+Enter), TAns (model answers), Check, de / en, `0.5` / `0,5`,
+- Preview bar: Restart, Update (save and evaluate, Ctrl+Enter), TAns (model answers), Check, the question tests, de / en, `0.5` / `0,5`,
   simp, then the sections Question, General FB, Note, Messages, Inputs, PRT
   graphs, Variables.
 - `⋯` at the top of a bar: the side of the bar (left or right of its column;
@@ -177,6 +177,7 @@ question variable `X` (another expression can be given). Types and defaults
 | number with unit | units, size 8, syntax hint `{@meclib_h_unit@}`, insert stars 3 | UnitsRelative, rel. tolerance 0.005, simplify off | `fb_unit(S_X, X, tol)` / `fb_unit(S_X, X, 0)` |
 | number without unit | numerical, size 8, syntax hint `{@meclib_h_number@}` | NumRelative, rel. tolerance 0.005 | `fb_unit(S_X, X, tol)` / `fb_unit(S_X, X, 0)` |
 | expression | algebraic, size 15, syntax hint `{@meclib_h_alg@}`, insert stars 3, forbid float | AlgEquiv | `fb_vars(S_X, X)` |
+| expression with rounded numbers | algebraic, size 15, syntax hint `{@meclib_h_alg@}`, insert stars 3, floats allowed | feedback variables `[txt, isOK]: fb_floats(S_X, X, tol);`, AlgEquiv `isOK` = `true` | `txt` |
 | vector / matrix of numbers | matrix, size 4, insert stars 3 | feedback variables `[txt, isOK]: fb_unit_matrix(S_X, X, tol, labels);`, AlgEquiv `isOK` = `true` | `txt` |
 | vector / matrix of expressions | matrix, size 8, insert stars 3, forbid float | feedback variables `txt: fb_vars_matrix(S_X, X, [], labels);`, AlgEquiv `S_X` = `X` | `txt` |
 | choice: dropdown list / radio buttons | dropdown / radio, model answer `X_mcq`, not verified, no validation | AlgEquiv `S_X` = `mcq_correct(X_mcq)[1]` | none |
@@ -300,7 +301,58 @@ as invalid (incomplete), as in STACK.
 
 **TAns** fills in the model answers of all inputs; the graphic
 starts from the model answer of its objects input. Then "Check" should give
-full marks.
+full marks. A model answer shown with STACK's display functions (`dispdp`,
+`dispsf`, `scientific_notation`) is filled in as the number it shows.
+
+**Question tests** (below TAns/Check): STACK's own question tests
+(`<qtest>` in the file, so Moodle imports them with the question), one button
+per test case with its description, inputs and expected results as tooltip.
+A click fills the inputs with the test's values (CAS expressions such as
+`NN`, evaluated with the question variables of the current variant) and
+checks; the button turns green or red, a failed test lists the reasons below
+the buttons. The comparison follows STACK: per PRT the score (-1: not
+compared), the penalty (empty: the question's penalty; -1: not compared; 0
+when the score is 1) and the answer note - the expected note is the last one
+of the PRT, or a pattern as in STACK (`[` anchors the first note, `)` frees
+the last one, `a | b` lists notes in order; `NULL`: the PRT does not run).
+The answer notes of the fast check are those of the nodes (STACK also lists
+the notes of the answer tests, which a pattern rarely names). "+" stores the
+current answers and the result of their check as a new test case (with a
+description); an input with the model answer is stored as its expression
+(e.g. `NN`), which holds for every variant, as STACK's default test. "✎"
+replaces the inputs and expected results of the selected test by the current
+ones or changes its description, "✕" (click twice) deletes it, "▶" runs all.
+The check is the workbench's fast one in Maxima. **STACK ▶** runs all tests in
+STACK itself (below): the buttons get a green or red line for that result,
+failures are listed under them.
+
+**STACK itself (STACK API in Docker)**: STACK's own PHP code without Moodle,
+with STACK's input validation, compilation and PRTs - for the question tests
+("STACK ▶") and for timing. It runs in Docker Desktop, in two containers built
+once on this machine for the STACK version of the Moodle server
+(`config/stack/<version>/`) and its Maxima version, plus a small web server
+that offers the Maxima files of the working copy to `stack_include` (meclib
+source "local working copy"; with dev or main the includes come from GitHub):
+
+    cd tools\workbench
+    python stackapi.py build --maxima 5.45.1      (once: 10-20 minutes)
+
+`build` clones STACK (the release tag from `profile.json`) and goemaxima (the
+Maxima server of STACK's own images) into `.cache/stackapi/`, builds the
+images `meclib-stackapi:<version>` (STACK's `api/docker/Dockerfile`, PHP 8.4)
+and `meclib-goemaxima:<version>-<maxima>` (Maxima compiled from source) and
+writes `.cache/stackapi/docker-compose.yml`. The workbench starts the
+containers on the first "STACK ▶" (Docker Desktop must be running); `python
+stackapi.py down` stops them, `status` reports. The API is
+`http://localhost:3080` (STACK's routes render, validate, grade, test).
+STACK compiles the question on every call (the API has no cache): a test takes
+seconds, with large includes up to a minute. The tests are graded with the
+route "grade" (the route "test" refuses questions for which STACK reports
+language warnings, e.g. PRT feedback without `[[lang]]` blocks next to
+multilingual feedback functions). `MECLIB_STACKAPI_URL` (environment variable
+of the workbench server) uses another STACK API instead, e.g. a manual
+installation with PHP (then without the includes container: meclib source dev
+or main).
 
 The answers stay when the question is evaluated again after an edit (save,
 PRT or input changes, Undo/Redo, review fixes), including the state of the
@@ -313,7 +365,11 @@ feedback by hand (as "Start again" in Moodle's preview).
 Approximations: STACK's input validation is not reproduced. The workbench
 converts a decimal comma to a point (and `;` to `,`), inserts `*` for spaces
 and implied products according to "insert stars", and accepts whatever then
-parses in Maxima (no forbidden words, no syntax checks). Answer test feedback
+parses in Maxima (no forbidden words, no syntax checks). One rule of STACK's
+validation is reproduced: an answer that uses the name of a question variable
+as a variable is invalid ("Forbidden variable or constant: v."), unless the
+name is among the input's allowed words; the PRTs that need that input do not
+run. Answer test feedback
 appears as STACK's message keys (e.g. `ATAlgEquiv_SA_not_logic`), not
 translated.
 
@@ -385,8 +441,23 @@ several nodes or other feedback text get a hint only.
 
 Unused embedded files (`files.unused`): files stored in the question (`<file>`
 elements of its texts) that no text shows as `@@PLUGINFILE@@/name` - usually
-leftovers of earlier versions edited in Moodle. The review shows the image;
+leftovers of earlier versions edited in Moodle (an image replaced in the editor
+keeps the old file). The message names where the file is stored and which
+text shows another file of the same type instead (probably its newer
+version). The review shows the image;
 the fix removes all copies of that file from the question.
+
+meclib from a branch other than main (`include.branch`, a hint): a
+`stack_include` of `mkraska/meclib/<branch>/...` with a branch other than
+`main` (e.g. while a feature exists only on the dev branch). The fix switches
+the URL to main - only after the branch is merged, as main may lack the
+functions the question uses.
+
+Local copies of meclib functions (`functions.legacy`): a function defined in
+the question variables that a meclib Maxima file defines too (older questions
+carried their own copies of the feedback functions). Reported when that file
+is included (the local copy hides the current version) or the name starts
+with `fb_`. The fix deletes the definition and adds the include if missing.
 
 Missing `;` in Maxima code (`maxima.semicolon`): where a line ends a complete
 statement and the next line starts an assignment or call, STACK assumes a
@@ -425,7 +496,10 @@ functions:
   signature with the current argument in bold (optional arguments in gray with a trailing `?`, taken from "(optional ..." in the wiki),
   the description of that argument and a short text, with a link to the meclib
   wiki, the STACK documentation or the Maxima manual. The link and **F1** open
-  the page in a small separate window (always the same one). Esc closes the box.
+  the page in a small separate window (always the same one). For a function
+  with offline Maxima tests, "tests (n)" opens the Tests page at its first
+  case (`tests.html#mtest=<file>&case=<n>`): examples of what it returns.
+  Esc closes the box.
 - **Autocomplete**: after two characters of a name, a list of matching
   functions with their signatures (meclib first, then STACK and Maxima);
   after `["` the meclib object types. **Ctrl+Space** opens the list at any time.
@@ -505,8 +579,30 @@ language), Markdown format. It has no PRT yet and therefore default mark 0.
 ### Evaluation
 
 Maxima is found on the PATH or in the usual Windows install locations
-(`C:\maxima-*`, `Program Files`); otherwise set `"maxima"` in
-`workbench_config.local.json` to the full path of `maxima.bat`. The first
+(every `C:\maxima-*`, `Program Files`, `LOCALAPPDATA`); otherwise set
+`"maxima"` in `workbench_config.local.json` to the full path of `maxima.bat`.
+**STACK version** (STACK select in the header of the Questions and Tests
+pages, one entry per `config/stack/<plugin version>/`, see
+`config/README.md`): its Maxima library and security map produce the preview
+and the test results. The choice holds for all pages (kept in
+`.cache/workbench_state.json`) and starts new Maxima sessions. If the
+version's `profile.json` names the JSXGraph bundled with it, a panel below
+the header offers to set JSXGraph to "STACK <release> bundled (JSXGraph
+<version>)" (Apply / Keep); such entries are added to the JSXGraph list for
+every installed STACK version. A JSXGraph choice other than the bundled one,
+and a Maxima outside the versions the STACK release supports, get a ⚠ with
+a tooltip. Maxima and MathJax are not changed by a STACK switch. The tooltip
+of the STACK item tells how to add a version. Logos in `vendor/logos/` of
+the repository (file names containing stack, jsxgraph, mathjax or maxima;
+svg or png) replace the labels of the header selects.
+
+With several versions installed, the "Maxima" select in the header of the
+Questions and Tests pages chooses one (newest first, labelled with the version
+from the folder name or `maxima --version`). The choice holds for all pages,
+is kept in `.cache/workbench_state.json` and closes the running sessions, so
+the next evaluation or test run starts with the chosen version. The Tests page
+shows STACK and Maxima of each run (and the JSXGraph of the graphics) in the
+title row of a file. The first
 evaluation starts Maxima and loads the library (a few seconds); later ones
 take a fraction of a second.
 
@@ -544,7 +640,7 @@ regenerates `Maxima/tests/fixtures/scenes.mac`.
 with a live thumbnail, expected and actual names, status, initialisation
 time, and on failure the differences (names, and objects one by one) plus
 console errors. Warnings are listed collapsed. Each case shows which Maxima
-test files use it. "Run all" or "Run scene" runs against the meclib.js
+test files use it. The Run button or "Run scene" runs against the meclib.js
 version selected in the header, so the same cases can be run against the
 local copy, dev and main. Per case:
 - **Open on Graphic page** loads the scene and the case's state for
@@ -555,6 +651,71 @@ local copy, dev and main. Per case:
 
 Numbers in objects are compared with a relative tolerance of 1e-9 (floating
 point noise), everything else exactly.
+
+**Tree of the test cases** (left column of the Tests page): the scenes with
+their cases, and the offline Maxima tests (`Maxima/tests/test_*.mac`), grouped
+into feedback on free-body diagrams (files with object lists or scene
+fixtures), feedback on answers (sans against tans: fb_unit, fb_vars,
+fb_floats, ...) and other functions, each file with its cases in the order of
+`run_tests.mac`. The filter field shows the cases whose label or function
+contains the text. A click on a scene or a case scrolls to it; a click on a
+Maxima test file or case shows the file: its header comment, the functions it
+tests, the set-up shared by several cases (e.g. an object list), and per
+case the label (line as tooltip), the call, its own set-up, and the expected
+result as the question preview shows it: the flag as a symbol, the feedback
+in STACK's yellow box (de/en in the title row, which stays at the top while
+scrolling). For answer feedback, sans and tans are typeset as the validation
+shows them (parsed, not evaluated: GET `/api/mtests/tex`, one Maxima call per
+file, no test run).
+
+**The Run button** in the header acts on what is marked in the tree and names
+it with the number of cases: all scenes, one scene or one scene case; all
+Maxima tests, a group, a file. A marked Maxima case runs its whole file (the
+cases build on its earlier statements) and then shows the case. Nothing
+marked: the scenes and all Maxima tests. The title row of a file has its own
+Run button. A click on a group or on "Maxima tests" shows the first file of
+it, so the results of a run are in view (the file shown is refreshed as soon
+as it has run).
+
+**Decimal separator** (0.5 / 0,5 in the title row of a file): with the comma,
+the run sets `stackfltsep: ","` and `texput_decimal(",")` as a question with
+the decimal comma does, sans and tans are typeset with it, and the expected
+feedback (written with the point in the test files) is shown with the comma.
+The actual texts are compared after `{,}` -> `.`, so the expected texts serve
+both separators. A case whose actual text still has a number with a decimal
+point is marked "point" (orange, also in the tree): the function is not
+separator-aware; the actual text is shown with the number marked. Results of
+a run with the other separator are not shown (Run again).
+
+**Expected values that refer to the set-up** (e.g. `GG_sx[1]`, a result of an
+earlier statement): before a run marked "(value after Run)", after a run shown
+as `GG_sx[1] = <value>`.
+
+**Running the Maxima tests** (Run button, see above): the file runs in a Maxima session of the server
+(POST `/api/mtests/run`) with the meclib files and scene fixtures of the
+working copy, loaded fresh for each run, so a change in `fb_value.mac` shows
+at once. The checks are redefined to record the actual result instead of
+printing it; each statement runs on its own, so an error stops only its case
+(the Maxima message is shown). Each case gets passed/failed; a failed case
+shows the actual result below the expected one, the raw text with the part
+from the first difference on marked. The tree marks files and cases green or
+red. For the diagram feedback, the objects list of the call (its first
+argument) is drawn as a thumbnail by meclib - as input of the test, not
+compared with anything; a list without a grid gets one around all its points,
+optional parameters left out before the state (label offset of a force, the
+points of a moment) are completed for the drawing; the names list is the
+tooltip. The drawing area follows the points of the objects (plus one unit),
+also for a grid of the list (its range and pixels are replaced, display only):
+at most 40 pixels per unit and about 400 x 300 pixels, drawn unscaled. Each case draws its objects in its own row, with the name of the set-up
+variable below (if the list is one). Object lists of the set-up that no case
+draws (e.g. `o_sx`, which `sum_xyM()` reads before the checks) are shown at
+the top of the file. Not covered: checks inside loops or blocks of a
+test file, and `test_security.mac` (no single checks) - run `run_tests.mac`
+for the complete suite. The files are read, not run (GET `/api/mtests`, `mtests.py`): a
+check is a call of `fb_check`, `fb_check_str`, `fb_check_val` or of a helper
+of the file that calls `fb_check` (e.g. `cr_check`). "used by" links of a
+scene case open the Maxima test file. The tree (`tree.js`) is a component of
+its own, meant for the question folders of the Questions page, too.
 
 ## How closely the graphic matches STACK
 
@@ -609,6 +770,8 @@ content of the npm package `codemirror@5.65.16`).
 - `frame.js` - builds and runs a graphic in a STACK-like frame (shared by the
   pages)
 - `style.css` - shared styles
+- `tree.js` - collapsible tree of the side column (Tests page)
+- `mtests.py` - reads the Maxima test files for the Tests page
 - `server.py` - local server (listens on this computer only; writing
   requests need the header `X-Workbench: 1`, which other web sites cannot
   send): serves the pages; shows the folder dialog; reads and writes the

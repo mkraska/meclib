@@ -13,7 +13,7 @@ What is reproduced from STACK 4.13 (moodle-qtype_stack):
 - {#stackfltsep#} gives the question's decimal separator.
 
 Not reproduced: STACK's input validation (insert stars, syntax hints, forbidden words, units
-syntax) and castext blocks other than the ones listed above (they are left as text).
+syntax) - except the rejection of question variable names in answers (question_variable_words) and castext blocks other than the ones listed above (they are left as text).
 """
 
 import re
@@ -166,7 +166,24 @@ def question_data(q):
         "inputs": inputs,
         "prts": prts,
         "seeds": seeds,
+        "qtests": question_tests(q),
     }
+
+
+def question_tests(q):
+    """STACK's question tests of a question element: [{testcase, description, inputs: {name:
+    CAS expression}, expected: {prt: {score, penalty, note}}}] (see qfile.qtests)."""
+    def t(el, tag):
+        x = el.find(tag)
+        return (x.text or "").strip() if x is not None else ""
+    out = []
+    for qt in q.findall("qtest"):
+        tc = t(qt, "testcase")
+        out.append({"testcase": int(tc) if tc.isdigit() else tc, "description": t(qt, "description"),
+                    "inputs": {t(i, "name"): t(i, "value") for i in qt.findall("testinput")},
+                    "expected": {t(e, "name"): {"score": t(e, "expectedscore"), "penalty": t(e, "expectedpenalty"),
+                                                "note": t(e, "expectedanswernote")} for e in qt.findall("expected")}})
+    return out
 
 
 # ---------------------------------------------------------------------- Maxima source handling
@@ -382,20 +399,23 @@ def mark_html_blocks(text):
 
 
 # ---------------------------------------------------------------------- STACK's security rules
-_SECURITY = None
+_SECURITY = {}
+STACK_VERSION = None    # the STACK version chosen in the workbench (set by the server); None: newest
 
 
 def security_map():
-    """STACK's stack/cas/security-map.json (copied to config/stack/<version>/), loaded once."""
-    global _SECURITY
-    if _SECURITY is None:
-        import glob, json
-        hits = sorted(glob.glob(str(REPO / "config" / "stack" / "*" / "security-map.json")))
+    """STACK's stack/cas/security-map.json (copied to config/stack/<version>/) of the chosen
+    STACK version (else the newest), loaded once per version."""
+    import glob, json
+    hits = sorted(glob.glob(str(REPO / "config" / "stack" / "*" / "security-map.json")))
+    chosen = REPO / "config" / "stack" / str(STACK_VERSION) / "security-map.json"
+    path = str(chosen) if STACK_VERSION and chosen.exists() else (hits[-1] if hits else None)
+    if path not in _SECURITY:
         try:
-            _SECURITY = json.loads(Path(hits[-1]).read_text(encoding="utf-8")) if hits else {}
+            _SECURITY[path] = json.loads(Path(path).read_text(encoding="utf-8")) if path else {}
         except (OSError, ValueError):
-            _SECURITY = {}
-    return _SECURITY
+            _SECURITY[path] = {}
+    return _SECURITY[path]
 
 
 def forbidden_identifiers(stmt):
@@ -574,6 +594,47 @@ def student_value(inp, raw, decimals):
     return v
 
 
+def question_variable_words(inp, value, qv_names):
+    """Names of question variables used as variables in a student's answer: STACK rejects such
+    an answer as invalid ("Forbidden variable or constant"), unless the name is among the
+    input's allowed words (Authoring/Variables, Notes). Function calls are not counted."""
+    if not qv_names:
+        return []
+    allowed = {w.strip() for w in (inp.get("allowwords") or "").split(",") if w.strip()}
+    code = re.sub(r'"(?:[^"\\]|\\.)*"', '""', value)
+    found = []
+    for m in re.finditer(r"(?<![A-Za-z0-9_%])([A-Za-z%_][A-Za-z0-9_%]*)(?!\s*\()", code):
+        w = m.group(1)
+        if w in qv_names and w not in allowed and w not in found:
+            found.append(w)
+    return found
+
+
+_NUM = r"(-?\s*[0-9.]+(?:[eE][-+]?[0-9]+)?)"
+
+
+def plain_tans(raw):
+    """The model answer as a student would type it: STACK's display functions of a number
+    (dispdp/dispsf evaluate to displaydp(x, n), scientific_notation to displaysci(m, n, e)) become
+    the number they show - "TAns" fills the input with it."""
+    if raw is None:
+        return raw
+
+    def dp(m):
+        try:
+            return "%.*f" % (int(m.group(2)), float(m.group(1).replace(" ", "")))
+        except ValueError:
+            return m.group(0)
+
+    def sci(m):
+        try:
+            return "%.*fE%d" % (int(m.group(2)), float(m.group(1).replace(" ", "")), int(m.group(3)))
+        except ValueError:
+            return m.group(0)
+    out = re.sub(r"displaydp\(\s*%s\s*,\s*(\d+)\s*\)" % _NUM, dp, raw)
+    return re.sub(r"displaysci\(\s*%s\s*,\s*(\d+)\s*,\s*(-?\d+)\s*\)" % _NUM, sci, out)
+
+
 MCQ_TYPES = ("dropdown", "radio", "checkbox")
 
 
@@ -724,7 +785,10 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
                 % (v("node"), v("guard"), v("guard"), v("guard"), loop, v("node")))
     code.append("%s: ev(float(round(max(min(%s, 1.0), 0.0)*1000)/1000), simp)$" % (v("score"), v("score")))
     code.append('meclib_out(%s, string(%s))$' % (mstring("prt:%s:score" % P), v("score")))
-    code.append('meclib_out(%s, string(%s))$' % (mstring("prt:%s:penalty" % P), v("pen")))
+    # as STACK (prt.class.php, prt.evaluatable.class.php): the penalty rounded like the score,
+    # and 0 if the score is 1
+    code.append('meclib_out(%s, string(if %s = 1.0 then 0.0 else ev(float(round(max(min(%s, 1.0), 0.0)*1000)/1000), simp)))$'
+                % (mstring("prt:%s:penalty" % P), v("score"), v("pen")))
     code.append('meclib_out(%s, simplode(%s, " | "))$' % (mstring("prt:%s:notes" % P), v("path")))
     code.append('for %%_f in %s do (meclib_out(%s, %%_f[1]), meclib_out(%s, stack_resolve_lang(%%_f[2], %s)),'
                 ' meclib_out(%s, stack_resolve_lang(%%_f[2], %s)))$'
@@ -827,6 +891,23 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
                         ' meclib_out(%s, stack_resolve_lang(%%_c[1], %s))))$'
                         % (mstring(hint), mstring("hint:de:" + inp["name"]), mstring(pick_lang("de", langs_q)),
                            mstring("hint:en:" + inp["name"]), mstring(pick_lang("en", langs_q))))
+    # the inputs of the question tests: CAS expressions, evaluated with the question variables
+    # (as STACK does); their values become the answers when a test runs (the page sends them
+    # to Check like typed answers)
+    # A choice input given its list of choices (e.g. sb_mcq, as STACK's default test does) means
+    # its correct entries, as in STACK: the value of the first (dropdown, radio) or the list of
+    # them (checkbox)
+    itype = {i["name"]: i.get("type") for i in data["inputs"]}
+    for qt in data.get("qtests", []):
+        for name, expr in qt["inputs"].items():
+            if not expr.strip() or forbidden_identifiers(expr):
+                continue
+            pick = ""
+            if itype.get(name) in MCQ_TYPES:
+                pick = (', if %%_v # [] and listp(%%_v[1]) and %%_v[1] # [] and every(listp, %%_v[1]) then %%_v: [%s]'
+                        % ("mcq_correct(%_v[1])" if itype[name] == "checkbox" else "first(mcq_correct(%_v[1]))"))
+            code.append('block([%%_v: errcatch(%s)]%s, if %%_v # [] then meclib_out(%s, string(%%_v[1])))$'
+                        % (expr, pick, mstring("qt:%s:%s" % (qt["testcase"], name))))
     code.append(tick("model answers, syntax hints"))
     texts = {"questiontext": data["questiontext"], "generalfeedback": data["generalfeedback"],
              "questionnote": data["questionnote"], "prtcorrect": data["prtcorrect"],
@@ -891,11 +972,13 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
         "variables": [{"name": n, "raw": first("var:" + n), "tex": first("tex:" + n)} for n in names],
         "names": names,
         "includes": includes,
-        "inputs": [dict(inp, tans_raw=first("tans:" + inp["name"]), tans_tex=first("tanstex:" + inp["name"]),
+        "inputs": [dict(inp, tans_raw=plain_tans(first("tans:" + inp["name"])), tans_tex=first("tanstex:" + inp["name"]),
                         hint_de=first("hint:de:" + inp["name"]), hint_en=first("hint:en:" + inp["name"]),
                         mcells=matrix_cells(first("mcells:" + inp["name"])), choices=mcq_choices(first("mcq:" + inp["name"])))
                    for inp in data["inputs"]],
         "texts": {key: {"de": first(key + ":de"), "en": first(key + ":en")} for key in texts if texts[key].strip()},
+        "qtests": [dict(qt, values={n: plain_tans(first("qt:%s:%s" % (qt["testcase"], n))) for n in qt["inputs"]})
+                   for qt in data.get("qtests", [])],
         "castext_errors": castext_errors,
         "languages": langs,
         "picked": {"de": pick_lang("de", langs), "en": pick_lang("en", langs)},
@@ -938,6 +1021,13 @@ def answer_code(data, answers, langs, resolver, checked, qv_names=()):
                 continue
         else:
             value = student_value(inp, raw, data["decimals"])
+            bad = question_variable_words(inp, value, qv_names) if inp.get("type") not in ("string", "notes") else []
+            if bad:
+                inputs[n] = {"state": "invalid", "value": value,
+                             "msg": "Forbidden variable or constant: %s." % ", ".join(bad),
+                             "hint": "STACK rejects names of question variables in answers (allow them with "
+                                     "the input option \"allowed words\")"}
+                continue
         inputs[n] = {"state": "?", "value": value}
         code.append('block([%%_p: errcatch(parse_string(%s))], if %%_p = [] then meclib_out(%s, "invalid") else ('
                     '%s: %%_p[1], meclib_out(%s, "valid"), meclib_out(%s, fb_tmpl_tostring(%s))))$'
@@ -961,6 +1051,10 @@ def answer_code(data, answers, langs, resolver, checked, qv_names=()):
         missing = [n for n in req if inputs[n]["state"] == "blank"]
         if missing:
             checked["prts"][prt["name"]] = {"skipped": "not answered: " + ", ".join(missing)}
+            continue
+        invalid = [n for n in req if inputs[n]["state"] == "invalid"]
+        if invalid:        # rejected already here (question variable names): STACK does not run the PRT
+            checked["prts"][prt["name"]] = {"skipped": "invalid answer: " + ", ".join(invalid)}
             continue
         checked["prts"][prt["name"]] = {"inputs": req}
         # an input that does not parse makes the PRT invalid (reported after the run), as in STACK
@@ -1004,6 +1098,8 @@ def check_results(checked, results, stdout, data):
     for n, info in checked["inputs"].items():
         state = first("ans:%s:state" % n, info["state"]) if info["state"] != "blank" else "blank"
         out["inputs"][n] = {"state": state, "tex": first("ans:%s:tex" % n), "value": info.get("value")}
+        if info.get("msg"):
+            out["inputs"][n].update(msg=info["msg"], hint=info.get("hint"))
         if info.get("empty"):
             out["inputs"][n]["empty"] = True     # blank, valid by allowempty
     errors = {}

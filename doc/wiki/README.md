@@ -27,6 +27,7 @@ Changes of the drafts (the table below lists them as they came):
 | Dynamic intersection of two line2p obbjects.md | `Dynamic intersection of two "line2p" obbjects` | explanation of the `targets` list corrected; note on the line2p fix of meclib 2026 10 11 |
 | Feedback for contact.md | `Feedback for "contact"` | rough contact: optional arguments friction (static, kinetic with velocity or `disp` name) and accepted names |
 | contact.md | `"contact"` | default `lineLength` 3 (was 1); smooth or rough is decided in the feedback; tip on dummy contacts |
+| fb_HAG.md | `fb_HAG` | now a library function in `fb_value.mac` (was a copy in each question); multilingual, decimal separator of the question; values as formulas with 3 significant figures |
 | description.md | `"description"` (new page; add it to "List of Objects") | new object: label with leader line |
 | Meclib Workbench.md | `Meclib Workbench` | syntax help, kept answers / Restart, MathJax choice, STACK versions, new section Planned |
 | Testing a new STACK version.md | `Testing a new STACK version` (new page) | steps for testing meclib with a new STACK release |

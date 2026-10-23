@@ -666,6 +666,7 @@ async function start() {
   fillSelect($("src"), srcEntries, saved.src);
   fillSelect($("jsx"), Object.keys(config.jsxgraph).map((k) => [k, k]), saved.jsx);
   fillSelect($("mathjax"), Object.keys(config.mathjax).map((k) => [k, k]), saved.mathjax);
+  F.initHeader(config);   // logos, JSXGraph marked if it differs from the STACK version in use
   $("status").textContent = "repository: " + config.repo_path;
   await helpLoaded;
   await iconsLoaded;

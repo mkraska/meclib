@@ -7,7 +7,50 @@
 <title>meclib test cases</title>
 <link rel="stylesheet" href="style.css">
 <style>
-  #scenes { padding: 16px; max-width: 1400px; }
+  .tgrid { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 16px; padding: 16px; align-items: start; }
+  @media (max-width: 900px) { .tgrid { grid-template-columns: 1fr; } }
+  #treeCol { position: sticky; top: calc(var(--hdr, 52px) + 8px); max-height: calc(100vh - var(--hdr, 52px) - 24px); overflow: auto; }
+  #treeCol section { margin-bottom: 0; }
+  #treeFilter { width: 100%; margin: 2px 0 4px; }
+  #mainCol { min-width: 0; max-width: 1400px; }
+  #mainCol section, #mainCol tr { scroll-margin-top: calc(var(--hdr, 52px) + 12px); }
+  section.flash { outline: 2px solid var(--accent); outline-offset: 2px; }
+  tr.flash td { background: #eef4fb; }
+  /* Maxima test files */
+  h2.mt-head { position: sticky; top: var(--hdr, 52px); background: var(--panel); z-index: 1; padding: 6px 0; margin: -6px 0 6px; }
+  .mt-title { font-family: var(--mono); font-size: 12px; white-space: pre-wrap; color: var(--muted); margin: 0 0 8px; }
+  .mt-fns code { background: #f0f0ec; padding: 0 4px; border-radius: 3px; margin-right: 4px; }
+  .mt-shared { margin: 0 0 8px; }
+  table.mt td { padding: 4px 6px; }
+  td.mt-call code { display: block; white-space: pre-wrap; word-break: break-word; font-size: 12px; }
+  details.setup summary { font-size: 11px; color: var(--muted); cursor: pointer; margin-top: 2px; }
+  details.setup pre { font-family: var(--mono); font-size: 11.5px; white-space: pre-wrap; margin: 2px 0 0; background: #f6f6f2; padding: 4px; border-radius: 4px; }
+  td.mt-ans { min-width: 30%; }
+  td.mt-ans code { font-size: 11.5px; white-space: pre-wrap; }
+  .mt-tans { color: var(--muted); margin-left: 6px; }
+  .mt-tans::before { content: "\2192\00a0"; }
+  td.mt-exp { width: 40%; background: #e7f3f5; }
+  .mt-flag { font-size: 15px; margin-right: 6px; vertical-align: top; }
+  .mt-flag.ok { color: var(--ok); } .mt-flag.bad { color: var(--err); }
+  /* as the question preview: STACK's validation box and yellow PRT feedback */
+  .stack-validation .val-ok.compact { margin: 1px; display: inline-block; vertical-align: middle; background-color: white; border: 1px solid #ccc; padding: 0.2em 0.3em; }
+  .stackprtfeedback { background: #fcf8e3; padding: 0.2em 0.5em 0.2em 0.2em; display: inline-block; vertical-align: top; color: var(--ink); font-size: 14px; }
+  .mt-scenes { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 8px; }
+  .mt-scenes figure { margin: 0; }
+  .mt-scenes figcaption { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+  .mt-scenes .placeholder { width: 120px; height: 80px; border: 1px dashed var(--line); border-radius: 4px; }
+  .mt-actual { margin-top: 6px; padding-top: 4px; border-top: 1px dashed #c9b; }
+  .mt-actual .lbl { color: var(--err); font-size: 11px; display: block; }
+  .stackprtfeedback.actual { outline: 1px solid var(--err); }
+  .mt-actual .raw { font-family: var(--mono); font-size: 11.5px; white-space: pre-wrap; word-break: break-word; color: var(--muted); margin-top: 2px; }
+  .mt-actual mark { background: #f6d5d2; color: var(--err); }
+  td.label .badge { margin-top: 3px; display: inline-block; }
+  .langsw button.dec { font-family: var(--mono); }
+  .langsw button.dec b { font-size: 15px; line-height: 10px; color: inherit; }
+  .badge.point { background: #fbe7c6; color: #9a5b00; }
+  .mt-ref { color: var(--muted); }
+  .langsw button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  #scenes { max-width: 1400px; }
   .scene h2 { font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--ink); }
   .scene h2 .file { color: var(--muted); font-weight: normal; font-size: 12px; font-family: var(--mono); }
   .scene .notes { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
@@ -19,6 +62,7 @@
   td.label .cnotes { color: var(--muted); font-size: 12px; }
   td.label code.cid { font-size: 11px; color: var(--muted); background: #f0f0ec; padding: 0 4px; border-radius: 3px; }
   td.thumb { width: 1%; }
+  td.thumb .tcap { font-family: var(--mono); font-size: 11px; }
   td.thumb .placeholder { width: 120px; height: 80px; border: 1px dashed var(--line); border-radius: 4px; }
   td.names code { display: block; white-space: pre-wrap; word-break: break-all; font-size: 12px; }
   td.names .lbl { color: var(--muted); font-size: 11px; }
@@ -45,17 +89,32 @@
   <h1>meclib workbench</h1>
   <nav class="pages"><a href="index.html">Graphic</a> · <a href="questions.html">Questions</a> · <b>Tests</b></nav>
   <label>meclib.js <select id="src"></select></label>
+  <label>STACK <select id="stack"></select></label>
   <label>JSXGraph <select id="jsx"></select></label>
   <label>MathJax <select id="mathjax"></select></label>
-  <button id="runAll" class="primary">Run all</button>
+  <label>Maxima <select id="maxima"></select></label>
+  <button id="runAll" class="primary" title="runs what is marked in the tree (nothing marked: everything)">Run all</button>
   <label><input type="checkbox" id="failuresOnly"> failures only</label>
   <span id="summary"></span>
   <div id="status">connecting to server ...</div>
 </header>
-<div id="runs"></div>
-<div id="scenes"></div>
+<main class="tgrid">
+  <aside id="treeCol">
+    <section>
+      <h2>Test cases</h2>
+      <input type="text" id="treeFilter" placeholder="filter (label, function)" spellcheck="false">
+      <div id="tree" class="tree"></div>
+    </section>
+  </aside>
+  <div id="mainCol">
+    <div id="runs"></div>
+    <div id="scenes"></div>
+    <div id="mtest" hidden></div>
+  </div>
+</main>
 
 <script src="frame.js"></script>
+<script src="tree.js"></script>
 <script>
 "use strict";
 const F = MeclibFrame;
@@ -65,6 +124,13 @@ let config = null;
 let scenes = [];            // full scene objects, with .file
 let running = false;
 let usage = {};             // scene -> case id -> [Maxima test files], from /api/usage
+let mtests = { groups: [], files: [] };   // the Maxima tests, from /api/mtests
+let tree = null;
+let mlang = "de";           // language of the expected feedback of the Maxima tests
+let msep = ".";             // decimal separator of the Maxima test runs and displays ("." or ",")
+const mresults = {};        // test file -> result of its last run (POST /api/mtests/run)
+let mrunning = false;
+let thumbToken = 0;         // a new view stops the thumbnails of the previous one
 const results = {};         // "file#n" -> {status, actual...}
 
 function esc(s) { return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
@@ -86,6 +152,7 @@ function storeChoice() {
 async function loadAll() {
   const list = await (await fetch("/api/cases")).json();
   try { usage = await (await fetch("/api/usage")).json(); } catch (e) { usage = {}; }
+  try { mtests = await (await fetch("/api/mtests")).json(); } catch (e) { mtests = { groups: [], files: [] }; }
   scenes = [];
   for (const s of list) {
     const resp = await fetch("/api/cases/" + encodeURIComponent(s.file));
@@ -94,6 +161,385 @@ async function loadAll() {
     scenes.push(scene);
   }
   draw();
+  buildTree();
+}
+
+// ---------------------------------------------------------------- tree of the test cases
+// Scenes (graphics test cases) and Maxima tests (grouped: feedback on free-body diagrams, on
+// answers, other functions), each file with its cases. A click shows the file and its case.
+function buildTree() {
+  const sceneNodes = scenes.map((scene) => ({
+    id: "s:" + scene.file, label: scene.title || scene.file, hint: scene.file + ".json",
+    onClick: () => showScene(scene.file),
+    children: scene.cases.map((c, i) => ({
+      id: "s:" + caseKey(scene, i), label: c.label || caseId(scene, i), hint: caseId(scene, i),
+      onClick: () => showScene(scene.file, i) })),
+  }));
+  const firstFile = (list) => { const f = list.find((x) => x.cases.length) || list[0]; if (f) showMFile(f.file); };
+  const groups = mtests.groups.map(([key, title]) => ({
+    id: "g:" + key, label: title, open: true, onClick: () => firstFile(mtests.files.filter((f) => f.group === key)),
+    children: mtests.files.filter((f) => f.group === key).map((f) => ({
+      id: "m:" + f.file, label: f.file.replace(/^test_|\.mac$/g, ""),
+      hint: mresultHint(f) + (f.in_suite ? "" : " - not in run_tests.mac"),
+      cls: mresults[f.file] ? (mresults[f.file].error || mresults[f.file].failed ? "tfail" : "tpass") + (mresults[f.file].points ? " tpoint" : "") : "",
+      title: f.title, onClick: () => showMFile(f.file),
+      children: f.cases.map((c) => ({ id: "m:" + f.file + "#" + c.n, label: c.label, hint: c.function,
+        cls: mresults[f.file] ? (caseResult(f.file, c.n).pass === "true" ? "tpass" : "tfail") + (caseResult(f.file, c.n).point ? " tpoint" : "") : "",
+        onClick: () => showMFile(f.file, c.n) })),
+    })),
+  }));
+  const roots = [
+    { id: "r:scenes", label: "Scenes (graphics)", open: true, onClick: () => showView("scenes"), children: sceneNodes },
+    { id: "r:maxima", label: "Maxima tests", open: true, onClick: () => firstFile(mtests.files), children: groups },
+  ];
+  if (!tree) {
+    tree = MeclibTree.create($("tree"), { storeKey: "meclib-tests-tree", onSelect: () => updateRunButton() });
+    $("treeFilter").addEventListener("input", () => tree.filter($("treeFilter").value));
+  }
+  tree.render(roots);
+  updateRunButton();
+}
+
+// ---------------------------------------------------------------- the Run button
+// It acts on the node marked in the tree: the scenes, one scene or one case of it; all Maxima
+// tests, a group, a file (a case of a file runs the whole file, since the cases of a file build
+// on its earlier statements). Nothing marked: the scenes and all Maxima tests.
+function runScope() {
+  const id = tree ? tree.selected() : null;
+  const mfiles = (list) => list.filter((f) => f.cases.length);
+  const ncases = (list) => list.reduce((a, f) => a + f.cases.length, 0);
+  const sceneCases = (list) => list.reduce((a, s) => a + s.cases.length, 0);
+  const all = () => ({ label: "Run all", n: sceneCases(scenes) + ncases(mtests.files),
+    run: async () => { await runCases(scenes); await runAllM(); } });
+  if (!id) return all();
+  if (id === "r:scenes") return { label: "Run scenes", n: sceneCases(scenes), run: () => runCases(scenes) };
+  if (id === "r:maxima") { const l = mfiles(mtests.files); return { label: "Run Maxima tests", n: ncases(l), run: () => runAllM(l) }; }
+  if (id.startsWith("g:")) {
+    const l = mfiles(mtests.files.filter((f) => f.group === id.slice(2)));
+    const g = mtests.groups.find(([k]) => k === id.slice(2));
+    return { label: "Run " + (g ? g[1] : id.slice(2)), n: ncases(l), run: () => runAllM(l) };
+  }
+  if (id.startsWith("m:")) {
+    const [file, n] = id.slice(2).split("#");
+    const f = mtests.files.find((x) => x.file === file);
+    if (!f) return all();
+    const short = file.replace(/^test_|\.mac$/g, "");
+    return { label: "Run " + short, n: f.cases.length, note: n ? "a case runs its whole file (the cases build on its earlier statements)" : "", run: async () => {
+      if (mrunning) return;
+      mrunning = true; updateRunButton();
+      await runMFile(file);
+      mrunning = false; updateRunButton();
+      if (n) showMFile(file, Number(n));
+    } };
+  }
+  if (id.startsWith("s:")) {
+    const [file, cid] = id.slice(2).split("#");
+    const scene = scenes.find((s) => s.file === file);
+    if (!scene) return all();
+    if (cid === undefined) return { label: "Run " + file, n: scene.cases.length, run: () => runCases([scene]) };
+    const i = scene.cases.findIndex((c, k) => caseId(scene, k) === cid);
+    return { label: "Run " + file + " #" + cid, n: 1, run: () => runCases([scene], i) };
+  }
+  return all();
+}
+function updateRunButton() {
+  const sc = runScope();
+  $("runAll").textContent = `${sc.label} (${sc.n})`;
+  $("runAll").title = (sc.note ? sc.note + "; " : "") + "runs what is marked in the tree (nothing marked: everything)";
+  $("runAll").disabled = running || mrunning || !sc.n;
+}
+// tests.html#mtest=<file>&case=<n> (the "tests" link of the syntax help): that file and case
+function openFromHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  const file = p.get("mtest");
+  if (!file || !mtests.files.some((f) => f.file === file)) return;
+  const n = p.get("case") ? Number(p.get("case")) : undefined;
+  if (tree) tree.reveal("m:" + file + (n !== undefined ? "#" + n : ""));
+  showMFile(file, n);
+}
+function showView(v) {
+  $("scenes").hidden = v !== "scenes"; $("runs").hidden = v !== "scenes"; $("mtest").hidden = v !== "mtest";
+}
+function flash(el) {
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1500);
+}
+function showScene(file, i) {
+  showView("scenes");
+  const scene = scenes.find((s) => s.file === file);
+  if (!scene) return;
+  flash(i === undefined ? $("sec-" + file) : $("row-" + caseKey(scene, i)));
+}
+
+// ---------------------------------------------------------------- Maxima test files
+// read from the file (no Maxima yet): label, line, the call with the statements that set it up,
+// and the expected result - feedback texts as castext renders them, shown formatted (de/en)
+function caseResult(file, n) { const r = mresults[file]; return (r && r.cases && r.cases[n]) || {}; }
+function mresultHint(f) {
+  const r = mresults[f.file];
+  if (!r) return String(f.cases.length);
+  if (r.error) return "error";
+  return (r.failed ? `\u2716 ${r.failed} of ${f.cases.length}` : `\u2714 ${f.cases.length}`) +
+    (r.sep === "," ? " (0,5" + (r.points ? `, ${r.points} with point` : "") + ")" : "");
+}
+// runs one test file; the view and the tree follow
+async function runMFile(name, quiet) {
+  const f = mtests.files.find((x) => x.file === name);
+  if (!f || !f.cases.length) return null;
+  try {
+    const resp = await fetch("/api/mtests/run", { method: "POST", headers: { "Content-Type": "application/json", "X-Workbench": "1" },
+      body: JSON.stringify({ file: name, sep: msep }) });
+    const r = await resp.json();
+    if (!resp.ok && !r.error) r.error = resp.statusText;
+    mresults[name] = r;
+  } catch (e) { mresults[name] = { error: e.message }; }
+  if (!quiet) { buildTree(); if (!$("mtest").hidden && $("mtest").dataset.file === name) showMFile(name); }
+  return mresults[name];
+}
+async function runAllM(files) {
+  if (mrunning) return;
+  mrunning = true; updateRunButton();
+  let pass = 0, fail = 0, err = 0;
+  const t0 = performance.now();
+  for (const f of files || mtests.files) {
+    if (!f.cases.length) continue;
+    $("status").textContent = "Maxima tests: " + f.file + " ...";
+    const r = await runMFile(f.file, true);
+    if (r.error) err++; else { pass += r.passed; fail += r.failed; }
+    buildTree();
+    if (!$("mtest").hidden && $("mtest").dataset.file === f.file) showMFile(f.file);
+  }
+  mrunning = false; updateRunButton();
+  $("status").textContent = `Maxima tests: ${pass} passed, ${fail} failed` + (err ? `, ${err} files with errors` : "") +
+    ` (${((performance.now() - t0) / 1000).toFixed(1)} s)`;
+  if (!$("mtest").hidden && $("mtest").dataset.file) showMFile($("mtest").dataset.file);
+}
+// the actual text against the expected one: the part from the first difference on marked
+function diffHtml(exp, act) {
+  let i = 0;
+  while (i < exp.length && i < act.length && exp[i] === act[i]) i++;
+  return esc(act.slice(0, i)) + `<mark>${esc(act.slice(i)) || "(ends here)"}</mark>`;
+}
+// objects for a thumbnail: with a grid around all points if the list has none (the lists of
+// the tests are cut-outs without one)
+function thumbInit(objects) {
+  // the test lists often leave out optional parameters before the state, e.g.
+  // ["force", "R_A", p1, p2, "active"] (label offset missing) or ["moment", "M", p, "active"]:
+  // completed with defaults, so that meclib can draw them (display only)
+  objects = objects.map((o) => {
+    if (!Array.isArray(o)) return o;
+    if (o[0] === "force" && typeof o[4] === "string") return [...o.slice(0, 4), 10, ...o.slice(4)];
+    if (o[0] === "moment" && Array.isArray(o[2]) && !(Array.isArray(o[3]) && Array.isArray(o[4]))) {
+      const c = o[2], st = o.filter((x) => typeof x === "string").slice(2);
+      const p2 = Array.isArray(o[3]) ? o[3] : [c[0] + 0.6, c[1]];
+      return ["moment", o[1], c, p2, [c[0] - (p2[1] - c[1]), c[1] + (p2[0] - c[0])], ...st];
+    }
+    return o;
+  });
+  // the drawing area: the points of the objects plus one unit, at most 40 pixels per unit and
+  // about 400 x 300 pixels, drawn unscaled (readable labels); a grid of the list keeps its
+  // labels and further entries, only its range and pixels follow the objects
+  const g = objects.findIndex((o) => Array.isArray(o) && o[0] === "grid");
+  const xs = [], ys = [];
+  const walk = (v) => {
+    if (!Array.isArray(v)) return;
+    if (v.length === 2 && typeof v[0] === "number" && typeof v[1] === "number") { xs.push(v[0]); ys.push(v[1]); return; }
+    v.forEach(walk);
+  };
+  objects.forEach((o, i) => { if (i !== g) walk(o); });
+  if (!xs.length) { xs.push(0); ys.push(0); }
+  const x0 = Math.floor(Math.min(...xs)) - 1, x1 = Math.ceil(Math.max(...xs)) + 1;
+  const y0 = Math.floor(Math.min(...ys)) - 1, y1 = Math.ceil(Math.max(...ys)) + 1;
+  const pix = Math.max(4, Math.min(40, Math.floor(400 / (x1 - x0)), Math.floor(300 / (y1 - y0))));
+  if (g >= 0) {
+    const grid = [...objects[g]];
+    grid.splice(3, 5, x0, x1, y0, y1, pix);
+    return objects.map((o, i) => (i === g ? grid : o));
+  }
+  return [["grid", "", "", x0, x1, y0, y1, pix], ...objects];
+}
+async function renderThumbs(box, f, token) {
+  const cells = [...box.querySelectorAll("[data-objs]")];
+  if (!cells.length) return;
+  let src;
+  try { src = await F.loadMeclib($("src").value, true); } catch (e) { return; }
+  for (const td of cells) {
+    if (token !== thumbToken) return;
+    let objects;
+    try { objects = JSON.parse(td.dataset.objs); } catch (e) { continue; }
+    td.innerHTML = "";
+    let handle;
+    try {
+      handle = F.run({ container: td, config, jsxKey: $("jsx").value, mathjaxKey: $("mathjax").value,
+        meclibSource: src.text, initText: JSON.stringify(thumbInit(objects)),
+        blockText: F.BLOCK_PRESETS.interactive, decsep: msep, scale: 1, timeout: 20000 });
+      const res = await handle.done;
+      // meclib could not draw the list (e.g. a cut-out that is no valid initdata): say so
+      if (res.errors.length) td.insertAdjacentHTML("beforeend", `<div class="details" title="${esc(res.errors.join("\n"))}">meclib: ${esc(res.errors[0]).slice(0, 80)}</div>`);
+    } catch (e) { td.textContent = e.message; }
+    if (handle) handle.stop();
+  }
+}
+
+// a feedback text of a test file (decimal point) as it shows with the decimal comma: {,} in
+// formulas, a plain comma in the text
+function commaText(t) {
+  if (msep !== ",") return t;
+  return t.split(/(\\\(.*?\\\)|\\\[.*?\\\])/s).map((part, i) =>
+    part.replace(/(\d)\.(\d)/g, i % 2 ? "$1{,}$2" : "$1,$2")).join("");
+}
+// with the decimal comma, the actual texts are compared after {,} -> . (as the run does)
+function sepNorm(t) { return msep === "," ? String(t ?? "").replace(/\{,\}/g, ".") : t; }
+// line breaks (and the spaces after them) inside TeX math removed, as the checks compare
+// (tex_nl_norm() of the harness: Maxima versions break long TeX output differently)
+function texNl(t) {
+  return String(t ?? "").replace(/\\\(.*?\\\)|\\\[.*?\\\]/gs, (m) => m.replace(/[\r\n]+ */g, ""));
+}
+function cmpNorm(t) { return texNl(sepNorm(t)); }
+
+function showMFile(name, n) {
+  const f = mtests.files.find((x) => x.file === name);
+  if (!f) return;
+  showView("mtest");
+  const box = $("mtest");
+  const isValue = f.group === "value";
+  const setupBox = (src, what) => src ? `<details class="setup"><summary>${what} (${src.split("\n").length} lines)</summary><pre>${esc(src)}</pre></details>` : "";
+  const R0 = mresults[f.file];
+  const stale = R0 && !R0.error && (R0.sep || ".") !== msep;     // a run with the other separator
+  const R = stale ? null : R0;
+  // names assigned in the set-up: an expected value that uses one is a reference (e.g. GG_sx[1])
+  const assigned = new Set([f.shared, ...f.cases.map((c) => c.setup)].join("\n").split("\n")
+    .map((l) => (l.match(/^\s*([A-Za-z_%][A-Za-z0-9_%]*)\s*:(?!=)/) || [])[1]).filter(Boolean));
+  const isRef = (v) => [...String(v).matchAll(/[A-Za-z_%][A-Za-z0-9_%]*/g)].some((m) => assigned.has(m[0]));
+  const isScene = f.group === "scene";
+  box.dataset.file = f.file;
+  const token = ++thumbToken;
+  const summary = !R ? "" : R.error ? `<span class="badge fail" title="${esc(R.error)}">error</span>`
+    : `<span class="badge ${R.failed ? "fail" : "pass"}">${R.passed} passed${R.failed ? ", " + R.failed + " failed" : ""}</span>` +
+      (R.points ? ` <span class="badge point" title="texts with a decimal point in a number although the run used the decimal comma">${R.points} with point</span>` : "") +
+      ` <span class="secs" title="run time, STACK and Maxima of the run, JSXGraph of the graphics">${R.seconds} s${R.stack ? " · " + esc(R.stack) : ""}${R.maxima ? " · " + esc(R.maxima) : ""}` +
+      ` · JSXGraph ${esc(($("jsx").value.match(/JSXGraph ([\d.]+)/) || [, $("jsx").value])[1])}</span>`;
+  // the graphics of the file: each case draws the objects of its call in its row; object lists
+  // of the set-up that no case draws (e.g. o_sx, which sum_xyM() reads before the checks) are
+  // shown at the top
+  const top = [];   // [json, [names]]
+  const varNames = {};   // json -> names of the set-up variables with this list
+  if (R && !R.error) {
+    const caseObjs = new Set(f.cases.map((c) => caseResult(f.file, c.n).obj).filter(Boolean));
+    for (const [v, j] of Object.entries(R.vars || {})) {
+      (varNames[j] = varNames[j] || []).push(v);
+      if (caseObjs.has(j)) continue;
+      const t = top.find((e) => e[0] === j);
+      if (t) t[1].push(v); else top.push([j, [v]]);
+    }
+  }
+  box.innerHTML = `<section><h2 class="mt-head">${esc(f.file)} <span class="hint">${f.cases.length} cases</span> ${summary}
+      ${f.cases.length ? '<button class="small" data-act="mrun" title="run this file in Maxima (meclib files of the working copy)">Run</button>' : ""}${stale ? `<span class="hint">last run with decimal ${R0.sep === "," ? "comma" : "point"} - Run again</span>` : ""}<span class="spacer"></span>
+      <span class="langsw sepsw" title="decimal separator of the run, the feedback and the validation (expected texts are written with the point)"><button class="small dec" data-s=".">0<b>.</b>5</button><button class="small dec" data-s=",">0<b>,</b>5</button></span>
+      <span class="langsw" title="language of the feedback"><button class="small" data-l="de">de</button><button class="small" data-l="en">en</button></span></h2>
+    ${f.title ? `<p class="mt-title">${esc(f.title)}</p>` : ""}
+    <p class="hint mt-fns">functions: ${f.functions.map((x) => `<code>${esc(x)}</code>`).join("") || "-"}
+      ${f.in_suite ? "" : " &middot; not loaded by run_tests.mac"}</p>
+    ${f.shared ? `<div class="mt-shared">${setupBox(f.shared, "set-up shared by several cases")}</div>` : ""}
+    ${top.length ? `<div class="mt-scenes">${top.map(([j, names], i) => `<figure><div class="thumb" data-objs="${esc(j)}"><div class="placeholder"></div></div>
+      <figcaption>${i + 1}: ${esc(names.join(", "))}</figcaption></figure>`).join("")}</div>` : ""}
+    ${f.error ? `<p class="error">${esc(f.error)}</p>` : ""}
+    ${f.cases.length ? "" : '<p class="hint">No single checks in this file - it runs as a whole in the test suite.</p>'}
+    ${R && R.error ? `<p class="error">${esc(R.error)}</p>` : ""}
+    <table class="mt"><thead><tr><th>#</th><th>Case</th><th>Call</th>${isValue ? "<th>Answer</th>" : ""}${isScene ? "<th>Objects</th>" : ""}<th>Expected</th></tr></thead><tbody></tbody></table></section>`;
+  const runBtn = box.querySelector('[data-act="mrun"]');
+  if (runBtn) runBtn.addEventListener("click", async () => {
+    runBtn.disabled = true; runBtn.textContent = "running ...";
+    await runMFile(f.file);
+  });
+  for (const b of box.querySelectorAll(".sepsw button")) {
+    b.classList.toggle("on", b.dataset.s === msep);
+    b.addEventListener("click", () => { msep = b.dataset.s; showMFile(name, n); });
+  }
+  for (const b of box.querySelectorAll(".langsw button[data-l]")) {
+    b.classList.toggle("on", b.dataset.l === mlang);
+    b.addEventListener("click", () => { mlang = b.dataset.l; showMFile(name, n); });
+  }
+  const tbody = box.querySelector("tbody");
+  for (const c of f.cases) {
+    const tr = document.createElement("tr");
+    tr.id = "mrow-" + c.n;
+    const exp = c.expected || {};
+    // expected result as the question preview shows it: the flag as a symbol, the feedback in
+    // STACK's yellow PRT box
+    let expHtml = "";
+    if ("ok" in exp) {
+      const ok = exp.ok === "true", known = exp.ok === "true" || exp.ok === "false";
+      expHtml += `<span class="mt-flag ${known ? (ok ? "ok" : "bad") : ""}" title="flag: ${esc(exp.ok)}">${known ? (ok ? "\u2714" : "\u2716") : esc(exp.ok)}</span>`;
+    }
+    if ("de" in exp) {
+      const t = commaText((exp[mlang] ?? "").replace(/^(\s|<br\s*\/?>|&nbsp;)+/i, ""));   // the leading line break of the feedback functions
+      if (t) expHtml += `<span class="stackprtfeedback" title="expected feedback (${mlang}); raw text: ${esc(t)}">${t}</span>`;
+    }
+    if ("value" in exp) {
+      // a reference to a result of the set-up (e.g. GG_sx[1]): its value is known after Run
+      const r = R && !R.error ? caseResult(f.file, c.n) : null;
+      if (r && r.expect !== undefined && isRef(exp.value))
+        expHtml += `<code class="mt-ref" title="expected value: a result of the set-up">${esc(exp.value)} =</code> <code title="expected value (evaluated by Run)">${esc(r.expect)}</code>`;
+      else expHtml += `<code title="expected value${isRef(exp.value) ? " - a result of the set-up, evaluated by Run" : ""}">${esc(exp.value)}</code>` +
+        (isRef(exp.value) && !r ? ' <span class="hint">(value after Run)</span>' : "");
+    }
+    // the last run: passed, or the actual result where it differs
+    const res = R && !R.error ? caseResult(f.file, c.n) : null;
+    let status = "";
+    if (res) {
+      if (res.pass === "true") status = '<span class="badge pass">passed</span>';
+      else {
+        status = `<span class="badge fail">${res.err ? "error" : "failed"}</span>`;
+        let act = "";
+        if (res.err) act += `<div class="details">${esc(res.err)}</div>`;
+        if ("ok" in res && res.ok !== exp.ok) act += `<span class="mt-flag ${res.ok === "true" ? "ok" : "bad"}" title="actual flag: ${esc(res.ok)}">${res.ok === "true" ? "\u2714" : "\u2716"}</span>`;
+        if ("de" in res) {
+          const e0 = exp[mlang] ?? "", a0 = res[mlang] ?? "";
+          if (cmpNorm(a0) !== texNl(e0) || cmpNorm(res.de) !== texNl(exp.de) || cmpNorm(res.en) !== texNl(exp.en)) {
+            const shown = a0.replace(/^(\s|<br\s*\/?>|&nbsp;)+/i, "");
+            act += (shown ? `<span class="stackprtfeedback actual">${shown}</span>` : '<span class="hint">(empty)</span>') +
+              `<div class="raw" title="actual raw text (${mlang}${msep === "," ? ", {,} shown as ." : ""}), from the first difference on marked; line breaks in formulas removed">${diffHtml(texNl(e0), cmpNorm(a0))}</div>`;
+          }
+        }
+        if ("value" in res && res.value !== exp.value) act += `<code class="mismatch" title="actual value">${esc(res.value)}</code>`;
+        if (act) expHtml += `<div class="mt-actual"><span class="lbl">actual</span>${act}</div>`;
+      }
+    }
+    if (res && res.point) {
+      status += ' <span class="badge point" title="the text has a number with a decimal point although the run used the decimal comma (not separator-aware)">point</span>';
+      if (res.pass === "true") {      // passed after {,} -> .: the actual text shows where the point is
+        const a0 = res[mlang] ?? "", shown = a0.replace(/^(\s|<br\s*\/?>|&nbsp;)+/i, "");
+        expHtml += `<div class="mt-actual"><span class="lbl">actual</span><span class="stackprtfeedback actual">${shown}</span>` +
+          `<div class="raw" title="actual raw text (${mlang}), numbers with a decimal point marked">${esc(a0).replace(/\d+\.\d+/g, "<mark>$&</mark>")}</div></div>`;
+      }
+    }
+    const answer = isValue ? `<td class="mt-ans">${c.args.length >= 2
+      ? `<span class="stack-validation" title="sans: ${esc(c.args[0])}"><span class="val-ok compact" data-tex="${c.n}:0"><code>${esc(c.args[0])}</code></span></span>
+         <span class="mt-tans" title="tans: ${esc(c.args[1])}" data-tex="${c.n}:1"><code>${esc(c.args[1])}</code></span>` : ""}</td>` : "";
+    tr.innerHTML = `<td class="num">${c.n}</td>
+      <td class="label" title="line ${c.line} · ${esc(c.check)}">${esc(c.label)}${status ? "<div>" + status + "</div>" : ""}</td>
+      <td class="mt-call"><code title="call (line ${c.line}): ${esc(c.call)}">${esc(
+        isValue && c.args.length >= 2 ? c.function + "(sans, tans" + c.args.slice(2).map((x) => ", " + x).join("") + ")" : c.call)}</code>${setupBox(c.setup, "set-up")}</td>
+      ${answer}${isScene ? `<td class="thumb" title="${res && res.names ? "names: " + esc(res.names) : "Run shows the objects of the call"}">${
+        res && res.obj ? `<div data-objs="${esc(res.obj)}"><div class="placeholder"></div></div>` +
+          (varNames[res.obj] ? `<div class="hint tcap">${esc(varNames[res.obj].join(", "))}</div>` : "") : ""}</td>` : ""}<td class="mt-exp">${expHtml}</td>`;
+    tbody.appendChild(tr);
+  }
+  const typeset = () => { if (window.MathJax && MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, box]); };
+  typeset();
+  // sans and tans typeset by Maxima (parsed, not evaluated), as the validation shows them
+  if (isValue && f.cases.length) fetch("/api/mtests/tex?file=" + encodeURIComponent(f.file) + "&sep=" + encodeURIComponent(msep)).then((r) => r.json()).then((tex) => {
+    if ($("mtest").hidden || !box.querySelector("table.mt")) return;
+    for (const el of box.querySelectorAll("[data-tex]")) {
+      const [k, i] = el.dataset.tex.split(":"), t = (tex[k] || [])[+i];
+      if (t) el.innerHTML = t;
+    }
+    typeset();
+  }).catch(() => {});
+  if (n !== undefined) flash($("mrow-" + n)); else box.scrollIntoView({ block: "start" });
+  if (isScene && R && !R.error) renderThumbs(box, f, token);
 }
 
 function caseId(scene, i) { return scene.cases[i].id || String(i + 1); }
@@ -115,6 +561,7 @@ function draw() {
   for (const scene of scenes) {
     const sec = document.createElement("section");
     sec.className = "scene";
+    sec.id = "sec-" + scene.file;
     sec.innerHTML = `<h2>${esc(scene.title)} <span class="file">${esc(scene.file)}.json</span><span class="spacer"></span>
       <button class="small" data-act="runScene">Run scene</button>
       <a class="small" href="index.html?scene=${encodeURIComponent(scene.file)}">open initdata on Graphic page</a></h2>
@@ -139,7 +586,7 @@ function caseRow(scene, i) {
       ${c.notes ? `<div class="cnotes">${esc(c.notes)}</div>` : ""}
       ${c.state ? '<div class="cnotes">starts from a stored state</div>' : ""}
       ${c.drags && c.drags.length ? `<div class="cnotes">${c.drags.length} drag(s): ${esc(c.drags.map((d) => JSON.stringify(d[0]) + "→" + JSON.stringify(d[1])).join(", "))}</div>` : ""}
-      ${users.length ? `<div class="cnotes">used by ${users.map(esc).join(", ")}</div>` : ""}</td>
+      ${users.length ? `<div class="cnotes">used by ${users.map((u) => `<a href="#" data-mfile="${esc(u)}">${esc(u)}</a>`).join(", ")}</div>` : ""}</td>
     <td class="thumb"><div class="placeholder"></div></td>
     <td class="names"><span class="lbl">expected</span><code>${esc(c.expected?.names ?? "(none)")}</code>
       <span class="lbl">actual</span><code class="actual">-</code></td>
@@ -150,6 +597,9 @@ function caseRow(scene, i) {
       <button data-act="accept" disabled title="Store the actual result as the expected one">Accept actual</button>
       <button data-act="delete">Delete</button></td>`;
   tr.querySelector('[data-act="run"]').addEventListener("click", () => runOne(scene, i));
+  for (const a of tr.querySelectorAll("a[data-mfile]")) a.addEventListener("click", (ev) => {
+    ev.preventDefault(); if (tree) tree.reveal("m:" + a.dataset.mfile); showMFile(a.dataset.mfile);
+  });
   tr.querySelector('[data-act="open"]').addEventListener("click", () => {
     location.href = "index.html?scene=" + encodeURIComponent(scene.file) + "&case=" + encodeURIComponent(caseId(scene, i)) +
       "&src=" + encodeURIComponent($("src").value);
@@ -227,17 +677,19 @@ function showResult(tr, r, fresh) {
   applyFilter();
 }
 
-async function runCases(list) {
+// list: scenes to run; only: run just this case index (of the single scene in list)
+async function runCases(list, only) {
   if (running) return;
-  running = true; $("runAll").disabled = true;
+  running = true; updateRunButton();
   let src;
   try { src = await F.loadMeclib($("src").value, true); }
-  catch (e) { $("status").textContent = e.message; running = false; $("runAll").disabled = false; return; }
+  catch (e) { $("status").textContent = e.message; running = false; updateRunButton(); return; }
   $("status").textContent = src.info + " - Meclib " + src.version;
   let pass = 0, fail = 0;
   const times = [], started = performance.now();     // initialisation time of each case
   for (const scene of list) {
     for (let i = 0; i < scene.cases.length; i++) {
+      if (only !== undefined && i !== only) continue;
       const r = await runOne(scene, i, src);
       if (r && r.status === "pass") pass++; else fail++;
       if (r && typeof r.seconds === "number") times.push({ s: r.seconds, name: scene.file + " #" + (i + 1) });
@@ -246,7 +698,7 @@ async function runCases(list) {
     }
   }
   if (times.length > 1) addRun(src, pass, fail, times, (performance.now() - started) / 1000);
-  running = false; $("runAll").disabled = false;
+  running = false; updateRunButton();
 }
 
 // Timing summary: the sum and the median of the initialisation times of the cases (the first
@@ -338,10 +790,22 @@ async function start() {
   fillSelect($("src"), srcEntries, saved.src);
   fillSelect($("jsx"), Object.keys(config.jsxgraph).map((k) => [k, k]), saved.jsx);
   fillSelect($("mathjax"), Object.keys(config.mathjax).map((k) => [k, k]), saved.mathjax);
+  // another Maxima: the results so far stay, marked with their version in the title row of a file
+  const reshow = () => { if (!$("mtest").hidden && $("mtest").dataset.file) showMFile($("mtest").dataset.file); };
+  F.initHeader(config, { onStack: reshow, onMaxima: reshow });
   $("status").textContent = "repository: " + config.repo_path;
+  // MathJax for the expected feedback texts of the Maxima tests (as on the Questions page)
+  const mj = document.createElement("script"); mj.type = "text/x-mathjax-config";
+  mj.text = 'MathJax.Hub.Config({messageStyle: "none", tex2jax: {inlineMath: [["\\\\(","\\\\)"]], displayMath: [["\\\\[","\\\\]"]], processEscapes: true}});';
+  document.head.appendChild(mj);
+  const s = document.createElement("script"); s.src = F.resolveUrl(config.mathjax[$("mathjax").value] || Object.values(config.mathjax)[0]);
+  document.head.appendChild(s);
+  document.documentElement.style.setProperty("--hdr", document.querySelector("header").offsetHeight + "px");
   await loadAll();
+  openFromHash();
+  window.addEventListener("hashchange", openFromHash);
 }
-$("runAll").addEventListener("click", () => runCases(scenes));
+$("runAll").addEventListener("click", () => runScope().run());
 $("failuresOnly").addEventListener("change", applyFilter);
 for (const id of ["src", "jsx", "mathjax"]) $(id).addEventListener("change", storeChoice);
 start();

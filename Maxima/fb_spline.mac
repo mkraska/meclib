@@ -2,12 +2,21 @@
 /* 2025 05 13                          */
 
 /* https://github.com/mkraska/meclib/wiki/Values-and-Slope-of-Splines */
+/* fb_lang(de, en): a text in German and English, as castext("[[lang code='de']]de[[/lang]]
+   [[lang code='en,other']]en[[/lang]]") gives it, but without castext(): STACK compiles every
+   castext literal of the question code including the includes, which costs much time at
+   import and first preview (and runs is_lang() at runtime just as here). With fb_lang_tags
+   true (offline tests, workbench) the [[lang]] blocks are kept, for their language switch. */
+fb_lang(%_de, %_en) := if fb_lang_tags = true
+  then sconcat("[[lang code='de']]", %_de, "[[/lang]][[lang code='en,other']]", %_en, "[[/lang]]")
+  else sconcat(if is_lang("de") then %_de else "", if is_lang("en") or is_lang("other") then %_en else "");
+
 fb_spline(%_sans,%_tans,%_x1,%_x2, %_f):=block( [simp,%_s1,%_s2, %_ftol, %_dtol, %_OK, %_txt,
-  str_value_at: castext("<br>[[lang code='de']]Der Wert bei [[/lang]][[lang code='en,other']]The value at  [[/lang]]"), 
-  str_slope_at: castext("<br>[[lang code='de']]Der Anstieg bei [[/lang]][[lang code='en,other']]The slope at  [[/lang]]"),
-  str_is_not_correct: castext(" [[lang code='de']]stimmt nicht.[[/lang]][[lang code='en,other']]is not correct.[[/lang]]"),
-  str_between: castext(" [[lang code='de']]zwischen[[/lang]][[lang code='en,other']]between[[/lang]] "),
-  str_and: castext(" [[lang code='de']]und[[/lang]][[lang code='en,other']]and[[/lang]] ")
+  str_value_at: sconcat("<br>", fb_lang("Der Wert bei ", "The value at  ")), 
+  str_slope_at: sconcat("<br>", fb_lang("Der Anstieg bei ", "The slope at  ")),
+  str_is_not_correct: sconcat(" ", fb_lang("stimmt nicht.", "is not correct.")),
+  str_between: sconcat(" ", fb_lang("zwischen", "between"), " "),
+  str_and: sconcat(" ", fb_lang("und", "and"), " ")
   ],
   simp:true, 
   %_OK: true,
@@ -36,4 +45,4 @@ fb_spline(%_sans,%_tans,%_x1,%_x2, %_f):=block( [simp,%_s1,%_s2, %_ftol, %_dtol,
           %_txt: castext_concat(%_txt, str_slope_at),
           %_txt: castext_concat(%_txt, castext("{@%_x2@}")),
           %_txt: castext_concat(%_txt, str_is_not_correct) ), 
-  [%_txt,%_OK]);
+  [%_txt,%_OK]);

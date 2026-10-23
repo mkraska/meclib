@@ -58,6 +58,18 @@ fb_check(fb_force(o_ok, "G", [0,2], 0, 2, [0.1,"mm"], "pre: "), false,
   "pre: The line of action of \\(G\\) misses the correct point of application. Distance: 2.0 mm.",
   "fb_force wrong line (unit)");
 
+/* ---- decimal comma (question option, stackfltsep: ","): the reported numbers too ---- */
+stackfltsep: ","$
+fb_check(fb_force(o_wrongdir, "G", [0,0], 0, 2, 0.5, "pre: "), false,
+  "pre: \\(G\\) hat nicht die richtige Richtung. Richtungsabweichung: 90,0°.",
+  "pre: \\(G\\) does not have the correct direction. Direction deviation: 90,0°.",
+  "fb_force wrong direction, decimal comma");
+fb_check(fb_force(o_ok, "G", [0,2], 0, 2, [0.1,"mm"], "pre: "), false,
+  "pre: Die Wirkungslinie von \\(G\\) geht am richtigen Angriffspunkt vorbei. Abstand: 2,0 mm.",
+  "pre: The line of action of \\(G\\) misses the correct point of application. Distance: 2,0 mm.",
+  "fb_force wrong line (unit), decimal comma");
+stackfltsep: "."$
+
 /* ---- dev diagnostics: unit-tagged toldist needs object 1 to be the
    "grid", and its fx/fy scaling factors to be equal. Same text in both
    languages, by convention (developer-facing, never translated). ---- */

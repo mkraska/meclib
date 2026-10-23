@@ -275,6 +275,11 @@ fb_tmpl_render(%ct_s):= block(
 
 castext(%ct_s) := fb_tmpl_render(%ct_s)$
 
+/* fb_lang(de, en) of the meclib files keeps its [[lang]] blocks here (in STACK it picks the
+   language with is_lang()), so that resolve_lang() / stack_resolve_lang() below can show
+   either language - as for castext("[[lang code='de']]...") */
+fb_lang_tags: true$
+
 /* ---- STACK's [[lang code='...']] selection rule, reimplemented ----
    Walks s left to right. Outside any [[lang]]...[[/lang]] block, text
    passes through unchanged (e.g. plain HTML markup, object names).
@@ -384,12 +389,36 @@ resolve_lang(s, lang) := block(
 s_test_fails: 0$
 s_test_success: 0$
 
+/* tex_nl_norm(s): line breaks (with the spaces after them) inside TeX math \( \) or \[ \] removed:
+   Maxima versions differ in where they break long TeX output; outside math, line breaks
+   and spaces of the feedback are significant and kept */
+tex_nl_strip(%_m) := block([%_out: [], %_skip: false],
+  for %_c in charlist(%_m) do
+    if %_c = ascii(10) or %_c = ascii(13) then %_skip: true
+    else if %_skip and %_c = " " then true
+    else (%_skip: false, %_out: cons(%_c, %_out)),
+  simplode(reverse(%_out)))$
+tex_nl_norm(%_s) := if not stringp(%_s) then %_s else
+  block([%_out: "", %_pos: 1, %_len: slength(%_s), %_a, %_b, %_st, %_cl, %_e],
+    while %_pos <= %_len do (
+      %_a: ssearch("\\(", %_s, %_pos), %_b: ssearch("\\[", %_s, %_pos),
+      if %_a = false and %_b = false then (%_out: sconcat(%_out, substring(%_s, %_pos)), %_pos: %_len + 1)
+      else (
+        if %_b = false or (%_a # false and %_a < %_b) then (%_st: %_a, %_cl: "\\)") else (%_st: %_b, %_cl: "\\]"),
+        %_e: ssearch(%_cl, %_s, %_st + 2),
+        if %_e = false then (%_out: sconcat(%_out, substring(%_s, %_pos)), %_pos: %_len + 1)
+        else (
+          %_out: sconcat(%_out, substring(%_s, %_pos, %_st), tex_nl_strip(substring(%_s, %_st, %_e + 2))),
+          %_pos: %_e + 2))),
+    %_out)$
+
 /* fb_check(result, expected_ok, expected_de, expected_en, label)
    result: the raw [text, flag] a feedback function returned.
    Renders `text` for "de" and for "en" via resolve_lang() and compares
    each, plus the flag, against the expected values with EXACT string
    equality (deliberately strict - a missing space or period is a
-   failure here, not something to eyeball away). Prints a precise diff
+   failure here, not something to eyeball away), except for line breaks
+   inside TeX math (tex_nl_norm(), they depend on the Maxima version). Prints a precise diff
    per mismatched field and updates the pass/fail counters. Returns
    true/false so a test file can also assert on it directly if useful. */
 fb_check(result, expected_ok, expected_de, expected_en, label) := block(
@@ -400,12 +429,12 @@ fb_check(result, expected_ok, expected_de, expected_en, label) := block(
     pass: false,
     print(sconcat("FAIL [", label, "] flag: got ", string(ok), ", expected ", string(expected_ok)))
   ),
-  if de # expected_de then (
+  if tex_nl_norm(de) # tex_nl_norm(expected_de) then (
     pass: false,
     print(sconcat("FAIL [", label, "] de:   got <<", de, ">>")),
     print(sconcat("              expected <<", expected_de, ">>"))
   ),
-  if en # expected_en then (
+  if tex_nl_norm(en) # tex_nl_norm(expected_en) then (
     pass: false,
     print(sconcat("FAIL [", label, "] en:   got <<", en, ">>")),
     print(sconcat("              expected <<", expected_en, ">>"))
@@ -421,12 +450,12 @@ fb_check(result, expected_ok, expected_de, expected_en, label) := block(
    other exact expected string. */
 fb_check_str(result, expected_de, expected_en, label) := block(
   [de: resolve_lang(result, "de"), en: resolve_lang(result, "en"), pass: true],
-  if de # expected_de then (
+  if tex_nl_norm(de) # tex_nl_norm(expected_de) then (
     pass: false,
     print(sconcat("FAIL [", label, "] de:   got <<", de, ">>")),
     print(sconcat("              expected <<", expected_de, ">>"))
   ),
-  if en # expected_en then (
+  if tex_nl_norm(en) # tex_nl_norm(expected_en) then (
     pass: false,
     print(sconcat("FAIL [", label, "] en:   got <<", en, ">>")),
     print(sconcat("              expected <<", expected_en, ">>"))

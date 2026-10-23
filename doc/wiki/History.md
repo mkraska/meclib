@@ -1,5 +1,33 @@
 ### Dev Branch
 
+2026 10 23
+- `fb_fbd.mac`, `fb_value.mac`, `fb_spline.mac`: the German/English texts are written with the new helper `fb_lang(de, en)` instead of `castext("[[lang code='de']]...[[/lang]][[lang code='en,other']]...[[/lang]]")` (241 texts; the texts with `{@...@}` stay castext). Same output in STACK (checked in both languages), but STACK compiles the question code much faster: `fb_fbd.mac` 19 s → 8 s at import and first preview. The cause of the long times is a quadratic step in STACK's compiler (reported to the STACK developers)
+- [[Meclib Workbench]]: the question tests can run in STACK itself ("STACK ▶"): STACK API in Docker, built once for the STACK and Maxima version of the Moodle server (`tools/workbench/stackapi.py`), with the Maxima files of the working copy for `stack_include`
+- [[Meclib Workbench]], Questions page: STACK question tests - a button per test case below TAns/Check runs it (inputs filled, checked, compared as STACK does), "+" stores the current answers and their result as a test case with a description, edit, delete, run all; the tests are STACK's `<qtest>` in the file. PRT penalty 0 when the score is 1 (as STACK); TAns fills in the number for models answers with `dispdp`/`dispsf`
+- [[fb_floats()]], [[fb_HAG]]: very small or large numbers in the feedback are shown in scientific notation (as the question option says, e.g. 1.500×10⁻¹⁴, with the question's decimal separator) instead of STACK's plain float display 1.5E-14
+- [[Meclib Workbench]]: the header dropdowns show version numbers only (details as tooltip); Questions page: the folders as a tree with a filter field (as on the Tests page); syntax help: "tests (n)" opens the Tests page at the tests of the function; review: an unused embedded file names where it is stored and which text shows another file of its type instead
+- [[fb_HAG]] is now part of `fb_value.mac` (before: a copy in each question): texts in German and English, values as formulas with 3 significant figures and the question's decimal separator ([issue #70](https://github.com/mkraska/meclib/issues/70)); the workbench review offers to replace the local copies
+- `fb_value.mac`: no `funmake()` any more (forbidden in STACK questions): STACK refused every question that included the dev version of `fb_value.mac` ("Error(s) in question-variables"); the TeX output of the marks of [[fb_floats()]] is now done by named functions, which the security test checks
+- `fb_force()`: the deviation of the direction and the distance of the line of action are written with the question's decimal separator (`90,0°` with the decimal comma)
+- [[Meclib Workbench]], review on opening a question: reminder for meclib includes from a branch other than main (fix: switch to main after the merge); local copies of meclib functions in the question variables (fix: delete, include the file)
+- [[Meclib Workbench]], Questions page: an answer that uses the name of a question variable is invalid, as in STACK ("Forbidden variable or constant"), unless the name is among the input's allowed words
+- [[Meclib Workbench]]: STACK version in the header (from `config/stack/<version>/`, with `profile.json`: release, bundled JSXGraph, supported Maxima versions); a switch can set JSXGraph to the bundled version; JSXGraph or Maxima that do not match are marked; logos from `vendor/logos/`
+
+2026 10 22
+- [[Meclib Workbench]]: Maxima version selectable in the header of the Questions and Tests pages (all installations found, e.g. every `C:\maxima-*`)
+- offline tests: line breaks inside TeX math are ignored when feedback texts are compared (Maxima versions break long TeX output differently)
+- [[Meclib Workbench]], Tests page: Run button for the scope marked in the tree; decimal separator switch (0.5 / 0,5) for runs and display, numbers left with a decimal point marked; graphics of each case in its row; expected values that refer to the set-up shown evaluated after a run
+
+2026 10 21
+- [[Meclib Workbench]], Tests page: tree of the test cases in a left column (scenes, and the offline Maxima tests grouped by free-body-diagram feedback, answer feedback and other functions); a Maxima test file shows its cases with call, sans/tans, set-up statements and the expected result, feedback texts formatted (de/en); not run yet. Compact rows: flag as symbol, feedback in STACK's yellow box, sans/tans typeset as in the validation, set-up shared by several cases shown once. "Run" per file and "Run all Maxima tests": the cases run in Maxima (meclib files of the working copy), passed/failed per case, actual result with the difference marked; thumbnails of the objects of the diagram tests
+
+2026 10 20
+- [[fb_floats()]]: a wrong function with the right argument (e.g. `asin(x)` for `acos(x)`): only the function name is underlined, "Check the function."
+- [[fb_floats()]]: a call without a partner is also marked when no summand has a partner (e.g. `asin(...)` for `acos(...)`), instead of the general hint
+- [[fb_floats()]]: the general hint (no summand in common, nothing else to say) is now "Tut mir leid, leider habe ich keine konkreteren Hinweise." / "Sorry, I have no more specific hints."
+- [[fb_floats()]]: feedback on the arguments of functions (sin, cos, ..., log, exp) and under roots: the calls are paired with those of the model answer and their arguments compared recursively ("Under the root: In the argument of cos(2·α): Number 2: ..."); a call without a partner marks its term
+- [[Meclib Workbench]], Questions page, "Input ...": type "expression with rounded numbers (fb_floats)" (algebraic input, floats allowed; PRT `[txt, isOK]: fb_floats(S_X, X, tol)` with the relative tolerance of the dialog)
+
 2026 10 19
 - [[Meclib Workbench]], Questions page, "Input ...": types "choice: dropdown list" and "choice: radio buttons" (model answer `X_mcq`, a list of choices added as a template at the beginning of the question variables; PRT `S_X` = `mcq_correct(X_mcq)[1]`); the messages report a choice list that is not a list or has no correct choice
 - [[Meclib Workbench]], Questions page: choice inputs (dropdown, radio, checkbox) in the preview, with the entries of the evaluated model answer `[[value, correct, display], ...]`; "TAns" picks the correct entries, "Check" passes the chosen value (checkbox: the list of the ticked values) to the PRTs

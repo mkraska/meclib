@@ -10,7 +10,7 @@
 
 <p hidden>[[input:objects]] [[validation:objects]]</p>
 <p hidden>[[input:names]] [[validation:names]]</p>
-<div style="float:right">
+<div style="float:right; margin: 0 0 0.5em 1.5em;">
 [[jsxgraph width='360px' height='300px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
 var mode  = "STACK";
 const initstring = {#init#};
@@ -58,18 +58,18 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
 
 <p>Gegeben: \(h = {@h@}\), \(r = {@r@}\) (Längeneinheiten).</p>
 
-**Gleichgewichtsbedingungen:** Geben Sie zunächst \(\sin\alpha\) und \(\cos\alpha\) an (der Winkel \(\alpha\) ist in der Skizze oben eingezeichnet).
+**Gleichgewichtsbedingungen:** Geben Sie zunächst \\\(\sin\alpha\\\) und \\\(\cos\alpha\\\) an (der Winkel \\\(\alpha\\\) ist in der Skizze oben eingezeichnet).
 
 <p>\(\sin\alpha = \) [[input:S_sinalpha]] [[validation:S_sinalpha]] [[feedback:alpha]]</p>
 <p>\(\cos\alpha = \) [[input:S_cosalpha]] [[validation:S_cosalpha]]</p>
 
-Stellen Sie nun die Kräftegleichgewichte in \(x\)- und \(y\)-Richtung auf. Verwenden Sie dabei dieselben Kraftnamen wie in Ihrem Freischnitt sowie \(\alpha\) und \(\varphi\) für die eingezeichneten Winkel, z.B. <code>sin(alpha)</code>.
+Stellen Sie nun die Kräftegleichgewichte in \\\(x\\\)- und \\\(y\\\)-Richtung auf. Verwenden Sie dabei dieselben Kraftnamen wie in Ihrem Freischnitt sowie \\\(\alpha\\\) und \\\(\varphi\\\) für die eingezeichneten Winkel, z.B. <code>sin(alpha)</code>.
 
 <p>\(\Sigma F_x:\quad\) [[input:S_GGx]] [[validation:S_GGx]] \(=0\) [[feedback:GGx]]</p>
 <p>\(\Sigma F_y:\quad\) [[input:S_GGy]] [[validation:S_GGy]] \(=0\) [[feedback:GGy]]</p>]]></text>
     </questiontext>
     <generalfeedback format="markdown">
-      <text><![CDATA[<div style="float:right">
+      <text><![CDATA[<div style="float:right; margin: 0 0 0.5em 1.5em;">
 [[jsxgraph width='360px' height='300px' ]]
 var mode  = "STACK";
 var stateRef;
@@ -81,9 +81,9 @@ const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
 [[/jsxgraph]]</div>
 
 Rechts sehen Sie einen möglichen richtigen Freischnitt: Boden und Stufe sind deaktiviert
-(weggeschnitten) und durch die Reaktionskräfte \(N_A\) (senkrecht zum Boden) und \(N_B\)
+(weggeschnitten) und durch die Reaktionskräfte \\\(N_A\\\) (senkrecht zum Boden) und \\\(N_B\\\)
 (radial, da reibungsfreier Punktkontakt an der Stufenkante) ersetzt; dazu kommt die
-Gewichtskraft \(G\).]]></text>
+Gewichtskraft \\\(G\\\).]]></text>
     </generalfeedback>
     <defaultgrade>1</defaultgrade>
     <penalty>0</penalty>
@@ -169,7 +169,7 @@ i_contactB: 15;
 refdata: copylist(initdata);
 refdata: endcons( ["force","G", xO_center, [xOS,rS-1.5], 10, "active"], refdata);
 refdata: endcons( ["force","N_A", float([xOS,0]-[0,1.5]), [xOS,0], 10, "active"] , refdata);
-refdata: endcons( ["force","N_B", float([0,hS]-dOu*1.5), [0,hS], 10, "active"] , refdata);
+refdata: endcons( ["force","N_B", float([0,hS]+dOu*1.5), [0,hS], 10, "active"] , refdata);
 refdata[2][6]: "hide";
 refdata[3][6]: "hide";
 refdata[4][6]: "hide";
@@ -188,7 +188,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       <text>{@ta1@}</text>
     </questionnote>
     <questiondescription format="html">
-      <text></text>
+      <text><![CDATA[<p>Revised by Meclib Workbench 2026-10-22 23:24</p>]]></text>
     </questiondescription>
     <questionsimplify>1</questionsimplify>
     <assumepositive>0</assumepositive>
@@ -223,7 +223,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       <syntaxattribute>0</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>
-      <forbidfloat>1</forbidfloat>
+      <forbidfloat>0</forbidfloat>
       <requirelowestterms>0</requirelowestterms>
       <checkanswertype>0</checkanswertype>
       <mustverify>0</mustverify>
@@ -255,7 +255,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       <boxsize>8</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>0</insertstars>
-      <syntaxhint>Zahl</syntaxhint>
+      <syntaxhint>{@meclib_h_number@}</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords>sin, cos</forbidwords>
       <allowwords></allowwords>
@@ -273,7 +273,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       <boxsize>8</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>0</insertstars>
-      <syntaxhint>Zahl</syntaxhint>
+      <syntaxhint>{@meclib_h_number@}</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords>sin, cos</forbidwords>
       <allowwords></allowwords>
@@ -291,7 +291,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint>Ausdruck</syntaxhint>
+      <syntaxhint>{@meclib_h_alg@}</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>
@@ -309,7 +309,7 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint>Ausdruck</syntaxhint>
+      <syntaxhint>{@meclib_h_alg@}</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>

@@ -1,0 +1,10 @@
+{
+  "release": "4.13.1",
+  "tag": "v4.13.1",
+  "jsxgraph": "1.12.2",
+  "maxima_range": ["5.40.0", "5.49.0"],
+  "sources": {
+    "jsxgraph": "banner of corsscripts/jsxgraphcore.min.js at tag v4.13.1",
+    "maxima_range": "https://docs.stack-assessment.org/en/Installation/STACK_versions/"
+  }
+}

@@ -75,6 +75,7 @@ load("test_fb_vars.mac")$
 load("test_fb_unit.mac")$
 load("test_fb_coeffs.mac")$
 load("test_fb_floats.mac")$
+load("test_fb_HAG.mac")$
 load("test_fb_dim.mac")$
 load("test_fb_system.mac")$
 load("test_fb_name.mac")$

@@ -11,7 +11,9 @@
    define (meclib_functions, noted in run_tests.mac): every operator of a
    definition is a call, every other symbol a variable. Comments and strings are not part of a
    definition, so they cannot give a false alarm. Not covered: statements
-   outside of function definitions (e.g. a texput() at the top level).
+   outside of function definitions (e.g. a texput() at the top level) - so such statements
+   should only name functions (texput(x, f) with a named f, not a lambda), whose definitions
+   are checked here.
    ============================================================================ */
 
 /* names with "globalyforbiddenfunction" / "globalyforbiddenvariable": true, from the map,

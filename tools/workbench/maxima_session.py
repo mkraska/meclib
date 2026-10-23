@@ -10,8 +10,10 @@ Maxima side to a separate output file instead of stdout, see meclib_out() in PRE
 """
 
 import glob
+import json
 import os
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -45,8 +47,89 @@ def find_maxima(configured=None):
     return None
 
 
-def stack_library_dir():
-    hits = sorted(glob.glob(str(REPO / "config" / "stack" / "*" / "maxima" / "stackmaxima.mac")))
+_VERSIONS = {}   # path -> version text (maxima --version, asked once)
+
+
+def maxima_version(path):
+    """Version of a Maxima executable: from its folder name (maxima-5.48.1), else maxima --version."""
+    m = re.search(r"maxima-(\d+(?:\.\d+)+)", str(path), re.I)
+    if m:
+        return m.group(1)
+    if path not in _VERSIONS:
+        try:
+            out = subprocess.run([path, "--version"], capture_output=True, text=True, timeout=15).stdout
+            m = re.search(r"(\d+\.\d+(?:\.\d+)?)", out)
+            _VERSIONS[path] = m.group(1) if m else ""
+        except (OSError, subprocess.SubprocessError):
+            _VERSIONS[path] = ""
+    return _VERSIONS[path]
+
+
+def list_maxima(configured=None):
+    """All Maxima installations found: [[label, path]] - the configured one, PATH, the usual
+    Windows locations (every C:\\maxima-*, Program Files, LOCALAPPDATA), newest version first."""
+    found = [configured] if configured else []
+    for name in ("maxima", "maxima.bat"):
+        hit = shutil.which(name)
+        if hit:
+            found.append(hit)
+    if os.name == "nt":
+        patterns = [r"C:\maxima-*\bin\maxima.bat",
+                    os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "maxima-*", "bin", "maxima.bat"),
+                    os.path.join(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"), "maxima-*", "bin", "maxima.bat"),
+                    os.path.join(os.environ.get("LOCALAPPDATA", ""), "maxima-*", "bin", "maxima.bat"),
+                    os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "maxima-*", "bin", "maxima.bat")]
+        for pattern in patterns:
+            found.extend(sorted(glob.glob(pattern)))
+    out, seen = [], set()
+    for path in found:
+        key = os.path.normcase(os.path.realpath(path))
+        if key in seen or not Path(path).exists() and not shutil.which(path):
+            continue
+        seen.add(key)
+        version = maxima_version(path)
+        out.append(["Maxima " + version if version else path, path])
+    labels = [label for label, _p in out]
+    for entry in out:      # the same version twice: the path tells them apart
+        if labels.count(entry[0]) > 1:
+            entry[0] += " (" + entry[1] + ")"
+    vkey = lambda e: [int(x) for x in re.findall(r"\d+", maxima_version(e[1]))] or [0]
+    return sorted(out, key=vkey, reverse=True)
+
+
+STACK_DIR = REPO / "config" / "stack"
+
+
+def stack_versions():
+    """The STACK versions in config/stack/<plugin version>/ with a Maxima library, oldest first:
+    [{id, release, jsxgraph, maxima_range}] - from profile.json of the version (release, the
+    JSXGraph version bundled with it, the Maxima versions it supports), the release also from
+    version.php if the profile has none."""
+    out = []
+    for lib in sorted(glob.glob(str(STACK_DIR / "*" / "maxima" / "stackmaxima.mac"))):
+        d = Path(lib).parent.parent
+        prof = {}
+        try:
+            prof = json.loads((d / "profile.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            pass
+        release = prof.get("release")
+        if not release:
+            try:
+                m = re.search(r"\$plugin->release\s*=\s*'([0-9.]+)", (d / "version.php").read_text(encoding="utf-8"))
+                release = m.group(1) if m else None
+            except OSError:
+                pass
+        out.append({"id": d.name, "release": release or d.name, "jsxgraph": prof.get("jsxgraph"),
+                    "maxima_range": prof.get("maxima_range")})
+    return out
+
+
+def stack_library_dir(version=None):
+    """config/stack/<version>/maxima/ - the given version, else the newest."""
+    if version and (STACK_DIR / version / "maxima" / "stackmaxima.mac").exists():
+        return STACK_DIR / version / "maxima"
+    hits = sorted(glob.glob(str(STACK_DIR / "*" / "maxima" / "stackmaxima.mac")))
     return Path(hits[-1]).parent if hits else None
 
 
@@ -65,11 +148,11 @@ class MaximaError(RuntimeError):
 
 
 class MaximaSession:
-    def __init__(self, maxima=None, timeout=60):
+    def __init__(self, maxima=None, timeout=60, stack=None):
         self.maxima = find_maxima(maxima)
         if not self.maxima:
             raise MaximaError("Maxima not found - set \"maxima\" in workbench_config.local.json to the full path of maxima.bat")
-        self.libdir = stack_library_dir()
+        self.libdir = stack_library_dir(stack)
         if not self.libdir:
             raise MaximaError("STACK's Maxima library not found under config/stack/<version>/maxima/")
         self.timeout = timeout
