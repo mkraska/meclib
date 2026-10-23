@@ -18,6 +18,26 @@ from that release's `version.php` (e.g. `2026080600`, which is STACK
 4.13.1), not the human release number, since that's what's unambiguous
 across releases.
 
+`stack/<plugin version>/version.php` is STACK's `version.php` of that release
+(the release name, e.g. `$plugin->release = '4.13.1 ...'`), and
+`stack/<plugin version>/profile.json` describes the release for the workbench:
+
+```json
+{
+  "release": "4.13.1",
+  "tag": "v4.13.1",
+  "jsxgraph": "1.12.2",
+  "maxima_range": ["5.40.0", "5.49.0"]
+}
+```
+
+`jsxgraph` is the JSXGraph version bundled with the release (the banner of its
+`corsscripts/jsxgraphcore.min.js`), `maxima_range` the oldest and newest Maxima
+it supports (STACK's compatibility table, see below). The workbench offers a
+JSXGraph entry "STACK <release> bundled (JSXGraph <version>)" for each such
+version, loaded from that release on GitHub, and marks a JSXGraph or Maxima
+choice that does not match the STACK version in use.
+
 `../Maxima/tests/run_tests.mac` requires this library and loads the first
 `stack/<version>/maxima/stackmaxima.mac` it finds here, so the offline tests
 use STACK's real `castext_concat()`, `ct2_latex()`, `stack_disp...()`,
@@ -48,10 +68,12 @@ actually runs, not necessarily the newest upstream release; check your
 installed Maxima version against that release's supported range.
 
 **Filled manually for now.** There's no fetch-it-yourself script yet - a
-version is just a plain copy of that GitHub subtree, placed by hand (or by
+version is just a plain copy of that GitHub subtree (plus `version.php`,
+`security-map.json` and a `profile.json` as above), placed by hand (or by
 Claude, on request); the steps are on the wiki page "Testing a new STACK
-version". With several versions here, the workbench and the offline tests use
-the newest one. A setup script/website that lets you pick a target
+version". With several versions here, the offline tests use the newest one; the
+workbench uses the one chosen in its header (STACK select of the Questions and Tests pages; default: the
+newest), and offers to set JSXGraph to the version bundled with it. A setup script/website that lets you pick a target
 STACK version and populates this automatically is a planned enhancement,
 not yet built.
 

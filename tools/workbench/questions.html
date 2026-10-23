@@ -255,6 +255,7 @@
   <h1>meclib workbench</h1>
   <nav class="pages"><a href="index.html">Graphic</a> · <b>Questions</b> · <a href="tests.html">Tests</a></nav>
   <label>meclib <select id="src"></select></label>
+  <label>STACK <select id="stack"></select></label>
   <label>JSXGraph <select id="jsx"></select></label>
   <label>MathJax <select id="mathjax"></select></label>
   <label>Maxima <select id="maxima"></select></label>
@@ -2179,7 +2180,7 @@ async function start() {
   fillSelect($("src"), srcEntries, savedSel.src);
   fillSelect($("jsx"), Object.keys(config.jsxgraph).map((k) => [k, k]), savedSel.jsx);
   fillSelect($("mathjax"), Object.keys(config.mathjax).map((k) => [k, k]), savedSel.mathjax);
-  F.initMaximaSelect($("maxima"), config, () => { if (result) evaluate(false); });
+  F.initHeader(config, { onStack: () => { if (result) evaluate(false); }, onMaxima: () => { if (result) evaluate(false); } });
   const mj = document.createElement("script"); mj.type = "text/x-mathjax-config";
   mj.text = 'MathJax.Hub.Config({messageStyle: "none", tex2jax: {inlineMath: [["\\\\(","\\\\)"]], displayMath: [["\\\\[","\\\\]"]], processEscapes: true}});';
   document.head.appendChild(mj);

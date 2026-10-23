@@ -21,6 +21,9 @@ Endpoints
   GET /vendor/<path>        static files from ./vendor/ (optional local copies,
                             e.g. MathJax for offline use; not in the repo)
   GET /api/config           merged configuration (see workbench_config.json)
+  POST /api/stack           {id} the STACK version (config/stack/<id>/: Maxima library, security
+                            map; kept in .cache/workbench_state.json); closes the sessions
+  GET /logos/<file>         logos (svg, png) from vendor/logos/ of the repository
   POST /api/maxima          {path} the Maxima version of the sessions (one of maxima_list in
                             /api/config, kept in .cache/workbench_state.json); closes the sessions
   GET /api/meclib?src=X     meclib.js as text, X = local | dev | main
@@ -118,10 +121,11 @@ import stack_question  # noqa: E402
 import qfile  # noqa: E402
 import rules  # noqa: E402
 import history  # noqa: E402
-from maxima_session import MaximaSession, MaximaError, list_maxima  # noqa: E402
+from maxima_session import MaximaSession, MaximaError, list_maxima, stack_versions, maxima_version  # noqa: E402
 
 INBOX = CACHE / "questions"      # copies of files dropped onto the page
 STATE = qfile.State(CACHE / "workbench_state.json")
+LOGOS = REPO / "vendor" / "logos"
 
 
 class SessionPool:
@@ -134,7 +138,7 @@ class SessionPool:
         self.lock = threading.Lock()
         self.sessions = {}   # key -> [session, last_used, names, kinds of runs done ("eval", "check")]
 
-    def get(self, key, maxima):
+    def get(self, key, maxima, stack=None):
         with self.lock:
             entry = self.sessions.get(key)
             if entry and entry[0].alive():
@@ -145,7 +149,7 @@ class SessionPool:
             while len(self.sessions) >= self.MAX:
                 oldest = min(self.sessions, key=lambda k: self.sessions[k][1])
                 self.sessions.pop(oldest)[0].close()
-        session = MaximaSession(maxima or None)
+        session = MaximaSession(maxima or None, stack=stack)
         entry = [session, time.time(), [], set()]
         with self.lock:
             self.sessions[key] = entry
@@ -173,6 +177,40 @@ def current_maxima(cfg=None):
 
 
 _MAXIMA_LIST = []
+
+
+def current_stack():
+    """The STACK version (config/stack/<id>) the sessions load: the one chosen in the page header
+    (kept in the workbench state) if it is still there, else the newest."""
+    versions = stack_versions()
+    chosen = STATE.data.get("stack")
+    if chosen and any(v["id"] == chosen for v in versions):
+        return chosen
+    return versions[-1]["id"] if versions else None
+
+
+def stack_info(cfg):
+    """For /api/config: the STACK versions, the current one, a JSXGraph entry per version with a
+    known bundled JSXGraph (loaded through the proxy from that release), and the logos."""
+    versions = stack_versions()
+    cfg["stack_list"] = versions
+    cfg["stack_current"] = current_stack()
+    bundled = {}            # first in the JSXGraph list, newest STACK first
+    for v in reversed(versions):
+        if v.get("jsxgraph"):
+            key = "STACK %s bundled (JSXGraph %s)" % (v["release"], v["jsxgraph"])
+            base = "proxy:https://raw.githubusercontent.com/maths/moodle-qtype_stack/v%s/corsscripts/" % v["release"]
+            bundled[key] = {"js": base + "jsxgraphcore.min.js", "css": base + "jsxgraph.min.css"}
+            v["jsxgraph_key"] = key
+    cfg["jsxgraph"] = {**bundled, **{k: x for k, x in cfg.get("jsxgraph", {}).items() if k not in bundled}}
+    # logos in vendor/logos/ of the repository, by the word in the file name
+    cfg["logos"] = {}
+    for p in sorted(LOGOS.glob("*")) if LOGOS.is_dir() else []:
+        for kind in ("stack", "jsxgraph", "mathjax", "maxima"):
+            if kind in p.name.lower() and p.suffix.lower() in (".svg", ".png"):
+                cfg["logos"].setdefault(kind, "/logos/" + p.name)
+    cfg["maxima_versions"] = {path: maxima_version(path) for _l, path in cfg.get("maxima_list", [])}
+    return cfg
 
 
 def maxima_list(cfg=None, refresh=False):
@@ -381,7 +419,13 @@ class Handler(SimpleHTTPRequestHandler):
             cfg["repo_path"] = str(REPO)
             cfg["maxima_list"] = maxima_list(cfg)
             cfg["maxima_current"] = current_maxima(cfg)
-            return self.send_json(cfg)
+            return self.send_json(stack_info(cfg))
+        if parsed.path.startswith("/logos/"):
+            name = urllib.parse.unquote(parsed.path[len("/logos/"):])
+            p = LOGOS / name
+            if "/" in name or "\\" in name or not p.is_file() or p.suffix.lower() not in (".svg", ".png"):
+                return self.send_error(404)
+            return self.send_bytes(p.read_bytes(), "image/svg+xml" if p.suffix.lower() == ".svg" else "image/png")
         if parsed.path == "/api/meclib":
             return self.serve_meclib(query.get("src", ["local"])[0])
         if parsed.path == "/proxy":
@@ -402,7 +446,7 @@ class Handler(SimpleHTTPRequestHandler):
             out = {}
             if code:
                 try:
-                    session = POOL.get("mtests:tex", current_maxima())[0]
+                    session = POOL.get("mtests:tex", current_maxima(), current_stack())[0]
                     _stdout, results = session.run_with_results("\n".join(code))
                 except (MaximaError, OSError) as err:
                     return self.send_json({"error": str(err)}, 500)
@@ -459,12 +503,14 @@ class Handler(SimpleHTTPRequestHandler):
             info = mtests.parse_file(target)
             t0 = time.time()
             maxima = current_maxima()
-            session = POOL.get("mtests:run", maxima)[0]
+            stack = current_stack()
+            session = POOL.get("mtests:run", maxima, stack)[0]
             stdout, results = session.run_with_results(
                 mtests.run_code(target, info, stack_question.mstring, REPO, sep), timeout=600)
             res = mtests.run_results(info, stdout, results, sep)
             res["seconds"] = round(time.time() - t0, 2)
             res["maxima"] = next((label for label, p in maxima_list() if p == maxima), maxima)
+            res["stack"] = next(("STACK " + v["release"] for v in stack_versions() if v["id"] == stack), stack)
             return self.send_json(res)
         except (ValueError, OSError, MaximaError) as err:
             return self.send_json({"error": str(err)}, 500)
@@ -529,7 +575,7 @@ class Handler(SimpleHTTPRequestHandler):
                 index, src = int(req["index"]), req.get("src", "local")
                 qel = stack_question.question_element(text, index)
                 data = stack_question.question_data(qel)
-                entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg))
+                entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg), current_stack())
                 resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
                 answers = req.get("answers") if path == "/api/q/check" else None
                 result = stack_question.evaluate(entry[0], data, int(req.get("seed", 1)), resolver, entry[2], answers)
@@ -710,6 +756,16 @@ class Handler(SimpleHTTPRequestHandler):
             STATE.save()
             POOL.close_all()          # the next run starts a session with the chosen version
             return self.send_json({"maxima_current": path})
+        if parsed.path == "/api/stack":
+            req = json.loads(self.read_body() or "{}")
+            version = req.get("id", "")
+            if not any(v["id"] == version for v in stack_versions()):
+                return self.send_json({"error": "no STACK version %s in config/stack/" % version}, 400)
+            STATE.data["stack"] = version
+            STATE.save()
+            stack_question.STACK_VERSION = version
+            POOL.close_all()          # the next run loads the chosen STACK library
+            return self.send_json({"stack_current": version})
         if parsed.path.startswith("/api/q/"):
             return self.question_post(parsed.path)
         if not parsed.path.startswith("/api/cases/"):
@@ -827,6 +883,7 @@ def main():
     args = parser.parse_args()
     mimetypes.add_type("text/javascript", ".js")
     mimetypes.add_type("text/css", ".css")
+    stack_question.STACK_VERSION = current_stack()     # the security map of the chosen STACK version
     port = args.port or load_config().get("port", 8765)
     stop_previous_server(port)
     server = None

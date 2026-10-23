@@ -6,10 +6,6 @@
     "main": "main"
   },
   "jsxgraph": {
-    "STACK 4.13.1 bundled (JSXGraph 1.12.2)": {
-      "js": "proxy:https://raw.githubusercontent.com/maths/moodle-qtype_stack/v4.13.1/corsscripts/jsxgraphcore.min.js",
-      "css": "proxy:https://raw.githubusercontent.com/maths/moodle-qtype_stack/v4.13.1/corsscripts/jsxgraph.min.css"
-    },
     "CDN 1.12.2": {
       "js": "https://cdn.jsdelivr.net/npm/jsxgraph@1.12.2/distrib/jsxgraphcore.js",
       "css": "https://cdn.jsdelivr.net/npm/jsxgraph@1.12.2/distrib/jsxgraph.min.css"

@@ -89,6 +89,7 @@
   <h1>meclib workbench</h1>
   <nav class="pages"><a href="index.html">Graphic</a> · <a href="questions.html">Questions</a> · <b>Tests</b></nav>
   <label>meclib.js <select id="src"></select></label>
+  <label>STACK <select id="stack"></select></label>
   <label>JSXGraph <select id="jsx"></select></label>
   <label>MathJax <select id="mathjax"></select></label>
   <label>Maxima <select id="maxima"></select></label>
@@ -408,7 +409,8 @@ function showMFile(name, n) {
   const summary = !R ? "" : R.error ? `<span class="badge fail" title="${esc(R.error)}">error</span>`
     : `<span class="badge ${R.failed ? "fail" : "pass"}">${R.passed} passed${R.failed ? ", " + R.failed + " failed" : ""}</span>` +
       (R.points ? ` <span class="badge point" title="texts with a decimal point in a number although the run used the decimal comma">${R.points} with point</span>` : "") +
-      ` <span class="secs" title="run time and Maxima version of the run">${R.seconds} s${R.maxima ? " · " + esc(R.maxima) : ""}</span>`;
+      ` <span class="secs" title="run time, STACK and Maxima of the run, JSXGraph of the graphics">${R.seconds} s${R.stack ? " · " + esc(R.stack) : ""}${R.maxima ? " · " + esc(R.maxima) : ""}` +
+      ` · JSXGraph ${esc(($("jsx").value.match(/JSXGraph ([\d.]+)/) || [, $("jsx").value])[1])}</span>`;
   // the graphics of the file: each case draws the objects of its call in its row; object lists
   // of the set-up that no case draws (e.g. o_sx, which sum_xyM() reads before the checks) are
   // shown at the top
@@ -780,7 +782,8 @@ async function start() {
   fillSelect($("jsx"), Object.keys(config.jsxgraph).map((k) => [k, k]), saved.jsx);
   fillSelect($("mathjax"), Object.keys(config.mathjax).map((k) => [k, k]), saved.mathjax);
   // another Maxima: the results so far stay, marked with their version in the title row of a file
-  F.initMaximaSelect($("maxima"), config, () => { if (!$("mtest").hidden && $("mtest").dataset.file) showMFile($("mtest").dataset.file); });
+  const reshow = () => { if (!$("mtest").hidden && $("mtest").dataset.file) showMFile($("mtest").dataset.file); };
+  F.initHeader(config, { onStack: reshow, onMaxima: reshow });
   $("status").textContent = "repository: " + config.repo_path;
   // MathJax for the expected feedback texts of the Maxima tests (as on the Questions page)
   const mj = document.createElement("script"); mj.type = "text/x-mathjax-config";

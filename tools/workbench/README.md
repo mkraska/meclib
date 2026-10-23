@@ -508,12 +508,28 @@ language), Markdown format. It has no PRT yet and therefore default mark 0.
 Maxima is found on the PATH or in the usual Windows install locations
 (every `C:\maxima-*`, `Program Files`, `LOCALAPPDATA`); otherwise set
 `"maxima"` in `workbench_config.local.json` to the full path of `maxima.bat`.
+**STACK version** (STACK select in the header of the Questions and Tests
+pages, one entry per `config/stack/<plugin version>/`, see
+`config/README.md`): its Maxima library and security map produce the preview
+and the test results. The choice holds for all pages (kept in
+`.cache/workbench_state.json`) and starts new Maxima sessions. If the
+version's `profile.json` names the JSXGraph bundled with it, a panel below
+the header offers to set JSXGraph to "STACK <release> bundled (JSXGraph
+<version>)" (Apply / Keep); such entries are added to the JSXGraph list for
+every installed STACK version. A JSXGraph choice other than the bundled one,
+and a Maxima outside the versions the STACK release supports, get a ⚠ with
+a tooltip. Maxima and MathJax are not changed by a STACK switch. The tooltip
+of the STACK item tells how to add a version. Logos in `vendor/logos/` of
+the repository (file names containing stack, jsxgraph, mathjax or maxima;
+svg or png) replace the labels of the header selects.
+
 With several versions installed, the "Maxima" select in the header of the
 Questions and Tests pages chooses one (newest first, labelled with the version
 from the folder name or `maxima --version`). The choice holds for all pages,
 is kept in `.cache/workbench_state.json` and closes the running sessions, so
 the next evaluation or test run starts with the chosen version. The Tests page
-shows the version of each run in the title row of a file. The first
+shows STACK and Maxima of each run (and the JSXGraph of the graphics) in the
+title row of a file. The first
 evaluation starts Maxima and loads the library (a few seconds); later ones
 take a fraction of a second.
 

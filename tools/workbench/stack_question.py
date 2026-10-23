@@ -382,20 +382,23 @@ def mark_html_blocks(text):
 
 
 # ---------------------------------------------------------------------- STACK's security rules
-_SECURITY = None
+_SECURITY = {}
+STACK_VERSION = None    # the STACK version chosen in the workbench (set by the server); None: newest
 
 
 def security_map():
-    """STACK's stack/cas/security-map.json (copied to config/stack/<version>/), loaded once."""
-    global _SECURITY
-    if _SECURITY is None:
-        import glob, json
-        hits = sorted(glob.glob(str(REPO / "config" / "stack" / "*" / "security-map.json")))
+    """STACK's stack/cas/security-map.json (copied to config/stack/<version>/) of the chosen
+    STACK version (else the newest), loaded once per version."""
+    import glob, json
+    hits = sorted(glob.glob(str(REPO / "config" / "stack" / "*" / "security-map.json")))
+    chosen = REPO / "config" / "stack" / str(STACK_VERSION) / "security-map.json"
+    path = str(chosen) if STACK_VERSION and chosen.exists() else (hits[-1] if hits else None)
+    if path not in _SECURITY:
         try:
-            _SECURITY = json.loads(Path(hits[-1]).read_text(encoding="utf-8")) if hits else {}
+            _SECURITY[path] = json.loads(Path(path).read_text(encoding="utf-8")) if path else {}
         except (OSError, ValueError):
-            _SECURITY = {}
-    return _SECURITY
+            _SECURITY[path] = {}
+    return _SECURITY[path]
 
 
 def forbidden_identifiers(stmt):

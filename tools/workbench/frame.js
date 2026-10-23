@@ -390,10 +390,120 @@ ${editorAddon(edit)}
       }
       config.maxima_current = r.maxima_current;
       sel.title = "Maxima of the question evaluation and the tests: " + r.maxima_current;
+      markProfile(config);
       if (onChange) onChange(r.maxima_current);
     });
   }
 
+  // ------------------------------------------------------------ STACK version and its profile
+  // config.stack_list: [{id, release, jsxgraph, jsxgraph_key, maxima_range}] (config/stack/<id>/,
+  // profile.json), config.stack_current: the id in use (server-wide, like Maxima)
+  function stackProfile(config) {
+    return (config.stack_list || []).find((v) => v.id === config.stack_current) || null;
+  }
+  const vnum = (v) => String(v || "").split(".").map((x) => parseInt(x, 10) || 0);
+  function vcmp(a, b) {
+    const x = vnum(a), y = vnum(b);
+    for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) - (y[i] || 0);
+    return 0;
+  }
+  // a ⚠ after a select of the header (created once), hidden if text is empty
+  function warnMark(sel, text) {
+    if (!sel) return;
+    let w = sel.parentElement.querySelector(".hwarn");
+    if (!w) { w = document.createElement("span"); w.className = "hwarn"; w.textContent = "\u26a0"; sel.after(w); }
+    w.hidden = !text; w.title = text || "";
+  }
+  // marks the JSXGraph and Maxima selects that differ from the profile of the STACK version
+  function markProfile(config) {
+    const p = stackProfile(config);
+    const jsx = document.getElementById("jsx"), mx = document.getElementById("maxima");
+    warnMark(jsx, p && p.jsxgraph_key && jsx && jsx.value !== p.jsxgraph_key
+      ? `differs from STACK ${p.release}, which bundles JSXGraph ${p.jsxgraph} ("${p.jsxgraph_key}")` : "");
+    const mv = (config.maxima_versions || {})[config.maxima_current];
+    const r = p && p.maxima_range;
+    warnMark(mx, r && mv && (vcmp(mv, r[0]) < 0 || vcmp(mv, r[1]) > 0)
+      ? `Maxima ${mv} is outside the versions STACK ${p.release} supports (${r[0]} to ${r[1]})` : "");
+  }
+  // the logos of vendor/logos/ (config.logos) in place of the labels of the header selects;
+  // the label text stays as tooltip
+  function headerLogos(config) {
+    for (const [id, kind] of [["stack", "stack"], ["jsx", "jsxgraph"], ["mathjax", "mathjax"], ["maxima", "maxima"]]) {
+      const sel = document.getElementById(id), src = (config.logos || {})[kind];
+      if (!sel || !src) continue;
+      const label = sel.closest("label");
+      const t = label && [...label.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim());
+      if (!t) continue;
+      const img = document.createElement("img"); img.className = "hlogo"; img.src = src;
+      img.alt = t.textContent.trim(); img.title = t.textContent.trim();
+      t.replaceWith(img);
+    }
+  }
+  // the STACK select of the header (Questions, Tests): a choice is sent to the server (Maxima
+  // library and security map of that version, new sessions) and offers to set JSXGraph to the
+  // version bundled with it; onChange(id) after the switch
+  function initStackSelect(sel, config, onChange) {
+    const list = config.stack_list || [];
+    sel.innerHTML = "";
+    for (const v of [...list].reverse()) {
+      const o = document.createElement("option"); o.value = v.id; o.textContent = v.release;
+      o.title = "plugin version " + v.id; sel.appendChild(o);
+    }
+    if (!list.length) { const o = document.createElement("option"); o.textContent = "not found"; sel.appendChild(o); }
+    sel.disabled = list.length < 2;
+    sel.value = config.stack_current || "";
+    const tip = () => {
+      const p = stackProfile(config);
+      sel.closest("label").title = (p ? `STACK ${p.release} (plugin version ${p.id}): its Maxima library (config/stack/${p.id}/maxima/) ` +
+        `and security map produce the preview and the test results` + (p.jsxgraph ? `; it bundles JSXGraph ${p.jsxgraph}` : "") +
+        (p.maxima_range ? `; supported Maxima ${p.maxima_range[0]} to ${p.maxima_range[1]}` : "") + ".\n"
+        : "No STACK version in config/stack/.\n") +
+        (list.length > 1 ? "Choose another installed version in this list (it can set JSXGraph to the bundled version).\n" : "") +
+        "To add a version: copy stack/maxima/, stack/cas/security-map.json and version.php of that release " +
+        "(github.com/maths/moodle-qtype_stack) into config/stack/<plugin version>/, add profile.json " +
+        "(release, bundled JSXGraph, Maxima range) and restart the workbench - see config/README.md.";
+    };
+    tip();
+    sel.addEventListener("change", async () => {
+      const resp = await fetch("/api/stack", { method: "POST", headers: { "Content-Type": "application/json", "X-Workbench": "1" },
+        body: JSON.stringify({ id: sel.value }) });
+      const r = await resp.json();
+      if (r.error) {
+        const st = document.getElementById("status"); if (st) st.textContent = r.error;
+        sel.value = config.stack_current; return;
+      }
+      config.stack_current = r.stack_current;
+      tip(); markProfile(config);
+      offerBundled(config);
+      if (onChange) onChange(r.stack_current);
+    });
+  }
+  // after a STACK switch: a panel below the header offers JSXGraph as bundled with that version
+  function offerBundled(config) {
+    const p = stackProfile(config), jsx = document.getElementById("jsx");
+    document.querySelectorAll(".hpanel").forEach((e) => e.remove());
+    if (!p || !p.jsxgraph_key || !jsx || jsx.value === p.jsxgraph_key) return;
+    const panel = document.createElement("div"); panel.className = "hpanel";
+    panel.innerHTML = `STACK ${p.release} bundles JSXGraph ${p.jsxgraph}. Set JSXGraph to "${p.jsxgraph_key}"? ` +
+      `<button class="small primary" data-a="apply">Apply</button> <button class="small" data-a="keep">Keep "${jsx.value}"</button>`;
+    panel.addEventListener("click", (ev) => {
+      const a = ev.target.dataset && ev.target.dataset.a;
+      if (!a) return;
+      if (a === "apply") { jsx.value = p.jsxgraph_key; jsx.dispatchEvent(new Event("change")); }
+      panel.remove(); markProfile(config);
+    });
+    document.querySelector("header").after(panel);
+  }
+  // the header of a page: logos, STACK and Maxima selects (if the page has them), marks
+  function initHeader(config, { onStack, onMaxima } = {}) {
+    headerLogos(config);
+    const st = document.getElementById("stack"), mx = document.getElementById("maxima"), jsx = document.getElementById("jsx");
+    if (st) initStackSelect(st, config, onStack);
+    if (mx) initMaximaSelect(mx, config, onMaxima);
+    if (jsx) jsx.addEventListener("change", () => markProfile(config));
+    markProfile(config);
+  }
+
   return { BLOCK_PRESETS, normalizeInit, parseInit, formatObjects, parseBlock, resolveUrl,
-           loadMeclib, buildFrameDoc, run, diffObjects, initMaximaSelect };
+           loadMeclib, buildFrameDoc, run, diffObjects, initMaximaSelect, initHeader, stackProfile };
 })();
