@@ -593,6 +593,31 @@ def question_variable_words(inp, value, qv_names):
     return found
 
 
+_NUM = r"(-?\s*[0-9.]+(?:[eE][-+]?[0-9]+)?)"
+
+
+def plain_tans(raw):
+    """The model answer as a student would type it: STACK's display functions of a number
+    (dispdp/dispsf evaluate to displaydp(x, n), scientific_notation to displaysci(m, n, e)) become
+    the number they show - "TAns" fills the input with it."""
+    if raw is None:
+        return raw
+
+    def dp(m):
+        try:
+            return "%.*f" % (int(m.group(2)), float(m.group(1).replace(" ", "")))
+        except ValueError:
+            return m.group(0)
+
+    def sci(m):
+        try:
+            return "%.*fE%d" % (int(m.group(2)), float(m.group(1).replace(" ", "")), int(m.group(3)))
+        except ValueError:
+            return m.group(0)
+    out = re.sub(r"displaydp\(\s*%s\s*,\s*(\d+)\s*\)" % _NUM, dp, raw)
+    return re.sub(r"displaysci\(\s*%s\s*,\s*(\d+)\s*,\s*(-?\d+)\s*\)" % _NUM, sci, out)
+
+
 MCQ_TYPES = ("dropdown", "radio", "checkbox")
 
 
@@ -910,7 +935,7 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
         "variables": [{"name": n, "raw": first("var:" + n), "tex": first("tex:" + n)} for n in names],
         "names": names,
         "includes": includes,
-        "inputs": [dict(inp, tans_raw=first("tans:" + inp["name"]), tans_tex=first("tanstex:" + inp["name"]),
+        "inputs": [dict(inp, tans_raw=plain_tans(first("tans:" + inp["name"])), tans_tex=first("tanstex:" + inp["name"]),
                         hint_de=first("hint:de:" + inp["name"]), hint_en=first("hint:en:" + inp["name"]),
                         mcells=matrix_cells(first("mcells:" + inp["name"])), choices=mcq_choices(first("mcq:" + inp["name"])))
                    for inp in data["inputs"]],

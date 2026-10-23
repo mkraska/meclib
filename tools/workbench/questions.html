@@ -91,7 +91,8 @@
   .files li { font-family: var(--mono); font-size: 12px; word-break: break-all; }
   /* the folder tree (tree.js): folder names as written, the folder files are dropped into marked */
   #folders details.troot > summary { text-transform: none; letter-spacing: 0; word-break: break-all; }
-  #folders details.troot.cur > summary .tlabel { color: var(--accent); }
+  #folders details.troot > summary .tlabel, #folders details.tbranch > summary .tlabel { color: var(--accent); }
+  #folders details.troot.cur > summary .tlabel { text-decoration: underline; }   /* the folder dropped files go to */
   .recent li { font-size: 12px; }
   .qlist.files li.subdir { color: var(--muted); font-size: 11.5px; cursor: default; padding-top: 4px; }
   .qlist.files li.subdir:hover { background: none; }
