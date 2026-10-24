@@ -291,6 +291,7 @@ class IncludeResolver:
 
     def __init__(self, src, branches, fetch):
         self.src, self.branches, self.fetch = src, branches, fetch
+        self.offline = []       # notes: an older copy used because GitHub was not reachable
 
     def local_file(self, url):
         m = MECLIB_RAW.match(url)
@@ -305,7 +306,16 @@ class IncludeResolver:
         branch = self.branches[self.src]
         cache = CACHE / "includes" / branch / path
         if not cache.exists() or time.time() - cache.stat().st_mtime > 60:
-            data = self.fetch("https://raw.githubusercontent.com/mkraska/meclib/%s/%s?t=%d" % (branch, path, int(time.time())))
+            try:
+                data = self.fetch("https://raw.githubusercontent.com/mkraska/meclib/%s/%s?t=%d" % (branch, path, int(time.time())))
+            except OSError as err:          # (URLError is an OSError) offline: the last copy
+                if not cache.exists():
+                    raise
+                note = "stack_include %s (%s): GitHub not reachable (%s) - using the copy from %s" % (
+                    path, branch, err, time.strftime("%Y-%m-%d %H:%M", time.localtime(cache.stat().st_mtime)))
+                if note not in self.offline:
+                    self.offline.append(note)
+                return cache
             cache.parent.mkdir(parents=True, exist_ok=True)
             cache.write_bytes(data)
         return cache

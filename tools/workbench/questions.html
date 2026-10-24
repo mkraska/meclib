@@ -2390,6 +2390,7 @@ function renderMessages() {
   if (!result.languages || !result.languages.length)
     msgs.push({ cls: "warn", text: "The question text has no [[lang]] block, so STACK sets no language: [[lang]] blocks (e.g. in the meclib feedback functions' texts) stay empty - as in Moodle." });
   for (const inc of result.includes || []) msgs.push({ cls: "info", text: `stack_include ${inc}\n→ follows the meclib source selector (${$("src").value})` });
+  for (const note of result.offline || []) msgs.push({ cls: "warn", text: note });
   // where Maxima spent the time (last Update or Check): the parts in the order they ran, then
   // the slow lines of the question variables in line order (the PRTs' times are at their feedback)
   const tm = timingSummary();

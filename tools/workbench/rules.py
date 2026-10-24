@@ -297,6 +297,26 @@ def r_include_branch(Q_):
     return out
 
 
+# Includes of the compact copies in Maxima/dist/ (removed 2026-10-23: STACK drops comments when it
+# reads the code, so they did not make its compilation faster): STACK refuses the question as soon
+# as it compiles it again ("could not retrieve").
+def r_include_dist(Q_):
+    out = []
+    for url in Q_.includes:
+        m = re.match(r"(https://raw\.githubusercontent\.com/mkraska/meclib/[^/]+/Maxima/)dist/([^/]+)$", url)
+        if not m:
+            continue
+        new_url = m.group(1) + m.group(2)
+
+        def fix(q, url=url, new_url=new_url):
+            return _set_text(q, "questionvariables", Q(q).qvars.replace(url, new_url))
+        out.append(F("include.dist", m.group(2), "required", "Include of a removed compact copy",
+                     "%s is included from Maxima/dist/, which no longer exists (the compact copies did not make "
+                     "STACK faster). STACK refuses the question as soon as it compiles it again (\"could not "
+                     "retrieve\"). Include Maxima/%s instead." % (m.group(2), m.group(2)), fix))
+    return out
+
+
 _MECLIB_FUNS = {}
 
 
@@ -1008,7 +1028,7 @@ def r_scenes(Q_):
 
 RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_scenes, r_graphic_inputs, r_input_settings, r_prts,
          r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_matrix_inputs, r_unused_files, r_semicolons,
-         r_include_branch, r_legacy_functions]
+         r_include_branch, r_include_dist, r_legacy_functions]
 
 
 # ---------------------------------------------------------------------- metadata in the description

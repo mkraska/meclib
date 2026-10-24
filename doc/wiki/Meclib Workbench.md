@@ -16,7 +16,8 @@ Questions (your folders, saved continuously) and tests (in the repository, chang
 2. Install the requirements:
    - Python 3 (standard library only)
    - Maxima (for the Questions page; found on the PATH or in the usual Windows install locations)
-   - an internet connection (JSXGraph, MathJax and meclib files from GitHub)
+   - an internet connection (JSXGraph, MathJax and meclib files from GitHub) - or, for working offline, local copies made once with `python fetch_vendor.py` in `tools/workbench/` and the meclib source "local working copy"
+   - optional, for running question tests in STACK itself (STACK ▶): Docker Desktop and a one-time build of the STACK API, see "STACK API (optional)" in the [workbench README](https://github.com/mkraska/meclib/blob/dev2026/tools/workbench/README.md#stack-api-optional)
 3. Start the workbench:
    - Windows: double-click `tools/workbench/start_workbench.bat`
    - any platform: `python server.py` in `tools/workbench/`
@@ -59,7 +60,7 @@ The workbench and the offline tests use STACK's Maxima library, security map and
 
 ## Limitations
 
-The workbench approximates STACK closely, but not completely: STACK's input validation is not reproduced, answer test messages appear as message keys, and `[[jsxgraph]]` blocks inside PRT feedback are not rendered. Check the final question in Moodle before using it with students.
+The workbench approximates STACK closely, but not completely: STACK's input validation is not reproduced, answer test messages appear as message keys, and `[[jsxgraph]]` blocks inside PRT feedback are not rendered. The question tests can be run in STACK itself (STACK ▶, with the STACK API set up). Check the final question in Moodle before using it with students.
 
 ## Planned
 

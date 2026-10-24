@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="stack">
+    <name>
+      <text>meclib diagnostics</text>
+    </name>
+    <questiontext format="markdown">
+      <text><![CDATA[<p hidden>[[input:objects]] [[validation:objects]]</p>
+<p hidden>[[input:names]] [[validation:names]]</p>
+<div style="float:right; margin: 0 0 0.5em 1.5em;">
+[[jsxgraph width='400px' height='320px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
+var mode  = "STACK";
+const diag_t0 = performance.now();
+const initstring = {#init#};
+var decsep = {#stackfltsep#};
+const centeredLabelStyle = {size:0, showInfobox:false, label:{offset:[-6,0],
+  anchorX:'left', anchorY:'middle'}};
+// End of STACK header
+[[include src="https://raw.githubusercontent.com/mkraska/meclib/main/meclib.js" /]]
+// diagnostics of the browser side, as text lines below the beam
+const diag_t1 = performance.now();
+const diag_ua = navigator.userAgent;
+const diag_browser = ["Edg", "OPR", "Firefox", "Chrome", "Safari"]
+  .map(n => diag_ua.match(new RegExp(n + "/[0-9.]+"))).find(m => m);
+const diag_lines = [
+  "page in the graphic frame: " + Math.round(document.documentElement.outerHTML.length/1024) + " kB",
+  "frame start to script: " + Math.round(diag_t0) + " ms, meclib + board: " + Math.round(diag_t1 - diag_t0) + " ms",
+  "browser: " + (diag_browser ? diag_browser[0] : diag_ua.slice(0, 60)) + ", " + ((diag_ua.match(/\(([^;)]+)/) || ["", "?"])[1])
+];
+diag_lines.forEach((s, k) => board.create('text', [-0.8, -1.4 - 0.6*k, s],
+  {fixed: true, useMathJax: false, parse: false, fontSize: 11, display: 'internal', highlight: false}));
+[[/jsxgraph]]</div>
+
+[[lang code="de"]]
+**meclib-Diagnose.** Die Frage zeigt, mit welchen Versionen Moodle sie ausführt (Server in der Tabelle, Browser in der Grafik; dort oben links JSXGraph- und meclib.js-Version), und prüft, ob die meclib-Bibliotheken bei der Bewertung laufen: In der Vorschau *Richtige Antworten ausfüllen*, dann *Prüfen*. Punktzahl 1: `fb_fbd.mac` und `fb_value.mac` arbeiten.
+
+Die Übersetzungszeit des Servers (vor allem für die Includes) lässt sich hier nicht messen (Maximas Zeitfunktionen sind in Fragen verboten). Messen: Frage speichern, Vorschau mit den Entwicklerwerkzeugen des Browsers (Netzwerk) öffnen - die Ladezeit der Seite enthält die Übersetzung, nur beim ersten Aufruf nach dem Speichern.
+[[/lang]][[lang code="en,other"]]
+**meclib diagnostics.** The question shows the versions Moodle runs it with (server in the table, browser in the graphic, with the JSXGraph and meclib.js versions at its top left) and checks that the meclib libraries work when answers are graded: in the preview *Fill in correct responses*, then *Check*. Score 1: `fb_fbd.mac` and `fb_value.mac` work.
+
+The server's compile time (mainly for the includes) cannot be measured here (Maxima's time functions are forbidden in questions). To measure it: save the question, open the preview with the browser's developer tools (network) - the page request includes the compilation, only on the first view after saving.
+[[/lang]]
+
+<table>
+<tr><td>Maxima</td><td>{#MAXIMA_VERSION_STR#}</td></tr>
+<tr><td>STACK library</td><td>{#stackmaximaversion#}</td></tr>
+<tr><td>fb_fbd.mac</td><td>{#fb_fbd_version#}</td></tr>
+<tr><td>fb_value.mac</td><td>{#fb_value_version#}</td></tr>
+<tr><td>[[lang code="de"]]Sprache[[/lang]][[lang code="en,other"]]language[[/lang]]</td><td>{#%_STACK_LANG#}</td></tr>
+<tr><td>[[lang code="de"]]Dezimaltrennzeichen[[/lang]][[lang code="en,other"]]decimal separator[[/lang]]</td><td>{#stackfltsep#}</td></tr>
+<tr><td>simp</td><td>{#simp#}</td></tr>
+</table>
+
+[[lang code="de"]]
+Test: Gewichtskraft \\\(G\\\) senkrecht nach unten durch die Balkenmitte; \\\(G = \\\) [[input:G_val]] N [[validation:G_val]] (50)
+[[/lang]][[lang code="en,other"]]
+Test: weight force \\\(G\\\) vertically down through the middle of the beam; \\\(G = \\\) [[input:G_val]] N [[validation:G_val]] (50)
+[[/lang]]
+
+[[feedback:diag]]]]></text>
+    </questiontext>
+    <generalfeedback format="markdown">
+      <text></text>
+    </generalfeedback>
+    <defaultgrade>1</defaultgrade>
+    <penalty>0</penalty>
+    <hidden>0</hidden>
+    <idnumber></idnumber>
+    <stackversion>
+      <text>2026080600</text>
+    </stackversion>
+    <questionvariables>
+      <text><![CDATA[initdata: [
+  [ "grid", "", "", -1, 9, -4, 4, 40 ],
+  [ "forceGen", "G", [6, 3] ],
+  [ "beam", "", [0, 0], [4, 0], 0.15 ],
+  [ "fix12", "A", [0, 0], 0, "show" ],
+  [ "fix1", "B", [4, 0], 0, "show" ]
+];
+init: stackjson_stringify(initdata);
+/* model answer: the weight force G at the middle of the beam, pointing down */
+tansdata: append(initdata, [["force", "G", [2, 1.5], [2, 0], 10, "active"]]);
+tans: stackjson_stringify(tansdata);
+stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_fbd.mac");
+stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_value.mac");]]></text>
+    </questionvariables>
+    <specificfeedback format="markdown">
+      <text></text>
+    </specificfeedback>
+    <questionnote format="markdown">
+      <text></text>
+    </questionnote>
+    <questiondescription format="markdown">
+      <text><![CDATA[<p>Revised by Meclib Workbench 2026-10-23 21:21</p>
+<p>Review rejected: inputs.settings[G_val], prt.simp[diag]</p>
+
+Shows the Maxima and STACK library versions, the versions of the included meclib files, JSXGraph/meclib.js versions and browser timing; checks fb_fbd.mac (fb_force) and fb_value.mac (fb_unit) in a PRT. Includes from main; switch to dev2026 to test the dev branch.]]></text>
+    </questiondescription>
+    <questionsimplify>1</questionsimplify>
+    <assumepositive>0</assumepositive>
+    <assumereal>0</assumereal>
+    <prtcorrect format="markdown">
+      <text></text>
+    </prtcorrect>
+    <prtpartiallycorrect format="markdown">
+      <text></text>
+    </prtpartiallycorrect>
+    <prtincorrect format="markdown">
+      <text></text>
+    </prtincorrect>
+    <decimals>.</decimals>
+    <scientificnotation>*10</scientificnotation>
+    <multiplicationsign>dot</multiplicationsign>
+    <sqrtsign>1</sqrtsign>
+    <complexno>i</complexno>
+    <inversetrig>cos-1</inversetrig>
+    <logicsymbol>lang</logicsymbol>
+    <matrixparens>[</matrixparens>
+    <isbroken>0</isbroken>
+    <variantsselectionseed></variantsselectionseed>
+    <input>
+      <name>G_val</name>
+      <type>algebraic</type>
+      <tans>50</tans>
+      <boxsize>8</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint>{@meclib_h_alg@}</syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>0</mustverify>
+      <showvalidation>1</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>names</name>
+      <type>algebraic</type>
+      <tans>[]</tans>
+      <boxsize>80</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint></syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>0</mustverify>
+      <showvalidation>0</showvalidation>
+      <options></options>
+    </input>
+    <input>
+      <name>objects</name>
+      <type>string</type>
+      <tans>tans</tans>
+      <boxsize>80</boxsize>
+      <strictsyntax>1</strictsyntax>
+      <insertstars>0</insertstars>
+      <syntaxhint></syntaxhint>
+      <syntaxattribute>0</syntaxattribute>
+      <forbidwords></forbidwords>
+      <allowwords></allowwords>
+      <forbidfloat>0</forbidfloat>
+      <requirelowestterms>0</requirelowestterms>
+      <checkanswertype>0</checkanswertype>
+      <mustverify>0</mustverify>
+      <showvalidation>0</showvalidation>
+      <options></options>
+    </input>
+    <prt>
+      <name>diag</name>
+      <value>1.0000000</value>
+      <autosimplify>1</autosimplify>
+      <feedbackstyle>2</feedbackstyle>
+      <feedbackvariables>
+        <text><![CDATA[obj: fb_objects(objects);
+[txtG, okG]: fb_force(obj, "G", [2, 0], -90, 5, 0.25, "fb_force: ");]]></text>
+      </feedbackvariables>
+      <node>
+        <name>0</name>
+        <description>fb_fbd.mac: fb_force</description>
+        <answertest>AlgEquiv</answertest>
+        <sans>okG</sans>
+        <tans>true</tans>
+        <testoptions></testoptions>
+        <quiet>1</quiet>
+        <truescoremode>=</truescoremode>
+        <truescore>0.5</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>1</truenextnode>
+        <trueanswernote>diag-1-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<p>fb_fbd.mac: {@txtG@}</p>]]></text>
+        </truefeedback>
+        <falsescoremode>=</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>1</falsenextnode>
+        <falseanswernote>diag-1-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<p>fb_fbd.mac: {@txtG@}</p>]]></text>
+        </falsefeedback>
+      </node>
+      <node>
+        <name>1</name>
+        <description>fb_value.mac: fb_unit</description>
+        <answertest>NumRelative</answertest>
+        <sans>G_val</sans>
+        <tans>50</tans>
+        <testoptions>0.005</testoptions>
+        <quiet>1</quiet>
+        <truescoremode>+</truescoremode>
+        <truescore>0.5</truescore>
+        <truepenalty></truepenalty>
+        <truenextnode>-1</truenextnode>
+        <trueanswernote>diag-2-T</trueanswernote>
+        <truefeedback format="html">
+          <text><![CDATA[<p>fb_value.mac: fb_unit OK {@fb_unit(G_val, 50, 0.005)@}</p>]]></text>
+        </truefeedback>
+        <falsescoremode>+</falsescoremode>
+        <falsescore>0</falsescore>
+        <falsepenalty></falsepenalty>
+        <falsenextnode>-1</falsenextnode>
+        <falseanswernote>diag-2-F</falseanswernote>
+        <falsefeedback format="html">
+          <text><![CDATA[<p>fb_value.mac: {@fb_unit(G_val, 50, 0.005)@}</p>]]></text>
+        </falsefeedback>
+      </node>
+    </prt>
+    <qtest>
+      <testcase>1</testcase>
+      <description>Model answers: score 1 if fb_fbd.mac and fb_value.mac work</description>
+      <testinput>
+        <name>G_val</name>
+        <value>50</value>
+      </testinput>
+      <testinput>
+        <name>names</name>
+        <value>[]</value>
+      </testinput>
+      <testinput>
+        <name>objects</name>
+        <value>tans</value>
+      </testinput>
+      <expected>
+        <name>diag</name>
+        <expectedscore>1.0000000</expectedscore>
+        <expectedpenalty>0.0000000</expectedpenalty>
+        <expectedanswernote>diag-2-T</expectedanswernote>
+      </expected>
+    </qtest>
+  </question>
+</quiz>

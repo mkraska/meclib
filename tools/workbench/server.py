@@ -18,8 +18,8 @@ Maxima evaluation (question and feedback variables) to the same server.
 Endpoints
   GET /                     index.html
   GET /<file>               static files from this folder
-  GET /vendor/<path>        static files from ./vendor/ (optional local copies,
-                            e.g. MathJax for offline use; not in the repo)
+  GET /vendor/<path>        static files from ./vendor/ (local copies of the CDN libraries for
+                            offline use, written by fetch_vendor.py; not in the repo)
   GET /api/config           merged configuration (see workbench_config.json)
   POST /api/stack           {id} the STACK version (config/stack/<id>/: Maxima library, security
                             map; kept in .cache/workbench_state.json); closes the sessions
@@ -114,6 +114,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
 CACHE = HERE / ".cache"
+VENDOR = HERE / "vendor"        # local copies of the CDN libraries (fetch_vendor.py), not committed
 CASES = REPO / "tests" / "scenes"
 MAXIMA_TESTS = REPO / "Maxima" / "tests"
 SCENE_NAME = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -286,6 +287,50 @@ def load_config():
     return cfg
 
 
+CDN_NPM = re.compile(r"^https://cdn\.jsdelivr\.net/npm/((?:@[\w.-]+/)?[\w.-]+@\d+\.\d+\.\d+)/([^?#]*)(.*)$")
+
+
+def vendorize(url):
+    """The local copy of a CDN URL (vendor/npm/<package>@<version>/..., see fetch_vendor.py) if it
+    exists, otherwise the URL itself."""
+    m = CDN_NPM.match(url) if isinstance(url, str) else None
+    if not m:
+        return url
+    pkg, path, rest = m.groups()
+    local = VENDOR / "npm" / pkg / path
+    if (local.is_dir() if path.endswith("/") or not path else local.is_file()):
+        return "/vendor/npm/%s/%s%s" % (pkg, path, rest)
+    return url
+
+
+def local_libraries(cfg):
+    """For /api/config: CDN URLs replaced by their local copies where present (same entries)."""
+    for key in ("jsxgraph", "mathjax"):
+        for name, entry in list((cfg.get(key) or {}).items()):
+            cfg[key][name] = ({k: vendorize(v) for k, v in entry.items()} if isinstance(entry, dict)
+                              else vendorize(entry))
+    for key in ("markdown", "codemirror"):
+        if cfg.get(key):
+            cfg[key] = vendorize(cfg[key])
+    return cfg
+
+
+def offline_copy(cache, fetch_it, what):
+    """Fetches (fetch_it() -> bytes), keeps a copy in cache; without a connection the copy of the
+    last successful fetch. Returns (data, None) or (data, note about the old copy); raises if
+    there is neither."""
+    try:
+        data = fetch_it()
+    except (OSError, urllib.error.URLError) as err:
+        if not cache.exists():
+            raise
+        when = time.strftime("%Y-%m-%d %H:%M", time.localtime(cache.stat().st_mtime))
+        return cache.read_bytes(), "%s: GitHub not reachable (%s) - using the copy from %s" % (what, err, when)
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_bytes(data)
+    return data, None
+
+
 def git_branch():
     """Name of the branch checked out in the local working copy (read from .git/HEAD)."""
     try:
@@ -426,7 +471,7 @@ class Handler(SimpleHTTPRequestHandler):
             cfg["repo_path"] = str(REPO)
             cfg["maxima_list"] = maxima_list(cfg)
             cfg["maxima_current"] = current_maxima(cfg)
-            return self.send_json(stack_info(cfg))
+            return self.send_json(local_libraries(stack_info(cfg)))
         if parsed.path.startswith("/logos/"):
             name = urllib.parse.unquote(parsed.path[len("/logos/"):])
             p = LOGOS / name
@@ -632,6 +677,7 @@ class Handler(SimpleHTTPRequestHandler):
                 resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
                 answers = req.get("answers") if path == "/api/q/check" else None
                 result = stack_question.evaluate(entry[0], data, int(req.get("seed", 1)), resolver, entry[2], answers)
+                result["offline"] = resolver.offline
                 entry[2] = result["kill"]
                 # the first run of its kind in a session includes Maxima's warm-up (about 0.2 s,
                 # mostly in the first PRT), so its times are not comparable with later runs
@@ -865,8 +911,9 @@ class Handler(SimpleHTTPRequestHandler):
                 branch = cfg["branches"][src]
                 url = "https://raw.githubusercontent.com/%s/%s/meclib.js?t=%d" % (
                     cfg["github_repo"], branch, int(time.time()))
-                data = fetch(url)
-                info = "GitHub %s (%s), fetched %s" % (src, branch, time.strftime("%H:%M:%S"))
+                data, note = offline_copy(CACHE / "meclib" / branch / "meclib.js", lambda: fetch(url),
+                                          "meclib.js %s" % branch)
+                info = note or "GitHub %s (%s), fetched %s" % (src, branch, time.strftime("%H:%M:%S"))
             else:
                 return self.send_json({"error": "unknown source " + src}, 400)
         except (OSError, urllib.error.URLError) as err:
@@ -881,15 +928,14 @@ class Handler(SimpleHTTPRequestHandler):
         cached = CACHE / hashlib.sha1(url.encode("utf-8")).hexdigest()
         # Branch files can change at any time; only tagged/versioned files are cached.
         cacheable = "/v" in url or "@" in url
+        # (branch files are refetched each time, the last copy is used without a connection)
         if cacheable and cached.exists():
             data = cached.read_bytes()
         else:
             try:
-                data = fetch(url)
+                data, _note = offline_copy(cached, lambda: fetch(url), url)
             except (OSError, urllib.error.URLError) as err:
                 return self.send_error(502, "proxy fetch failed: %s" % err)
-            if cacheable:
-                cached.write_bytes(data)
         ctype = mimetypes.guess_type(urllib.parse.urlparse(url).path)[0] or "application/octet-stream"
         if ctype.startswith("text/") or ctype.endswith("javascript"):
             ctype += "; charset=utf-8"

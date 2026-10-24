@@ -30,8 +30,8 @@ not) and are saved continuously while you work.
   port, `--no-browser` to skip opening the browser).
 
 Requirements: Python 3 (standard library only), an internet connection for
-GitHub sources, JSXGraph and MathJax, and Maxima for the Questions page (see
-below).
+GitHub sources, JSXGraph and MathJax (or local copies, see "Working offline"
+under Configuration), and Maxima for the Questions page (see below).
 
 ## Graphic
 
@@ -332,7 +332,8 @@ with STACK's input validation, compilation and PRTs - for the question tests
 once on this machine for the STACK version of the Moodle server
 (`config/stack/<version>/`) and its Maxima version, plus a small web server
 that offers the Maxima files of the working copy to `stack_include` (meclib
-source "local working copy"; with dev or main the includes come from GitHub):
+source "local working copy"; with dev or main the includes come from GitHub).
+Set-up: see "STACK API (optional)" under Configuration.
 
     cd tools\workbench
     python stackapi.py build --maxima 5.45.1      (once: 10-20 minutes)
@@ -452,6 +453,13 @@ meclib from a branch other than main (`include.branch`, a hint): a
 `main` (e.g. while a feature exists only on the dev branch). The fix switches
 the URL to main - only after the branch is merged, as main may lack the
 functions the question uses.
+
+Includes of the removed compact copies (`include.dist`, required): a
+`stack_include` of `.../Maxima/dist/<file>`. The folder `Maxima/dist/` no
+longer exists (STACK drops comments when it reads the code, so the copies did
+not make the compilation faster); STACK refuses such a question as soon as it
+compiles it again ("stack_include ... could not retrieve"). The fix includes
+`.../Maxima/<file>` instead.
 
 Local copies of meclib functions (`functions.legacy`): a function defined in
 the question variables that a meclib Maxima file defines too (older questions
@@ -750,21 +758,109 @@ its entries are merged over the defaults, e.g.
 ```
 {
   "question_dirs": ["C:/Users/me/Documents/STACK-Fragen"],
-  "maxima": "C:/maxima-5.47.0/bin/maxima.bat",
-  "mathjax": { "MathJax 2.7.9 (local)": "/vendor/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML" },
-  "codemirror": "/vendor/codemirror/"
+  "maxima": "C:/maxima-5.47.0/bin/maxima.bat"
 }
 ```
 
-(the last two entries: local copies of MathJax and CodeMirror for working
-offline, unpacked into `vendor/`, also not committed; for CodeMirror the
-content of the npm package `codemirror@5.65.16`).
+### Working offline
+
+Once prepared, the workbench runs without internet. While online, run once
+
+    cd tools\workbench
+    python fetch_vendor.py
+
+It downloads the configured versions of JSXGraph, MathJax 2.7.9 and 3.2.2,
+CodeMirror and the Markdown renderer (marked) from the npm registry into
+`vendor/npm/<package>@<version>/` (about 90 MB, mostly MathJax; not committed)
+and the JSXGraph files bundled with the STACK versions in `config/stack/` into
+`.cache/`. From then on the server hands the pages these local copies instead of
+the CDN URLs - the same entries in the selectors, nothing to configure. Run it
+again after adding a version to `workbench_config.json` (`--force` downloads
+everything again). Entries without an exact version ("CDN latest") stay online
+only.
+
+Further without internet:
+
+- meclib.js and the `stack_include` files: with the meclib source "local
+  working copy" they come from the repository. With dev or main the workbench
+  fetches them from GitHub; without a connection it uses the copy of the last
+  successful fetch and says so (message on the Questions page, source info of
+  the graphic); without any earlier copy it reports the error.
+- Maxima evaluation, the Tests page, the offline Maxima tests and STACK ▶ in
+  Docker (with the meclib source "local working copy") need no internet.
+- The syntax help uses STACK's documentation from `.cache/` once
+  `build_help.py` has downloaded it.
+
+Older local copies configured by hand (`"mathjax": {"... (local)":
+"/vendor/mathjax/..."}`, `"codemirror": "/vendor/codemirror/"` in
+`workbench_config.local.json`) keep working.
+
+### STACK API (optional)
+
+Only needed for **STACK ▶** on the Questions page (question tests run by STACK
+itself, with STACK's input validation); everything else works without it.
+Set up once per computer:
+
+1. **Docker Desktop**: install it from <https://www.docker.com/products/docker-desktop/>
+   (Windows: accept the WSL 2 backend it proposes, restart if asked), start
+   it and wait until it reports "Engine running". Check in a console:
+
+       docker run hello-world
+
+   It prints "Hello from Docker!". Docker Desktop must be running whenever
+   STACK ▶ is used (it can start with Windows: Settings → General).
+2. **Versions of the Moodle server**: put this line into the text of any
+   question (a test question in your course is enough) and preview it:
+
+       Maxima: {#MAXIMA_VERSION_STR#}, STACK library: {#stackmaximaversion#}
+
+   It shows e.g. `Maxima: "5.45.1", STACK library: 2026080600`. The
+   STACK library number must exist as `config/stack/<number>/` with a
+   `profile.json` naming the release tag (see `config/README.md`; for a new
+   version: wiki page "Testing a new STACK version").
+3. **Build the images** (internet needed - GitHub and Docker Hub; git is not
+   needed; takes 10-20 minutes, mainly compiling Maxima, and some GB of disk):
+
+       cd tools\workbench
+       python stackapi.py build --maxima 5.45.1
+
+   `--stack <number>` chooses the STACK version (default: the newest folder in
+   `config/stack/`), `--maxima` the Maxima version of the server (default: the
+   one goemaxima names for that STACK version). The images are
+   `meclib-stackapi:<number>` and `meclib-goemaxima:<number>-<maxima>`.
+4. **Check**:
+
+       python stackapi.py up
+
+   starts the containers and ends with `"running": true`. Then open a
+   question with test cases and press STACK ▶. The workbench also starts the
+   containers itself on the first STACK ▶. `python stackapi.py down` stops
+   them (they use memory while running), `python stackapi.py status` reports.
+
+When the Moodle server gets a new STACK or Maxima version, add the
+`config/stack/<number>/` folder if needed and run `build` again with the new
+versions; the compose file then uses the new images. Old images stay until
+deleted in Docker Desktop (Images) or with `docker image rm <name>`.
+
+The build writes the path of the working copy's `Maxima` folder into
+`.cache/stackapi/docker-compose.yml` (for `stack_include` with the meclib
+source "local working copy"): after moving the repository, run `build` again
+(fast, the images are reused from Docker's cache) or edit that path.
+
+If STACK ▶ reports that the STACK API does not answer: is Docker Desktop
+running? `python stackapi.py up` shows Docker's messages;
+`docker compose -f .cache/stackapi/docker-compose.yml logs stack` shows those
+of the API. Port 3080 must be free. `MECLIB_STACKAPI_URL` (environment
+variable of the workbench server) points the workbench to another STACK API
+instead.
 
 ## Files
 
 - `index.html`, `questions.html`, `tests.html` - the three pages
 - `editor.js` - code editor of the Questions page: loads CodeMirror, Maxima
   and castext highlighting, syntax help, autocomplete, closing brackets
+- `fetch_vendor.py` - downloads local copies of the CDN libraries for working
+  offline (see Configuration)
 - `build_help.py` - builds `syntax_help.json` (syntax help) from the code,
   the wiki, STACK's library and documentation and `syntax_help_extra.json`
 - `frame.js` - builds and runs a graphic in a STACK-like frame (shared by the
