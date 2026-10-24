@@ -317,6 +317,25 @@ def r_include_dist(Q_):
     return out
 
 
+# Test input values longer than STACK's database column (255 characters): the import into Moodle
+# fails with "error writing to the database". The fix moves them into question variables.
+def r_qtest_length(Q_):
+    out = []
+    for t in qfile.qtests(Q_.block):
+        long = [n for n, v in t["inputs"].items() if len(v) > qfile.QTEST_VALUE_MAX]
+        if not long:
+            continue
+
+        def fix(q, tc=t["testcase"]):
+            return qfile.qtest_externalize(q, tc, qfile._newline(q))[0]
+        out.append(F("tests.value-length", "test %s" % t["testcase"], "required", "Test input too long for Moodle",
+                     "Test %s: the value of %s is longer than the 255 characters STACK can store for a test input; "
+                     "importing the question into Moodle fails (\"error writing to the database\"). The fix moves it "
+                     "into a question variable (%s), the test input then holds its name."
+                     % (t["testcase"], ", ".join(long), ", ".join("qt%s_%s" % (t["testcase"], n) for n in long)), fix))
+    return out
+
+
 _MECLIB_FUNS = {}
 
 
@@ -904,7 +923,8 @@ def r_unused_files(Q_):
         return "the question"
     used = {}
     for t in Q_.el.iter("text"):
-        for m in re.finditer(r"@@PLUGINFILE@@/([^\"'()\s<>]+)", t.text or ""):
+        # (the name ends before a query such as ?time=..., which Moodle's editor appends)
+        for m in re.finditer(r"@@PLUGINFILE@@/([^\"'()\s<>?#]+)", t.text or ""):
             used.setdefault(urllib.parse.unquote(m.group(1)), set()).add(field(t))
     files = {}
     for f in Q_.el.iter("file"):
@@ -1028,7 +1048,7 @@ def r_scenes(Q_):
 
 RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_scenes, r_graphic_inputs, r_input_settings, r_prts,
          r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_matrix_inputs, r_unused_files, r_semicolons,
-         r_include_branch, r_include_dist, r_legacy_functions]
+         r_include_branch, r_include_dist, r_legacy_functions, r_qtest_length]
 
 
 # ---------------------------------------------------------------------- metadata in the description

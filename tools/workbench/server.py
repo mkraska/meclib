@@ -139,14 +139,22 @@ LOGOS = REPO / "vendor" / "logos"
 class SessionPool:
     """One Maxima session per (question, source); at most MAX sessions, least recently used
     ones are closed. A session keeps its state, so re-evaluating a question only needs the
-    names it assigned before to be killed."""
+    names it assigned before to be killed.
+
+    One more session is kept started in the background (the spare, for the chosen Maxima and
+    STACK version): a question evaluated for the first time takes it instead of waiting for
+    Maxima to start and load STACK's library (several seconds), and the next spare starts."""
     MAX = 3
 
     def __init__(self):
         self.lock = threading.Lock()
         self.sessions = {}   # key -> [session, last_used, names, kinds of runs done ("eval", "check")]
+        self.spare = None    # [session, (maxima, stack)], ready to use
+        self.spare_starting = None   # (maxima, stack) of the spare being started
 
     def get(self, key, maxima, stack=None):
+        sig = (maxima or None, stack)
+        session = None
         with self.lock:
             entry = self.sessions.get(key)
             if entry and entry[0].alive():
@@ -157,17 +165,50 @@ class SessionPool:
             while len(self.sessions) >= self.MAX:
                 oldest = min(self.sessions, key=lambda k: self.sessions[k][1])
                 self.sessions.pop(oldest)[0].close()
-        session = MaximaSession(maxima or None, stack=stack)
+            if self.spare and self.spare[1] == sig and self.spare[0].alive():
+                session, self.spare = self.spare[0], None
+                session.from_spare = True
+        if session is None:
+            session = MaximaSession(maxima or None, stack=stack)
         entry = [session, time.time(), [], set()]
         with self.lock:
             self.sessions[key] = entry
+        self.prepare(maxima, stack)
         return entry
+
+    def prepare(self, maxima, stack=None):
+        """Starts the spare in the background, unless there is one for these versions."""
+        sig = (maxima or None, stack)
+        with self.lock:
+            if (self.spare and self.spare[1] == sig and self.spare[0].alive()) or self.spare_starting == sig:
+                return
+            old, self.spare = self.spare, None
+            self.spare_starting = sig
+        if old:
+            old[0].close()
+
+        def run():
+            try:
+                session = MaximaSession(maxima or None, stack=stack)
+            except Exception:          # (Maxima missing etc.: reported when a question is evaluated)
+                session = None
+            with self.lock:
+                if self.spare_starting == sig:
+                    self.spare_starting = None
+                    if session:
+                        self.spare, session = [session, sig], None
+            if session:                # versions changed meanwhile
+                session.close()
+        threading.Thread(target=run, daemon=True).start()
 
     def close_all(self):
         with self.lock:
             for entry in self.sessions.values():
                 entry[0].close()
             self.sessions.clear()
+            spare, self.spare, self.spare_starting = self.spare, None, None
+        if spare:
+            spare[0].close()
 
 
 POOL = SessionPool()
@@ -688,6 +729,7 @@ class Handler(SimpleHTTPRequestHandler):
                                "formats": data["formats"], "prts": data["prts"],
                                "seeds": data["seeds"], "decimals": data["decimals"], "penalty": data["penalty"],
                                "simplify": data["questionsimplify"], "maxima_start": round(entry[0].started, 1),
+                               "maxima_spare": getattr(entry[0], "from_spare", False),
                                "files": stack_question.embedded_files(qel)})
                 return self.send_json(result)
             if path == "/api/q/new":
@@ -868,6 +910,7 @@ class Handler(SimpleHTTPRequestHandler):
             STATE.data["maxima"] = path
             STATE.save()
             POOL.close_all()          # the next run starts a session with the chosen version
+            POOL.prepare(path, current_stack())
             return self.send_json({"maxima_current": path})
         if parsed.path == "/api/stack":
             req = json.loads(self.read_body() or "{}")
@@ -878,6 +921,7 @@ class Handler(SimpleHTTPRequestHandler):
             STATE.save()
             stack_question.STACK_VERSION = version
             POOL.close_all()          # the next run loads the chosen STACK library
+            POOL.prepare(current_maxima(), version)
             return self.send_json({"stack_current": version})
         if parsed.path.startswith("/api/q/"):
             return self.question_post(parsed.path)
@@ -1015,6 +1059,7 @@ def main():
     print("meclib workbench running at %s  (repository: %s)" % (url, REPO))
     regenerate_fixtures()
     print("Stop with Ctrl+C or by closing this window.")
+    POOL.prepare(current_maxima(), current_stack())     # a Maxima session ready for the first question
     if not args.no_browser:     # ?start: the page continues on the page used last (Graphic, Questions, Tests)
         threading.Timer(0.5, lambda: webbrowser.open(url + "?start")).start()
     try:

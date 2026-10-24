@@ -124,7 +124,7 @@ def embedded_files(q):
     import urllib.parse
     used = set()
     for t in q.iter("text"):
-        for m in re.finditer(r"@@PLUGINFILE@@/([^\"'()\s<>]+)", t.text or ""):
+        for m in re.finditer(r"@@PLUGINFILE@@/([^\"'()\s<>?#]+)", t.text or ""):   # (without ?time=...)
             used.add(urllib.parse.unquote(m.group(1)))
     mime = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "gif": "image/gif",
             "svg": "image/svg+xml", "webp": "image/webp"}

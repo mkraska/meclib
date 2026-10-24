@@ -2083,7 +2083,8 @@ async function evaluate(firstTime) {
       const s0 = parseInt(result.seeds[0], 10);
       if (s0 && s0 !== seed) { $("seed").value = s0; $("evaluate").disabled = false; return evaluate(false); }
     }
-    $("status").textContent = "evaluated in " + result.seconds + " s (Maxima start " + result.maxima_start + " s)";
+    $("status").textContent = "evaluated in " + result.seconds + " s (" +
+      (result.maxima_spare ? "Maxima session started in advance" : "Maxima start " + result.maxima_start + " s") + ")";
     // after an edit of the same question and variant the answers stay (and the graphic's state,
     // unless the sketch changed); if feedback was shown, it is checked again with them
     const keep = !firstTime && prev && String(prev.seed) === String(result.seed);
@@ -2130,7 +2131,8 @@ function restore(text, tag, store) {
 // castext output (already evaluated by Maxima) -> HTML with slots for graphics and inputs
 function toHTML(text, format, blocks) {
   // images embedded in the question file (<file> elements, referenced as @@PLUGINFILE@@/name)
-  text = String(text || "").replace(/@@PLUGINFILE@@\/([^"'()\s<>]+)/g, (m, n) => {
+  // (a query such as ?time=..., which Moodle's editor appends, is not part of the name)
+  text = String(text || "").replace(/@@PLUGINFILE@@\/([^"'()\s<>?#]+)(?:\?[^"'\s<>]*)?/g, (m, n) => {
     const f = (result && result.files) || {};
     return f[decodeURIComponent(n)] || f[n] || m;
   });

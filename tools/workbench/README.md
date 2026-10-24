@@ -322,6 +322,15 @@ description); an input with the model answer is stored as its expression
 (e.g. `NN`), which holds for every variant, as STACK's default test. "✎"
 replaces the inputs and expected results of the selected test by the current
 ones or changes its description, "✕" (click twice) deletes it, "▶" runs all.
+STACK stores a test input value in a database column of 255 characters; a
+longer value (typically the `objects` state of a graphic) would make the import
+into Moodle fail ("error writing to the database"). Such a value goes into a
+question variable `qt<test>_<input>` at the end of the question variables
+(under a comment line), and the test input holds its name - STACK evaluates
+test input values with the question variables, so the test is the same.
+Replacing or deleting the test updates or removes the variable. The review
+reports older test cases with too long values (`tests.value-length`,
+required) and moves them the same way.
 The check is the workbench's fast one in Maxima. **STACK ▶** runs all tests in
 STACK itself (below): the buttons get a green or red line for that result,
 failures are listed under them.
@@ -585,6 +594,14 @@ empty `[[lang]]` declaration (so that the feedback functions' texts get a
 language), Markdown format. It has no PRT yet and therefore default mark 0.
 
 ### Evaluation
+
+Each question is evaluated in its own Maxima session (Maxima with STACK's
+library loaded, kept for further updates and checks; at most three, the least
+recently used is closed). Starting a session takes several seconds, so the
+server keeps one more session started in the background: a question evaluated
+for the first time takes it at once (status line: "Maxima session started in
+advance"), and the next one starts. A change of the Maxima or STACK version
+closes all sessions and starts the spare one with the new version.
 
 Maxima is found on the PATH or in the usual Windows install locations
 (every `C:\maxima-*`, `Program Files`, `LOCALAPPDATA`); otherwise set

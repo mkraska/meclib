@@ -916,6 +916,94 @@ def _qtest_xml(testcase, description, inputs, expected, nl):
     return nl.join(lines)
 
 
+# STACK stores a test input value in qtype_stack_qtest_inputs.value, char(255): a longer value
+# makes the import into Moodle fail ("error writing to the database"). Such a value goes into a
+# question variable qt<testcase>_<input>, the test input holds its name (test input values are
+# expressions evaluated with the question variables, so the test is unchanged).
+QTEST_VALUE_MAX = 255
+QTEST_VARS_COMMENT = "/* question tests: input values longer than STACK's 255 characters */"
+
+
+def _qvars_text(q):
+    m = re.search(r"<questionvariables\b[^>]*>\s*<text>(.*?)</text>", q, re.S)
+    return _decode(m.group(1)) if m else ""
+
+
+def _statement_span(code, name):
+    """(start, end) of the statement `name: ...;` at the start of a line (end after ; or $ and the
+    line break), strings and brackets respected; None if there is none."""
+    m = re.search(r"(?m)^[ \t]*%s[ \t]*:" % re.escape(name), code)
+    if not m:
+        return None
+    i, depth, n = m.end(), 0, len(code)
+    while i < n:
+        c = code[i]
+        if c == '"':
+            i += 1
+            while i < n and code[i] != '"':
+                i += 2 if code[i] == "\\" else 1
+        elif code.startswith("/*", i):
+            j = code.find("*/", i + 2)
+            i = n - 1 if j < 0 else j + 1
+        elif c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        elif c in ";$" and depth <= 0:
+            end = i + 1
+            br = re.match(r"[ \t]*\r?\n", code[end:])
+            return m.start(), end + (br.end() if br else 0)
+        i += 1
+    return m.start(), n
+
+
+def _set_qtest_vars(q, remove, add, nl):
+    """Question variables of block q without the statements of the names in remove and with
+    `name: value;` for add (under QTEST_VARS_COMMENT at the end); the comment goes when no such
+    variable is left."""
+    code = _qvars_text(q).replace("\r\n", "\n")
+    trailing = code.endswith("\n")
+    for name in list(remove) + list(add):
+        sp = _statement_span(code, name)
+        if sp:
+            code = code[:sp[0]] + code[sp[1]:]
+    if add:
+        if QTEST_VARS_COMMENT not in code:
+            code = code.rstrip("\n") + ("\n" if code.strip() else "") + QTEST_VARS_COMMENT + "\n"
+        code = code.rstrip("\n") + "\n" + "".join("%s: %s;\n" % (k, v) for k, v in add.items())
+    if not re.search(r"(?m)^[ \t]*qt\d+_\w+[ \t]*:", code):
+        code = re.sub(r"[ \t]*%s[ \t]*\n?" % re.escape(QTEST_VARS_COMMENT), "", code)
+    code = code.rstrip("\n") + ("\n" if trailing else "")
+    return _replace_text_child(q, "questionvariables", code, nl)[0]
+
+
+def qtest_externalize(q, tc, nl):
+    """Block q with the long input values of test tc moved into question variables qt<tc>_<input>
+    and the variables of tc no longer referenced removed. Returns (q, [variable names added])."""
+    test = next((t for t in qtests(q) if t["testcase"] == tc), None)
+    if test is None:
+        return q, []
+    prefix = "qt%s_" % tc
+    inputs, add = {}, {}
+    for name, value in test["inputs"].items():
+        if len(value) > QTEST_VALUE_MAX:
+            var = prefix + name
+            add[var] = value
+            inputs[name] = var
+        else:
+            inputs[name] = value
+    used = set(inputs.values())
+    code = _qvars_text(q)
+    old = set(re.findall(r"(?m)^[ \t]*(%s\w+)[ \t]*:" % re.escape(prefix), code))
+    remove = {v for v in old if v not in used}
+    if not add and not remove:
+        return q, []
+    if add:
+        m = re.search(r"[ \t]*<qtest>(?:(?!</qtest>).)*?<testcase>\s*%s\s*</testcase>.*?</qtest>" % re.escape(str(tc)), q, re.S)
+        q = q[:m.start()] + _qtest_xml(tc, test["description"], inputs, test["expected"], nl) + q[m.end():]
+    return _set_qtest_vars(q, remove, add, nl), list(add)
+
+
 def qtest_op(text, index, op):
     """{op: add, description, inputs, expected} (a new test case, number = highest + 1),
     {op: replace, testcase, description?, inputs, expected}, {op: delete, testcase},
@@ -938,7 +1026,8 @@ def qtest_op(text, index, op):
         q = _insert_after_last(q, "</qtest>", block, nl, ["<hint"]) if "</qtest>" in q else \
             _insert_after_last(q, "</deployedseed>", block, nl, ["<hint"]) if "</deployedseed>" in q else \
             _insert_after_last(q, "</prt>", block, nl, ["<hint"])
-        label = "test %d added" % tc
+        q, moved = qtest_externalize(q, tc, nl)
+        label = "test %d added" % tc + (" (long values in %s)" % ", ".join(moved) if moved else "")
     elif kind in ("replace", "describe"):
         tc = int(op["testcase"])
         old = tests.get(tc)
@@ -949,11 +1038,18 @@ def qtest_op(text, index, op):
         new = old if kind == "describe" else {"inputs": op.get("inputs") or {}, "expected": op.get("expected") or {}}
         block = _qtest_xml(tc, desc, new["inputs"], new["expected"], nl)
         q = q[:m.start()] + block + q[m.end():]
-        label = "test %d %s" % (tc, "replaced" if kind == "replace" else "described")
+        moved = []
+        if kind == "replace":
+            q, moved = qtest_externalize(q, tc, nl)
+        label = "test %d %s" % (tc, "replaced" if kind == "replace" else "described") + \
+            (" (long values in %s)" % ", ".join(moved) if moved else "")
     elif kind == "delete":
         tc = int(op["testcase"])
         span(tc)
         q = _remove_block(q, r"<qtest>(?:(?!</qtest>).)*?<testcase>\s*%s\s*</testcase>.*?</qtest>" % re.escape(str(tc)))
+        own = set(re.findall(r"(?m)^[ \t]*(qt%s_\w+)[ \t]*:" % tc, _qvars_text(q)))
+        if own:
+            q = _set_qtest_vars(q, own, {}, nl)
         label = "test %d deleted" % tc
     else:
         raise ValueError("unknown op")

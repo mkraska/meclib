@@ -1,6 +1,8 @@
 ### Dev Branch
 
 2026 10 24
+- [[Meclib Workbench]]: images referenced with a query (`@@PLUGINFILE@@/name.jpg?time=...`, as Moodle's editor writes them) are shown in the preview and no longer reported as unused files by the review (whose fix removed them)
+- [[Meclib Workbench]], question tests: input values longer than 255 characters (the state of a graphic) are stored in a question variable `qt<test>_<input>`, since Moodle's import fails on them ("error writing to the database"); the review moves such values of existing tests
 - [[Meclib Workbench]] without internet: `python fetch_vendor.py` (in `tools/workbench`) downloads local copies of JSXGraph, MathJax, CodeMirror and marked, which the workbench then uses instead of the CDN; meclib files from GitHub (dev, main): without a connection the copy of the last fetch is used, with a message
 
 2026 10 23
