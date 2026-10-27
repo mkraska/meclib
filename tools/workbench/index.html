@@ -57,6 +57,29 @@ try { const last = localStorage.getItem("meclib-last-page");
 
 <main>
   <div>
+    <section id="graphicFile">
+      <h2>Graphic file<span class="spacer"></span><span id="gBadge" class="badge"></span></h2>
+      <div class="form-row">
+        <button id="gNew" title="empty graphic with a grid only">New</button>
+        <select id="gOpen" style="flex:1;min-width:0" title="open a graphic file"></select>
+        <button id="gRefresh" class="small" title="list the graphic files again">↻</button>
+      </div>
+      <div class="form-row">
+        <label for="gFolder">Folder</label>
+        <select id="gFolder" style="flex:1;min-width:0"></select>
+        <button id="gPick" class="small" title="choose another folder in the system's folder dialog">...</button>
+      </div>
+      <div class="form-row">
+        <label for="gName">Name</label>
+        <input type="text" id="gName" placeholder="file name without extension" spellcheck="false">
+        <button id="gSave" class="primary" title="Ctrl+S">Save</button>
+      </div>
+      <p class="hint">A graphic file (<code>&lt;name&gt;.graphic.json</code>, in a question folder) keeps initdata,
+        start state, decimal separator and [[jsxgraph]] block, without making a question or a test case of it.
+        The list shows the graphic files of all question folders.</p>
+      <div id="gMsg"></div>
+    </section>
+
     <section>
       <h2>initdata<span class="spacer"></span><button id="formatInit" title="One object per line">Format</button></h2>
       <div id="initEd"><textarea id="init" rows="14" spellcheck="false"></textarea></div>
@@ -203,6 +226,8 @@ const DEFAULT_INIT =
 ["label","\\\\(B\\\\)",[3.8,-0.5]],
 ["q","","q_0",[0,0.3],[4,0.3],0.7,0.7,0,"show"]]`;
 
+const NEW_INIT = `[["grid","","",-1,6,-2,4,40]]`;   // "New": a grid only
+
 const STORE_KEY = "meclib-tryout-v1";   // name kept from the former "tryout", so settings survive
 const FIELDS = ["src", "jsx", "mathjax", "decsep", "init", "startState", "block", "prettyObjects", "showLog", "editPts", "editSnap"];
 
@@ -226,6 +251,7 @@ function saveFields() {
   const data = {};
   for (const f of FIELDS) { const el = $(f); data[f] = f === "init" ? getInit() : el.type === "checkbox" ? el.checked : el.value; }
   try { localStorage.setItem(STORE_KEY, JSON.stringify(data)); } catch (e) { /* private mode etc. */ }
+  updateGBadge();
 }
 function loadFields() {
   let data = {};
@@ -573,38 +599,164 @@ async function openCaseFromUrl() {
   if (p.get("src")) $("src").value = p.get("src");
   const banner = $("loadedBanner");
   banner.hidden = false;
+  setGFile("");
   banner.textContent = "Loaded scene '" + scene.title + "' (" + file + ")" + (c ? ", case '" + (c.id || n) + "': " + c.label : "") +
     (c && c.notes ? " - " + c.notes : "");
   await loadScenes(file);
   return true;
 }
 
-// ---------------------------------------------------------------- questions
-async function pickQuestionFolder() {
-  $("saveQMsg").innerHTML = '<p class="hint">Choose the folder in the dialog (it may open behind the browser window) ...</p>';
+// ---------------------------------------------------------------- graphic files
+// The file the fields came from ({path, snap}); snap is the state of the fields when it was opened,
+// saved or newly created, so that changes since then can be detected. path "" = not saved yet.
+const GFILE_KEY = "meclib-graphic-file";
+let gFile = stored(GFILE_KEY);
+function snapshot() { return JSON.stringify([getInit(), $("startState").value, $("decsep").value, $("block").value]); }
+function gDirty() { return gFile.snap !== snapshot(); }
+function baseName(path) { return path.split(/[\\/]/).pop().replace(/\.graphic\.json$/i, ""); }
+function setGFile(path) {
+  gFile = { path, snap: snapshot() };
+  try { localStorage.setItem(GFILE_KEY, JSON.stringify(gFile)); } catch (e) { /* ignore */ }
+  updateGBadge();
+}
+function updateGBadge() {
+  const b = $("gBadge");
+  if (!b) return;
+  const dirty = gDirty();
+  b.textContent = (gFile.path ? baseName(gFile.path) : "not saved") + (dirty ? " · changed" : "");
+  b.className = dirty ? "badge warn" : "badge";
+  b.title = gFile.path || "";
+}
+function gMsg(text, ok) {
+  $("gMsg").className = ok ? "okmsg" : "error";
+  $("gMsg").textContent = text;
+}
+function confirmDiscard() {
+  return !gDirty() || confirm("The graphic has changes that are not saved in a graphic file. Discard them?");
+}
+const postJSON = (url, body) => fetch(url, { method: "POST",
+  headers: { "Content-Type": "application/json", "X-Workbench": "1" }, body: JSON.stringify(body) });
+
+async function loadGraphicList() {
+  let list = [];
+  try { list = await (await fetch("/api/graphics")).json(); } catch (e) { list = []; }
+  const sel = $("gOpen");
+  sel.innerHTML = "";
+  const first = document.createElement("option"); first.value = "";
+  first.textContent = list.length ? "open a graphic file ..." : "no graphic files yet";
+  sel.appendChild(first);
+  for (const f of list) {
+    const g = document.createElement("optgroup"); g.label = f.folder;
+    for (const file of f.files) {
+      const o = document.createElement("option"); o.value = file.path; o.textContent = file.name; g.appendChild(o);
+    }
+    sel.appendChild(g);
+  }
+  sel.value = "";
+}
+
+function newGraphic() {
+  if (!confirmDiscard()) return;
+  setInit(NEW_INIT);
+  $("startState").value = "";
+  $("decsep").value = ".";
+  $("block").value = F.BLOCK_PRESETS.interactive;
+  $("gName").value = "";
+  $("loadedBanner").hidden = true;
+  setGFile("");
+  gMsg("", true);
+  render();
+}
+
+async function openGraphic(path) {
+  $("gOpen").value = "";
+  if (!path || !confirmDiscard()) return;
   try {
-    const resp = await fetch("/api/pick-folder", { method: "POST", headers: { "Content-Type": "application/json", "X-Workbench": "1" },
-      body: JSON.stringify({ title: "Save the question in folder ...", initial: $("qFolder").value || "" }) });
+    const resp = await postJSON("/api/graphics/open", { path });
     const r = await resp.json();
     if (!resp.ok || r.error) throw new Error(r.error || resp.statusText);
-    $("saveQMsg").innerHTML = "";
+    const g = r.graphic;
+    setInit(F.formatObjects(g.initdata));
+    $("startState").value = g.state ? JSON.stringify(g.state) : "";
+    $("decsep").value = g.decsep || ".";
+    $("block").value = g.block || F.BLOCK_PRESETS.interactive;
+    $("gName").value = baseName(r.path);
+    selectFolder($("gFolder"), r.path.replace(/[\\/][^\\/]*$/, ""));
+    $("loadedBanner").hidden = true;
+    setGFile(r.path);
+    gMsg("Opened " + r.path, true);
+    render();
+  } catch (e) { gMsg("Could not open the graphic file: " + e.message); }
+}
+
+async function saveGraphic() {
+  gMsg("", true);
+  const name = $("gName").value.trim();
+  if (!name) return gMsg("Please give the graphic file a name.");
+  if (!$("gFolder").value) return gMsg('No folder - choose one with "...".');
+  const graphic = { title: name };
+  try { graphic.initdata = F.parseInit(getInit()).data; } catch (e) { return gMsg("initdata: " + e.message); }
+  const state = $("startState").value.trim();
+  if (state) {
+    try { graphic.state = JSON.parse(state); } catch (e) { return gMsg("Start state: " + e.message); }
+    if (!Array.isArray(graphic.state)) return gMsg("Start state: not a list.");
+  }
+  if ($("decsep").value !== ".") graphic.decsep = $("decsep").value;
+  if ($("block").value.trim() !== F.BLOCK_PRESETS.interactive.trim()) graphic.block = $("block").value;
+  const body = { folder: $("gFolder").value, name, graphic, overwrite: false };
+  try {
+    let resp = await postJSON("/api/graphics/save", body);
+    let r = await resp.json();
+    if (resp.status === 409 && r.exists) {
+      // the file of the fields is saved again without asking, any other existing file only after asking
+      if (r.path !== gFile.path && !confirm("The graphic file " + r.path + " exists already. Overwrite it?")) return gMsg("Not saved.");
+      body.overwrite = true;
+      resp = await postJSON("/api/graphics/save", body);
+      r = await resp.json();
+    }
+    if (!resp.ok || r.error) throw new Error(r.error || resp.statusText);
+    storePatch("meclib-question-v2", { graphicFileFolder: $("gFolder").value });
+    setGFile(r.path);
+    gMsg("Saved: " + r.path, true);
+    loadGraphicList();
+  } catch (e) { gMsg("Saving failed: " + e.message); }
+}
+
+// ---------------------------------------------------------------- questions
+function selectFolder(sel, path) {
+  const norm = (p) => p.replace(/\\/g, "/").toLowerCase();
+  const opt = [...sel.options].find((o) => norm(o.value) === norm(path));
+  if (opt) sel.value = opt.value;
+}
+
+// sel: the folder select to set, msg: message element, title: dialog title, storeField: remembered folder
+async function pickQuestionFolder(sel = $("qFolder"), msg = $("saveQMsg"), title = "Save the question in folder ...", storeField = "graphicFolder") {
+  msg.innerHTML = '<p class="hint">Choose the folder in the dialog (it may open behind the browser window) ...</p>';
+  try {
+    const resp = await fetch("/api/pick-folder", { method: "POST", headers: { "Content-Type": "application/json", "X-Workbench": "1" },
+      body: JSON.stringify({ title, initial: sel.value || "" }) });
+    const r = await resp.json();
+    if (!resp.ok || r.error) throw new Error(r.error || resp.statusText);
+    msg.innerHTML = "";
     if (!r.path) return;
     const add = await fetch("/api/q/folders", { method: "POST", headers: { "Content-Type": "application/json", "X-Workbench": "1" },
       body: JSON.stringify({ add: r.path }) });
     const data = await add.json();
     if (!add.ok || data.error) throw new Error(data.error || add.statusText);
-    storePatch("meclib-question-v2", { graphicFolder: r.path });
+    storePatch("meclib-question-v2", { [storeField]: r.path });
     await loadQuestionFolders();
-    const opt = [...$("qFolder").options].find((o) => o.value.replace(/\\/g, "/").toLowerCase() === r.path.replace(/\\/g, "/").toLowerCase());
-    if (opt) $("qFolder").value = opt.value;
-  } catch (e) { $("saveQMsg").innerHTML = `<p class="error">${e.message}</p>`; }
+    selectFolder(sel, r.path);
+  } catch (e) { msg.innerHTML = `<p class="error">${e.message}</p>`; }
 }
 
 async function loadQuestionFolders() {
   try {
     const data = await (await fetch("/api/q/folders")).json();
-    const last = (stored("meclib-question-v2") || {}).graphicFolder;
-    fillSelect($("qFolder"), data.folders.filter((d) => d.exists).map((d) => [d.path, d.source === "inbox" ? "workbench inbox" : d.path]), last);
+    const st = stored("meclib-question-v2") || {};
+    const entries = data.folders.filter((d) => d.exists).map((d) => [d.path, d.source === "inbox" ? "workbench inbox" : d.path]);
+    fillSelect($("qFolder"), entries, st.graphicFolder);
+    const gWanted = $("gFolder").value || st.graphicFileFolder;
+    fillSelect($("gFolder"), entries, gWanted);
     if (!$("qFolder").options.length) $("saveQMsg").innerHTML = '<p class="hint">No question folder yet - choose one with "...".</p>';
   } catch (e) { /* server without question support */ }
 }
@@ -645,6 +797,7 @@ function loadFromQuestion() {   // returns true if the graphic came from a quest
   const from = stored("meclib-graphic-from");
   if (!from.name) return false;
   localStorage.removeItem("meclib-graphic-from");
+  setGFile("");
   const banner = $("loadedBanner");
   banner.hidden = false;
   banner.textContent = "Graphic of question '" + from.name + "' (" + from.path + ", variant " + from.seed + "): initdata as evaluated by Maxima." +
@@ -674,18 +827,30 @@ async function start() {
   try {
     await MeclibEditor.load(config.codemirror && F.resolveUrl(config.codemirror));
     const text = getInit();
-    initEd = MeclibEditor.field($("init"), "maxima", () => {}, { height: 260 });
+    initEd = MeclibEditor.field($("init"), "maxima", updateGBadge, { height: 260 });
     if (initEd.plain) initEd = null; else initEd.set(text);
     if (syntaxHelp) MeclibEditor.setHelp(syntaxHelp);
     MeclibEditor.configure({ autocomplete: true, closeBrackets: true, semicolon: false });
   } catch (e) { logLine("warn", "Code editor not available (plain text field instead): " + e.message); }
   loadQuestionFolders();
+  loadGraphicList();
+  if (gFile.path) $("gName").value = baseName(gFile.path);
+  updateGBadge();
   const fromQuestion = loadFromQuestion();
   if (await openCaseFromUrl()) render();
   else { await loadScenes(); if (fromQuestion) render(); }
 }
 
 $("render").addEventListener("click", render);
+$("gNew").addEventListener("click", newGraphic);
+$("gOpen").addEventListener("change", () => openGraphic($("gOpen").value));
+$("gRefresh").addEventListener("click", loadGraphicList);
+$("gSave").addEventListener("click", saveGraphic);
+$("gPick").addEventListener("click", () => pickQuestionFolder($("gFolder"), $("gMsg"), "Save the graphic file in folder ...", "graphicFileFolder"));
+$("gFolder").addEventListener("change", () => storePatch("meclib-question-v2", { graphicFileFolder: $("gFolder").value }));
+$("init").addEventListener("input", updateGBadge);
+for (const id of ["startState", "block"]) $(id).addEventListener("input", updateGBadge);
+document.addEventListener("keydown", (e) => { if (e.key === "s" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveGraphic(); } });
 for (const id of ["editPts", "editSnap"]) $(id).addEventListener("change", render);
 document.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); render(); } });
 $("formatInit").addEventListener("click", () => {
@@ -706,7 +871,7 @@ $("clearConsole").addEventListener("click", clearConsole);
 $("sceneSel").addEventListener("change", () => $("saveCase").classList.toggle("is-new", $("sceneSel").value === ""));
 $("saveCaseBtn").addEventListener("click", saveCase);
 $("saveQBtn").addEventListener("click", saveAsQuestion);
-$("qPick").addEventListener("click", pickQuestionFolder);
+$("qPick").addEventListener("click", () => pickQuestionFolder());
 $("caseLabel").addEventListener("input", () => { $("caseId").placeholder = $("caseLabel").value ? slug($("caseLabel").value) : "short key, e.g. init"; });
 for (const b of document.querySelectorAll("[data-copy]"))
   b.addEventListener("click", () => navigator.clipboard.writeText($(b.dataset.copy).value));

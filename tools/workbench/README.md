@@ -69,7 +69,28 @@ meclib.js, and width, height and `input-ref-...` attributes are taken from
 the opening tag.
 
 The page keeps its fields in the browser, so the last graphic is there again
-after a restart. To keep a graphic for later, save it as a question.
+after a restart. To keep a graphic for later, save it as a graphic file (or as
+a question).
+
+**Graphic file** (top of the left column): a graphic can be kept as a file of
+its own, without making a question or a test case of it.
+- **New** starts an empty graphic (a grid only), with an empty start state,
+  the decimal point and the interactive [[jsxgraph]] preset.
+- The list opens a graphic file. It shows the files `*.graphic.json` of all
+  question folders (and their subfolders), grouped by folder; ↻ lists them
+  again.
+- **Save** (Ctrl+S) writes `<Name>.graphic.json` into the chosen folder ("..."
+  chooses another one, which is then added to the question folders). The file
+  that is open is saved again without asking; another existing file is
+  overwritten only after asking.
+- The badge in the heading shows the name of the open file and "changed" if
+  the fields differ from the file. New and opening a file ask before
+  discarding such changes. A graphic taken over from a question or a test
+  case is not connected to a file.
+
+A graphic file has the format of a test scene without cases (`title`,
+`initdata`, and if they differ from the defaults `decsep` and `block`), plus
+the start state as `state`.
 
 ## Questions
 

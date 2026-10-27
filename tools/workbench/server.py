@@ -314,6 +314,56 @@ def unique_path(folder, filename):
     return target
 
 
+GRAPHIC_EXT = ".graphic.json"
+
+
+def graphic_path(cfg, path, must_exist=True):
+    """The resolved path of a graphic file (*.graphic.json) in one of the question folders,
+    else ValueError."""
+    target = Path(path).expanduser().resolve()
+    if not target.name.lower().endswith(GRAPHIC_EXT):
+        raise ValueError("only %s files" % GRAPHIC_EXT)
+    for folder, _ in question_folders(cfg):
+        if folder.exists() and folder.resolve() in target.parents:
+            if must_exist and not target.is_file():
+                raise ValueError("file not found: %s" % target)
+            return target
+    raise ValueError("not in a question folder: %s" % target)
+
+
+def graphic_listing(cfg):
+    """[{folder, files: [{path, name}]}]: the graphic files in the question folders."""
+    out = []
+    for folder, _source in question_folders(cfg):
+        if not folder.is_dir():
+            continue
+        files = []
+        for p in sorted(folder.rglob("*" + GRAPHIC_EXT)):
+            rel = p.relative_to(folder)
+            if any(part.startswith(".") for part in rel.parts):
+                continue
+            files.append({"path": str(p.resolve()), "name": str(rel).replace("\\", "/")[:-len(GRAPHIC_EXT)]})
+        if files:
+            out.append({"folder": str(folder.resolve()), "files": files})
+    return out
+
+
+def check_graphic(g):
+    """Error text if g is not a graphic (a scene without cases, plus an optional start state)."""
+    if not isinstance(g, dict):
+        return "a graphic is a JSON object"
+    if not isinstance(g.get("initdata"), list):
+        return "initdata must be a list"
+    if "state" in g and not isinstance(g["state"], list):
+        return "state must be a list"
+    if g.get("decsep", ".") not in (".", ","):
+        return "decsep must be '.' or ','"
+    for key in ("title", "notes", "block"):
+        if key in g and not isinstance(g[key], str):
+            return key + " must be a string"
+    return ""
+
+
 def load_config():
     """workbench_config.json, overridden key by key by workbench_config.local.json if present
     (the local file is meant for per-machine settings and is not committed)."""
@@ -551,6 +601,8 @@ class Handler(SimpleHTTPRequestHandler):
                     _t, n, k = key.split(":")
                     out.setdefault(n, ["", ""])[int(k)] = vals[0]
             return self.send_json(out)
+        if parsed.path == "/api/graphics":
+            return self.send_json(graphic_listing(load_config()))
         if parsed.path == "/api/q/folders":
             return self.send_json(self.folder_listing())
         if parsed.path == "/api/snippets":
@@ -853,6 +905,39 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json({"error": "%s: %s" % (type(err).__name__, err)}, 400)
         return self.send_error(404)
 
+    def graphic_post(self, path):
+        """Graphic files of the Graphic page: open {path} -> {path, graphic};
+        save {folder, name, graphic, overwrite} -> {path}, or 409 {exists, path} if the file
+        exists and overwrite is not set."""
+        cfg = load_config()
+        try:
+            req = json.loads(self.read_body() or "{}")
+            if path == "/api/graphics/open":
+                target = graphic_path(cfg, req.get("path", ""))
+                graphic = json.loads(target.read_text(encoding="utf-8"))
+                error = check_graphic(graphic)
+                if error:
+                    raise ValueError("%s: %s" % (target.name, error))
+                return self.send_json({"path": str(target), "graphic": graphic})
+            graphic = req.get("graphic")
+            error = check_graphic(graphic)
+            if error:
+                raise ValueError(error)
+            name = re.sub(r"(?i)(\.graphic)?\.json$", "", (req.get("name") or "").strip())
+            filename = qfile.safe_filename(name, GRAPHIC_EXT) if name else ""
+            if not filename:
+                raise ValueError("no file name")
+            if not req.get("folder"):
+                raise ValueError("no folder")
+            folder = target_folder(cfg, req["folder"])
+            target = graphic_path(cfg, folder / filename, must_exist=False)
+            if target.exists() and not req.get("overwrite"):
+                return self.send_json({"exists": True, "path": str(target)}, 409)
+            target.write_text(dump_scene(graphic), encoding="utf-8", newline="\n")
+            return self.send_json({"path": str(target)})
+        except (OSError, ValueError) as err:
+            return self.send_json({"error": str(err)}, 400)
+
     def split_file(self, source):
         """Writes each STACK question of a file as its own file (one question per file, as
         qbank_gitsync keeps them), named after the question, into a folder per category next to
@@ -923,6 +1008,8 @@ class Handler(SimpleHTTPRequestHandler):
             POOL.close_all()          # the next run loads the chosen STACK library
             POOL.prepare(current_maxima(), version)
             return self.send_json({"stack_current": version})
+        if parsed.path in ("/api/graphics/open", "/api/graphics/save"):
+            return self.graphic_post(parsed.path)
         if parsed.path.startswith("/api/q/"):
             return self.question_post(parsed.path)
         if not parsed.path.startswith("/api/cases/"):
