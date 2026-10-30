@@ -48,6 +48,9 @@
   nav.jump button.on { background: #bcd4ec; border-color: #7fa6cc; color: #0d3a63; font-weight: 600; }
   nav.jump button.sub { font-family: var(--mono); background: #f2f6fb; color: #4d6f8f; margin-left: 8px; }
   nav.jump button.sub.on { background: #bcd4ec; border-color: #7fa6cc; color: #0d3a63; }
+  /* "Review" with open findings */
+  nav.jump button.warn { background: #f8d7d3; border-color: #e0a199; color: #8f1f13; }
+  nav.jump button.warn.on { background: #eeb3ab; border-color: #c96f63; color: #6e130a; }
   .sbmenu { position: relative; }
   .sbmenu summary { cursor: pointer; list-style: none; border: 1px solid #cfcfc8; background: #e6e6e1; color: var(--muted); text-align: center; font-weight: bold; letter-spacing: 1px; }
   .sbmenu summary:hover, .sbmenu[open] summary { background: #d9d9d3; color: var(--ink); }
@@ -1540,6 +1543,7 @@ function renderReview() {
   const open = review.filter((f) => !f.rejected && f.level !== "hint");
   $("reviewCount").textContent = review.length ? `(${open.length} open, ${review.length} in all)` : "(no findings)";
   $("reviewCount").classList.toggle("open", open.length > 0);
+  markReviewJump();
   const list = [...review].sort((a, b) => (a.rejected - b.rejected) || (LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]));
   $("reviewView").innerHTML = list.map((f) => `<div class="rv ${f.level}${f.rejected ? " rejected" : ""}">
     <label><input type="checkbox" data-key="${esc(f.key)}"${f.fixable ? "" : " disabled"}${f.fixable && f.default && !f.rejected ? " checked" : ""}>
@@ -1802,7 +1806,17 @@ function renderJumpNav() {
       });
     }
   }
+  markReviewJump();
   spyJump();
+}
+// the jump button "Review" of the editor is red while there are open findings
+function markReviewJump() {
+  let n = 0;
+  try { n = review.filter((f) => !f.rejected && f.level !== "hint").length; } catch (e) { return; }   // before the review exists
+  for (const b of $("railEdit").querySelectorAll("button")) if (b.textContent === "Review") {
+    b.classList.toggle("warn", n > 0);
+    b.title = n ? `Review: ${n} open finding${n > 1 ? "s" : ""}` : "Review";
+  }
 }
 function jumpTo(col, el) {
   if (!WIDE.matches && tab !== col) setTab(col);

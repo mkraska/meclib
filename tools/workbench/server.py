@@ -1053,7 +1053,7 @@ class Handler(SimpleHTTPRequestHandler):
             req = json.loads(self.read_body() or "{}")
             try:
                 return self.send_json({"path": pick_folder(req.get("title") or "Choose a folder", req.get("initial") or "")})
-            except (OSError, subprocess.SubprocessError, RuntimeError) as err:
+            except (OSError, subprocess.SubprocessError, RuntimeError, ValueError) as err:
                 return self.send_json({"error": "no folder dialog available (%s) - type or paste the path instead" % err}, 400)
         if parsed.path == "/api/mtests/run":
             return self.mtests_run()
@@ -1160,9 +1160,12 @@ PICK_LOCK = threading.Lock()
 def pick_folder(title, initial):
     """The system's folder dialog, in a separate Python process (tkinter wants its own main
     thread). Returns the chosen folder or "" if cancelled."""
+    # the dialog process writes UTF-8 (on Windows its stdout would otherwise use the ANSI code
+    # page, and a folder name with an umlaut could not be read here)
+    env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
     with PICK_LOCK:
         proc = subprocess.run([sys.executable, "-c", PICK_FOLDER_SCRIPT, title, initial if Path(initial).is_dir() else ""],
-                              capture_output=True, text=True, encoding="utf-8", timeout=600)
+                              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600, env=env)
     if proc.returncode != 0:
         raise RuntimeError((proc.stderr.strip().splitlines() or ["tkinter failed"])[-1])
     return str(Path(proc.stdout.strip())) if proc.stdout.strip() else ""

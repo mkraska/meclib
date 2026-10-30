@@ -481,6 +481,25 @@ up to its closing tag), which Markdown passes through unchanged: there
 feedback, question note, PRT node feedback, each by its own format; only
 complete pairs, not in `[[jsxgraph]]` blocks or `{@...@}`/`{#...#}`.
 
+Includes of meclib's Maxima files (`include.unused`, recommended;
+`include.missing`, required): an included file of which the question uses no
+function and no variable is reported, the fix removes its `stack_include`
+(loading it only costs compile time, which shows as CAS timeouts in Moodle).
+A meclib function or variable used without its file is reported, the fix adds
+the include (same branch as the question's other meclib includes). Uses are
+searched in all Maxima code: question variables, feedback variables, CAS parts
+of the texts and of the syntax hints, model answers, PRT nodes (SAns, TAns,
+test options); a function counts only when called (`angle(`), so that a
+variable of the same name does not count. Files needed by a needed file count
+as needed; `*_EN.mac` files are never proposed.
+
+Raw values in formulas (`text.raw-in-math`, required): `{#...#}` inside
+`\( ... \)` or `\[ ... \]` becomes `{@...@}`. Where Moodle shows the castext
+unevaluated (question bank, import), MathJax fails on `#`, and Moodle does not
+save such a question; `{@...@}` inside a formula gives the LaTeX of the value
+without delimiters. Same texts as above; `[[jsxgraph]]` blocks (e.g.
+`{#init#}`) are not touched.
+
 Matrix inputs (`matrix.layout`, `matrix.feedback`, wiki "Matrix input" and
 "Matrix Feedback"): a paragraph `<p>label [[input:S_X]] [[validation:S_X]]
 [[feedback:X]]</p>` becomes a table row label | input | validation with the

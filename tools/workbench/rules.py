@@ -317,6 +317,104 @@ def r_include_dist(Q_):
     return out
 
 
+# Includes of meclib's Maxima files: one whose names the question never uses only costs compile
+# time (CAS timeouts in Moodle); a meclib function or variable used without its file stays
+# unevaluated. Names: the functions and top-level variables a file defines; uses: identifiers in
+# all Maxima code of the question (strings and comments removed), and the files a needed file
+# itself relies on. Files *_EN.mac (outdated) are never proposed.
+MECLIB_INCLUDE = re.compile(r"https://raw\.githubusercontent\.com/mkraska/meclib/[^/]+/Maxima/([A-Za-z0-9_]+\.mac)$")
+IDENT = re.compile(r"[A-Za-z_%][A-Za-z0-9_%]*")
+_MECLIB_NAMES = {}
+
+
+def _code_idents(code):
+    """Uses in Maxima code: identifiers, and "name(" for the calls (a function counts as used only
+    when called: a variable may share the name of a meclib function, e.g. angle)."""
+    code = re.sub(r'"(?:\\.|[^"\\])*"', '""', sq.strip_comments(code or ""))
+    return set(IDENT.findall(code)) | {n + "(" for n in re.findall(r"([A-Za-z_%][A-Za-z0-9_%]*)\s*\(", code)}
+
+
+def meclib_names():
+    """file -> (names it defines, identifiers its own code uses)."""
+    if not _MECLIB_NAMES:
+        for f in sorted((sq.REPO / "Maxima").glob("*.mac")):
+            text = f.read_text(encoding="utf-8", errors="replace")
+            code = sq.strip_comments(text)
+            defs = {n + "(" for n in re.findall(r"(?m)^([A-Za-z_][A-Za-z0-9_]*)\s*\([^()]*\)\s*:=", code)}
+            defs |= set(re.findall(r"(?m)^([A-Za-z_][A-Za-z0-9_]*)\s*:(?!=)", code))
+            _MECLIB_NAMES[f.name] = (defs, _code_idents(text))
+    return _MECLIB_NAMES
+
+
+def _question_idents(Q_):
+    """Identifiers of all Maxima code of the question, and the names it defines itself."""
+    used = set()
+    for _place, code in _cas_sources(Q_):
+        used |= _code_idents(code)
+    for inp in Q_.inputs:
+        used |= _code_idents(inp.get("tans") or "")
+        for part in sq.castext_cas_parts(inp.get("syntaxhint") or ""):
+            used |= _code_idents(part)
+    for prt in Q_.prts:
+        for node in prt["nodes"]:
+            used |= _code_idents(node.get("testoptions") or "")
+    qv = sq.strip_comments(Q_.qvars)
+    own = set(re.findall(r"(?m)^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:(?!=)", qv))
+    own |= {n + "(" for n in re.findall(r"(?m)^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\([^()]*\)\s*:=", qv)}
+    return used, own
+
+
+def _remove_include(qvars, url):
+    return re.sub(r'[ \t]*stack_include\(\s*"%s"\s*\)\s*[;$][ \t]*\r?\n?' % re.escape(url), "", qvars)
+
+
+def r_includes(Q_):
+    names = meclib_names()
+    included = {}                       # file -> url
+    for url in Q_.includes:
+        m = MECLIB_INCLUDE.match(url)
+        if m and m.group(1) in names:
+            included[m.group(1)] = url
+    used, own = _question_idents(Q_)
+    used -= own
+    out = []
+    # needed files: a used name defined in an included file (the first one, if several define it),
+    # then what the code of a needed file uses from the other included files
+    needed, todo = set(), [used]
+    while todo:
+        idents = todo.pop()
+        for n in idents:
+            homes = [f for f in included if n in names[f][0]]
+            if homes and not any(h in needed for h in homes):
+                needed.add(homes[0])
+                todo.append(names[homes[0]][1])
+    for f, url in included.items():
+        if f in needed:
+            continue
+
+        def fix(q, url=url):
+            return _set_text(q, "questionvariables", _remove_include(Q(q).qvars, url))
+        out.append(F("include.unused", f, "recommended", "Unused include",
+                     "%s is included, but the question uses none of its functions or variables. Loading it "
+                     "costs compile time (CAS timeouts in Moodle). The fix removes the stack_include." % f, fix))
+    # missing files: a used meclib name that no included file defines
+    missing = {}
+    for n in sorted(used):
+        if any(n in names[f][0] for f in included):
+            continue
+        homes = [f for f in names if n in names[f][0] and not f.endswith("_EN.mac")]
+        if homes:
+            missing.setdefault(homes[0], []).append(n)
+    for f, ns in missing.items():
+        shown = [n.rstrip("(") + ("()" if n.endswith("(") else "") for n in ns]
+        out.append(F("include.missing", f, "required", "Missing include",
+                     "%s is used, but %s is not included; without it the call stays unevaluated. The fix adds "
+                     "stack_include(\"%s\")." % (", ".join(shown[:6]) + (" ..." if len(shown) > 6 else ""), f,
+                                                 include_url(Q_, f)),
+                     _include_fix(include_url(Q_, f))))
+    return out
+
+
 # Test input values longer than STACK's database column (255 characters): the import into Moodle
 # fails with "error writing to the database". The fix moves them into question variables.
 def r_qtest_length(Q_):
@@ -759,6 +857,67 @@ def r_math_delimiters(Q_):
     return out
 
 
+RAW_INSERT = re.compile(r"\{#(.*?)#\}", re.S)
+
+
+def _math_spans(text):
+    """Spans of the formulas of a castext (between \\( \\) or \\[ \\], whatever the number of
+    backslashes), outside [[jsxgraph]] and [[comment]] blocks."""
+    protected = [m.span() for m in PROTECTED.finditer(text)]
+    spans, opener = [], None
+    for m in MATH_DELIM.finditer(text):
+        if any(a <= m.start() < b for a, b in protected):
+            continue
+        if opener is None:
+            if m.group(2) in "([":
+                opener = m
+        elif m.group(2) == {"(": ")", "[": "]"}[opener.group(2)]:
+            spans.append((opener.end(), m.start()))
+            opener = None
+    return spans
+
+
+def fix_raw_in_math(text):
+    """Returns (new text, count): {#...#} inside formulas replaced by {@...@}."""
+    spans = _math_spans(text)
+    n = [0]
+
+    def sub(m):
+        if any(a <= m.start() < b for a, b in spans):
+            n[0] += 1
+            return "{@" + m.group(1) + "@}"
+        return m.group(0)
+    return RAW_INSERT.sub(sub, text), n[0]
+
+
+def r_raw_in_math(Q_):
+    """{#...#} inside a formula: Moodle shows the castext unevaluated in some places (question
+    bank, import), MathJax then fails on "#" ("macro parameter character"), and Moodle refuses
+    to save it; {@...@} gives the LaTeX of the value, without delimiters inside a formula."""
+    out = []
+    places = [(f, Q_.data.get(f) or "", None) for f in ("questiontext", "generalfeedback", "specificfeedback", "questionnote")]
+    for prt in Q_.prts:
+        for k, node in enumerate(prt["nodes"]):
+            for br in ("true", "false"):
+                places.append(("PRT %s node %d %s" % (prt["name"], k + 1, br), node.get(br + "feedback") or "", (prt["name"], k, br)))
+    for where, text, node in places:
+        n = fix_raw_in_math(text)[1]
+        if not n:
+            continue
+
+        def fix(q, where=where, node=node):
+            if node is None:
+                return _set_text(q, where, fix_raw_in_math(Q(q).data.get(where) or "")[0])
+            P, k, br = node
+            prt = next(p for p in Q(q).prts if p["name"] == P)
+            return _set_node_text(q, P, k, br + "feedback", fix_raw_in_math(prt["nodes"][k].get(br + "feedback") or "")[0])
+        out.append(F("text.raw-in-math", where, "required", "{#...#} in a formula",
+                     "%s: %d× {#...#} inside \\( \\) or \\[ \\] → {@...@}. Unevaluated (question bank, import), "
+                     "MathJax fails on \"#\" and Moodle does not save the question; {@...@} gives the LaTeX of the "
+                     "value and adds no delimiters inside a formula." % (where, n), fix))
+    return out
+
+
 # Matrix inputs (wiki "Matrix input", "Matrix Feedback"): a table row label | input | validation
 # with the feedback below, and element-wise feedback with fb_unit_matrix() / fb_vars_matrix().
 MATRIX_NUMERIC_TESTS = ("NumRelative", "NumAbsolute", "UnitsRelative", "UnitsStrictRelative", "UnitsAbsolute",
@@ -1047,8 +1206,8 @@ def r_scenes(Q_):
 
 
 RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_scenes, r_graphic_inputs, r_input_settings, r_prts,
-         r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_matrix_inputs, r_unused_files, r_semicolons,
-         r_include_branch, r_include_dist, r_legacy_functions, r_qtest_length]
+         r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_raw_in_math, r_matrix_inputs, r_unused_files, r_semicolons,
+         r_include_branch, r_include_dist, r_includes, r_legacy_functions, r_qtest_length]
 
 
 # ---------------------------------------------------------------------- metadata in the description

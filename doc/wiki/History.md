@@ -5,6 +5,9 @@
 - [[Meclib Workbench]], PRT editor: tooltips for the answer tests and their options, links to the STACK documentation and to STACK's test cases of the chosen test; list of answer tests corrected to STACK's names (`Units`, `UnitsStrict` instead of `UnitsSigFigs`, `UnitsStrictSigFigs`; `SigFigsStrict`, `Antidiff`, `AddConst` added)
 - [[Meclib Workbench]], preview: `[[if]]` blocks of the question text show all branches with their tests and values (inactive ones greyed, `[[elif]]` supported); a button at the block switches to what Moodle shows; the castext renderer of `Maxima/tests/harness.mac` has the marked variant `[[wbif]]` for this
 - [[Meclib Workbench]], editors: syntax help for `fb_dims` (box in the assignment `fb_dims: [...]`, autocomplete inserts the assignment); `[[ if ]]`, `[[ else ]]`, `[[ /if ]]` with blanks are rendered like STACK
+- [[Meclib Workbench]]: the jump button "Review" of the editor is red while there are open review findings; folder dialog ("...") fixed for folder names with umlauts (Windows: the dialog process now writes UTF-8)
+- [[Meclib Workbench]], review: new rule `text.raw-in-math` - `{#...#}` inside a formula is reported and replaced by `{@...@}` (Moodle cannot save it, MathJax fails on `#` where the text is shown unevaluated)
+- [[Meclib Workbench]], review: new rules `include.unused` (meclib include of which no function or variable is used, fix removes it; saves compile time) and `include.missing` (meclib function or variable used without its include, fix adds it)
 
 2026 10 27
 - [[Meclib Workbench]], Graphic page: graphics can be saved as graphic files (`<name>.graphic.json` in a question folder: initdata, start state, decimal separator, [[jsxgraph]] block) and opened again; "New" starts an empty graphic with a grid only; a badge shows the open file and unsaved changes; "PNG" saves the graphic as shown as `<name>.png` (2x, without border and version text; needs Playwright)
