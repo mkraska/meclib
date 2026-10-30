@@ -1,7 +1,17 @@
 ### Dev Branch
 
+2026 10 30
+- [[Meclib Workbench]], question tests: test mode for creating and editing tests ("+" / "✎"): the preview turns red, the inputs take CAS expressions with question variables (e.g. prepared typical errors), Check evaluates them for the current variant, the expressions are stored in the test
+- [[Meclib Workbench]], PRT editor: tooltips for the answer tests and their options, links to the STACK documentation and to STACK's test cases of the chosen test; list of answer tests corrected to STACK's names (`Units`, `UnitsStrict` instead of `UnitsSigFigs`, `UnitsStrictSigFigs`; `SigFigsStrict`, `Antidiff`, `AddConst` added)
+- [[Meclib Workbench]], preview: `[[if]]` blocks of the question text show all branches with their tests and values (inactive ones greyed, `[[elif]]` supported); a button at the block switches to what Moodle shows; the castext renderer of `Maxima/tests/harness.mac` has the marked variant `[[wbif]]` for this
+- [[Meclib Workbench]], editors: syntax help for `fb_dims` (box in the assignment `fb_dims: [...]`, autocomplete inserts the assignment); `[[ if ]]`, `[[ else ]]`, `[[ /if ]]` with blanks are rendered like STACK
+
+2026 10 27
+- [[Meclib Workbench]], Graphic page: graphics can be saved as graphic files (`<name>.graphic.json` in a question folder: initdata, start state, decimal separator, [[jsxgraph]] block) and opened again; "New" starts an empty graphic with a grid only; a badge shows the open file and unsaved changes; "PNG" saves the graphic as shown as `<name>.png` (2x, without border and version text; needs Playwright)
+
 2026 10 24
 - [[Meclib Workbench]]: images referenced with a query (`@@PLUGINFILE@@/name.jpg?time=...`, as Moodle's editor writes them) are shown in the preview and no longer reported as unused files by the review (whose fix removed them)
+- [[Meclib Workbench]]: a Maxima session is kept started in advance, so opening a question no longer waits for Maxima to start (several seconds)
 - [[Meclib Workbench]], question tests: input values longer than 255 characters (the state of a graphic) are stored in a question variable `qt<test>_<input>`, since Moodle's import fails on them ("error writing to the database"); the review moves such values of existing tests
 - [[Meclib Workbench]] without internet: `python fetch_vendor.py` (in `tools/workbench`) downloads local copies of JSXGraph, MathJax, CodeMirror and marked, which the workbench then uses instead of the CDN; meclib files from GitHub (dev, main): without a connection the copy of the last fetch is used, with a message
 

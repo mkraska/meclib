@@ -466,6 +466,37 @@ def forbidden_message(found, consequence="the statement was not evaluated"):
         ", ".join("%s %s" % (kind, name) for name, kind in dict.fromkeys(found)), consequence)
 
 
+BLOCK_TAG_OPEN = re.compile(r"\[\[\s*(if|elif|foreach|define)(?=\s)")
+BLOCK_TAG_BARE = re.compile(r"\[\[\s*(/\s*(?:if|foreach)|else|comment|/\s*comment)\s*\]\]")
+
+
+def normalize_block_tags(text):
+    """Castext block tags in STACK's lenient spelling ("[[ if test=...]]", "[[ /if ]]",
+    "[[ else ]]") in the strict one the renderer of the harness looks for ("[[if ...]]",
+    "[[/if]]", "[[else]]")."""
+    text = BLOCK_TAG_OPEN.sub(lambda m: "[[" + m.group(1), text)
+    return BLOCK_TAG_BARE.sub(lambda m: "[[" + re.sub(r"\s+", "", m.group(1)) + "]]", text)
+
+
+IF_EXCLUDED = re.compile(r"\[\[\s*jsxgraph\b.*?\[\[/jsxgraph\]\]|<[^<>]*>|\\\\?\(.*?\\\\?\)|\\\\?\[.*?\\\\?\]|\$\$.*?\$\$", re.S)
+
+
+def mark_if_blocks(text):
+    """The question text with its [[if ...]] blocks as [[wbif ...]] for the preview, which
+    shows them with all their branches (the renderer of the harness, fb_tmpl_render_ifmarks);
+    not inside [[jsxgraph]] blocks, HTML tags or math, where the markers would break the
+    content. Returns (text, number of blocks marked)."""
+    excluded = [m.span() for m in IF_EXCLUDED.finditer(text)]
+    out, n, pos = [], 0, 0
+    for m in re.finditer(r"\[\[if(?=\s)", text):
+        if any(a <= m.start() < b for a, b in excluded):
+            continue
+        out.append(text[pos:m.start()] + "[[wbif")
+        pos, n = m.end(), n + 1
+    out.append(text[pos:])
+    return "".join(out), n
+
+
 CAS_BLOCKS = ("if", "elif", "define", "foreach")   # castext blocks whose attribute values are Maxima
 CT_CAS = re.compile(r"\{([@#])(.*?)\1\}", re.S)
 CT_BLOCK = re.compile(r"\[\[\s*([A-Za-z_]+)((?:[^\]]|\](?!\]))*)\]\]")
@@ -774,6 +805,7 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
             fb = n[b + "feedback"] or ""
             if fb.strip():
                 md = n[b + "format"] == "markdown"
+                fb = normalize_block_tags(fb)
                 src = mark_html_blocks(fb) if md else fb
                 parts.append("fb_tmpl_md: %s" % ("true" if md else "false"))
                 parts.append("%%_c: errcatch(castext(%s))" % mstring(src))
@@ -809,9 +841,19 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
     return code
 
 
-def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
+def test_inputs(data, test_exprs):
+    """{input: expression} of the test mode of the page: the inputs whose answer is a CAS
+    expression with question variables (not choice, matrix, string and notes inputs; not blank)."""
+    itype = {i["name"]: i.get("type") for i in data["inputs"]}
+    return {n: e for n, e in (test_exprs or {}).items()
+            if n in itype and itype[n] not in MCQ_TYPES + ("matrix", "string", "notes") and str(e).strip()}
+
+
+def evaluate(session, data, seed, resolver, previous_names=(), answers=None, test_exprs=None):
     """Evaluates question variables, model answers and castext of a question in a Maxima
-    session. Returns a dict for the preview page."""
+    session. Returns a dict for the preview page. test_exprs ({input: expression}, with answers):
+    the test mode of the page - these inputs get the value of the expression, evaluated with the
+    question variables like the inputs of a question test, as answer."""
     t0 = time.time()
     statements = split_statements(data["questionvariables"])
     names, includes, code = [], [], []
@@ -918,17 +960,30 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
                         % ("mcq_correct(%_v[1])" if itype[name] == "checkbox" else "first(mcq_correct(%_v[1]))"))
             code.append('block([%%_v: errcatch(%s)]%s, if %%_v # [] then meclib_out(%s, string(%%_v[1])))$'
                         % (expr, pick, mstring("qt:%s:%s" % (qt["testcase"], name))))
+    # test mode: the expressions evaluated as the inputs of question tests above, kept as strings
+    # (%_tv_<input>, false if the expression fails) for answer_code()
+    texprs = test_inputs(data, test_exprs) if answers is not None else {}
+    for name, expr in texprs.items():
+        if forbidden_identifiers(expr):
+            code.append("%%_tv_%s: false$" % name)
+            continue
+        code.append('block([%%_v: errcatch(%s)], if %%_v # [] then (%%_tv_%s: string(%%_v[1]), meclib_out(%s, %%_tv_%s))'
+                    ' else %%_tv_%s: false)$' % (expr, name, mstring("tv:" + name), name, name))
     code.append(tick("model answers, syntax hints"))
     texts = {"questiontext": data["questiontext"], "generalfeedback": data["generalfeedback"],
              "questionnote": data["questionnote"], "prtcorrect": data["prtcorrect"],
              "prtpartiallycorrect": data["prtpartiallycorrect"], "prtincorrect": data["prtincorrect"]}
     langs = languages_used(data["questiontext"])
+    if_blocks = 0
     for key, txt in texts.items():
         if not txt.strip() or key in security:
             continue
         code.append('print("@@CT %s@@")$' % key)
         # Markdown texts: {@...@} escaped for Markdown, Markdown's math delimiters (as STACK)
         md = data["formats"].get(key) == "markdown"
+        txt = normalize_block_tags(txt)
+        if key == "questiontext":     # [[if]] blocks with all branches, marked for the preview
+            txt, if_blocks = mark_if_blocks(txt)
         code.append('fb_tmpl_md: %s$' % ("true" if md else "false"))
         code.append('%%_c: errcatch(castext(%s))$' % mstring(mark_html_blocks(txt) if md else txt))
         code.append('fb_tmpl_md: false$')
@@ -939,7 +994,7 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
         code.append(tick(key))
     checked = {}
     if answers is not None:
-        code += answer_code(data, answers, langs, resolver, checked, names)
+        code += answer_code(data, answers, langs, resolver, checked, names, texprs)
     stdout, results = session.run_with_results("\n".join(code))
 
     # attribute Maxima's messages to the statement that produced them
@@ -990,19 +1045,23 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
         "qtests": [dict(qt, values={n: plain_tans(first("qt:%s:%s" % (qt["testcase"], n))) for n in qt["inputs"]})
                    for qt in data.get("qtests", [])],
         "castext_errors": castext_errors,
+        "if_blocks": if_blocks,
         "languages": langs,
         "picked": {"de": pick_lang("de", langs), "en": pick_lang("en", langs)},
         "check": check_results(checked, results, stdout, data) if answers is not None else None,
         "timing": timing(results),
         # names to kill before the next evaluation in the same Maxima session
-        "kill": names + ([i["name"] for i in data["inputs"]] if answers is not None else []) + (
+        "kill": names + ([i["name"] for i in data["inputs"]] if answers is not None else []) +
+                ["%_tv_" + n for n in texprs] + (
             [n for p in data["prts"] for n in fv_names(p)] if answers is not None else []),
     }
 
 
-def answer_code(data, answers, langs, resolver, checked, qv_names=()):
+def answer_code(data, answers, langs, resolver, checked, qv_names=(), texprs=None):
     """Code for the student's answers (as STACK: simp:false, then name: value) and the PRTs
-    whose inputs are all answered. Fills checked with what is evaluated."""
+    whose inputs are all answered. Fills checked with what is evaluated. texprs: inputs of the
+    test mode, whose answer is the value of an expression (%_tv_<input>, see evaluate()), read
+    as a typed answer is read."""
     names = [i["name"] for i in data["inputs"]]
     raw_by_input = {n: answers.get(n, "") for n in names}
     code = ['print("@@ANSWERS@@")$', "simp: false$"]
@@ -1010,6 +1069,14 @@ def answer_code(data, answers, langs, resolver, checked, qv_names=()):
     for inp in data["inputs"]:
         n = inp["name"]
         raw = raw_by_input[n]
+        if texprs and n in texprs:
+            inputs[n] = {"state": "?", "test": True}
+            code.append('block([%%_p: []], if stringp(%%_tv_%s) then %%_p: errcatch(parse_string(%%_tv_%s)),'
+                        ' if %%_p = [] then meclib_out(%s, "invalid") else ('
+                        '%s: %%_p[1], meclib_out(%s, "valid"), meclib_out(%s, fb_tmpl_tostring(%s))))$'
+                        % (n, n, mstring("ans:%s:state" % n), n, mstring("ans:%s:state" % n),
+                           mstring("ans:%s:tex" % n), n))
+            continue
         if inp.get("type") == "matrix":
             mstate, value = matrix_answer(inp, raw, data["decimals"])
             if mstate != "ok":
@@ -1108,6 +1175,10 @@ def check_results(checked, results, stdout, data):
     for n, info in checked["inputs"].items():
         state = first("ans:%s:state" % n, info["state"]) if info["state"] != "blank" else "blank"
         out["inputs"][n] = {"state": state, "tex": first("ans:%s:tex" % n), "value": info.get("value")}
+        if info.get("test"):      # test mode: the value of the expression
+            out["inputs"][n].update(test=True, value=first("tv:" + n))
+            if state == "invalid":
+                out["inputs"][n]["msg"] = "The expression cannot be evaluated with the question variables."
         if info.get("msg"):
             out["inputs"][n].update(msg=info["msg"], hint=info.get("hint"))
         if info.get("empty"):

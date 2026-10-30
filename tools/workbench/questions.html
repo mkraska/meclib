@@ -119,6 +119,30 @@
   :is(#qtext, #gfb, #qnote, .stack-prt .prtfb) code { color: #d63384; font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: .875em; word-wrap: break-word; }
   :is(#qtext, #gfb, #qnote, .stack-prt .prtfb) pre code { color: inherit; font-size: inherit; }
   .formulation { background: #e7f3f5; border-radius: 4px; padding: 10px 14px; }
+  .atsel { display: flex; align-items: center; gap: 4px; min-width: 0; }
+  .atsel select { flex: 1; min-width: 0; }
+  .atsel a { font-size: 11px; color: var(--accent); text-decoration: none; }
+  .atsel a.atdoc { font-weight: bold; padding: 0 3px; border: 1px solid var(--line); border-radius: 50%; }
+  /* test mode: the inputs take CAS expressions with question variables (for a question test) */
+  #previewView.testmode .formulation { background: #fbe3e1; }
+  /* [[if]] blocks of the question text: every branch with its test (mode "conditions") or only
+     the branch STACK shows (mode "as Moodle"); the button at the label switches */
+  .wbif-s { font-size: 11px; font-family: ui-monospace, Consolas, monospace; }
+  .wbif-lab { display: inline-block; margin: 1px 3px 1px 0; padding: 0 4px; border-radius: 3px; border: 1px solid #9cc99c; background: #eef7ee; color: var(--ok); }
+  .wbif-s[data-state="off"] .wbif-lab, .wbif-s[data-state="raw"] .wbif-lab, .wbif-s[data-state="none"] .wbif-lab { border-color: var(--line); background: #f3f3f0; color: var(--muted); }
+  .wbif-tg { font-size: 10px; padding: 0 4px; margin-right: 3px; line-height: 1.3; }
+  /* the extent of a branch: green background for the branch STACK shows, grey for the others;
+     blocks (paragraphs, tables, ...) also a line on the left */
+  .wbif-on { background: #e3f2e3; }
+  .wbif-dim { opacity: .5; background: #ececE8; }
+  .wbif-on:is(p, div, table, ul, ol, pre, h1, h2, h3, h4, center) { border-left: 3px solid #7fbf7f; padding-left: 6px; }
+  .wbif-dim:is(p, div, table, ul, ol, pre, h1, h2, h3, h4, center) { border-left: 3px solid #b5b5ae; padding-left: 6px; }
+  .wbif-raw { font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; }
+  .wbif-moodle .wbif-on { background: none; border-left: none; padding-left: 0; }
+  .wbif-moodle .wbif-dim, .wbif-moodle .wbif-lab, .wbif-moodle .wbif-s[data-state="off"], .wbif-moodle .wbif-s[data-state="raw"] { display: none; }
+  #testBanner { background: #fbe3e1; border: 1px solid #e3a19b; border-radius: 4px; padding: 6px 10px; margin-bottom: 8px; font-size: 12px; }
+  #testBanner .tbrow { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+  #testBanner input { flex: 1; min-width: 12em; font-size: 12px; }
   /* as in STACK: page font, width (boxsize * 0.9 + 0.1) em set on the element; options "monospace", "align:right" */
   input.stack-input { font: inherit; padding: 2px 4px; border: 1px solid #9aa; border-radius: 3px; max-width: 100%; box-sizing: content-box; }
   input.stack-input.mono { font-family: var(--mono); }
@@ -389,6 +413,7 @@
     <section>
       <h2>Preview</h2>
       <div id="previewView">
+        <div id="testBanner" hidden></div>
         <div id="qmeta" class="meta"></div>
         <div id="qtext" class="formulation"><p class="hint">Open a file and choose a STACK question.</p></div>
         <div id="sfb" class="specificfeedback" hidden></div>
@@ -661,7 +686,7 @@ async function selectQuestion(index) {
   for (const k of Object.keys(testResults)) delete testResults[k];     // the tests of another question
   for (const k of Object.keys(stackResults)) delete stackResults[k];
   stackSummary = "";
-  activeTest = null; testForm = null; testDeleteArmed = null;
+  activeTest = null; testDeleteArmed = null; leaveTestMode(false);
   if (!(await flush())) return;
   if ($("inputDialog").open) $("inputDialog").close("");   // it belongs to the question it was opened for
   qindex = index; markSelected();
@@ -812,11 +837,80 @@ async function setOption(k, v) {
 }
 
 // ---------------------------------------------------------------- PRT editor
-const ANSWER_TESTS = ["AlgEquiv", "AlgEquivNouns", "CasEqual", "EqualComAss", "EqualComAssRules", "SameType", "SubstEquiv",
-  "SysEquiv", "Sets", "Equiv", "EquivFirst", "Expanded", "FacForm", "SingleFrac", "PartFrac", "CompSquare", "LowestTerms",
-  "PropLogic", "Int", "Diff", "GT", "GTE", "NumRelative", "NumAbsolute", "NumSigFigs", "NumDecPlaces", "NumDecPlacesWrong",
-  "UnitsRelative", "UnitsStrictRelative", "UnitsAbsolute", "UnitsStrictAbsolute", "UnitsSigFigs", "UnitsStrictSigFigs",
-  "String", "StringSloppy", "Levenshtein", "SRegExp", "Validator"];
+// STACK's answer tests (names as in stack/answertest/controller.class.php, the names stored in
+// the question file): [group, what the test does, what the option is ("" = no option)]; the
+// group gives the page of the STACK documentation, the name the page with STACK's own test cases
+const AT_DOCS = "https://docs.stack-assessment.org/en/";
+const AT_PAGES = { eq: "Authoring/Answer_Tests/Equivalence/", form: "Authoring/Answer_Tests/Form/",
+  rule: "Authoring/Answer_Tests/Rule_based/", num: "Authoring/Answer_Tests/Numerical/",
+  units: "Topics/Units/#answer-tests", calc: "Authoring/Answer_Tests/Calculus/", str: "Authoring/Answer_Tests/String/",
+  lev: "Topics/Levenshtein_distance/#answer-test", other: "Authoring/Answer_Tests/Other/",
+  equiv: "Specialist_tools/Equivalence_reasoning/", prop: "Topics/Propositional_Logic/", valid: "CAS/Validator/" };
+const NUMRAW = " SAns must be the name of the input (the raw typed value, trailing zeros count).";
+const AT_INFO = {
+  AlgEquiv: ["eq", "Algebraic equivalence: simplify(SAns - TAns) = 0. Fully simplifies both, whatever the simp setting; works for expressions, lists, sets, equations, inequalities, matrices. Not for floating-point numbers (use a numerical test).", ""],
+  AlgEquivNouns: ["eq", "Algebraic equivalence, but noun forms such as 'diff(y,x) or noundiff(y,x) are not evaluated.", ""],
+  CasEqual: ["eq", "Identical parse trees: SAns = TAns with simp:false, no simplification at all. Very strict.", ""],
+  EqualComAss: ["rule", "Equal up to commutativity and associativity of + and * (with minus and division); no other simplification - checks the form, e.g. 'simplified'.", ""],
+  EqualComAssRules: ["rule", "Like EqualComAss, plus the rules given as option (identity, integer arithmetic, ...).", "required: list of rules, e.g. [oneMul, zeroAdd] or ID_TRANS, INT_ARITH"],
+  SameType: ["eq", "SAns and TAns are the same type of object (recursively, e.g. list of equations).", ""],
+  SubstEquiv: ["eq", "Equivalent after renaming the variables of SAns (at most 4 variables), e.g. other names for arbitrary constants.", "optional: list of variables that keep their names, e.g. [x]"],
+  SysEquiv: ["eq", "Two lists of polynomial equations have the same solutions (Groebner bases); does not check that the system is solved.", ""],
+  Sets: ["other", "Compares two sets and gives feedback on missing and extra elements.", ""],
+  Expanded: ["form", "SAns equals expand(SAns); TAns is not used but must not be empty.", ""],
+  FacForm: ["form", "SAns is equivalent to TAns and factored over the rationals (polynomials).", "required: the variable, e.g. x"],
+  SingleFrac: ["form", "SAns is equivalent to TAns and written as a single fraction (top level).", ""],
+  PartFrac: ["form", "SAns is equivalent to TAns and in partial fraction form.", "required: the variable, e.g. x"],
+  CompSquare: ["form", "SAns is equivalent to TAns and in completed square form.", "required: the variable, e.g. x"],
+  PropLogic: ["prop", "Equivalence of expressions of propositional logic.", ""],
+  Equiv: ["equiv", "Reasoning by equivalence: checks the lines of a student's argument (equivalence reasoning input).", "optional, see the documentation"],
+  EquivFirst: ["equiv", "Like Equiv, and the first line must be the teacher's starting expression.", "optional, see the documentation"],
+  GT: ["num", "Numerical SAns > TAns (SAns is simplified and converted to a float).", ""],
+  GTE: ["num", "Numerical SAns >= TAns (SAns is simplified and converted to a float).", ""],
+  SigFigsStrict: ["num", "Strict rules of significant figures (100 has one, 1.00e2 three); only the written form, not the value." + NUMRAW, "required: number of significant figures, e.g. 3"],
+  NumAbsolute: ["num", "Numerical comparison with absolute tolerance: |SAns - TAns| < opt. Also for lists and sets of numbers.", "tolerance (absolute), default 0.05"],
+  NumRelative: ["num", "Numerical comparison with relative tolerance: |SAns - TAns| <= opt*|TAns|. Also for lists and sets of numbers.", "tolerance (relative), default 0.05, e.g. 0.005"],
+  NumSigFigs: ["num", "Accuracy and number of significant figures (liberal: 100 counts as 1 to 3 sig figs)." + NUMRAW, "required: n sig figs, or [n,m] (accuracy in m places, e.g. [3,2]), [n,0] (only the number of figures), [n,-1] (at least n)"],
+  NumDecPlaces: ["num", "Equivalent and written to exactly opt decimal places (trailing zeros required: 12.30)." + NUMRAW, "required: number of decimal places, e.g. 2"],
+  NumDecPlacesWrong: ["num", "Detects a misplaced decimal point (3.141 vs 31.41); lack of trailing zeros is condoned.", "required: number of digits compared, from the most significant"],
+  Units: ["units", "Number with units, compared like NumSigFigs; other compatible units are converted to SI base units (with feedback)." + NUMRAW, "as NumSigFigs: n or [n,m]"],
+  UnitsStrict: ["units", "Like Units, but the units must be exactly those of TAns (no conversion)." + NUMRAW, "as NumSigFigs: n or [n,m]"],
+  UnitsAbsolute: ["units", "Number with units, compared like NumAbsolute after conversion to SI base units.", "absolute tolerance (in the units of TAns)"],
+  UnitsStrictAbsolute: ["units", "Like UnitsAbsolute, but the units must be exactly those of TAns.", "absolute tolerance (in the units of TAns)"],
+  UnitsRelative: ["units", "Number with units, compared like NumRelative after conversion to SI base units.", "relative tolerance, e.g. 0.01"],
+  UnitsStrictRelative: ["units", "Like UnitsRelative, but the units must be exactly those of TAns.", "relative tolerance, e.g. 0.01"],
+  LowestTerms: ["form", "All numbers in SAns are in lowest terms, no surds or complex numbers in denominators; TAns is ignored.", ""],
+  Diff: ["calc", "Algebraic equivalence, with feedback if the student seems to have integrated instead of differentiated.", "required: the variable, e.g. x"],
+  Int: ["calc", "Indefinite integrals of the same expression (constant of integration expected).", "required: the variable, or [x, NOCONST] (constant may be missing), [x, FORMAL], [x, integrand]"],
+  Antidiff: ["calc", "The derivatives of SAns and TAns are equivalent (any antiderivative); combine with AddConst.", "required: the variable, e.g. x"],
+  AddConst: ["calc", "SAns contains exactly one additive constant besides the given variables.", "required: list of variables, e.g. [x], or [x, NONSTRICT] (any additive term)"],
+  String: ["str", "Exact string match (whitespace kept).", ""],
+  StringSloppy: ["str", "String match after removing all spaces, newlines and tabs.", ""],
+  Levenshtein: ["lev", "String similarity: SAns (a string) against TAns = [allow, deny], two lists of strings; case insensitive by default.", "required: similarity 0..1, e.g. 0.8, or [0.9, CASE, WHITESPACE]"],
+  SRegExp: ["str", "Regular expression: TAns (a pattern string) matches somewhere in SAns (a string); anchor with ^ and $.", ""],
+  Validator: ["valid", "Applies the validator function named in the option to SAns; TAns must not be empty but is ignored.", "required: name of the validator function"],
+};
+const ANSWER_TESTS = Object.keys(AT_INFO);
+const AT_LABEL = { Units: "Units (sig figs)", UnitsStrict: "UnitsStrict (sig figs)" };
+function atDocUrl(t) { const i = AT_INFO[t]; return i ? AT_DOCS + AT_PAGES[i[0]] : AT_DOCS + "Authoring/Answer_Tests/"; }
+function atExamplesUrl(t) { return AT_DOCS + "Authoring/Answer_Tests/Results/" + (AT_INFO[t] ? t + "/" : ""); }
+function atTitle(t) { const i = AT_INFO[t]; return i ? t + ": " + i[1] + "\noption: " + (i[2] || "none") : t + " (not a STACK answer test known to the workbench)"; }
+function atOptHint(t) { const i = AT_INFO[t]; return i ? (i[2] || "no option") : ""; }
+function atOptions(cur) {
+  const names = ANSWER_TESTS.includes(cur) ? ANSWER_TESTS : [cur, ...ANSWER_TESTS];
+  return names.map((t) => `<option value="${esc(t)}"${t === cur ? " selected" : ""} title="${esc(atTitle(t))}">${esc(AT_LABEL[t] || t)}</option>`).join("");
+}
+// select, option field and links of a node's test show the help of the chosen test
+function atHelp(nodeEl) {
+  const sel = nodeEl.querySelector('select[data-nk="answertest"]');
+  if (!sel) return;
+  const t = sel.value, opt = nodeEl.querySelector('input[data-nk="testoptions"]');
+  sel.title = atTitle(t);
+  if (opt) { opt.placeholder = atOptHint(t); opt.title = "option of " + t + ": " + (atOptHint(t) || "-"); }
+  const doc = nodeEl.querySelector("a.atdoc"), ex = nodeEl.querySelector("a.atex");
+  if (doc) { doc.href = atDocUrl(t); doc.title = "STACK documentation of " + t; }
+  if (ex) { ex.href = atExamplesUrl(t); ex.title = "STACK's own test cases of " + t + " (what the test accepts and the feedback it gives)"; }
+}
 const FEEDBACK_STYLES = [["0", "formative"], ["1", "standard"], ["2", "compact"], ["3", "symbolic only"]];
 const opt = (list, cur) => (list.some(([v]) => v === cur) ? list : [[cur, cur], ...list])
   .map(([v, l]) => `<option value="${esc(v)}"${v === cur ? " selected" : ""}>${esc(l)}</option>`).join("");
@@ -851,7 +945,7 @@ function renderPRTs(prts) {
           <input type="text" data-nk="description" value="${esc(n.description)}" placeholder="description">
           <button type="button" class="small del" data-op="delete-node" title="delete this node (branches leading to it end the PRT)">✕</button></div>
         <div class="test">
-          <span>test</span><select data-nk="answertest">${opt(ANSWER_TESTS.map((t) => [t, t]), n.answertest)}</select>
+          <span>test</span><span class="atsel"><select data-nk="answertest">${atOptions(n.answertest)}</select><a class="atdoc" target="_blank" rel="noopener">?</a><a class="atex" target="_blank" rel="noopener">examples</a></span>
           <span>options</span><input type="text" data-nk="testoptions" value="${esc(n.testoptions)}">
           <span>SAns</span><input type="text" data-nk="sans" value="${esc(n.sans)}" spellcheck="false">
           <span>TAns</span><input type="text" data-nk="tans" value="${esc(n.tans)}" spellcheck="false">
@@ -865,8 +959,10 @@ function renderPRTs(prts) {
     el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
       setDirty(true);
       if (/nextnode$|^description$|^answertest$/.test(el.dataset.nk || "")) renderPRTGraphs();
+      if (el.dataset.nk === "answertest") atHelp(el.closest(".node"));
     });
   }
+  for (const nd of box.querySelectorAll(".node")) atHelp(nd);
   for (const b of box.querySelectorAll("[data-op]")) {
     const prt = b.closest(".prt").dataset.prt, node = b.closest(".node");
     b.addEventListener("click", () => {
@@ -1288,11 +1384,16 @@ async function check() {
   if (!(await flush()) && conflict) return;
   const answers = {};
   for (const inp of result.inputs || []) answers[inp.name] = inputValues[inp.name] ?? "";
+  const body = { path: file.path, index: qindex, src: $("src").value, answers };
+  if (testMode) {    // the inputs with expressions get their values (evaluated with the question variables)
+    body.test_exprs = {};
+    for (const inp of result.inputs || []) if (exprInput(inp)) body.test_exprs[inp.name] = inputValues[inp.name] ?? "";
+  }
   $("status").textContent = "checking ...";
   $("checkBtn").disabled = true;
   try {
-    const seed = parseInt($("seed").value, 10) || 1;
-    const r = await postJSON("/api/q/check", { path: file.path, index: qindex, seed, src: $("src").value, answers });
+    body.seed = parseInt($("seed").value, 10) || 1;
+    const r = await postJSON("/api/q/check", body);
     $("status").textContent = "checked in " + r.seconds + " s";
     lastCheck = r.check; lastCheck.timing = r.timing;
     result.timing = r.timing; result.first_run = r.first_run; renderMessages();
@@ -1314,6 +1415,7 @@ function showCheck() {
       if (v.empty) el.innerHTML = "";   // blank, valid by allowempty (value EMPTYANSWER)
       else if (v.state === "invalid") el.innerHTML = v.msg ? `<span class="val-bad" title="${esc(v.hint || "")}">This answer is invalid. ${esc(v.msg)}</span>`
         : `<span class="val-bad">${inp.type === "matrix" ? "invalid input (incomplete or does not parse)" : "invalid input (does not parse)"}</span>`;
+      else if (v.test && v.state === "valid") el.innerHTML = `<span class="val-ok standard" title="value of the expression: ${esc(v.value || "")}">→ ${esc(v.tex || "")}</span>`;
       else if (v.state === "valid" && inp.showvalidation !== "0" && inp.type !== "string") el.innerHTML = `<span class="val-ok ${inp.showvalidation === "3" ? "compact" : "standard"}">${esc(v.tex || "")}</span>`;
       else el.innerHTML = "";
     }
@@ -1819,7 +1921,11 @@ async function openSnippets() {
 const testResults = {};       // testcase -> {pass, reasons}
 const stackResults = {};      // testcase -> {pass, reasons, seconds}: the same test graded by STACK itself
 let stackApi = null, stackRunning = false, stackSummary = "";   // GET /api/stackapi/status
-let activeTest = null, testForm = null, testDeleteArmed = null;   // testForm: null, "new" or a test case
+let activeTest = null, testDeleteArmed = null;
+// test mode (a new test or a test being edited): {tc: "new" or a test case, saved: the answers
+// before}; the inputs take CAS expressions with question variables (exprInput), Check evaluates
+// them first, the expressions are stored in the test
+let testMode = null;
 function answerText(inp, raw) {
   if (raw == null) return "";
   let v = String(raw);
@@ -1902,15 +2008,15 @@ function renderTests() {
     bar.appendChild(b);
   }
   const tool = (label, title, fn) => { const b = document.createElement("button"); b.className = "small"; b.textContent = label; b.title = title; b.addEventListener("click", fn); bar.appendChild(b); };
-  if (result && (result.inputs || []).length) tool("+", "new test case from the current answers and the result of their check", () => openTestForm(null));
+  if (result && (result.inputs || []).length && !testMode) tool("+", "new test case: the preview goes into test mode, where the inputs take CAS expressions with question variables", () => enterTestMode(null));
   if (tests.length) tool("▶", "run all tests (fast check in Maxima)", runAllTests);
   if (tests.length) tool(stackRunning ? "STACK …" : "STACK ▶", stackApi && stackApi.built
     ? `run all tests in STACK itself (STACK API in Docker: STACK ${(stackApi.settings || {}).release || ""}, Maxima ${(stackApi.settings || {}).maxima || ""}); ` +
       "STACK compiles the question for every test, which takes seconds to a minute with large includes; the result shows as a line under each button"
     : "STACK API not built yet - in tools/workbench: python stackapi.py build --maxima <the server's Maxima, e.g. 5.45.1> (Docker Desktop running), see README",
     runTestsInStack);
-  if (activeTest !== null && tests.some((t) => t.testcase === activeTest)) {
-    tool("✎", `test ${activeTest}: replace its inputs and expected results by the current answers and their check, or change its description`, () => openTestForm(activeTest));
+  if (activeTest !== null && !testMode && tests.some((t) => t.testcase === activeTest)) {
+    tool("✎", `test ${activeTest}: edit it in test mode (its inputs as expressions), or change its description`, () => enterTestMode(activeTest));
     tool(testDeleteArmed === activeTest ? "✕?" : "✕", `delete test ${activeTest}` + (testDeleteArmed === activeTest ? " - click again to delete" : ""), () => deleteTest(activeTest));
   }
   const r = activeTest !== null && testResults[activeTest];
@@ -1918,7 +2024,6 @@ function renderTests() {
   const sf = Object.entries(stackResults).filter(([tc, x]) => !x.pass && tests.some((t) => String(t.testcase) === tc));
   if (stackSummary) { const m = document.createElement("div"); m.className = "qtmsg " + (sf.length ? "bad" : "info"); m.textContent = stackSummary +
     (sf.length ? "\n" + sf.map(([tc, x]) => `test ${tc}: ` + x.reasons.join("; ")).join("\n") : ""); bar.appendChild(m); }
-  if (testForm !== null) bar.appendChild(testFormEl());
 }
 // a test's answers as the STACK API takes them: as typed (decimal separator of the question); a
 // choice input as the number of the chosen entry (checkbox: one key name_k per ticked entry), a
@@ -1974,6 +2079,7 @@ async function runTestsInStack() {
   finally { stackRunning = false; renderTests(); }
 }
 async function runTest(qt, quiet) {
+  if (testMode) return null;
   activeTest = qt.testcase; testDeleteArmed = null;
   for (const inp of result.inputs || []) inputValues[inp.name] = qt.values && inp.name in qt.values ? answerText(inp, qt.values[inp.name]) : "";
   lastCheck = null;
@@ -1990,31 +2096,73 @@ async function runAllTests() {
   renderTests();
   $("status").textContent = `tests: ${pass} of ${tests.length} passed`;
 }
-function openTestForm(tc) { testForm = tc === null ? "new" : tc; renderTests(); const i = $("qtestDesc"); if (i) i.focus(); }
-function testFormEl() {
-  const qt = testForm !== "new" ? (result.qtests || []).find((t) => t.testcase === testForm) : null;
-  const f = document.createElement("div"); f.className = "qtform";
-  f.innerHTML = `<input type="text" id="qtestDesc" placeholder="description of the test case" value="${esc(qt ? qt.description : "")}">` +
-    (qt ? `<button class="small" data-a="replace" title="inputs and expected results from the current answers and their check">Replace test ${qt.testcase}</button>` +
-          `<button class="small" data-a="describe">Save description only</button>`
-        : `<button class="small" data-a="add" title="inputs and expected results from the current answers and their check">Add test</button>`) +
-    `<button class="small" data-a="cancel">Cancel</button>`;
-  f.addEventListener("click", (ev) => { const a = ev.target.dataset && ev.target.dataset.a; if (a) saveTest(a, qt, $("qtestDesc").value); });
-  return f;
+// inputs that take an expression in test mode: not choice, matrix, string and notes inputs
+function exprInput(inp) { return !MCQ_TYPES.includes(inp.type) && !["matrix", "string", "notes"].includes(inp.type); }
+function enterTestMode(tc) {
+  if (!result) return;
+  const qt = tc === null ? null : (result.qtests || []).find((t) => t.testcase === tc);
+  testMode = { tc: qt ? qt.testcase : "new", saved: Object.assign({}, inputValues), desc: qt ? qt.description : "" };
+  testDeleteArmed = null;
+  for (const inp of result.inputs || []) {
+    if (qt) inputValues[inp.name] = exprInput(inp) ? (qt.inputs[inp.name] ?? "")
+      : qt.values && inp.name in qt.values ? answerText(inp, qt.values[inp.name]) : "";
+    // the model answer as the name of its variable (holds for every variant), as STACK's default test
+    else if (exprInput(inp) && inp.tans && inp.tans_raw != null && (inputValues[inp.name] ?? "") === answerText(inp, inp.tans_raw))
+      inputValues[inp.name] = inp.tans;
+  }
+  lastCheck = null;
+  render(true);
+  showTestBanner();
+  renderTests();
+  if (qt) check();
 }
-// the current answers as test inputs (the Maxima expressions of the last check) and the results
-// of the PRTs as expected results (score, penalty, last answer note; NULL for a PRT that did not run)
+// restore: the answers from before the test mode come back
+function leaveTestMode(restore) {
+  if (!testMode) return;
+  const saved = testMode.saved;
+  testMode = null;
+  showTestBanner();
+  if (!restore || !result) return;
+  for (const k of Object.keys(inputValues)) delete inputValues[k];
+  Object.assign(inputValues, saved);
+  lastCheck = null;
+  render(true);
+  renderTests();
+}
+function showTestBanner() {
+  const b = $("testBanner");
+  $("previewView").classList.toggle("testmode", !!testMode);
+  b.hidden = !testMode;
+  if (!testMode) { b.innerHTML = ""; return; }
+  const edit = testMode.tc !== "new";
+  b.innerHTML = `<b>Test mode${edit ? ": test " + esc(String(testMode.tc)) : ": new test"}</b> - enter CAS expressions with question variables
+    (Maxima syntax, e.g. <code>J_err1</code>); Check evaluates them for this variant and grades their values. The expressions are stored in the test.
+    <div class="tbrow"><input type="text" id="qtestDesc" placeholder="description of the test case" value="${esc(testMode.desc || "")}">
+    <button class="small primary" data-a="${edit ? "replace" : "add"}" title="the expressions as inputs, the result of their check as expected result">${edit ? "Replace test " + esc(String(testMode.tc)) : "Add test"}</button>
+    ${edit ? '<button class="small" data-a="describe">Save description only</button>' : ""}
+    <button class="small" data-a="cancel">Cancel</button></div>`;
+  b.querySelector(".tbrow").addEventListener("click", (ev) => {
+    const a = ev.target.dataset && ev.target.dataset.a;
+    if (!a) return;
+    const qt = edit ? (result.qtests || []).find((t) => t.testcase === testMode.tc) : null;
+    saveTest(a, qt, $("qtestDesc").value);
+  });
+  $("qtestDesc").addEventListener("input", (ev) => { if (testMode) testMode.desc = ev.target.value; });
+}
+// the test inputs (test mode: the expressions; choice and matrix inputs: the values of the last
+// check) and the results of the PRTs as expected results (score, penalty, last answer note; NULL
+// for a PRT that did not run)
 async function currentTestData() {
   await check();
   if (!lastCheck) return null;
   const inputs = {}, expected = {};
   for (const inp of result.inputs || []) {
     const v = lastCheck.inputs[inp.name];
-    // an input with the model answer is stored as the model answer's expression (e.g. NN), as
-    // STACK's own default test does: it holds for every variant of a randomised question
-    if (inp.tans && inp.tans_raw != null && (inputValues[inp.name] ?? "") === answerText(inp, inp.tans_raw)) inputs[inp.name] = inp.tans;
+    if (exprInput(inp)) { const e = String(inputValues[inp.name] ?? "").trim(); if (e) inputs[inp.name] = e; }
     else if (v && v.state !== "blank" && v.value != null) inputs[inp.name] = String(v.value);
   }
+  const bad = Object.entries(lastCheck.inputs).filter(([, v]) => v.test && v.state === "invalid").map(([n]) => n);
+  if (bad.length) { showMessages([{ cls: "err", text: "Not saved: the expression of " + bad.join(", ") + " cannot be evaluated." }]); return null; }
   for (const prt of result.prts || []) {
     const r = lastCheck.prts[prt.name];
     if (!r || r.skipped) expected[prt.name] = r && r.bail ? { score: "", penalty: "", note: prt.name + "-bail" } : { score: "", penalty: "", note: "NULL" };
@@ -2023,7 +2171,7 @@ async function currentTestData() {
   return { inputs, expected };
 }
 async function saveTest(action, qt, description) {
-  if (action === "cancel") { testForm = null; renderTests(); return; }
+  if (action === "cancel") { leaveTestMode(true); return; }
   if (!(await flush())) return;
   const body = { path: file.path, index: qindex, rev: file.rev, description };
   if (action === "describe") Object.assign(body, { op: "describe", testcase: qt.testcase });
@@ -2038,7 +2186,7 @@ async function saveTest(action, qt, description) {
     const r = await postJSON("/api/q/qtest", body);
     if (backup) backedUp.add(file.path);
     file.rev = r.rev; showHistory(r.history);
-    testForm = null;
+    leaveTestMode(true);
     if (action !== "describe") {
       const tc = action === "add" ? Math.max(...r.qtests.map((t) => t.testcase)) : qt.testcase;
       activeTest = tc; testResults[tc] = { pass: true, reasons: [] };
@@ -2087,7 +2235,9 @@ async function evaluate(firstTime) {
       (result.maxima_spare ? "Maxima session started in advance" : "Maxima start " + result.maxima_start + " s") + ")";
     // after an edit of the same question and variant the answers stay (and the graphic's state,
     // unless the sketch changed); if feedback was shown, it is checked again with them
-    const keep = !firstTime && prev && String(prev.seed) === String(result.seed);
+    if (firstTime) leaveTestMode(false);
+    // in test mode the expressions stay, also for another variant (that is what they are for)
+    const keep = !firstTime && prev && (String(prev.seed) === String(result.seed) || !!testMode);
     if (keep) carryAnswers(prev);
     lastCheck = null;
     render(keep);
@@ -2263,6 +2413,56 @@ function setInputValue(name, value) {
   if (cell) cell.textContent = value;
 }
 
+// [[if]] blocks of the question text: the server renders every branch between markers (see
+// fb_tmpl_render_ifmarks in Maxima/tests/harness.mac); ifMarkup() turns the markers into
+// elements, applyIfMarks() marks what lies between them
+let ifMoodle = false;
+try { ifMoodle = localStorage.getItem("meclib-if-moodle") === "1"; } catch (e) { /* default */ }
+function ifMarkup(text) {
+  return String(text || "")
+    .replace(/@@WBIF (\d+) (on|off|raw|none) ([^@]*)@@/g, (m, id, state, lab) => {
+      const label = lab.replace(/%([0-9a-fA-F]+);/g, (x, h) => String.fromCodePoint(parseInt(h, 16))).replace(/ -> /, " → ");
+      const tip = state === "on" ? "the branch STACK shows in this variant" : state === "raw" ? "not shown in this variant; cannot be rendered here (or contains [[define]]), shown as its source"
+        : state === "none" ? "no test is true and there is no [[else]]: nothing is shown" : "not shown in this variant";
+      return `<span class="wbif-s" data-id="${id}" data-state="${state}"><button type="button" class="small wbif-tg" title="switch: all branches with their tests / only what Moodle shows">⇄</button>` +
+        `<span class="wbif-lab" title="${esc(tip)}">${esc(label)}</span></span>`;
+    })
+    .replace(/@@WBIF\/ (\d+)@@/g, (m, id) => `<span class="wbif-e" data-id="${id}"></span>`);
+}
+function applyIfMarks(root) {
+  root.classList.toggle("wbif-moodle", ifMoodle);
+  for (const start of root.querySelectorAll(".wbif-s")) {
+    const end = root.querySelector(`.wbif-e[data-id="${start.dataset.id}"]`);
+    start.querySelector(".wbif-tg").addEventListener("click", () => {
+      ifMoodle = !ifMoodle;
+      try { localStorage.setItem("meclib-if-moodle", ifMoodle ? "1" : "0"); } catch (e) { /* ignore */ }
+      for (const r of document.querySelectorAll(".formulation")) r.classList.toggle("wbif-moodle", ifMoodle);
+    });
+    const state = start.dataset.state;
+    if (!end || state === "none") continue;
+    // the nodes between the markers (whole ones only: the markers are elements)
+    const range = document.createRange();
+    range.setStartAfter(start); range.setEndBefore(end);
+    const nodes = [];
+    const walker = document.createTreeWalker(range.commonAncestorContainer, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+    for (let n = walker.currentNode; n; n = walker.nextNode()) {
+      if (n === range.commonAncestorContainer || !range.intersectsNode(n)) continue;
+      const len = n.nodeType === 3 ? n.length : n.childNodes.length;
+      if (!range.isPointInRange(n, 0) || !range.isPointInRange(n, len)) continue;
+      if (nodes.some((p) => p.contains(n))) continue;
+      nodes.push(n);
+    }
+    for (const n of nodes) {
+      let el = n;
+      if (n.nodeType === 3) {
+        if (!n.data.trim()) continue;
+        el = document.createElement("span"); n.replaceWith(el); el.appendChild(n);
+      }
+      el.classList.add(state === "on" ? "wbif-on" : "wbif-dim");
+      if (state === "raw") el.classList.add("wbif-raw");
+    }
+  }
+}
 async function renderInto(container, text, format) {
   const blocks = [];
   container.innerHTML = toHTML(text, format, blocks);
@@ -2327,7 +2527,8 @@ function render(keepValues) {
     `PRTs: ${byTextOrder(result.prts || [], "feedback").map((p) => esc(p.name)).join(", ") || "-"}`,
   ].map((x) => `<span>${x}</span>`).join("") + '<span id="qtime"></span>';
   renderTiming();
-  renderInto($("qtext"), pick("questiontext"), fmt);
+  renderInto($("qtext"), ifMarkup(pick("questiontext")), fmt);
+  applyIfMarks($("qtext"));
   if (!lastCheck) $("sfb").hidden = true;
   renderInto($("gfb"), pick("generalfeedback"), (result.formats || {}).generalfeedback || "html");
   if (pick("questionnote")) renderInto($("qnote"), pick("questionnote"), (result.formats || {}).questionnote || "html");

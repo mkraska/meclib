@@ -73,10 +73,12 @@ try { const last = localStorage.getItem("meclib-last-page");
         <label for="gName">Name</label>
         <input type="text" id="gName" placeholder="file name without extension" spellcheck="false">
         <button id="gSave" class="primary" title="Ctrl+S">Save</button>
+        <button id="gPng" title="the graphic as it is shown now, as Name.png in the folder (2x resolution, without border and version text)">PNG</button>
       </div>
       <p class="hint">A graphic file (<code>&lt;name&gt;.graphic.json</code>, in a question folder) keeps initdata,
         start state, decimal separator and [[jsxgraph]] block, without making a question or a test case of it.
-        The list shows the graphic files of all question folders.</p>
+        The list shows the graphic files of all question folders. PNG writes the graphic as it is shown now
+        (including changes made in the graphic) as <code>&lt;name&gt;.png</code> into the folder.</p>
       <div id="gMsg"></div>
     </section>
 
@@ -722,6 +724,30 @@ async function saveGraphic() {
   } catch (e) { gMsg("Saving failed: " + e.message); }
 }
 
+// The graphic as it is shown now (current objects, else the start state) as <name>.png in the folder,
+// drawn by the server in a headless browser.
+async function exportPng() {
+  gMsg("", true);
+  const name = $("gName").value.trim();
+  if (!name) return gMsg("Please give the graphic a name (also the name of the PNG file).");
+  if (!$("gFolder").value) return gMsg('No folder - choose one with "...".');
+  let init;
+  try { init = F.parseInit(getInit()); } catch (e) { return gMsg("initdata: " + e.message); }
+  if (rendering) await rendering;
+  const btn = $("gPng");
+  btn.disabled = true;
+  gMsg("drawing the PNG (a few seconds) ...", true);
+  try {
+    const resp = await postJSON("/api/graphics/png", { folder: $("gFolder").value, name,
+      init: init.text, state: lastObjects || $("startState").value.trim(), block: $("block").value,
+      decsep: $("decsep").value, src: $("src").value, jsx: $("jsx").value, mathjax: $("mathjax").value });
+    const r = await resp.json();
+    if (!resp.ok || r.error) throw new Error(r.error || resp.statusText);
+    gMsg("PNG saved: " + r.path, true);
+  } catch (e) { gMsg("PNG export failed: " + e.message); }
+  finally { btn.disabled = false; }
+}
+
 // ---------------------------------------------------------------- questions
 function selectFolder(sel, path) {
   const norm = (p) => p.replace(/\\/g, "/").toLowerCase();
@@ -846,6 +872,7 @@ $("gNew").addEventListener("click", newGraphic);
 $("gOpen").addEventListener("change", () => openGraphic($("gOpen").value));
 $("gRefresh").addEventListener("click", loadGraphicList);
 $("gSave").addEventListener("click", saveGraphic);
+$("gPng").addEventListener("click", exportPng);
 $("gPick").addEventListener("click", () => pickQuestionFolder($("gFolder"), $("gMsg"), "Save the graphic file in folder ...", "graphicFileFolder"));
 $("gFolder").addEventListener("change", () => storePatch("meclib-question-v2", { graphicFileFolder: $("gFolder").value }));
 $("init").addEventListener("input", updateGBadge);

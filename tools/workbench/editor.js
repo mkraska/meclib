@@ -170,12 +170,13 @@
 
   // ------------------------------------------------------------------ syntax help
   const settings = { autocomplete: true, closeBrackets: true, semicolon: true, helpBox: true };
-  let help = { functions: new Map(), objects: new Map(), list: [] };
+  let help = { functions: new Map(), objects: new Map(), variables: new Map(), list: [] };
 
   function setHelp(data) {
-    help = { functions: new Map(), objects: new Map(), list: [] };
+    help = { functions: new Map(), objects: new Map(), variables: new Map(), list: [] };
     for (const e of (data && data.entries) || []) {
       if (e.kind === "object") help.objects.set(e.name, e);
+      else if (e.kind === "variable") help.variables.set(e.name, e);   // set by an assignment, e.g. fb_dims: [...]
       else if (!help.functions.has(e.name)) help.functions.set(e.name, e);
       help.list.push(e);
     }
@@ -238,7 +239,7 @@
       if (ch === '"') inStr = true;
       masked += ch;
     }
-    let depth = 0, commas = 0;
+    let depth = 0, commas = 0, stmtStart = 0;
     const stack = [];
     // walk backwards
     for (let i = masked.length - 1; i >= 0; i--) {
@@ -264,12 +265,17 @@
         continue;
       }
       if (ch === "," && depth === 0) commas++;
-      if ((ch === ";" || ch === "$") && depth === 0) break;
+      if ((ch === ";" || ch === "$") && depth === 0) { stmtStart = i + 1; break; }
     }
+    // a statement assigning a variable with help (e.g. fb_dims: [...]): its box anywhere in it
+    const mv = /^\s*([A-Za-z_%][A-Za-z0-9_%]*)\s*:(?!=)/.exec(masked.slice(stmtStart));
+    const ev = mv && help.variables.get(mv[1]);
+    if (ev) return { entry: ev, arg: -1, kind: "variable", pos: cur };
     return null;
   }
   // The commas counted for the level that was found: recount from the bracket to the cursor.
   function argIndex(cm, ctx) {
+    if (ctx.kind === "variable") return -1;
     const text = cm.getRange(ctx.pos, cm.getCursor()).slice(1);
     let depth = 0, n = 0, inStr = false;
     for (let i = 0; i < text.length; i++) {
@@ -298,12 +304,13 @@
       return i === arg ? `<b>${h}</b>` : h;
     });
     if (e.kind === "object") return `[ "${escHTML(e.name)}", ${parts.join(", ")} ]`;
+    if (e.kind === "variable") return escHTML(e.sig);
     return `${escHTML(e.name)}(${parts.join(", ")})`;
   }
   function boxHTML(e, arg) {
     const a = (e.args || [])[arg];
     const ad = a != null && e.argdocs ? e.argdocs[a] : null;
-    const src = e.kind === "meclib" || e.kind === "object" ? "meclib wiki" : e.kind === "stack" ? "STACK docs" : "Maxima manual";
+    const src = e.kind === "meclib" || e.kind === "object" || e.kind === "variable" ? "meclib wiki" : e.kind === "stack" ? "STACK docs" : "Maxima manual";
     return `<div class="hb-sig">${e.returns ? `<span class="hb-ret">${escHTML(e.returns)}:</span> ` : ""}${sigHTML(e, arg)}</div>` +
       (ad ? `<div class="hb-arg"><b>${escHTML(a)}</b>: ${codeSpans(ad)}</div>` : "") +
       (e.text ? `<div class="hb-text">${codeSpans(e.text)}</div>` : "") +
@@ -361,7 +368,7 @@
     if (ctx) return openHelp(ctx.entry.url);
     const w = cm.findWordAt(cm.getCursor());
     const name = cm.getRange(w.anchor, w.head);
-    const e = help.functions.get(name) || help.objects.get(name);
+    const e = help.functions.get(name) || help.objects.get(name) || help.variables.get(name);
     if (e) openHelp(e.url);
   }
 
@@ -426,13 +433,18 @@
       return list.length ? { from: { line: cur.line, ch: s }, to: cur, list } : null;
     }
     if (word.length < 1) return null;
-    const rank = { meclib: 0, object: 3, stack: 1, extra: 1, maxima: 2 };
+    const rank = { meclib: 0, variable: 0, object: 3, stack: 1, extra: 1, maxima: 2 };
     const list = help.list.filter((e) => e.kind !== "object" && e.name.startsWith(word) && e.name !== word)
       .sort((a, b) => (rank[a.kind] - rank[b.kind]) || a.name.localeCompare(b.name)).slice(0, 60)
       .map((e) => ({
         text: e.name + "(", displayText: e.name, entry: e,
         render: (el) => { el.innerHTML = `<span class="hn">${escHTML(e.name)}</span> <span class="hs">${escHTML(e.sig.slice(e.name.length))}</span> <span class="hk">${e.kind}</span>`; },
         hint: (c, data) => {
+          if (e.kind === "variable") {     // an assignment: name: [ ... ]
+            c.replaceRange(e.name + ": [", data.from, data.to, "complete");
+            autoClose(c, "]");
+            return;
+          }
           c.replaceRange(e.name + "(", data.from, data.to, "complete");
           autoClose(c, ")");
         },

@@ -61,6 +61,8 @@ Endpoints
                             rendered texts, evaluated with STACK's Maxima library
   POST /api/q/check         like eval, plus {answers: {input: raw text}} -> "check": validation of the
                             answers and the PRT results (score, penalty, answer notes, feedback)
+                            optional test_exprs {input: CAS expression}: test mode, these inputs get
+                            the value of the expression (evaluated with the question variables)
   POST /api/q/new           {folder, filename, name} new file with a question from the template,
                             or {path, rev, name} appended to an existing file; optional
                             questionvariables, questiontext
@@ -317,12 +319,12 @@ def unique_path(folder, filename):
 GRAPHIC_EXT = ".graphic.json"
 
 
-def graphic_path(cfg, path, must_exist=True):
-    """The resolved path of a graphic file (*.graphic.json) in one of the question folders,
-    else ValueError."""
+def graphic_path(cfg, path, must_exist=True, ext=GRAPHIC_EXT):
+    """The resolved path of a graphic file (*.graphic.json, or with ext=".png" its image) in one
+    of the question folders, else ValueError."""
     target = Path(path).expanduser().resolve()
-    if not target.name.lower().endswith(GRAPHIC_EXT):
-        raise ValueError("only %s files" % GRAPHIC_EXT)
+    if not target.name.lower().endswith(ext):
+        raise ValueError("only %s files" % ext)
     for folder, _ in question_folders(cfg):
         if folder.exists() and folder.resolve() in target.parents:
             if must_exist and not target.is_file():
@@ -362,6 +364,65 @@ def check_graphic(g):
         if key in g and not isinstance(g[key], str):
             return key + " must be a string"
     return ""
+
+
+# runs in the Graphic page of a headless browser: draws a graphic as the page shows it, without
+# the version text of meclib and without the border of the board; returns the size of the frame
+PNG_DRAW = """async ([init, state, block, decsep, src, jsx, mathjax]) => {
+  const box = document.createElement("div");
+  Object.assign(box.style, {position: "fixed", left: "0px", top: "0px", zIndex: 9999, background: "#fff"});
+  document.body.appendChild(box);
+  const blk = block.replace("[[/jsxgraph]]", `document.getElementById(divid).style.border = "none";
+for (const o of [...board.objectsList]) if (o.elType === "text" && /Meclib|JXG/.test(String(o.plaintext || o.htmlStr || ""))) board.removeObject(o);
+[[/jsxgraph]]`);
+  const meclib = await F.loadMeclib(src, true);
+  const jsxKey = config.jsxgraph[jsx] ? jsx : Object.keys(config.jsxgraph)[0];
+  const mathjaxKey = config.mathjax[mathjax] ? mathjax : Object.keys(config.mathjax)[0];
+  const handle = F.run({ container: box, config, jsxKey, mathjaxKey, meclibSource: meclib.text,
+    initText: init, blockText: blk, decsep, startState: state });
+  const res = await handle.done;
+  const fr = box.querySelector("iframe");
+  fr.style.border = "none";
+  const r = fr.getBoundingClientRect();
+  return { errors: res.errors, finished: res.finished, x: r.left, y: r.top,
+           w: parseFloat(fr.style.width), h: parseFloat(fr.style.height) };
+}"""
+PNG_LOCK = threading.Lock()
+
+
+def render_png(port, req):
+    """PNG (bytes) of a graphic, drawn by the workbench page in headless Chromium (Playwright),
+    at twice the resolution; the 3 px meclib adds to the frame are cut off."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        raise ValueError("PNG export needs Playwright: pip install playwright; python -m playwright install chromium")
+    args = [req.get("init", ""), req.get("state", ""), req.get("block", ""), req.get("decsep", "."),
+            req.get("src", "local"), req.get("jsx", ""), req.get("mathjax", "")]
+    with PNG_LOCK, sync_playwright() as p:
+        try:
+            browser = p.chromium.launch()
+        except Exception as err:
+            raise ValueError("PNG export: Chromium for Playwright not available (python -m playwright install chromium): %s"
+                             % str(err).splitlines()[0])
+        try:
+            page = browser.new_context(viewport={"width": 2400, "height": 1800}, device_scale_factor=2).new_page()
+            page.goto("http://127.0.0.1:%d/index.html" % port)
+            page.wait_for_function("typeof F !== 'undefined' && config !== null", timeout=30000)
+            res = page.evaluate(PNG_DRAW, args)
+            if res["errors"]:
+                raise ValueError("rendering failed: " + "; ".join(res["errors"]))
+            if not res["finished"]:
+                raise ValueError("meclib did not finish its initialisation")
+            page.wait_for_timeout(500)          # MathJax of the labels
+            return page.screenshot(clip={"x": res["x"], "y": res["y"],
+                                         "width": max(res["w"] - 3, 1), "height": max(res["h"] - 3, 1)})
+        except ValueError:
+            raise
+        except Exception as err:   # Playwright's own errors (timeouts, browser not installed)
+            raise ValueError("PNG export: %s" % str(err).splitlines()[0])
+        finally:
+            browser.close()
 
 
 def load_config():
@@ -769,7 +830,8 @@ class Handler(SimpleHTTPRequestHandler):
                 entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg), current_stack())
                 resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
                 answers = req.get("answers") if path == "/api/q/check" else None
-                result = stack_question.evaluate(entry[0], data, int(req.get("seed", 1)), resolver, entry[2], answers)
+                result = stack_question.evaluate(entry[0], data, int(req.get("seed", 1)), resolver, entry[2], answers,
+                                                 req.get("test_exprs") if answers is not None else None)
                 result["offline"] = resolver.offline
                 entry[2] = result["kill"]
                 # the first run of its kind in a session includes Maxima's warm-up (about 0.2 s,
@@ -919,6 +981,14 @@ class Handler(SimpleHTTPRequestHandler):
                 if error:
                     raise ValueError("%s: %s" % (target.name, error))
                 return self.send_json({"path": str(target), "graphic": graphic})
+            if path == "/api/graphics/png":
+                name = re.sub(r"(?i)(\.graphic\.json|\.png)$", "", (req.get("name") or "").strip())
+                if not name or not req.get("folder"):
+                    raise ValueError("no file name or folder")
+                folder = target_folder(cfg, req["folder"])
+                target = graphic_path(cfg, folder / qfile.safe_filename(name, ".png"), must_exist=False, ext=".png")
+                target.write_bytes(render_png(self.server.server_address[1], req))
+                return self.send_json({"path": str(target)})
             graphic = req.get("graphic")
             error = check_graphic(graphic)
             if error:
@@ -1008,7 +1078,7 @@ class Handler(SimpleHTTPRequestHandler):
             POOL.close_all()          # the next run loads the chosen STACK library
             POOL.prepare(current_maxima(), version)
             return self.send_json({"stack_current": version})
-        if parsed.path in ("/api/graphics/open", "/api/graphics/save"):
+        if parsed.path in ("/api/graphics/open", "/api/graphics/save", "/api/graphics/png"):
             return self.graphic_post(parsed.path)
         if parsed.path.startswith("/api/q/"):
             return self.question_post(parsed.path)

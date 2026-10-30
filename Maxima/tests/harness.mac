@@ -179,11 +179,11 @@ fb_tmpl_parse_open1(%ct_s, %ct_pos, %ct_prefix):= block([%ct_eq, %ct_q1, %ct_q2,
    end (not exercised by any current template, but cheap to get right). Returns
    [rawBody, posAfterCloseTag]. */
 fb_tmpl_find_foreach_end(%ct_s, %ct_pos):= block([%ct_bodystart: %ct_pos, %ct_depth: 0, %ct_p, %ct_best, %ct_tag,
-    %ct_cands: ["[[if","[[foreach","[[/if]]","[[/foreach]]"], %ct_endpos: false],
+    %ct_cands: ["[[if","[[wbif","[[foreach","[[/if]]","[[/foreach]]"], %ct_endpos: false],
   while %ct_endpos = false do (
     [%ct_best, %ct_tag]: fb_tmpl_find_next(%ct_s, %ct_pos, %ct_cands),
     if %ct_best = false then %ct_endpos: slength(%ct_s)+1
-    elseif %ct_tag = "[[if" or %ct_tag = "[[foreach" then (%ct_depth: %ct_depth+1, %ct_pos: %ct_best+slength(%ct_tag))
+    elseif %ct_tag = "[[if" or %ct_tag = "[[wbif" or %ct_tag = "[[foreach" then (%ct_depth: %ct_depth+1, %ct_pos: %ct_best+slength(%ct_tag))
     elseif %ct_depth = 0 then %ct_endpos: %ct_best
     else (%ct_depth: %ct_depth-1, %ct_pos: %ct_best+slength(%ct_tag))
   ),
@@ -195,11 +195,11 @@ fb_tmpl_find_foreach_end(%ct_s, %ct_pos):= block([%ct_bodystart: %ct_pos, %ct_de
    untaken branch never fires and the test is evaluated exactly once, before either
    branch runs. Returns [thenraw, elseraw, posAfterEndifTag]. */
 fb_tmpl_split_if_body(%ct_s, %ct_p):= block([%ct_pos: %ct_p, %ct_depth: 0, %ct_elsepos: false, %ct_endpos: false,
-    %ct_cands: ["[[if","[[foreach","[[/if]]","[[/foreach]]","[[else]]"], %ct_best, %ct_tag],
+    %ct_cands: ["[[if","[[wbif","[[foreach","[[/if]]","[[/foreach]]","[[else]]"], %ct_best, %ct_tag],
   while %ct_endpos = false do (
     [%ct_best, %ct_tag]: fb_tmpl_find_next(%ct_s, %ct_pos, %ct_cands),
     if %ct_best = false then %ct_endpos: slength(%ct_s)+1
-    elseif %ct_tag = "[[if" or %ct_tag = "[[foreach" then (%ct_depth: %ct_depth+1, %ct_pos: %ct_best+slength(%ct_tag))
+    elseif %ct_tag = "[[if" or %ct_tag = "[[wbif" or %ct_tag = "[[foreach" then (%ct_depth: %ct_depth+1, %ct_pos: %ct_best+slength(%ct_tag))
     elseif %ct_tag = "[[else]]" then (
       if %ct_depth = 0 and %ct_elsepos = false then (%ct_elsepos: %ct_best, %ct_pos: %ct_best+slength(%ct_tag))
       else %ct_pos: %ct_best+slength(%ct_tag)
@@ -219,9 +219,9 @@ fb_tmpl_split_if_body(%ct_s, %ct_p):= block([%ct_pos: %ct_p, %ct_depth: 0, %ct_e
    block). {#expr#} is STACK's raw output, string(expr): for a string that is a quoted
    literal, which is how e.g. {#init#} becomes a JavaScript string in a [[jsxgraph]] block. */
 fb_tmpl_render(%ct_s):= block(
-  [%ct_out: "", %ct_pos: 1, %ct_len: slength(%ct_s), %ct_cands: ["[[define","[[foreach","[[if","{@","{#","[[comment]]","[[htmlformat]]"],
+  [%ct_out: "", %ct_pos: 1, %ct_len: slength(%ct_s), %ct_cands: ["[[define","[[foreach","[[if","[[wbif","{@","{#","[[comment]]","[[htmlformat]]"],
    %ct_p, %ct_tag, %ct_inner, %ct_closepos, %ct_val, %ct_var, %ct_exprsrc, %ct_bodyinfo, %ct_rawbody, %ct_listval, %ct_iterout,
-   %ct_ifbody, %ct_testval, %ct_mm: false],
+   %ct_ifbody, %ct_testval, %ct_brs, %ct_mm: false],
   while true do (
     [%ct_p, %ct_tag]: fb_tmpl_find_next(%ct_s, %ct_pos, %ct_cands),
     if %ct_p = false then (
@@ -269,9 +269,75 @@ fb_tmpl_render(%ct_s):= block(
       [%ct_ifbody, %ct_bodyinfo, %ct_pos]: fb_tmpl_split_if_body(%ct_s, %ct_pos),
       %ct_testval: fb_tmpl_eval_expr(%ct_exprsrc),
       %ct_out: sconcat(%ct_out, fb_tmpl_render(if %ct_testval then %ct_ifbody else %ct_bodyinfo))
+    ) elseif %ct_tag = "[[wbif" then (
+      [%ct_var, %ct_exprsrc, %ct_pos]: fb_tmpl_parse_open1(%ct_s, %ct_p, "[[wbif"),
+      [%ct_brs, %ct_pos]: fb_tmpl_split_if_chain(%ct_s, %ct_pos, ["if", %ct_exprsrc]),
+      %ct_out: sconcat(%ct_out, fb_tmpl_render_ifmarks(%ct_brs))
     )
   )
 )$
+
+/* ---- [[if]] blocks marked for the workbench preview ----
+   The workbench turns the [[if]] blocks of a question text into [[wbif]] (outside of
+   [[jsxgraph]] blocks, HTML tags and math). Such a block - with [[elif]] and [[else]], as in
+   STACK - is rendered with all its branches, each between the markers
+   "@@WBIF <id> <state> <label>@@" and "@@WBIF/ <id>@@": state "on" for the branch STACK shows
+   (the first whose test is true), "off" for the others, "raw" for another branch that cannot
+   be rendered in this variant or contains [[define]] (rendering it could change variables
+   used later), shown as its source; label "if <test> -> <value>", "elif ..." or "else",
+   encoded (%<hex code>; for every character that is not a letter or digit). The page shows
+   them marked or only the "on" branch, as STACK does. */
+fb_tmpl_ifmarks_id: 0$
+fb_tmpl_ifenc(%ct_s) := block([%ct_o: "", %ct_c],
+  for %ct_i thru slength(%ct_s) do (%ct_c: charat(%ct_s, %ct_i),
+    %ct_o: sconcat(%ct_o, if alphanumericp(%ct_c) then %ct_c else sconcat("%", printf(false, "~x", cint(%ct_c)), ";"))),
+  %ct_o)$
+fb_tmpl_htmlesc(%ct_s) := ssubst("&gt;", ">", ssubst("&lt;", "<", ssubst("&amp;", "&", %ct_s)))$
+/* the branches of an [[if]] chain from pos (just after the open tag): [[[kind, test], raw], ...]
+   with kind "if", "elif" or "else", and the position after [[/if]] */
+fb_tmpl_split_if_chain(%ct_s, %ct_p, %ct_cond0) := block([%ct_pos: %ct_p, %ct_depth: 0, %ct_start: %ct_p,
+    %ct_cond: %ct_cond0, %ct_br: [], %ct_best, %ct_tag, %ct_done: false, %ct_x],
+  while not %ct_done do (
+    [%ct_best, %ct_tag]: fb_tmpl_find_next(%ct_s, %ct_pos, ["[[if","[[wbif","[[foreach","[[/if]]","[[/foreach]]","[[else]]","[[elif"]),
+    if %ct_best = false then (
+      %ct_br: endcons([%ct_cond, substring(%ct_s, %ct_start)], %ct_br), %ct_pos: slength(%ct_s) + 1, %ct_done: true)
+    elseif member(%ct_tag, ["[[if","[[wbif","[[foreach"]) then (%ct_depth: %ct_depth + 1, %ct_pos: %ct_best + slength(%ct_tag))
+    elseif %ct_depth > 0 and member(%ct_tag, ["[[/if]]","[[/foreach]]"]) then (%ct_depth: %ct_depth - 1, %ct_pos: %ct_best + slength(%ct_tag))
+    elseif %ct_depth > 0 or %ct_tag = "[[/foreach]]" then %ct_pos: %ct_best + slength(%ct_tag)
+    elseif %ct_tag = "[[elif" then (
+      %ct_br: endcons([%ct_cond, substring(%ct_s, %ct_start, %ct_best)], %ct_br),
+      %ct_x: fb_tmpl_parse_open1(%ct_s, %ct_best, "[[elif"),
+      %ct_cond: ["elif", %ct_x[2]], %ct_start: %ct_x[3], %ct_pos: %ct_x[3])
+    elseif %ct_tag = "[[else]]" then (
+      %ct_br: endcons([%ct_cond, substring(%ct_s, %ct_start, %ct_best)], %ct_br),
+      %ct_cond: ["else", ""], %ct_start: %ct_best + slength("[[else]]"), %ct_pos: %ct_start)
+    else (
+      %ct_br: endcons([%ct_cond, substring(%ct_s, %ct_start, %ct_best)], %ct_br),
+      %ct_pos: %ct_best + slength("[[/if]]"), %ct_done: true)
+  ),
+  [%ct_br, %ct_pos])$
+fb_tmpl_render_ifmarks(%ct_brs) := block([%ct_active: false, %ct_o: "", %ct_id, %ct_vals: [], %ct_v, %ct_b,
+    %ct_lab, %ct_state, %ct_r],
+  fb_tmpl_ifmarks_id: fb_tmpl_ifmarks_id + 1, %ct_id: fb_tmpl_ifmarks_id,
+  /* all tests, for the labels; the branch shown is the first whose test is true (as STACK) */
+  for %ct_b in %ct_brs do (
+    if %ct_b[1][1] = "else" then %ct_v: ""
+    else (%ct_r: errcatch(fb_tmpl_eval_expr(%ct_b[1][2])), %ct_v: if %ct_r = [] then "error" else string(%ct_r[1])),
+    %ct_vals: endcons(%ct_v, %ct_vals)),
+  for %ct_k thru length(%ct_brs) do
+    if %ct_active = false and (%ct_brs[%ct_k][1][1] = "else" or %ct_vals[%ct_k] = "true") then %ct_active: %ct_k,
+  for %ct_k thru length(%ct_brs) do (
+    %ct_b: %ct_brs[%ct_k],
+    %ct_lab: if %ct_b[1][1] = "else" then "else" else sconcat(%ct_b[1][1], " ", %ct_b[1][2], " -> ", %ct_vals[%ct_k]),
+    if %ct_k = %ct_active then (%ct_state: "on", %ct_r: fb_tmpl_render(%ct_b[2]))
+    elseif ssearch("[[define", %ct_b[2]) # false then (%ct_state: "raw", %ct_r: fb_tmpl_htmlesc(%ct_b[2]))
+    else (%ct_r: errcatch(fb_tmpl_render(%ct_b[2])),
+      if %ct_r = [] then (%ct_state: "raw", %ct_r: fb_tmpl_htmlesc(%ct_b[2])) else (%ct_state: "off", %ct_r: %ct_r[1])),
+    %ct_o: sconcat(%ct_o, "@@WBIF ", %ct_id, " ", %ct_state, " ", fb_tmpl_ifenc(%ct_lab), "@@", %ct_r, "@@WBIF/ ", %ct_id, "@@")),
+  /* no branch is true and there is no [[else]]: an empty marker, so that the page shows the block */
+  if %ct_active = false and not member("else", map(lambda([%ct_x], %ct_x[1][1]), %ct_brs)) then
+    %ct_o: sconcat(%ct_o, "@@WBIF ", %ct_id, " none ", fb_tmpl_ifenc("else (none)"), "@@@@WBIF/ ", %ct_id, "@@"),
+  %ct_o)$
 
 castext(%ct_s) := fb_tmpl_render(%ct_s)$
 

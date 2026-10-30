@@ -5642,6 +5642,14 @@
    "text": "This function applies the binary function \\(f\\) to two matrices \\(A\\) and \\(B\\) returning a matrix. An example is given in adding matrices to show working. - `coeff_list(ex,v)` - This function takes an expression `ex` and returns a list of coefficients of `v`.",
    "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "fb_dims",
+   "kind": "variable",
+   "sig": "fb_dims: [var = \"unit\", ...]",
+   "args": [],
+   "text": "Units of the variables of the answers, for the unit check of `fb_floats()` and `fb_dimension()`, e.g. `fb_dims: [a = \"m\", m = \"kg\", g = \"m/s^2\"]`. Declare every variable that occurs in the answers: an undeclared one switches the check off for its term. A name that has a value in the question variables is written as a string (`\"m\" = \"kg\"`), a dimensionless variable gets `1`. Units: m, g, s, A, K, mol, N, J, W, Pa, bar, Hz, C, V, Ohm, min, h, d, t, l, L, rad, deg, rpm, with prefixes p n u m c d h k M G T; `*` or blank, `/`, `^2`, `^-1`, `^(1/2)`, parentheses.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_floats()#units"
   }
  ]
 }

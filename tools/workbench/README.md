@@ -83,6 +83,12 @@ its own, without making a question or a test case of it.
   chooses another one, which is then added to the question folders). The file
   that is open is saved again without asking; another existing file is
   overwritten only after asking.
+- **PNG** writes the graphic as it is shown now (with the changes made in the
+  graphic, else the start state) as `<Name>.png` into the chosen folder, at
+  twice the resolution, without the border of the board and without the
+  version text; an existing PNG of that name is replaced. The server draws it
+  in a headless browser, so it needs Playwright (`pip install playwright`,
+  `python -m playwright install chromium`), as `build_shelf_icons.py`.
 - The badge in the heading shows the name of the open file and "changed" if
   the fields differ from the file. New and opening a file ask before
   discarding such changes. A graphic taken over from a question or a test
@@ -155,7 +161,14 @@ specific feedback, question note, each text with its format, and the PRTs.
 simplification, feedback style and feedback variables; per node description,
 answer test, SAns, TAns, test options, quiet, and per branch (true/false)
 score mode and score, penalty, next node, answer note and feedback with its
-format. Changes are saved like the other fields. "+ node" in a branch adds a
+format. The answer tests are STACK's (names as stored in the file, e.g.
+`Units` for the units test with significant figures): each entry of the list,
+the list itself and the options field have a tooltip with what the test does
+and what its option is (the options field also as grey placeholder; Firefox
+shows the tooltips of the entries in the open list, Chrome and Edge only that
+of the list); "?" opens the page of the STACK documentation for the chosen
+test, "examples" STACK's own test cases of it (Answer_Tests/Results).
+Changes are saved like the other fields. "+ node" in a branch adds a
 node that this branch leads to, "+ Node" below the nodes an unlinked one; ✕
 deletes a node (branches leading to it then end the PRT; the first node - the
 one no branch leads to, as in STACK - cannot be deleted) or the whole PRT
@@ -337,12 +350,23 @@ when the score is 1) and the answer note - the expected note is the last one
 of the PRT, or a pattern as in STACK (`[` anchors the first note, `)` frees
 the last one, `a | b` lists notes in order; `NULL`: the PRT does not run).
 The answer notes of the fast check are those of the nodes (STACK also lists
-the notes of the answer tests, which a pattern rarely names). "+" stores the
-current answers and the result of their check as a new test case (with a
-description); an input with the model answer is stored as its expression
-(e.g. `NN`), which holds for every variant, as STACK's default test. "✎"
-replaces the inputs and expected results of the selected test by the current
-ones or changes its description, "✕" (click twice) deletes it, "▶" runs all.
+the notes of the answer tests, which a pattern rarely names).
+"+" (new test) and "✎" (edit the selected test) put the preview into **test
+mode** (red instead of blue, with a bar above the question): the inputs take
+CAS expressions in Maxima syntax that may use question variables, e.g. a
+typical error prepared as `J_err1`, which holds for every variant of a
+randomised question. Check evaluates the expressions for the current variant
+(as STACK evaluates test inputs) and grades their values; the validation shows
+the value ("→ ..."). Another seed keeps the expressions, so other variants can
+be checked before saving. For a new test the inputs keep their current
+answers, an input with the model answer becomes the name of its variable
+(e.g. `NN`, as STACK's default test); "✎" fills in the stored expressions.
+Choice, matrix and string inputs are entered as usual and stored with their
+value. "Add test" / "Replace test" store the expressions (not their values)
+and the result of their check as expected result, "Save description only"
+changes just the description; saving or "Cancel" ends the test mode and brings
+back the answers from before. "✕" (click twice) deletes the selected test,
+"▶" runs all.
 STACK stores a test input value in a database column of 255 characters; a
 longer value (typically the `objects` state of a graphic) would make the import
 into Moodle fail ("error writing to the database"). Such a value goes into a
@@ -514,6 +538,18 @@ graphics and the images embedded in the file (`@@PLUGINFILE@@/...`); the inputs 
 question's graphic (first [[jsxgraph]] block, initdata as evaluated) on the
 Graphic page.
 
+**Conditional text** (`[[if]]` / `[[elif]]` / `[[else]]` in the question text):
+every branch is shown, with a label giving its test and the test's value
+(`if F1>F2 → true`); the branch STACK shows in this variant has a green
+background, the others a grey one and greyed text (paragraphs and other blocks
+also a line on the left, so the extent of a branch is visible). A branch that cannot be rendered in this variant (e.g.
+an expression the `[[if]]` guards) or that contains `[[define]]` (rendering it
+could change variables used later) is shown greyed as its source. The button
+"⇄" at a label switches to what Moodle shows (only the active branches, the
+small button stays) and back; the choice is kept. Not marked: `[[if]]`
+inside `[[jsxgraph]]` blocks, HTML tags and math, and in other texts than the
+question text.
+
 The right column shows messages (Maxima errors with the line of the question
 variables, assumed missing semicolons, where `stack_include` files came
 from), the inputs with model answer and current value, and all question
@@ -537,9 +573,12 @@ functions:
   the page in a small separate window (always the same one). For a function
   with offline Maxima tests, "tests (n)" opens the Tests page at its first
   case (`tests.html#mtest=<file>&case=<n>`): examples of what it returns.
-  Esc closes the box.
+  Esc closes the box. Settings variables of meclib (entries of kind
+  `variable` in `syntax_help_extra.json`, so far `fb_dims`) have the box
+  anywhere in their assignment, e.g. `fb_dims: [a = "m", ...]`.
 - **Autocomplete**: after two characters of a name, a list of matching
   functions with their signatures (meclib first, then STACK and Maxima);
+  a settings variable is inserted as an assignment (`fb_dims: [ ]`);
   after `["` the meclib object types. **Ctrl+Space** opens the list at any time.
 - **Castext snippets** (outside `{@ @}` and `[[jsxgraph]]`): `\` offers
   `\( \)` and `\[ \]` with the delimiters the format needs (Markdown:
