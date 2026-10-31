@@ -70,7 +70,13 @@ if not(?boundp('debug)) then debug: false$
    this renderer only recognizes "[[define", "[[foreach", "[[if" and "{@" as its own tags;
    "[[lang"/"[[/lang]]" is just ordinary text to it and passes through untouched, to be
    resolved by the separate, later pass. */
-fb_tmpl_eval_expr(%_src):= ev(parse_string(%_src), eval)$
+/* The renderer's own bookkeeping (positions, lengths) needs simp:true; the expressions of the
+   castext are evaluated with the question's simplification setting, as STACK does. A question
+   with simplification off (questionsimplify 0) otherwise broke every text: %ct_p+2 stayed an
+   unevaluated sum. fb_tmpl_qsimp holds the question's setting while a text is rendered. */
+fb_tmpl_qsimp: true$
+fb_tmpl_inside: false$
+fb_tmpl_eval_expr(%_src):= block([simp: fb_tmpl_qsimp], ev(parse_string(%_src), eval))$
 /* {@expr@} -> text, exactly as STACK does it: compiled castext calls the library's
    ct2_latex(value, "i", simp), which gives ["smlt", "\\({{S}_{10}}\\)"] for a CAS value and
    ["smlt", "17"] for a string (castext2 latex block, stack/maxima/stackstrings.mac); the
@@ -79,10 +85,10 @@ fb_tmpl_smlt_text(%_r):= if stringp(%_r) then %_r
   elseif listp(%_r) and length(%_r) > 0 and %_r[1] = "smlt" then %_r[2]
   elseif listp(%_r) and length(%_r) > 0 and %_r[1] = "%root" then simplode(map(fb_tmpl_smlt_text, rest(%_r)), "")
   else string(%_r)$
-fb_tmpl_tostring(%_v):= fb_tmpl_smlt_text(ct2_latex(%_v, if fb_tmpl_md then "im" else "i", simp))$
+fb_tmpl_tostring(%_v):= fb_tmpl_smlt_text(block([simp: fb_tmpl_qsimp], ct2_latex(%_v, if fb_tmpl_md then "im" else "i", simp)))$
 /* Inside math mode STACK compiles {@expr@} without its own delimiters (latex block,
    mathmode=true -> ct2_latex mode ""): "{...}" instead of "\\({...}\\)". */
-fb_tmpl_tostring_math(%_v):= fb_tmpl_smlt_text(ct2_latex(%_v, if fb_tmpl_md then "m" else "", simp))$
+fb_tmpl_tostring_math(%_v):= fb_tmpl_smlt_text(block([simp: fb_tmpl_qsimp], ct2_latex(%_v, if fb_tmpl_md then "m" else "", simp)))$
 /* In Markdown text (fb_tmpl_md: true) the modes are "im" and "m": the same, escaped for
    Markdown with str_to_md(), so that Markdown turns it back into LaTeX. */
 
@@ -218,7 +224,9 @@ fb_tmpl_split_if_body(%ct_s, %ct_p):= block([%ct_pos: %ct_p, %ct_depth: 0, %ct_e
    including [[lang]]/[[/lang]] - passes through as plain text, see the comment above this
    block). {#expr#} is STACK's raw output, string(expr): for a string that is a quoted
    literal, which is how e.g. {#init#} becomes a JavaScript string in a [[jsxgraph]] block. */
-fb_tmpl_render(%ct_s):= block(
+fb_tmpl_render(%ct_s):= if fb_tmpl_inside then fb_tmpl_render1(%ct_s)
+  else block([fb_tmpl_qsimp: simp, fb_tmpl_inside: true, simp: true], fb_tmpl_render1(%ct_s))$
+fb_tmpl_render1(%ct_s):= block(
   [%ct_out: "", %ct_pos: 1, %ct_len: slength(%ct_s), %ct_cands: ["[[define","[[foreach","[[if","[[wbif","{@","{#","[[comment]]","[[htmlformat]]"],
    %ct_p, %ct_tag, %ct_inner, %ct_closepos, %ct_val, %ct_var, %ct_exprsrc, %ct_bodyinfo, %ct_rawbody, %ct_listval, %ct_iterout,
    %ct_ifbody, %ct_testval, %ct_brs, %ct_mm: false],
@@ -396,7 +404,8 @@ fb_test_starts_with(s, pos, prefix) := block([plen: slength(prefix)],
    (question text without any [[lang]] block, so no language is set) shows no block at all,
    as in Moodle. resolve_lang() below is the per-pair variant the offline tests use; for
    meclib's own [[lang code='de']]/[[lang code='en,other']] pairs both give the same text. */
-stack_resolve_lang(s, code) := block([out: "", pos: 1, len: slength(s), tagstart, parsed],
+/* simp: true - also called right after the castext of a question with simplification off */
+stack_resolve_lang(s, code) := block([simp: true, out: "", pos: 1, len: slength(s), tagstart, parsed],
   if not stringp(s) then return(s),
   while pos <= len do (
     tagstart: ssearch("[[lang", s, pos),
@@ -413,7 +422,7 @@ stack_resolve_lang(s, code) := block([out: "", pos: 1, len: slength(s), tagstart
 )$
 
 resolve_lang(s, lang) := block(
-  [out: "", pos: 1, len: slength(s), tagstart, cur, parsed,
+  [simp: true, out: "", pos: 1, len: slength(s), tagstart, cur, parsed,
    group_codes, group_bodies, chosen, found, i],
   if not stringp(s) then return(s),
   while pos <= len do (
