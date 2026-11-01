@@ -2279,6 +2279,21 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "backtosibase",
+   "kind": "stack",
+   "sig": "backtosibase(expression)",
+   "args": [
+    "expression"
+   ],
+   "text": "Converts units to SI-base units. Useful for comparison of values with different units. NOTE! this is a legacy alias for `stack_unit_si_to_si_base`, which may be deprecated in future versions.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/stackunits/#backtosibase",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "expression": "an expression with units mixed in or a singular `stackunits`-object."
+   },
+   "returns": "an expression with units mixed in or a `stackunits`-object, with all units converted to SI base units."
+  },
+  {
    "name": "block",
    "kind": "maxima",
    "sig": "block([v_1, ..., v_m], expr_1, ..., expr_n)",
@@ -2923,6 +2938,23 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "extract_matching_parts",
+   "kind": "stack",
+   "sig": "extract_matching_parts(predicate, expression)",
+   "args": [
+    "predicate",
+    "expression"
+   ],
+   "text": "Given a predicate, returns a list of all the subtrees of the expression matching that predicate. Including subtrees inside previously matched subtrees. Note this is largely the same as Maximas format packages `matching_parts`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/expressions/extraction/#extract_matching_parts",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "predicate": "a single argument predicate function",
+    "expression": "an expression that may contain parts matching that predicate"
+   },
+   "returns": "the matching subtrees in arbitrary order, could be empty"
+  },
+  {
    "name": "factor",
    "kind": "maxima",
    "sig": "factor(expr)",
@@ -2954,6 +2986,14 @@
    "text": "true if \\(ex\\) equals its factored form. Note, if you would like to know if an expression is factored you need to use the FacForm answer test. Prime integers equal their factored form, composite integers do not.",
    "url": "https://docs.stack-assessment.org/en/CAS/Predicate_functions/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "fb_dims",
+   "kind": "variable",
+   "sig": "fb_dims: [var = \"unit\", ...]",
+   "args": [],
+   "text": "Units of the variables of the answers, for the unit check of `fb_floats()` and `fb_dimension()`, e.g. `fb_dims: [a = \"m\", m = \"kg\", g = \"m/s^2\"]`. Declare every variable that occurs in the answers: an undeclared one switches the check off for its term. A name that has a value in the question variables is written as a string (`\"m\" = \"kg\"`), a dimensionless variable gets `1`. Units: m, g, s, A, K, mol, N, J, W, Pa, bar, Hz, C, V, Ohm, min, h, d, t, l, L, rad, deg, rpm, with prefixes p n u m c d h k M G T; `*` or blank, `/`, `^2`, `^-1`, `^(1/2)`, parentheses.",
+   "url": "https://github.com/mkraska/meclib/wiki/fb_floats()#units"
   },
   {
    "name": "first",
@@ -4685,6 +4725,317 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "sbasen_bitwidth",
+   "kind": "stack",
+   "sig": "sbasen_bitwidth(expression)",
+   "args": [
+    "expression"
+   ],
+   "text": "Returns the maximum bitwidth of all the base 2, 8 or 16 `stackbasen` objects present in the expression. Should none be found returns -1.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/binary/#sbasen_bitwidth",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "expression": "an expression to check"
+   },
+   "returns": "`-1` if no `stackbasen` numbers of the relevant bases were found"
+  },
+  {
+   "name": "sbasen_bitwise_eval",
+   "kind": "stack",
+   "sig": "sbasen_bitwise_eval(basen_logic)",
+   "args": [
+    "basen_logic"
+   ],
+   "text": "Given a logical expression with operators `not`, `and`, `or`, `nand`, `nor`, `xor`, or `xnor` of `stackbasen` objects. Will interpret those all as their bitwise equivalents and evaluate operations between those and binary representations of the `stackbasen` objects. Will use the bitwidth of the widest base-2 (or 8 or 16) `stackbasen` object in the expression and pads all others to that length.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/binary/#sbasen_bitwise_eval",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "basen_logic": "expression with `stackbasen` objects as targets of normal logical operators"
+   },
+   "returns": "and expression where all logical operations between \"binary\" `stackbasen`-objects have been evaluated as bitwise operations."
+  },
+  {
+   "name": "sbasen_char_to_digit",
+   "kind": "stack",
+   "sig": "sbasen_char_to_digit(char)",
+   "args": [
+    "char"
+   ],
+   "text": "A function to convert singular characters to numbers used in the `stackbasen` syntax. Basically, '\"0\"' -> '0' and '\"A\"' -> '10'. Lower and upper case ASCII letters are considered the same.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/#sbasen_char_to_digit",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "char": "a single character string."
+   },
+   "returns": "the matching number in the range 0-35, or false for unknown"
+  },
+  {
+   "name": "sbasen_construct_from_base10",
+   "kind": "stack",
+   "sig": "sbasen_construct_from_base10(number, format, base)",
+   "args": [
+    "number",
+    "format",
+    "base"
+   ],
+   "text": "Given a positive base-10 integer and a format and a base settings will convert bases and produce a `stackbasen` object with those settings. Note that for `\"C\"` format only bases 2,8, and 16 are available. For `\"S\"` bases 2-36 are possible. For digits 10-35 will use ASCII letters and the case will be defined by the option `sbasen_construct_default_case`, by default uppercase letters will be used.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/#sbasen_construct_from_base10",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "number": "base-10 number to convert",
+    "format": "the format, either `\"S\"` or `\"C\"`",
+    "base": "the base as a integer in the range [2,36]"
+   },
+   "returns": "the value in the desired base and format"
+  },
+  {
+   "name": "sbasen_convert_to_base10",
+   "kind": "stack",
+   "sig": "sbasen_convert_to_base10(expression)",
+   "args": [
+    "expression"
+   ],
+   "text": "A function to convert `stackbasen` objects back to normal base-10 numbers, will find all `stackbasen` instances in the input and replaces them with raw base-10 integers. Does not verify validity of those `stackbasen` objects, so might generate interesting results.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/#sbasen_convert_to_base10",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "expression": "an expression that might have `stackbasen`-objects in it."
+   },
+   "returns": "the original expression with all `stackbasen`-objects converted to raw integers."
+  },
+  {
+   "name": "sbasen_convert_to_binary",
+   "kind": "stack",
+   "sig": "sbasen_convert_to_binary(number, format)",
+   "args": [
+    "number",
+    "format"
+   ],
+   "text": "A function to convert to binary `stackbasen`. Will work with positive raw integers or with any `stackbasen` objects. Does not verify validity of those `stackbasen` objects, so might generate interesting results. Do note that for general conversion between bases you can simply use the constructor `sbasen_construct_from_base10` and converter `sbasen_convert_to_base10`. This is just a convenience wrapper for them.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/binary/#sbasen_convert_to_binary",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "number": "a number to convert.",
+    "format": "a single character string selecting between \"C\" and \"S\" presentation formats"
+   },
+   "returns": "an object representing that binary number."
+  },
+  {
+   "name": "sbasen_convert_to_digits",
+   "kind": "stack",
+   "sig": "sbasen_convert_to_digits(sbasen_number)",
+   "args": [
+    "sbasen_number"
+   ],
+   "text": "A function to convert `stackbasen` objects into a list of digits presented as base-10 numbers. With most significant digit first. See `sbasen_convet_to_digits_lsd` for a variant with least significant digit first. Does not verify validity of those `stackbasen` objects, so might generate interesting results. If a digit does not fit the 0-9+A-Z range expect to see `false` in the list.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/#sbasen_convert_to_digits",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "sbasen_number": "the `stackbasen`-object to turn to a digit list"
+   },
+   "returns": "the digits interpereted as base-10 integers, most significant digit first"
+  },
+  {
+   "name": "sbasen_convert_to_digits_lsd",
+   "kind": "stack",
+   "sig": "sbasen_convert_to_digits_lsd(sbasen_number)",
+   "args": [
+    "sbasen_number"
+   ],
+   "text": "A function to convert `stackbasen` objects into a list of digits presented as base-10 numbers. With least significant digit first. See `sbasen_convet_to_digits` for a variant with most significant digit first. Does not verify validity of those `stackbasen` objects, so might generate interesting results. If a digit does not fit the 0-9+A-Z range expect to see `false` in the list.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/#sbasen_convert_to_digits_lsd",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "sbasen_number": "the `stackbasen`-object to turn to a digit list"
+   },
+   "returns": "the digits interpereted as base-10 integers, least significant digit first"
+  },
+  {
+   "name": "sbasen_convert_to_suffix_notation",
+   "kind": "stack",
+   "sig": "sbasen_convert_to_suffix_notation(expression)",
+   "args": [
+    "expression"
+   ],
+   "text": "Converts all `stackbasen` objects present in an expression to the suffix notation. This should help when checking for equality but won't help if values include padding, if that is the case you may need to use `sbasen_trim_padding`. To avoid issues with different cases will recreate all `stackbasen` objects. And remap the digits.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/#sbasen_convert_to_suffix_notation",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "expression": "an expression that might have `stackbasen`-objects in it."
+   },
+   "returns": "the original expression with all `stackbasen`-objects converted to use \"S\"-format."
+  },
+  {
+   "name": "sbasen_is_cs",
+   "kind": "stack",
+   "sig": "sbasen_is_cs(expression)",
+   "args": [
+    "expression"
+   ],
+   "text": "Checks if the expression contains a `stackbasen` value and that all such values it contains are in traditional computer science bases, i.e, 2, 8 or 16.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/binary/#sbasen_is_cs",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "expression": "an expression to check"
+   },
+   "returns": "`false` if no `stackbasen` numbers were found or if even one of them is not in the expected bases."
+  },
+  {
+   "name": "sbasen_pad",
+   "kind": "stack",
+   "sig": "sbasen_pad(sbasen_number, width)",
+   "args": [
+    "sbasen_number",
+    "width"
+   ],
+   "text": "Pads a `stackbasen` number with 0-digits from the left so that the number has the desired width (bit width or otherwise). Intended for binary operations but can be used in general for example to pad hexadecimal to a given word size. Note should the number already be wider than the width will not modify it. Use `sbasen_truncate_left` to throw the extra high digits away if that is neeeded.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/binary/#sbasen_pad",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "sbasen_number": "a stackbasen-object to pad.",
+    "width": "the digit width to aim for"
+   },
+   "returns": "the padded stackbasen-object."
+  },
+  {
+   "name": "sbasen_texput_C_binary",
+   "kind": "stack",
+   "sig": "sbasen_texput_C_binary(sbasen_number)",
+   "args": [
+    "sbasen_number"
+   ],
+   "text": "A function to convert singular C binary format `stackbasen` object to a LaTeX string presentation. By default `\\texttt{0b101}` is the output format. Feel free to override this function in the preamble, if the style does not match your needs.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/#sbasen_texput_C_binary",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "sbasen_number": "a single base-N object in the `\"C\"`-format."
+   },
+   "returns": "the matching LaTeX presentation"
+  },
+  {
+   "name": "sbasen_texput_C_hex",
+   "kind": "stack",
+   "sig": "sbasen_texput_C_hex(sbasen_number)",
+   "args": [
+    "sbasen_number"
+   ],
+   "text": "A function to convert singular C hex format `stackbasen` object to a LaTeX string presentation. By default `\\texttt{0xAbc1}` is the output format. Feel free to override this function in the preamble, if the style does not match your needs. This function respects the option `sbasen_output_force_case`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/#sbasen_texput_C_hex",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "sbasen_number": "a single base-N object in the `\"C\"`-format."
+   },
+   "returns": "the matching LaTeX presentation"
+  },
+  {
+   "name": "sbasen_texput_C_octal",
+   "kind": "stack",
+   "sig": "sbasen_texput_C_octal(sbasen_number)",
+   "args": [
+    "sbasen_number"
+   ],
+   "text": "A function to convert singular C octal format `stackbasen` object to a LaTeX string presentation. By default `\\texttt{0755}` is the output format. Feel free to override this function in the preamble, if the style does not match your needs.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/#sbasen_texput_C_octal",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "sbasen_number": "a single base-N object in the `\"C\"`-format."
+   },
+   "returns": "the matching LaTeX presentation"
+  },
+  {
+   "name": "sbasen_texput_suffix",
+   "kind": "stack",
+   "sig": "sbasen_texput_suffix(sbasen_number)",
+   "args": [
+    "sbasen_number"
+   ],
+   "text": "A function to convert singular suffix format `stackbasen` object to a LaTeX string presentation. By default `{\\textrm{123}}_{10}` is the output format. Feel free to override this function in the preamble, if the style does not match your needs. This function respects the option `sbasen_output_force_case`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/#sbasen_texput_suffix",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "sbasen_number": "a single base-N object in the `\"S\"`-format."
+   },
+   "returns": "the matching LaTeX presentation"
+  },
+  {
+   "name": "sbasen_trim_padding",
+   "kind": "stack",
+   "sig": "sbasen_trim_padding(expression)",
+   "args": [
+    "expression"
+   ],
+   "text": "Drops extra `0` digits from `stackbasen` objects that may have been padded to match some \"bit width\". Works for all bases.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/binary/#sbasen_trim_padding",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "expression": "with possible stackbasen-objects to trim."
+   },
+   "returns": "expression with the stackbasen-objects without extra leading zeros."
+  },
+  {
+   "name": "sbasen_truncate_left",
+   "kind": "stack",
+   "sig": "sbasen_truncate_left(sbasen_number, width)",
+   "args": [
+    "sbasen_number",
+    "width"
+   ],
+   "text": "Drops extra highest digits from the number if the number is overly long. Might be of use when doing binary operations. There is a lowest digits version `sbasen_truncate_right` should one need it.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/binary/#sbasen_truncate_left",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "sbasen_number": "a stackbasen-object to truncate.",
+    "width": "the digit width to aim for"
+   },
+   "returns": "the padded stackbasen-object."
+  },
+  {
+   "name": "sbasen_truncate_right",
+   "kind": "stack",
+   "sig": "sbasen_truncate_right(sbasen_number, width)",
+   "args": [
+    "sbasen_number",
+    "width"
+   ],
+   "text": "Drops extra lowest digits from the number if the number is overly long. Might be of use when doing binary operations. There is a highest digits version `sbasen_truncate_left` should one need it.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/binary/#sbasen_truncate_right",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "width": "the digit width to aim for"
+   },
+   "returns": "the padded stackbasen-object."
+  },
+  {
+   "name": "sbasen_validate",
+   "kind": "stack",
+   "sig": "sbasen_validate(expression)",
+   "args": [
+    "expression"
+   ],
+   "text": "Validates a `stackbasen` object, i.e., checks that the \"digits\" are suitable for the base. Returns either `true` for valid or a CASText fragment describing the issue. Suitable for bespoke validator use. Note this is for a singular value, use the tree checking version (`sbasen_validate_tree`) if you expect expressions or multiple literals.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/#sbasen_validate",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "expression": "an expression to validate"
+   },
+   "returns": "`true` if valid otherwise a CASText fragment."
+  },
+  {
+   "name": "sbasen_validate_tree",
+   "kind": "stack",
+   "sig": "sbasen_validate_tree(expression)",
+   "args": [
+    "expression"
+   ],
+   "text": "Validates `stackbasen` objects present in the expression, i.e., checks that the \"digits\" are suitable for the base. Returns either `true` for valid or a CASText fragment describing the issues. Suitable for bespoke validator use. Note that will not consider non existence of `stackbasen` objects an issue.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/#sbasen_validate_tree",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "expression": "an expression to validate"
+   },
+   "returns": "`true` if valid otherwise a CASText fragment."
+  },
+  {
    "name": "scale_nicely",
    "kind": "stack",
    "sig": "scale_nicely(v, [_pos])",
@@ -5206,6 +5557,25 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "stackbasen",
+   "kind": "stack",
+   "sig": "stackbasen(textform, format, base)",
+   "args": [
+    "textform",
+    "format",
+    "base"
+   ],
+   "text": "An object combining a textual presentation of a base-N number with details necessary for working with that number. Note that some details are overly defined and when there is a conflict the two latter parameters are the authoritative ones, the `base` being the deciding one of those two. If this object comes from the student, do not assume that the object is valid.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/basen/#stackbasen",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "textform": "the textual presentation that may be valid for this base and format",
+    "format": "the format that is to be used, basically `\"C\"` for C-style integer literals, or `\"S\"` for STACK suffix style",
+    "base": "the base as an base-10 integer in the range of 2-36"
+   },
+   "returns": "returns itself, does not evaluate on its own"
+  },
+  {
    "name": "stackjson_parse",
    "kind": "stack",
    "sig": "stackjson_parse(\"json\")",
@@ -5228,6 +5598,23 @@
    "source": "syntax_help_extra.json"
   },
   {
+   "name": "stackunits",
+   "kind": "stack",
+   "sig": "stackunits(number, unit)",
+   "args": [
+    "number",
+    "unit"
+   ],
+   "text": "An object combining a numerical value to an unit forming a dimensional quantity. Basically, a container keeping things together and allowing presentational adjustments as well as handling of special cases like `stackunits(0,kg)` where is very different from `0*kg`, the latter will simply simplify away while the former does still maintain knowledge of the unit.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/stackunits/#stackunits",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "number": "the numeric magnitude of this pair, can also we a presentational accuracy wrapper like `dispdp` or `dispsf`",
+    "unit": "expression consisting of unit representing identifiers, e.g, `kV`, `m/s` or `kg/cm^3`"
+   },
+   "returns": "returns itself, does not evaluate on its own"
+  },
+  {
    "name": "stackunits_make",
    "kind": "stack",
    "sig": "stackunits_make(ex)",
@@ -5248,6 +5635,66 @@
    "text": "The function `stackunits_to_product(ex)` turns a `stackunits` object into a product of number and units.",
    "url": "https://docs.stack-assessment.org/en/Topics/Units/",
    "source": "STACK v4.13.1"
+  },
+  {
+   "name": "str_to_html",
+   "kind": "stack",
+   "sig": "str_to_html(string_to_escape)",
+   "args": [
+    "string_to_escape"
+   ],
+   "text": "A function to convert a string to an escaped HTML/XML string. Do note that this is not idempotent, and will escape the escaped things if the original already uses entities.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/strings/escapes/#str_to_html",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "string_to_escape": "the string to be escaped."
+   },
+   "returns": "a string with all characters sensitive in HTML/XML turned to entities."
+  },
+  {
+   "name": "str_to_html_char",
+   "kind": "stack",
+   "sig": "str_to_html_char(c)",
+   "args": [
+    "c"
+   ],
+   "text": "A function to convert singular characters to HTML/XML-entities if necessary. To convert longer strings use `str_to_html`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/strings/escapes/#str_to_html_char",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "c": "a single character string."
+   },
+   "returns": "a string with characters sensitive in HTML/XML turned to entities."
+  },
+  {
+   "name": "str_to_js",
+   "kind": "stack",
+   "sig": "str_to_js(string_to_escape)",
+   "args": [
+    "string_to_escape"
+   ],
+   "text": "A function to convert a string to an escaped ECMAScript string. Do note that this is not idempotent, and will escape the escaped things if the original already uses did so.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/strings/escapes/#str_to_js",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "string_to_escape": "the string to be escaped."
+   },
+   "returns": "a string with characters sensitive in ECMAScript escaped."
+  },
+  {
+   "name": "str_to_js_char",
+   "kind": "stack",
+   "sig": "str_to_js_char(c)",
+   "args": [
+    "c"
+   ],
+   "text": "A function to convert singular characters to ECMAScript escaped chars if necessary. To convert longer strings use `str_to_js`.",
+   "url": "https://docs.stack-assessment.org/en/CAS/Library/strings/escapes/#str_to_js_char",
+   "source": "STACK v4.13.1",
+   "argdocs": {
+    "c": "a single character string."
+   },
+   "returns": "a string with characters sensitive in ECMAScript escaped."
   },
   {
    "name": "strim",
@@ -5642,14 +6089,6 @@
    "text": "This function applies the binary function \\(f\\) to two matrices \\(A\\) and \\(B\\) returning a matrix. An example is given in adding matrices to show working. - `coeff_list(ex,v)` - This function takes an expression `ex` and returns a list of coefficients of `v`.",
    "url": "https://docs.stack-assessment.org/en/CAS/Maxima_background/",
    "source": "STACK v4.13.1"
-  },
-  {
-   "name": "fb_dims",
-   "kind": "variable",
-   "sig": "fb_dims: [var = \"unit\", ...]",
-   "args": [],
-   "text": "Units of the variables of the answers, for the unit check of `fb_floats()` and `fb_dimension()`, e.g. `fb_dims: [a = \"m\", m = \"kg\", g = \"m/s^2\"]`. Declare every variable that occurs in the answers: an undeclared one switches the check off for its term. A name that has a value in the question variables is written as a string (`\"m\" = \"kg\"`), a dimensionless variable gets `1`. Units: m, g, s, A, K, mol, N, J, W, Pa, bar, Hz, C, V, Ohm, min, h, d, t, l, L, rad, deg, rpm, with prefixes p n u m c d h k M G T; `*` or blank, `/`, `^2`, `^-1`, `^(1/2)`, parentheses.",
-   "url": "https://github.com/mkraska/meclib/wiki/fb_floats()#units"
   }
  ]
 }
