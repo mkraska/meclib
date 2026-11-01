@@ -1,6 +1,7 @@
 ### Dev Branch
 
 2026 11 01
+- [[Meclib Workbench]], input editor: the coded options (insert stars, hint attribute, forbid float, lowest terms, check type, strict syntax) are dropdowns "value – meaning" (texts of STACK 4.13.1); the tooltip of these and of verify/validation shows STACK's explanation and the current choice
 - [[Meclib Workbench]]: edits of a question with a large text (over 64 KB, e.g. an image embedded in the question text) were not saved ("not saved: NetworkError when attempting to fetch resource"), and switching to another question failed as it saves first: browsers refuse a save sent with keepalive above 64 KB; keepalive (which lets a save finish when the page is closed) is now used only for smaller saves
 
 2026 10 31

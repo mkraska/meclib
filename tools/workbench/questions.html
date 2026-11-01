@@ -760,6 +760,46 @@ const INPUT_MAIN = [["type", "type"], ["tans", "model answer"], ["boxsize", "siz
 const INPUT_MORE = [["options", "options"], ["syntaxhint", "syntax hint"], ["forbidwords", "forbidden words"], ["allowwords", "allowed words"],
   ["insertstars", "insert stars"], ["forbidfloat", "forbid float"], ["requirelowestterms", "lowest terms"], ["checkanswertype", "check type"],
   ["strictsyntax", "strict syntax"], ["syntaxattribute", "hint attribute"]];
+// meaning of the coded input options (STACK 4.13.1: stack/options.class.php, lang/en/qtype_stack.php):
+// shown beside the field for the current value, all values and STACK's help as tooltip
+const YES_NO = { "1": "yes", "0": "no" };
+const INPUT_CODES = {
+  insertstars: { help: "Inserts * where multiplication is implied (STACK: Authoring/Inputs, Insert stars).", values: {
+    "0": "don't insert stars", "1": "insert stars for implied multiplication only",
+    "2": "insert stars assuming single-character variable names", "3": "insert stars for spaces only",
+    "4": "insert stars for implied multiplication and for spaces",
+    "5": "insert stars assuming single-character variables, implied and for spaces",
+    "6": "insert stars for implied multiplication, spaces, and no user-functions",
+    "7": "insert stars for implied multiplication, spaces, no user-functions and assuming single-character variables" } },
+  syntaxattribute: { help: "The syntax hint appears as an editable value or as a non-editable placeholder.",
+    values: { "0": "value (editable initial content of the box)", "1": "placeholder (shown while the box is empty)" } },
+  forbidfloat: { help: "Answers containing a floating point number are rejected as invalid.", values: YES_NO },
+  requirelowestterms: { help: "Rational numbers in the answer must be in lowest terms, otherwise the answer is invalid.", values: YES_NO },
+  checkanswertype: { help: "Answers of a different type than the model answer (expression, equation, matrix, list, set) are rejected as invalid.", values: YES_NO },
+  strictsyntax: { help: "No longer used by STACK (will be removed).", values: YES_NO },
+  mustverify: { help: "The student's answer is shown back to them (validation) before it is graded: two steps.", values: YES_NO },
+  showvalidation: { help: "Shows the validation feedback (the answer echoed in two-dimensional notation); syntax errors are always reported.",
+    values: { "0": "no", "1": "yes, with variable list", "2": "yes, without variable list", "3": "yes, compact" } },
+};
+function codeMeaning(k, v) {
+  const c = INPUT_CODES[k];
+  if (!c) return "";
+  return c.values[String(v ?? "").trim()] ?? (String(v ?? "").trim() === "" ? "(empty: STACK's default)" : "unknown value");
+}
+function codeTitle(k, v) {
+  const c = INPUT_CODES[k];
+  return c ? c.help + (v != null ? "\nNow: " + codeMeaning(k, v) : "") : "";
+}
+// a coded option as dropdown "value - meaning"; a value STACK does not list (or empty) is kept as
+// an extra entry, so that opening a question never changes it
+function codeSelect(k, v, attrs) {
+  const c = INPUT_CODES[k], cur = String(v ?? "");
+  const opts = Object.entries(c.values);
+  if (!opts.some(([x]) => x === cur)) opts.unshift([cur, cur === "" ? "(empty: STACK's default)" : "unknown value"]);
+  return `<select data-ik="${k}" title="${esc(codeTitle(k, cur))}"${attrs || ""}>` +
+    opts.map(([x, l]) => `<option value="${esc(x)}"${x === cur ? " selected" : ""}>${esc(x === "" ? l : x + " – " + l)}</option>`).join("") + "</select>";
+}
+
 // inputs and PRTs are listed in the order of their first [[input:..]] / [[feedback:..]] tag in the
 // question text, then the specific feedback; anything not placed keeps its XML order at the end
 function textOrder() {
@@ -783,18 +823,23 @@ function renderInputEditor(inputs) {
         h += `<td><select data-ik="type">${types.map((x) => `<option${x === inp.type ? " selected" : ""}>${esc(x)}</option>`).join("")}</select></td>`;
       } else if (k === "mustverify" || k === "showvalidation") {
         const opts = k === "mustverify" ? [["1", "yes"], ["0", "no"]] : [["1", "yes"], ["2", "yes, no vars"], ["3", "compact"], ["0", "no"]];
-        h += `<td><select data-ik="${k}">${opts.map(([v, l]) => `<option value="${v}"${v === inp[k] ? " selected" : ""}>${l}</option>`).join("")}</select></td>`;
+        h += `<td><select data-ik="${k}" title="${esc(codeTitle(k, inp[k]))}">${opts.map(([v, l]) => `<option value="${v}"${v === inp[k] ? " selected" : ""}>${l}</option>`).join("")}</select></td>`;
       } else {
         h += `<td><input type="text" data-ik="${k}" value="${esc(inp[k])}" spellcheck="false"${k === "boxsize" ? ' style="width:4em"' : ""}></td>`;
       }
     }
     h += `<td><button type="button" class="small del" data-del="${esc(inp.name)}" title="delete this input">✕</button></td>`;
     h += `</tr><tr class="more" data-input="${esc(inp.name)}"><td></td><td colspan="${INPUT_MAIN.length + 1}"><details><summary>more</summary>` +
-      INPUT_MORE.map(([k, l]) => `<div class="form-row"><label style="width:9em">${l}</label><input type="text" data-ik="${k}" value="${esc(inp[k])}" spellcheck="false"></div>`).join("") +
+      INPUT_MORE.map(([k, l]) => `<div class="form-row"><label style="width:9em"${INPUT_CODES[k] ? ` title="${esc(INPUT_CODES[k].help)}"` : ""}>${l}</label>` +
+        (INPUT_CODES[k] ? codeSelect(k, inp[k])
+          : `<input type="text" data-ik="${k}" value="${esc(inp[k])}" spellcheck="false">`) + `</div>`).join("") +
       "</details></td></tr>";
   }
   t.innerHTML = h;
-  for (const el of t.querySelectorAll("[data-ik]")) el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => setDirty(true));
+  for (const el of t.querySelectorAll("[data-ik]")) el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+    setDirty(true);
+    if (INPUT_CODES[el.dataset.ik]) el.title = codeTitle(el.dataset.ik, el.value);
+  });
   for (const b of t.querySelectorAll("[data-del]")) b.addEventListener("click", () => deleteInput(b.dataset.del));
 }
 
