@@ -530,8 +530,12 @@ function loadScript(src) {
   });
 }
 async function postJSON(url, body, raw) {
+  const data0 = raw ? raw.body : JSON.stringify(body);
+  // keepalive lets a save finish when the page is closed, but browsers refuse keepalive requests
+  // with a body over 64 KB ("NetworkError when attempting to fetch resource"): only below that
+  const small = typeof data0 === "string" && new Blob([data0]).size < 60000;
   const resp = await fetch(url, { method: "POST", headers: Object.assign({ "X-Workbench": "1" }, raw ? raw.headers : { "Content-Type": "application/json" }),
-    body: raw ? raw.body : JSON.stringify(body), keepalive: url === "/api/q/save" });
+    body: data0, keepalive: url === "/api/q/save" && small });
   const data = await resp.json();
   if (!resp.ok || data.error) { const e = new Error(data.error || resp.statusText); e.conflict = !!data.conflict; throw e; }
   return data;

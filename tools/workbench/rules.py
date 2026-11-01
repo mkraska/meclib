@@ -173,6 +173,10 @@ def F(rule, target, level, title, message, fix=None, wiki=None, default=None):
 
 # ---------------------------------------------------------------------- rules
 def r_security(Q_):
+    """Identifiers STACK refuses in a question (its security list: functions like system(),
+    eval_string(), concat() of names ...): STACK does not save such a question. Checked: the model
+    answers and texts (as the preview's check), the question variables and the feedback variables
+    of the PRTs, statement by statement. Rename or replace the identifier."""
     out = []
     for place, msg in sq.security_findings(Q_.data).items():
         out.append(F("security", place, "required", "Identifier forbidden by STACK", place + ": " + msg))
@@ -195,6 +199,9 @@ STYLE_TYPO = re.compile(r"\bstyle\s*=\s*style\s*=\s*", re.I)
 
 
 def r_style_typo(Q_):
+    """A doubled style attribute style=style="..." in the question text or the general/specific
+    feedback (a slip of older templates): browsers ignore the style, so e.g. the graphic no longer
+    floats beside the text. The fix removes the duplicate."""
     out = []
     for field in ("questiontext", "generalfeedback", "specificfeedback"):
         text = Q_.data.get(field) or ""
@@ -213,6 +220,10 @@ FLOAT_DIV = re.compile(r"""(<div\b[^>]*?\bstyle\s*=\s*)(["'])([^"']*)\2""", re.I
 
 
 def r_float_margin(Q_):
+    """A block floating right or left (usually the graphic, <div style="float:right">) without a
+    margin: the text runs into it. The fix adds the margin of the workbench template (right: 0 0
+    0.5em 1.5em, left: 0 1.5em 0.5em 0). One finding per text; after the fix a new review finds
+    the next block."""
     out = []
     for field in ("questiontext", "generalfeedback", "specificfeedback"):
         text = Q_.data.get(field) or ""
@@ -243,6 +254,10 @@ def uses_meclib_feedback(Q_):
 
 
 def r_lang(Q_):
+    """A question that uses meclib feedback functions (an fb_*.mac include) but declares no languages
+    in the question text: STACK then shows the English texts of the feedback functions. The fix
+    inserts the empty declaration [[lang code="de"]] [[/lang]][[lang code="other"]] [[/lang]]
+    after the graphic (wiki "Multilingual questions")."""
     if not uses_meclib_feedback(Q_) or "[[lang" in Q_.qtext:
         return []
 
@@ -261,6 +276,8 @@ def r_lang(Q_):
 
 
 def r_lang_includes(Q_):
+    """Includes of the obsolete language-specific libraries fb_*_EN.mac / fb_*_DE.mac: the feedback
+    functions are multilingual. The fix includes fb_*.mac instead."""
     out = []
     for url in Q_.includes:
         m = re.search(r"/(fb_\w+?)_(EN|DE)\.mac$", url)
@@ -369,6 +386,20 @@ def _remove_include(qvars, url):
 
 
 def r_includes(Q_):
+    """Includes of meclib's Maxima files.
+
+    include.unused: an included file of which the question uses no function and no variable; the
+    fix removes its stack_include (loading it only costs compile time, which shows as CAS timeouts
+    in Moodle).
+
+    include.missing: a meclib function or variable used without its file (it would stay
+    unevaluated); the fix adds the include, from the same branch as the question's other meclib
+    includes.
+
+    Uses are searched in all Maxima code: question variables, feedback variables, CAS parts of the
+    texts and of the syntax hints, model answers, PRT nodes (SAns, TAns, test options); a function
+    counts only when called ("angle("), so that a variable of the same name does not count. Files
+    needed by a needed file count as needed; *_EN.mac files are never proposed."""
     names = meclib_names()
     included = {}                       # file -> url
     for url in Q_.includes:
@@ -463,6 +494,8 @@ def _remove_definition(qvars, name):
 
 # Old copies of meclib functions in the question variables (from the time before stack_include):
 # the include provides the current version; the local definition hides it or duplicates it.
+# Reported when a meclib Maxima file defines the function too and that file is included, or the
+# name starts with fb_. The fix deletes the definition and adds the include if missing.
 def r_legacy_functions(Q_):
     funs = meclib_functions()
     out = []
@@ -496,6 +529,14 @@ def _input_fix(name, changes):
 
 
 def r_graphic_inputs(Q_):
+    """The hidden inputs bound to a meclib graphic ([[jsxgraph input-ref-...]]).
+
+    inputs.graphic: the input of the objects (stateRef) is a string input, the input of the names
+    (fbd_names) an algebraic input with floats allowed; neither shows validation or asks students
+    to verify (wiki "MecLib Question Setup"). The fix sets these options.
+
+    inputs.graphic-visible: an input of the graphic that is not inside <p hidden> ... </p>:
+    students see the raw data (fine while debugging)."""
     out = []
     for inp in Q_.inputs:
         ref = Q_.graphic.get(inp["name"])
@@ -515,6 +556,15 @@ def r_graphic_inputs(Q_):
 
 
 def r_input_settings(Q_):
+    """The answer inputs (algebraic, units, numerical; not the inputs of a graphic).
+
+    inputs.settings: as the style guide and the maintainer decided - insert stars for spaces only
+    (none for numerical inputs), the syntax hint as placeholder, validation "compact", students
+    must verify. The fix sets these options.
+
+    inputs.syntaxhint: syntax hints that are empty or plain words ("expression", "Zahl", ...)
+    become the multilingual hints of fb_value.mac ({@meclib_h_alg@}, {@meclib_h_number@},
+    {@meclib_h_unit@}); the fix adds the include of fb_value.mac if the question lacks it."""
     out = []
     has_fb_value = any("fb_value" in u for u in Q_.includes)
     for inp in Q_.inputs:
@@ -572,6 +622,22 @@ def _feedback(node):
 
 
 def r_prts(Q_):
+    """Settings of the PRTs:
+
+    prt.simp: a PRT that uses fb_unit() should have simplification off, so that answers like 0*kg
+    keep their unit for the feedback.
+
+    prt.feedbackstyle: feedback style compact (2); a hint only where the feedback contains HTML
+    blocks (<p>, <div>, lists), which need the standard style.
+
+    prt.quiet: where the feedback comes from a meclib function, the answer test's own feedback is
+    switched off (quiet).
+
+    prt.feedbackformat: the node feedback in format html; Markdown suppresses the yellow feedback
+    background (reject the proposal only if the feedback is meant as a dynamic part of the
+    question text).
+
+    prt.tolerance: a relative tolerance other than 0.005 (the maintainer's standard) is a hint."""
     out = []
     for prt in Q_.prts:
         P = prt["name"]
@@ -626,6 +692,7 @@ def r_prts(Q_):
 
 
 def r_grade(Q_):
+    """A question with PRTs but default mark 0 gives no points. The fix sets the default mark to 1."""
     grade = _t(Q_.el, "defaultgrade") or "0"
     try:
         zero = float(grade) == 0
@@ -675,6 +742,9 @@ def r_feedback_inputs(Q_):
 
 
 def r_literal_index(Q_):
+    """Object indices written as numbers in calls of meclib feedback functions (fb_fix12(obj, n, 7,
+    ...)): the numbers change when objects are inserted into the graphic. Define a variable for
+    each object index (i_A: 7; /* fix12 A */) and use it."""
     lists = OBJECT_LISTS + list(Q_.graphic)
     sub = re.compile(r"\b(%s)\s*\[\s*(\d+)\s*[\],]" % "|".join(map(re.escape, lists)))
     call = re.compile(r"\b(%s)\s*\(" % "|".join(INDEX_ARG))
@@ -697,6 +767,9 @@ def r_literal_index(Q_):
 
 
 def r_tans_copy(Q_):
+    """The model answer of a graphic's input is its initial state (tans equal to init): usually it is
+    derived from it, tansdata: copy(initdata) with the changes a student makes, tans:
+    stackjson_stringify(tansdata)."""
     out = []
     for inp in Q_.inputs:
         if Q_.graphic.get(inp["name"]) == "stateRef" and (inp.get("tans") or "").strip() == "init":
@@ -726,6 +799,11 @@ OBJ_STATE = re.compile(r'\[\s*"(\w+)"(?:[^\[\]]|\[[^\[\]]*\])*?,\s*"locked"\s*\]
 
 
 def r_locked(Q_):
+    """The legacy object state "locked" in the objects of a meclib graphic (initdata etc.):
+    fb_system() counts only "SHOW"/"show" as shown. Replacing it by "SHOW" is offered
+    (recommended, with fix) for the object types with a regression test for this - types that
+    appear with "SHOW" in a scene of tests/scenes/ (state_show.json: beam, q, fix1, fix12, fix123,
+    bar, force, moment); other types get a hint only."""
     found = [m for m in OBJ_STATE.finditer(sq.strip_comments(Q_.qvars))]
     if not found:
         return []
@@ -828,6 +906,13 @@ def fix_math_delimiters(text, fmt):
 
 
 def r_math_delimiters(Q_):
+    r"""Math delimiters by the format of each text: in HTML texts \( ... \); in Markdown texts the
+    strict form \\\( ... \\\) (backslash and bracket both escaped, so Markdown never takes the
+    bracket for part of a link), except inside block-level HTML (a line starting with <p>,
+    <table>, <div> ... up to its closing tag), which Markdown passes through unchanged: there \(
+    ... \) as in HTML. Checked: question text, general and specific feedback, question note, PRT
+    node feedback, each by its own format; only complete pairs, not in [[jsxgraph]] blocks or
+    {@...@}/{#...#}. The fix rewrites the delimiters."""
     out = []
     places = [(f, Q_.data.get(f) or "", Q_.data["formats"].get(f, "html"), None)
               for f in ("questiontext", "generalfeedback", "specificfeedback", "questionnote")]
@@ -918,6 +1003,39 @@ def r_raw_in_math(Q_):
     return out
 
 
+def r_unit_names(Q_):
+    """A question variable named like a STACK unit (g, m, mm, s, N, t, h, ...) in a question in
+    units mode: the value hides the unit inside the question, and in a student's answer the name
+    counts as the unit (STACK allows unit names before it forbids the teacher's variable names) -
+    e.g. "m g" of a meclib force in the names input only works because g is also gram. Without
+    units mode the same answer would be invalid. Rename the variable (g -> g0)."""
+    units = sq.uses_units(Q_.data) or "stack_unit_si_declare" in Q_.qvars
+    if not units:
+        return []
+    found = []
+    for stmt, _line, _ins in sq.split_statements(Q_.qvars):
+        clean = sq.strip_comments(stmt)
+        names = []
+        m = sq.ASSIGN.match(clean)
+        if m:
+            names.append(m.group(1))
+        m = sq.LISTASSIGN.match(clean)
+        if m:
+            names += [n.strip() for n in m.group(1).split(",") if n.strip()]
+        found += [n for n in names if n in sq.STACK_UNITS and n not in found]
+    if not found:
+        return []
+    return [F("qv.unit-name", n, "required", "question variable %s is a unit" % n,
+              "The question is in units mode, where %s is a STACK unit. The question variable %s hides the "
+              "unit in the question, and in answers %s still counts as the unit: e.g. a meclib force "
+              "\"m g\" in the names input is accepted only because %s is also a unit - in a question "
+              "without units it would be rejected as a question variable. In grading the unit is replaced "
+              "by the variable's value: an answer using the unit %s is accepted as valid and marked wrong "
+              "(STACK 4.13.1: 300000 g m/s^2 for 300 N with g: 10*m/s^2 gives ATUnits_incompatible_units). "
+              "Rename the variable (e.g. %s0)."
+              % (n, n, n, n, n, n)) for n in found]
+
+
 # Matrix inputs (wiki "Matrix input", "Matrix Feedback"): a table row label | input | validation
 # with the feedback below, and element-wise feedback with fb_unit_matrix() / fb_vars_matrix().
 MATRIX_NUMERIC_TESTS = ("NumRelative", "NumAbsolute", "UnitsRelative", "UnitsStrictRelative", "UnitsAbsolute",
@@ -976,6 +1094,20 @@ def _call_args(text, fname):
 
 
 def r_matrix_inputs(Q_):
+    """Matrix inputs (wiki "Matrix input", "Matrix Feedback").
+
+    matrix.layout: STACK shows a matrix input as a block of its own, so label, matrix and
+    validation do not stand side by side in a paragraph. A paragraph <p>label [[input:S_X]]
+    [[validation:S_X]] [[feedback:X]]</p> becomes a table row label | input | validation with the
+    feedback below; other layouts get a hint only.
+
+    matrix.feedback: element-wise feedback. PRT X gets the feedback variable [txt, isOK]:
+    fb_unit_matrix(S_X, T, tol) (numeric: a numeric answer test, fb_unit or the old toList
+    pattern; the answer test becomes AlgEquiv isOK = true, toList is removed) or txt:
+    fb_vars_matrix(S_X, T, vars) (otherwise; AlgEquiv on the matrix stays), feedback {@txt@} in
+    both branches, quiet. T is the input's model answer; tolerance and vars are taken from the old
+    PRT, simple symbol labels of the old per-component feedback become the label list. PRTs with
+    several nodes or other feedback text get a hint only."""
     out = []
     for inp in Q_.inputs:
         if inp["type"] != "matrix":
@@ -1206,7 +1338,7 @@ def r_scenes(Q_):
 
 
 RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_scenes, r_graphic_inputs, r_input_settings, r_prts,
-         r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_raw_in_math, r_matrix_inputs, r_unused_files, r_semicolons,
+         r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_raw_in_math, r_unit_names, r_matrix_inputs, r_unused_files, r_semicolons,
          r_include_branch, r_include_dist, r_includes, r_legacy_functions, r_qtest_length]
 
 

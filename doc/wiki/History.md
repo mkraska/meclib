@@ -1,5 +1,14 @@
 ### Dev Branch
 
+2026 11 01
+- [[Meclib Workbench]]: edits of a question with a large text (over 64 KB, e.g. an image embedded in the question text) were not saved ("not saved: NetworkError when attempting to fetch resource"), and switching to another question failed as it saves first: browsers refuse a save sent with keepalive above 64 KB; keepalive (which lets a save finish when the page is closed) is now used only for smaller saves
+
+2026 10 31
+- [[Meclib Workbench]], preview: questions with simplification off (`questionsimplify` 0) were shown without text and feedback - the castext renderer of `Maxima/tests/harness.mac` ran with `simp: false`, so its own positions stayed unevaluated sums ("... is not of type NUMBER"); it now computes with `simp: true` and evaluates the expressions of the text with the question's setting, as STACK
+- [[Meclib Workbench]], Check: in units mode (units input or units answer test) unit names are allowed in answers even where a question variable has the same name, as in STACK (`cassecurity`: units are checked before the teacher's variable names). Before, the workbench rejected e.g. the names input of a meclib graphic with the force "m g" (`m*g`) when `g` was a question variable
+- [[Meclib Workbench]], review: new rule `qv.unit-name` (required) - a question variable named like a STACK unit (`g`, `m`, `mm`, `F`, `A`, also `yA` = yoctoampere ...) in a question in units mode. STACK accepts the unit in a student's answer as valid but replaces it by the variable's value when grading: with `g: 10*m/s^2`, the answer 300000 g·m/s² for 300 N is marked wrong (`ATUnits_incompatible_units`, checked with STACK 4.13.1). Without units mode the variable would make answers containing the name invalid. No automatic fix: rename the variable (e.g. `g0`)
+- [[Meclib Workbench Review Rules]]: new wiki page with all review rules (key, level, automatic fix, what is checked and why), generated from `rules.py` by `tools/workbench/build_rules_doc.py`; the rule list in the workbench README is replaced by a link to it
+
 2026 10 30
 - [[Meclib Workbench]], question tests: test mode for creating and editing tests ("+" / "✎"): the preview turns red, the inputs take CAS expressions with question variables (e.g. prepared typical errors), Check evaluates them for the current variant, the expressions are stored in the test
 - [[Meclib Workbench]], PRT editor: tooltips for the answer tests and their options, links to the STACK documentation and to STACK's test cases of the chosen test; list of answer tests corrected to STACK's names (`Units`, `UnitsStrict` instead of `UnitsSigFigs`, `UnitsStrictSigFigs`; `SigFigsStrict`, `Antidiff`, `AddConst` added)

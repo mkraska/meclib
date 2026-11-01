@@ -456,95 +456,12 @@ greyed and stay unchecked. The record is kept in the question description
 `Revised by Meclib Workbench <date>`, `Review rejected: <rule[target]>, ...`;
 other text in that field is kept.
 
-Current rules: forbidden identifiers; broken `style=style="..."` attributes;
-margin of right/left floating blocks (graphic); empty `[[lang]]` declaration when meclib feedback is used;
-obsolete `fb_*_EN.mac`; settings of the graphic's inputs (objects, names);
-input settings (insert stars: spaces only, none for numbers; placeholder hint;
-validation compact; students must verify); multilingual syntax hints (the fix
-adds `stack_include` of `fb_value.mac` if the question lacks it); PRT
-feedback style compact, feedback format html (Markdown suppresses the yellow
-feedback background), quiet answer test with meclib
-feedback, simplification off with `fb_unit`; relative tolerance other than
-0.005 (hint); default mark 0 with PRTs; object indices written as numbers
-(hint: use variables like `i_A`); model answer of the graphic equal to its
-initial state (hint); legacy state `"locked"`, replaced by `"SHOW"` (`fb_system()` counts only
-SHOW/show as shown) for object types with a regression test, i.e. types that
-appear with `"SHOW"` in a scene of `tests/scenes/` (`state_show.json`: beam,
-q, fix1, fix12, fix123, bar, force, moment); other types get a hint.
-
-Math delimiters (`text.math-delimiters`): in HTML texts `\( ... \)`; in
-Markdown texts the strict form `\\\( ... \\\)` (backslash and bracket both
-escaped, so Markdown never takes the bracket for part of a link), except
-inside block-level HTML (a line starting with `<p>`, `<table>`, `<div>` ...
-up to its closing tag), which Markdown passes through unchanged: there
-`\( ... \)` as in HTML. Checked: question text, general and specific
-feedback, question note, PRT node feedback, each by its own format; only
-complete pairs, not in `[[jsxgraph]]` blocks or `{@...@}`/`{#...#}`.
-
-Includes of meclib's Maxima files (`include.unused`, recommended;
-`include.missing`, required): an included file of which the question uses no
-function and no variable is reported, the fix removes its `stack_include`
-(loading it only costs compile time, which shows as CAS timeouts in Moodle).
-A meclib function or variable used without its file is reported, the fix adds
-the include (same branch as the question's other meclib includes). Uses are
-searched in all Maxima code: question variables, feedback variables, CAS parts
-of the texts and of the syntax hints, model answers, PRT nodes (SAns, TAns,
-test options); a function counts only when called (`angle(`), so that a
-variable of the same name does not count. Files needed by a needed file count
-as needed; `*_EN.mac` files are never proposed.
-
-Raw values in formulas (`text.raw-in-math`, required): `{#...#}` inside
-`\( ... \)` or `\[ ... \]` becomes `{@...@}`. Where Moodle shows the castext
-unevaluated (question bank, import), MathJax fails on `#`, and Moodle does not
-save such a question; `{@...@}` inside a formula gives the LaTeX of the value
-without delimiters. Same texts as above; `[[jsxgraph]]` blocks (e.g.
-`{#init#}`) are not touched.
-
-Matrix inputs (`matrix.layout`, `matrix.feedback`, wiki "Matrix input" and
-"Matrix Feedback"): a paragraph `<p>label [[input:S_X]] [[validation:S_X]]
-[[feedback:X]]</p>` becomes a table row label | input | validation with the
-feedback below; PRT `X` gets the feedback variable
-`[txt, isOK]: fb_unit_matrix(S_X, T, tol)` (numeric: a numeric answer test,
-`fb_unit` or the old `toList` pattern; the answer test becomes AlgEquiv
-`isOK` = `true`, `toList` is removed) or `txt: fb_vars_matrix(S_X, T, vars)`
-(otherwise; AlgEquiv on the matrix stays), feedback `{@txt@}` in both
-branches, quiet. `T` is the input's model answer; tolerance and `vars` are
-taken from the old PRT, simple symbol labels of the old per-component
-feedback (`<br>\(N\): {@fb_unit(...)@}`) become the label list. PRTs with
-several nodes or other feedback text get a hint only.
-
-Unused embedded files (`files.unused`): files stored in the question (`<file>`
-elements of its texts) that no text shows as `@@PLUGINFILE@@/name` - usually
-leftovers of earlier versions edited in Moodle (an image replaced in the editor
-keeps the old file). The message names where the file is stored and which
-text shows another file of the same type instead (probably its newer
-version). The review shows the image;
-the fix removes all copies of that file from the question.
-
-meclib from a branch other than main (`include.branch`, a hint): a
-`stack_include` of `mkraska/meclib/<branch>/...` with a branch other than
-`main` (e.g. while a feature exists only on the dev branch). The fix switches
-the URL to main - only after the branch is merged, as main may lack the
-functions the question uses.
-
-Includes of the removed compact copies (`include.dist`, required): a
-`stack_include` of `.../Maxima/dist/<file>`. The folder `Maxima/dist/` no
-longer exists (STACK drops comments when it reads the code, so the copies did
-not make the compilation faster); STACK refuses such a question as soon as it
-compiles it again ("stack_include ... could not retrieve"). The fix includes
-`.../Maxima/<file>` instead.
-
-Local copies of meclib functions (`functions.legacy`): a function defined in
-the question variables that a meclib Maxima file defines too (older questions
-carried their own copies of the feedback functions). Reported when that file
-is included (the local copy hides the current version) or the name starts
-with `fb_`. The fix deletes the definition and adds the include if missing.
-
-Missing `;` in Maxima code (`maxima.semicolon`): where a line ends a complete
-statement and the next line starts an assignment or call, STACK assumes a
-missing `;` (the preview reports it in the messages). The fix writes the `;`
-into the question variables or the PRT's feedback variables, right after the
-statement (before a trailing comment).
+The rules - key, level, automatic fix, what they check and why - are listed on
+the wiki page [Meclib Workbench Review Rules](https://github.com/mkraska/meclib/wiki/Meclib-Workbench-Review-Rules)
+(`doc/wiki/Meclib Workbench Review Rules.md`). The page is generated from
+`rules.py` (docstrings of the rule functions and the messages of their
+findings): after a change of the rules run `python build_rules_doc.py`, which
+also names rule functions without an explanation.
 
 **Snippet ...** inserts a text snippet at the cursor of the field last
 edited: the interactive and the fixed [[jsxgraph]] block, the empty

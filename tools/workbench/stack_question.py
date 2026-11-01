@@ -635,13 +635,28 @@ def student_value(inp, raw, decimals):
     return v
 
 
-def question_variable_words(inp, value, qv_names):
+# STACK's unit names (stack/cas/casstring.units.class.php, STACK 4.13.1): units without
+# prefixes, units with prefixes, the prefixes. In units mode they are allowed in answers even
+# where a question variable has the same name (cassecurity is_allowed_to_read checks the units
+# before the teacher's variable names) - e.g. g (gram) for a question variable g.
+_NONPREFIX_UNITS = ("min amu u mmHg bar ha cc gal mbar atm torr rev deg rpm au Da Np B dB day year hp in ft "
+                    "yd mi lb dpt").split()
+_PREFIX_UNITS = ("m l L g t s h Hz Bq cd N Pa cal Cal Btu eV J W Wh A ohm Omega C V F S Wb T H Gy rem Sv lx "
+                 "lm mol M kat rad sr K VA eV Ci").split()
+_PREFIXES = "y z a f p n u m c d da h k M G T P E Z Y".split()
+STACK_UNITS = set(_NONPREFIX_UNITS) | set(_PREFIX_UNITS) | {p + u for u in _PREFIX_UNITS for p in _PREFIXES}
+
+
+def question_variable_words(inp, value, qv_names, units=False):
     """Names of question variables used as variables in a student's answer: STACK rejects such
     an answer as invalid ("Forbidden variable or constant"), unless the name is among the
-    input's allowed words (Authoring/Variables, Notes). Function calls are not counted."""
+    input's allowed words (Authoring/Variables, Notes) or - in units mode (a units input or a
+    units answer test in the question) - is a unit name. Function calls are not counted."""
     if not qv_names:
         return []
     allowed = {w.strip() for w in (inp.get("allowwords") or "").split(",") if w.strip()}
+    if units:
+        allowed |= STACK_UNITS
     code = re.sub(r'"(?:[^"\\]|\\.)*"', '""', value)
     found = []
     for m in re.finditer(r"(?<![A-Za-z0-9_%])([A-Za-z%_][A-Za-z0-9_%]*)(?!\s*\()", code):
@@ -1098,7 +1113,8 @@ def answer_code(data, answers, langs, resolver, checked, qv_names=(), texprs=Non
                 continue
         else:
             value = student_value(inp, raw, data["decimals"])
-            bad = question_variable_words(inp, value, qv_names) if inp.get("type") not in ("string", "notes") else []
+            bad = (question_variable_words(inp, value, qv_names, uses_units(data))
+                   if inp.get("type") not in ("string", "notes") else [])
             if bad:
                 inputs[n] = {"state": "invalid", "value": value,
                              "msg": "Forbidden variable or constant: %s." % ", ".join(bad),
