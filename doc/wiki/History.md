@@ -1,6 +1,8 @@
 ### Dev Branch
 
 2026 11 01
+- [[fb_floats()]]: if the answer contains only one number, the hint on a deviating value no longer names it ("Marked number 6.25: The value is too large ..." becomes "The value is too large ..."); also inside a function argument or exponent with a single number
+- [[Meclib Workbench]], Check: PRTs with simplification off whose feedback comes from a meclib function that builds its text with `castext()` (e.g. `fb_unit`) failed with "ssearch: unsuitable optional arguments": the nested castext ran with `simp: false`; the castext renderer of `Maxima/tests/harness.mac` now also computes with `simp: true` in nested calls
 - [[Meclib Workbench]], preview: a syntax error in a text (Maxima: "Premature termination of input at $", which names no place - the `$` is the end the workbench adds) now names the incomplete `{@...@}`, `{#...#}` or `[[if]]`/`[[define]]` attribute and why: missing closing bracket, unclosed string, bracket closed by the wrong one, trailing operator
 - [[Meclib Workbench]], syntax help: `build_help.py` also reads STACK's function library documentation (`doc/en/CAS/Library`), with descriptions of the arguments and the return value; this adds 28 STACK functions that are not defined with `:=` in STACK's Maxima files, among them `stackunits(number, unit)`, `backtosibase()`, `str_to_html()`, `str_to_js()`. The STACK documentation is taken from the STACK API's source if present (no separate download)
 - [[Meclib Workbench]], input editor: the coded options (insert stars, hint attribute, forbid float, lowest terms, check type, strict syntax) are dropdowns "value – meaning" (texts of STACK 4.13.1); the tooltip of these and of verify/validation shows STACK's explanation and the current choice

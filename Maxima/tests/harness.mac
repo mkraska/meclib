@@ -224,8 +224,11 @@ fb_tmpl_split_if_body(%ct_s, %ct_p):= block([%ct_pos: %ct_p, %ct_depth: 0, %ct_e
    including [[lang]]/[[/lang]] - passes through as plain text, see the comment above this
    block). {#expr#} is STACK's raw output, string(expr): for a string that is a quoted
    literal, which is how e.g. {#init#} becomes a JavaScript string in a [[jsxgraph]] block. */
-fb_tmpl_render(%ct_s):= if fb_tmpl_inside then fb_tmpl_render1(%ct_s)
-  else block([fb_tmpl_qsimp: simp, fb_tmpl_inside: true, simp: true], fb_tmpl_render1(%ct_s))$
+/* Nested calls (castext() inside an evaluated expression, e.g. a feedback function of meclib
+   that builds its text with castext()) run while simp is the question's setting again: they keep
+   the outer question setting and switch the bookkeeping back to simp: true as well. */
+fb_tmpl_render(%ct_s):= block([fb_tmpl_qsimp: if fb_tmpl_inside then fb_tmpl_qsimp else simp,
+    fb_tmpl_inside: true, simp: true], fb_tmpl_render1(%ct_s))$
 fb_tmpl_render1(%ct_s):= block(
   [%ct_out: "", %ct_pos: 1, %ct_len: slength(%ct_s), %ct_cands: ["[[define","[[foreach","[[if","[[wbif","{@","{#","[[comment]]","[[htmlformat]]"],
    %ct_p, %ct_tag, %ct_inner, %ct_closepos, %ct_val, %ct_var, %ct_exprsrc, %ct_bodyinfo, %ct_rawbody, %ct_listval, %ct_iterout,

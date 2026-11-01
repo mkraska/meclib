@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-Overview */ 
-fb_value_version: "2026 10 23";
+fb_value_version: "2026 11 01";
 
 /* https://github.com/mkraska/meclib/wiki/deg2rad */
 /* Substitutes any use of the "deg" marker in expr with its numeric value (pi/180), for use right
@@ -461,7 +461,7 @@ fb_floats(%_sans, %_tans, %_tol) := fb_floats_main(%_sans, %_tans, %_tol, false)
    numbers if it has more than one summand, since the student typed the argument in another form */
 fb_floats_main(%_sans, %_tans, %_tol, %_inner) := block([simp: true, %_s, %_t, %_sT, %_tT, %_used, %_pairs: [], %_us, %_ut: [],
     %_bad: [], %_txt: "", %_r, %_i, %_j, %_p, %_disp, %_tab, %_dt, %_ds, %_du, %_tu, %_v, %_dimtxt: "", %_vt: "", %_nd: [],
-    %_s0, %_sc, %_tc, %_tu2, %_argtxt: "", %_back: [], %_lone: [], %_fcalls: [], %_fraw: [], %_others, fb_floats_nums, fb_floats_rnew, fb_floats_rk,
+    %_s0, %_sc, %_tc, %_tu2, %_argtxt: "", %_nnum, %_back: [], %_lone: [], %_fcalls: [], %_fraw: [], %_others, fb_floats_nums, fb_floats_rnew, fb_floats_rk,
     str_value: fb_lang("&nbsp;Zahlenwert ", "&nbsp;Number "),
     str_marked: fb_lang("&nbsp;Markierter Zahlenwert ", "&nbsp;Marked number "),
     str_structure: fb_lang("&nbsp;Tut mir leid, leider habe ich keine konkreteren Hinweise.", "&nbsp;Sorry, I have no more specific hints."),
@@ -577,10 +577,13 @@ fb_floats_main(%_sans, %_tans, %_tol, %_inner) := block([simp: true, %_s, %_t, %
     if %_dimtxt = "" and %_vt = "" then %_txt: castext_concat(%_txt, castext_concat(
       if %_fcalls # [] then str_fun else "",
       if %_others = [] then "" else if length(%_others) = 1 then str_term else str_terms))),
+  /* an answer with a single number: the deviation needs no "Number x:" - it can only be that one */
+  %_nnum: apply("+", map(lambda([%_e], length(%_e[2])), %_sT)),
   for %_b in %_bad do (
     %_r: fb_unit(%_b[3], %_b[4], %_tol),
     /* the number with 4 significant figures (an exact answer gives long decimals) */
-    %_txt: castext_concat(%_txt, castext_concat(castext_concat(str_value, castext("{@fb_sigfig(%_b[3], 4)@}:")), %_r))
+    %_txt: castext_concat(%_txt, if %_nnum = 1 then %_r
+      else castext_concat(castext_concat(str_value, castext("{@fb_sigfig(%_b[3], 4)@}:")), %_r))
   ),
   /* summands of the model answer without a partner, beyond those that the extra summands may stand for */
   if length(%_ut) > length(%_us) then
