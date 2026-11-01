@@ -21,8 +21,8 @@ fb_check(fb_floats(sqrt(a*(6*g-0.502*c*a/m)), sqrt(6*g*a-(3*sqrt(5)-6)^2*c*a^2/m
 
 /* ---- a number outside the tolerance is named with fb_unit()'s deviation ---- */
 fb_check(fb_floats(0.75*c*a, (3*sqrt(5)-6)*c*a, 0.01), false,
-  "&nbsp;Zahlenwert \\({0.75}\\):&nbsp;Der Betrag ist um mindestens 5% zu gro&szlig;.",
-  "&nbsp;Number \\({0.75}\\):&nbsp;The value is too large by at least 5%.",
+  "&nbsp;Der Betrag ist um mindestens 5% zu gro&szlig;.",
+  "&nbsp;The value is too large by at least 5%.",
   "fb_floats: one number wrong");
 
 /* ---- other variables: fb_vars() on the original expressions ---- */
@@ -39,8 +39,8 @@ fb_check(fb_floats(0.708*c*a^2, (3*sqrt(5)-6)*c*a, 0.01), false,
 
 /* ---- sign errors: the sign belongs to the number (internal form), so fb_unit() reports it ---- */
 fb_check(fb_floats(-0.708*c*a, (3*sqrt(5)-6)*c*a, 0.01), false,
-  "&nbsp;Zahlenwert \\({-0.708}\\):&nbsp;Pr&uuml;fen Sie das Vorzeichen.",
-  "&nbsp;Number \\({-0.708}\\):&nbsp;Check the sign.",
+  "&nbsp;Pr&uuml;fen Sie das Vorzeichen.",
+  "&nbsp;Check the sign.",
   "fb_floats: sign of a factor");
 fb_check(fb_floats(g+0.317*a*c/m, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
   "&nbsp;Zahlenwert \\({0.317}\\):&nbsp;Pr&uuml;fen Sie das Vorzeichen.",
@@ -90,8 +90,8 @@ fb_check(fb_floats(g, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
   "&nbsp;Your result is right except for a missing term.",
   "fb_floats: missing summand");
 fb_check(fb_floats(0.317*a*c/m, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
-  "&nbsp;Zahlenwert \\({0.317}\\):&nbsp;Pr&uuml;fen Sie das Vorzeichen.&nbsp;Au&szlig;erdem fehlt ein Term.",
-  "&nbsp;Number \\({0.317}\\):&nbsp;Check the sign.&nbsp;Also, a term is missing.",
+  "&nbsp;Pr&uuml;fen Sie das Vorzeichen.&nbsp;Au&szlig;erdem fehlt ein Term.",
+  "&nbsp;Check the sign.&nbsp;Also, a term is missing.",
   "fb_floats: wrong number and missing summand");
 fb_check(fb_floats(g-0.3*a*c/m-a*c, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
   "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({-\\frac{{\\underline{0.3}}\\,a\\,c}{m}+g-{\\underline{a\\,c}}}\\).&nbsp;Pr&uuml;fen Sie den markierten Term.&nbsp;Markierter Zahlenwert \\({-0.3}\\):&nbsp;Der Betrag ist um mindestens 5% zu klein.",
@@ -102,18 +102,18 @@ fb_check(fb_floats(g-0.3*a*c/m-a*c, g-(3-6/sqrt(5))*c*a/m, 0.01), false,
    their arguments compared by fb_floats() itself; the case of TM3 05 05 (block on a half cylinder),
    v = sqrt(v_0^2+2*g*r*(1-cos(alpha))) ---- */
 fb_check(fb_floats(sqrt(v_0^2+2*(1-cos(2*alpha))*g*r), sqrt(v_0^2+2*g*r*(1-cos(alpha))), 0.01), false,
-  "&nbsp;Unter der Wurzel:&nbsp;Im Argument von \\({\\cos \\left( 2\\,\\alpha \\right)}\\):&nbsp;Zahlenwert \\({2}\\):&nbsp;Der Betrag ist um mindestens 100% zu gro&szlig;.",
-  "&nbsp;Under the root:&nbsp;In the argument of \\({\\cos \\left( 2\\,\\alpha \\right)}\\):&nbsp;Number \\({2}\\):&nbsp;The value is too large by at least 100%.",
+  "&nbsp;Unter der Wurzel:&nbsp;Im Argument von \\({\\cos \\left( 2\\,\\alpha \\right)}\\):&nbsp;Der Betrag ist um mindestens 100% zu gro&szlig;.",
+  "&nbsp;Under the root:&nbsp;In the argument of \\({\\cos \\left( 2\\,\\alpha \\right)}\\):&nbsp;The value is too large by at least 100%.",
   "fb_floats: wrong number in the argument of cos under the root");
 fb_check(fb_floats(sqrt(v_0^2+2*(1-cos(alpha/2))*g*r), sqrt(v_0^2+2*g*r*(1-cos(alpha))), 0.01), false,
-  "&nbsp;Unter der Wurzel:&nbsp;Im Argument von \\({\\cos \\left( 0.5\\,\\alpha \\right)}\\):&nbsp;Zahlenwert \\({0.5}\\):&nbsp;Der Betrag ist um mindestens 50% zu klein.",
-  "&nbsp;Under the root:&nbsp;In the argument of \\({\\cos \\left( 0.5\\,\\alpha \\right)}\\):&nbsp;Number \\({0.5}\\):&nbsp;The value is too small by at least 50%.",
+  "&nbsp;Unter der Wurzel:&nbsp;Im Argument von \\({\\cos \\left( 0.5\\,\\alpha \\right)}\\):&nbsp;Der Betrag ist um mindestens 50% zu klein.",
+  "&nbsp;Under the root:&nbsp;In the argument of \\({\\cos \\left( 0.5\\,\\alpha \\right)}\\):&nbsp;The value is too small by at least 50%.",
   "fb_floats: argument of cos too small");
 fb_check(fb_floats(sqrt(v_0^2+2*(2-cos(2*alpha))*g*r), sqrt(v_0^2+2*g*r*(1-cos(alpha))), 0.01), false,
   "&nbsp;Unter der Wurzel:&nbsp;Ausgewertet entspricht Ihre Eingabe \\({{{v}_{0}}^2-2\\,{\\underline{\\cos \\left( 2\\,\\alpha \\right)}}\\,g\\,r+
- {\\underline{4}}\\,g\\,r}\\).&nbsp;Im Argument von \\({\\cos \\left( 2\\,\\alpha \\right)}\\):&nbsp;Zahlenwert \\({2}\\):&nbsp;Der Betrag ist um mindestens 100% zu gro&szlig;.&nbsp;Markierter Zahlenwert \\({4}\\):&nbsp;Der Betrag ist um mindestens 100% zu gro&szlig;.",
+ {\\underline{4}}\\,g\\,r}\\).&nbsp;Im Argument von \\({\\cos \\left( 2\\,\\alpha \\right)}\\):&nbsp;Der Betrag ist um mindestens 100% zu gro&szlig;.&nbsp;Markierter Zahlenwert \\({4}\\):&nbsp;Der Betrag ist um mindestens 100% zu gro&szlig;.",
   "&nbsp;Under the root:&nbsp;Evaluated, your answer is \\({v_{0}^2-2\\,{\\underline{\\cos \\left( 2\\,\\alpha \\right)}}\\,g\\,r+
- {\\underline{4}}\\,g\\,r}\\).&nbsp;In the argument of \\({\\cos \\left( 2\\,\\alpha \\right)}\\):&nbsp;Number \\({2}\\):&nbsp;The value is too large by at least 100%.&nbsp;Marked number \\({4}\\):&nbsp;The value is too large by at least 100%.",
+ {\\underline{4}}\\,g\\,r}\\).&nbsp;In the argument of \\({\\cos \\left( 2\\,\\alpha \\right)}\\):&nbsp;The value is too large by at least 100%.&nbsp;Marked number \\({4}\\):&nbsp;The value is too large by at least 100%.",
   "fb_floats: wrong argument and wrong number under the root");
 fb_check(fb_floats(sqrt(v_0^2+2*(1-sin(alpha))*g*r), sqrt(v_0^2+2*g*r*(1-cos(alpha))), 0.01), false,
   "&nbsp;Unter der Wurzel:&nbsp;Ausgewertet entspricht Ihre Eingabe \\({-2\\,g\\,r\\,{\\underline{\\sin }}\\left( \\alpha \\right)+{{v}_{0}}^2+2\\,g
@@ -131,8 +131,8 @@ fb_check(fb_floats(sqrt(v_0^2+2*(1-cos(alpha))*g*r)+cos(3*alpha), sqrt(v_0^2+2*g
  {\\underline{\\cos \\left( 3\\,\\alpha \\right)}}}\\).&nbsp;Check the marked term.",
   "fb_floats: extra summand with a function");
 fb_check(fb_floats(3*exp(-2*x), 3*exp(-x), 0.01), false,
-  "&nbsp;Im Exponenten von \\({e^ {- 2\\,x }}\\):&nbsp;Zahlenwert \\({-2}\\):&nbsp;Der Betrag ist um mindestens 100% zu gro&szlig;.",
-  "&nbsp;In the exponent of \\({e^ {- 2\\,x }}\\):&nbsp;Number \\({-2}\\):&nbsp;The value is too large by at least 100%.",
+  "&nbsp;Im Exponenten von \\({e^ {- 2\\,x }}\\):&nbsp;Der Betrag ist um mindestens 100% zu gro&szlig;.",
+  "&nbsp;In the exponent of \\({e^ {- 2\\,x }}\\):&nbsp;The value is too large by at least 100%.",
   "fb_floats: wrong number in the exponent of exp");
 fb_check(fb_floats(a*sin(0.5236*x), a*sin(%pi/6*x), 0.01), true,
   "",
@@ -212,16 +212,16 @@ kill(fb_dims)$
    (here "*10", STACK's default) - a plain float would show as 1.5E-14 ---- */
 texput_scientificnotation("*10")$
 fb_check(fb_floats(1.5e-14*a, 1.0e-14*a, 0.01), false,
-  "&nbsp;Zahlenwert \\({1.500 \\times 10^{-14}}\\):&nbsp;Der Betrag ist um mindestens 50% zu gro&szlig;.",
-  "&nbsp;Number \\({1.500 \\times 10^{-14}}\\):&nbsp;The value is too large by at least 50%.",
+  "&nbsp;Der Betrag ist um mindestens 50% zu gro&szlig;.",
+  "&nbsp;The value is too large by at least 50%.",
   "fb_floats: scientific notation of a small number");
 fb_check(fb_floats(sqrt(2)*1e-7*a, 2e-7*a, 0.01), false,
-  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({{\\underline{1.414 \\times 10^{-7}}}\\,a}\\).&nbsp;Markierter Zahlenwert \\({1.414 \\times 10^{-7}}\\):&nbsp;Der Betrag ist um mindestens 20% zu klein.",
-  "&nbsp;Evaluated, your answer is \\({{\\underline{1.414 \\times 10^{-7}}}\\,a}\\).&nbsp;Marked number \\({1.414 \\times 10^{-7}}\\):&nbsp;The value is too small by at least 20%.",
+  "&nbsp;Ausgewertet entspricht Ihre Eingabe \\({{\\underline{1.414 \\times 10^{-7}}}\\,a}\\).&nbsp;Der Betrag ist um mindestens 20% zu klein.",
+  "&nbsp;Evaluated, your answer is \\({{\\underline{1.414 \\times 10^{-7}}}\\,a}\\).&nbsp;The value is too small by at least 20%.",
   "fb_floats: scientific notation in the evaluated form");
 stackfltsep: ","$
 fb_check(fb_floats(1.5e-14*a, 1.0e-14*a, 0.01), false,
-  "&nbsp;Zahlenwert \\({1{,}500 \\times 10^{-14}}\\):&nbsp;Der Betrag ist um mindestens 50% zu gro&szlig;.",
-  "&nbsp;Number \\({1{,}500 \\times 10^{-14}}\\):&nbsp;The value is too large by at least 50%.",
+  "&nbsp;Der Betrag ist um mindestens 50% zu gro&szlig;.",
+  "&nbsp;The value is too large by at least 50%.",
   "fb_floats: scientific notation with the decimal comma");
 stackfltsep: "."$
