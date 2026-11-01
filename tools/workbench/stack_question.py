@@ -513,6 +513,66 @@ def castext_cas_parts(text):
     return parts
 
 
+_CLOSE = {"(": ")", "[": "]", "{": "}"}
+
+
+def incomplete_code(code):
+    """Why a piece of Maxima code is incomplete or unbalanced, or None: an unclosed string or
+    bracket, a closing bracket without its opening one, a trailing operator. Maxima itself only
+    says "Premature termination of input at $" (the $ is the end the workbench adds)."""
+    stack, i, n = [], 0, len(code)
+    while i < n:
+        c = code[i]
+        if c == '"':
+            j = i + 1
+            while j < n and code[j] != '"':
+                j += 2 if code[j] == "\\" else 1
+            if j >= n:
+                return "unclosed string"
+            i = j + 1
+            continue
+        if code.startswith("/*", i):
+            j = code.find("*/", i + 2)
+            if j < 0:
+                return "unclosed comment /*"
+            i = j + 2
+            continue
+        if c in _CLOSE:
+            stack.append(c)
+        elif c in ")]}":
+            if not stack:
+                return "'%s' without an opening bracket" % c
+            o = stack.pop()
+            if _CLOSE[o] != c:
+                return "'%s' closed by '%s'" % (o, c)
+        i += 1
+    if stack:
+        return "missing " + " ".join("'%s'" % _CLOSE[o] for o in reversed(stack))
+    t = code.rstrip()
+    if t and t[-1] in "+-*/^=:,<>#" and not t.endswith(("'", ":=")):
+        return "ends with an operator"
+    if not t:
+        return "empty"
+    return None
+
+
+def castext_syntax_details(text):
+    """The CAS parts of a castext that are incomplete: ["{@...@}: missing ')'", ...]."""
+    out = []
+    for m in CT_CAS.finditer(text or ""):
+        why = incomplete_code(m.group(2))
+        if why:
+            out.append("%s: incomplete expression - %s" % (m.group(0), why))
+    for m in CT_BLOCK.finditer(text or ""):
+        if m.group(1).lower() in CAS_BLOCKS:
+            for a in CT_ATTR.finditer(m.group(2)):
+                code = a.group(1) if a.group(1) is not None else a.group(2)
+                why = incomplete_code(code)
+                if why:
+                    out.append("[[%s ...]] %s: incomplete expression - %s" % (m.group(1), code, why))
+    return out
+
+
 def castext_forbidden(text):
     """forbidden_identifiers() of all Maxima code in a castext."""
     return [f for part in castext_cas_parts(text) for f in forbidden_identifiers(part)]
@@ -1039,6 +1099,13 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None, tes
             info["output"] = "\n".join(messages[key])
     castext_errors = dict(security)
     castext_errors.update({arg: "\n".join(messages.get(("CT", arg), [])) or "error" for kind, arg in errors if kind == "CT"})
+    # Maxima's syntax errors name no place ("Premature termination of input at $."): name the
+    # {@...@} that is incomplete, if one is
+    for key, msg in list(castext_errors.items()):
+        if key in texts and "syntax error" in msg.lower():
+            details = castext_syntax_details(texts[key])
+            if details:
+                castext_errors[key] = "\n".join(details) + "\n(Maxima: " + msg.strip() + ")"
 
     def first(key):
         text = results.get(key, [None])[0]
