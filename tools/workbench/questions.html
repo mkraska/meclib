@@ -224,6 +224,9 @@
   .ed .CodeMirror-scroll { min-height: 3em; }
   /* the editors keep their height; drag the lower right corner to change it */
   .ed .CodeMirror.cm-resizable { resize: vertical; overflow: hidden; }
+  /* one-line editors of the input table (model answer, syntax hint) */
+  .ed .CodeMirror.cm-single { height: auto; min-height: 0; min-width: 11em; }
+  .ed .CodeMirror.cm-single .CodeMirror-scroll { min-height: 0; max-height: 6em; }
   #snippetDialog { border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; width: min(460px, 92vw); }
   #snippetDialog::backdrop { background: rgba(0, 0, 0, .15); }
   #snippetList li .pv { display: block; font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -756,6 +759,32 @@ function fillEditor(fields) {
   setDirty(false);
 }
 
+// input fields edited as one-line code editors: the model answer is Maxima, the syntax hint castext
+const INPUT_CODE_FIELDS = { tans: "maxima", syntaxhint: "castext" };
+// the multilingual syntax hints of fb_value.mac by input type (the review rule inputs.syntaxhint)
+const MECLIB_HINTS = { algebraic: "meclib_h_alg", numerical: "meclib_h_number", units: "meclib_h_unit" };
+let inputEditors = [];
+function inputCodeField(el) {
+  const row = () => el.closest("[data-input]");
+  const typeOf = () => {
+    const name = row() && row().dataset.input;
+    const sel = document.querySelector(`#inputEd tr[data-input="${CSS.escape(name)}"] [data-ik="type"]`);
+    return sel ? sel.value : "";
+  };
+  let ed = null;
+  ed = MeclibEditor.field(el, INPUT_CODE_FIELDS[el.dataset.ik], () => { if (ed && ed.cm) ed.cm.save(); setDirty(true); }, {
+    singleLine: true,
+    context: () => ({ format: "html", inputs: [], prts: [] }),
+    // after "{" in the syntax hint: the meclib hints, the one of the input's type first
+    braceSnippets: el.dataset.ik !== "syntaxhint" ? null : () => {
+      const first = MECLIB_HINTS[typeOf()];
+      return Object.values(MECLIB_HINTS).sort((a, b) => (b === first) - (a === first))
+        .map((v) => ({ text: `{@${v}@}`, display: `{@${v}@}  meclib syntax hint (fb_value.mac)` }));
+    },
+  });
+  el._ed = ed;
+  inputEditors.push(ed);
+}
 const INPUT_MAIN = [["type", "type"], ["tans", "model answer"], ["boxsize", "size"], ["mustverify", "verify"], ["showvalidation", "validation"]];
 const INPUT_MORE = [["options", "options"], ["syntaxhint", "syntax hint"], ["forbidwords", "forbidden words"], ["allowwords", "allowed words"],
   ["insertstars", "insert stars"], ["forbidfloat", "forbid float"], ["requirelowestterms", "lowest terms"], ["checkanswertype", "check type"],
@@ -824,6 +853,8 @@ function renderInputEditor(inputs) {
       } else if (k === "mustverify" || k === "showvalidation") {
         const opts = k === "mustverify" ? [["1", "yes"], ["0", "no"]] : [["1", "yes"], ["2", "yes, no vars"], ["3", "compact"], ["0", "no"]];
         h += `<td><select data-ik="${k}" title="${esc(codeTitle(k, inp[k]))}">${opts.map(([v, l]) => `<option value="${v}"${v === inp[k] ? " selected" : ""}>${l}</option>`).join("")}</select></td>`;
+      } else if (INPUT_CODE_FIELDS[k]) {
+        h += `<td><textarea data-ik="${k}" rows="1" spellcheck="false">${esc(inp[k])}</textarea></td>`;
       } else {
         h += `<td><input type="text" data-ik="${k}" value="${esc(inp[k])}" spellcheck="false"${k === "boxsize" ? ' style="width:4em"' : ""}></td>`;
       }
@@ -832,10 +863,15 @@ function renderInputEditor(inputs) {
     h += `</tr><tr class="more" data-input="${esc(inp.name)}"><td></td><td colspan="${INPUT_MAIN.length + 1}"><details><summary>more</summary>` +
       INPUT_MORE.map(([k, l]) => `<div class="form-row"><label style="width:9em"${INPUT_CODES[k] ? ` title="${esc(INPUT_CODES[k].help)}"` : ""}>${l}</label>` +
         (INPUT_CODES[k] ? codeSelect(k, inp[k])
+          : INPUT_CODE_FIELDS[k] ? `<div style="flex:1"><textarea data-ik="${k}" rows="1" spellcheck="false">${esc(inp[k])}</textarea></div>`
           : `<input type="text" data-ik="${k}" value="${esc(inp[k])}" spellcheck="false">`) + `</div>`).join("") +
       "</details></td></tr>";
   }
   t.innerHTML = h;
+  inputEditors = [];
+  for (const el of t.querySelectorAll("textarea[data-ik]")) inputCodeField(el);
+  // an editor inside a closed <details> has no size yet: refresh it when opened
+  for (const d of t.querySelectorAll("details")) d.addEventListener("toggle", () => { for (const ed of inputEditors) ed.refresh(); });
   for (const el of t.querySelectorAll("[data-ik]")) el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
     setDirty(true);
     if (INPUT_CODES[el.dataset.ik]) el.title = codeTitle(el.dataset.ik, el.value);
@@ -1374,7 +1410,7 @@ function applyToEditor(edits) {
       for (const d of v) for (const [ik, iv] of Object.entries(d)) {
         if (ik === "name") continue;
         const el = document.querySelector(`#inputEd [data-input="${CSS.escape(d.name)}"] [data-ik="${ik}"]`);
-        if (el) el.value = iv;
+        if (el) { el.value = iv; if (el._ed) el._ed.set(iv); }
       }
     } else if (k.endsWith("_format")) {
       const sel = document.querySelector(`#editView [data-format="${k.slice(0, -7)}"]`);
@@ -1393,6 +1429,7 @@ function autoGrow(ta) {
 function refreshEditors() {
   for (const ed of Object.values(editors)) ed.refresh();
   for (const ed of prtEditors) ed.refresh();
+  for (const ed of inputEditors) ed.refresh();
   for (const ta of document.querySelectorAll("#editView textarea")) if (ta.style.display !== "none") autoGrow(ta);
 }
 // the editor fields: Maxima for the question variables, castext for the texts, plain for the name

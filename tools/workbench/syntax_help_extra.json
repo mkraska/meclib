@@ -1324,6 +1324,30 @@
    "args": [],
    "text": "Units of the variables of the answers, for the unit check of `fb_floats()` and `fb_dimension()`, e.g. `fb_dims: [a = \"m\", m = \"kg\", g = \"m/s^2\"]`. Declare every variable that occurs in the answers: an undeclared one switches the check off for its term. A name that has a value in the question variables is written as a string (`\"m\" = \"kg\"`), a dimensionless variable gets `1`. Units: m, g, s, A, K, mol, N, J, W, Pa, bar, Hz, C, V, Ohm, min, h, d, t, l, L, rad, deg, rpm, with prefixes p n u m c d h k M G T; `*` or blank, `/`, `^2`, `^-1`, `^(1/2)`, parentheses.",
    "url": "https://github.com/mkraska/meclib/wiki/fb_floats()#units"
+  },
+  {
+   "name": "meclib_h_alg",
+   "kind": "variable",
+   "sig": "{@meclib_h_alg@}",
+   "args": [],
+   "text": "Syntax hint of algebraic inputs in German and English (\"Ausdruck / expression\", by the question's language), from `fb_value.mac`: write `{@meclib_h_alg@}` as the input's syntax hint, and include `fb_value.mac`. The review rule `inputs.syntaxhint` puts it in for plain hints.",
+   "url": "https://github.com/mkraska/meclib/wiki/Multilingual-questions"
+  },
+  {
+   "name": "meclib_h_number",
+   "kind": "variable",
+   "sig": "{@meclib_h_number@}",
+   "args": [],
+   "text": "Syntax hint of numerical inputs in German and English (\"Zahl / number\", by the question's language), from `fb_value.mac`: write `{@meclib_h_number@}` as the input's syntax hint, and include `fb_value.mac`. The review rule `inputs.syntaxhint` puts it in for plain hints.",
+   "url": "https://github.com/mkraska/meclib/wiki/Multilingual-questions"
+  },
+  {
+   "name": "meclib_h_unit",
+   "kind": "variable",
+   "sig": "{@meclib_h_unit@}",
+   "args": [],
+   "text": "Syntax hint of units inputs in German and English (\"Zahl mit Einheit / number with unit\", by the question's language), from `fb_value.mac`: write `{@meclib_h_unit@}` as the input's syntax hint, and include `fb_value.mac`. The review rule `inputs.syntaxhint` puts it in for plain hints.",
+   "url": "https://github.com/mkraska/meclib/wiki/Multilingual-questions"
   }
  ]
 }

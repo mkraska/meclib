@@ -3888,6 +3888,30 @@
    "source": "STACK v4.13.1"
   },
   {
+   "name": "meclib_h_alg",
+   "kind": "variable",
+   "sig": "{@meclib_h_alg@}",
+   "args": [],
+   "text": "Syntax hint of algebraic inputs in German and English (\"Ausdruck / expression\", by the question's language), from `fb_value.mac`: write `{@meclib_h_alg@}` as the input's syntax hint, and include `fb_value.mac`. The review rule `inputs.syntaxhint` puts it in for plain hints.",
+   "url": "https://github.com/mkraska/meclib/wiki/Multilingual-questions"
+  },
+  {
+   "name": "meclib_h_number",
+   "kind": "variable",
+   "sig": "{@meclib_h_number@}",
+   "args": [],
+   "text": "Syntax hint of numerical inputs in German and English (\"Zahl / number\", by the question's language), from `fb_value.mac`: write `{@meclib_h_number@}` as the input's syntax hint, and include `fb_value.mac`. The review rule `inputs.syntaxhint` puts it in for plain hints.",
+   "url": "https://github.com/mkraska/meclib/wiki/Multilingual-questions"
+  },
+  {
+   "name": "meclib_h_unit",
+   "kind": "variable",
+   "sig": "{@meclib_h_unit@}",
+   "args": [],
+   "text": "Syntax hint of units inputs in German and English (\"Zahl mit Einheit / number with unit\", by the question's language), from `fb_value.mac`: write `{@meclib_h_unit@}` as the input's syntax hint, and include `fb_value.mac`. The review rule `inputs.syntaxhint` puts it in for plain hints.",
+   "url": "https://github.com/mkraska/meclib/wiki/Multilingual-questions"
+  },
+  {
    "name": "mediant",
    "kind": "stack",
    "sig": "mediant(ex1, ex2)",

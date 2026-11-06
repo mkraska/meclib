@@ -459,7 +459,8 @@
         if (kind === "castext" && !inCas(c) && !inJsx(c)) {
           if (line[cur.ch - 1] === "\\") return snippetHint(c, { line: cur.line, ch: cur.ch - 1 - (/\\\\\\$/.test(line.slice(0, cur.ch)) ? 2 : 0) }, mathSnippets(c, opts));
           if (line[cur.ch - 1] === "{") return snippetHint(c, { line: cur.line, ch: cur.ch - 1 },
-            [{ text: "{@", tail: "@}", display: "{@ ... @}  value of a CAS expression" }, { text: "{#", tail: "#}", display: "{# ... #}  raw value (e.g. for JavaScript)" }]);
+            (opts.braceSnippets ? opts.braceSnippets() : []).concat(
+            [{ text: "{@", tail: "@}", display: "{@ ... @}  value of a CAS expression" }, { text: "{#", tail: "#}", display: "{# ... #}  raw value (e.g. for JavaScript)" }]));
           if (line.slice(cur.ch - 2, cur.ch) === "[[") return snippetHint(c, { line: cur.line, ch: cur.ch - 2 }, blockSnippets(opts));
           if (!explicit) return null;
         }
@@ -513,7 +514,8 @@
   function addClosing(cm, close) {
     const cur = cm.getCursor();
     const next = cm.getRange(cur, { line: cur.line, ch: cur.ch + 1 });
-    if (!(next === "" || /[\s)\]};,]/.test(next))) return;
+    const casEnd = /^[@#]\}$/.test(cm.getRange(cur, { line: cur.line, ch: cur.ch + 2 }));   // castext: before @} or #}
+    if (!(next === "" || casEnd || /[\s)\]};,]/.test(next))) return;
     cm.replaceRange(close, cur, cur, "*autoclose");
     const m = cm.markText(cur, { line: cur.line, ch: cur.ch + close.length }, { className: "cm-autoclosed", inclusiveLeft: false, inclusiveRight: false });
     (cm.state.autoClosed = cm.state.autoClosed || []).push(m);
@@ -650,6 +652,9 @@
   // A field wraps a textarea: a CodeMirror editor when available, the textarea otherwise.
   // opts.height: initial height in px (the user can drag the lower right corner; then
   // opts.onResize(height) is called, e.g. to remember it)
+  // opts.singleLine: one line without line numbers (a model answer, a syntax hint): Enter adds no
+  // line break, pasted line breaks become blanks
+  // opts.braceSnippets(): castext, snippets offered first after "{" ({text, tail, display})
   function field(textarea, kind, onChange, opts) {
     opts = opts || {};
     if (!ready) {
@@ -665,21 +670,27 @@
         plain: true,
       };
     }
+    const single = !!opts.singleLine;
     const cm = window.CodeMirror.fromTextArea(textarea, {
-      mode: kind, lineNumbers: true, lineWrapping: true, matchBrackets: true, indentUnit: 2, tabSize: 2,
+      mode: kind, lineNumbers: !single, lineWrapping: true, matchBrackets: true, indentUnit: 2, tabSize: 2,
       viewportMargin: 50,
       extraKeys: Object.assign({ Tab: (c) => c.replaceSelection("  "), "Shift-Tab": "indentLess",
         "Ctrl-Space": (c) => complete(c, kind, opts, true), F1: (c) => openHelpAtCursor(c), F2: (c) => toggleHelpBox(c),
         Esc: (c) => hideBox() },
+        single ? { Enter: () => {}, Tab: false, "Shift-Tab": false } : {},
         bracketKeys(kind, opts)),
     });
     cm.meclibKind = kind;
+    if (single) {
+      cm.on("beforeChange", (c, ch) => { if (ch.update && ch.text.length > 1) ch.update(ch.from, ch.to, [ch.text.join(" ")]); });
+      cm.getWrapperElement().classList.add("cm-single");
+    }
     cm.on("cursorActivity", (c) => updateBox(c));
     // only the box of this editor: a click into another field shows that field's box at once
     cm.on("blur", () => setTimeout(() => { if (!boxHover && boxCm === cm) hideBox(); }, 150));
     cm.on("inputRead", (c, change) => onInputRead(c, change, kind, opts));
     const wrap = cm.getWrapperElement();
-    wrap.classList.add("cm-resizable");
+    if (!single) wrap.classList.add("cm-resizable");
     if (opts.height) wrap.style.height = opts.height + "px";
     let lastH = wrap.offsetHeight;
     new ResizeObserver(() => {
