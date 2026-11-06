@@ -37,6 +37,7 @@ The review of the [[Meclib Workbench]] (Questions page, **Review** at the top of
 | [`grade.default`](#gradedefault) | recommended | yes | Default mark |
 | **Maxima code and includes** | | | |
 | [`include.lang-specific`](#includelang-specific) | recommended | yes | Language-specific library |
+| [`maxima.multsgn`](#maximamultsgn) | required | yes | Unknown option of make_multsgn() |
 | [`qv.unit-name`](#qvunit-name) | required | no | question variable … is a unit |
 | [`maxima.semicolon`](#maximasemicolon) | recommended | yes | Missing ; in Maxima code |
 | [`include.branch`](#includebranch) | hint | yes | Include from branch … |
@@ -288,6 +289,15 @@ Message:
 
 See also: https://github.com/mkraska/meclib/wiki/Multilingual-questions
 
+### `maxima.multsgn`
+
+Level: **required** · automatic fix: **yes** · function `r_multsgn()`
+
+make_multsgn() with an option STACK does not know: STACK refuses the question ("make_multsgn received un-supported option"). "blank" was an option until STACK 2025033100 (a thin space); the fix replaces it by "onum" (a cross between numbers only, no space between numbers), everywhere in the question. Other options are reported without a fix.
+
+Message:
+> …× make_multsgn("…"): STACK knows only … and refuses the question ("make_multsgn received un-supported option").…
+
 ### `qv.unit-name`
 
 Level: **required** · automatic fix: **no** · function `r_unit_names()`
@@ -335,6 +345,8 @@ An included file of which the question uses no function and no variable; the fix
 
 Uses are searched in all Maxima code: question variables, feedback variables, CAS parts of the texts and of the syntax hints, model answers, PRT nodes (SAns, TAns, test options); a function counts only when called ("angle("), so that a variable of the same name does not count. Files needed by a needed file count as needed; *_EN.mac files are never proposed.
 
+What other findings of the review will need counts as used, so that their fixes and this one do not contradict: a local copy of a function of an included file (functions.legacy deletes it), and the syntax hints `{@meclib_h_...@}` that inputs.syntaxhint puts in (fb_value.mac).
+
 Message:
 > … is included, but the question uses none of its functions or variables. Loading it costs compile time (CAS timeouts in Moodle). The fix removes the stack_include.
 
@@ -347,6 +359,8 @@ Includes of meclib's Maxima files.
 A meclib function or variable used without its file (it would stay unevaluated); the fix adds the include, from the same branch as the question's other meclib includes.
 
 Uses are searched in all Maxima code: question variables, feedback variables, CAS parts of the texts and of the syntax hints, model answers, PRT nodes (SAns, TAns, test options); a function counts only when called ("angle("), so that a variable of the same name does not count. Files needed by a needed file count as needed; *_EN.mac files are never proposed.
+
+What other findings of the review will need counts as used, so that their fixes and this one do not contradict: a local copy of a function of an included file (functions.legacy deletes it), and the syntax hints `{@meclib_h_...@}` that inputs.syntaxhint puts in (fb_value.mac).
 
 Message:
 > … is used, but … is not included; without it the call stays unevaluated. The fix adds stack_include("…").

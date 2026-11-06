@@ -2,6 +2,7 @@
 
 2026 11 06
 - [[Meclib Workbench]], review: `include.unused` no longer reports a file that another proposed fix needs - `fb_value.mac` when `inputs.syntaxhint` puts in `{@meclib_h_alg@}` etc., the file of a local copy of a meclib function that `functions.legacy` deletes (TM1 08 11b, 11c; 13 questions of TM1). Applying the fixes does the include fixes last, so an include is no longer removed and added again at the end
+- [[Meclib Workbench]], review: new rule `maxima.multsgn` (required) - `make_multsgn()` with an option STACK does not know; STACK refuses such a question ("make_multsgn received un-supported option"). `"blank"` was an option until STACK 2025033100, the fix replaces it by `"onum"` (TM1 03 05, TM3 10 T04); other options are reported without a fix
 - [[Meclib Workbench]]: regression tests of its own (`tools/workbench/tests/`, Python `unittest`, no Maxima needed): `tests/run_tests.bat` or `python -m unittest discover -s tests -v` in `tools/workbench`; first cases for the review rule `include.unused`
 
 2026 11 01

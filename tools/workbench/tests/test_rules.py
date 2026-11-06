@@ -87,5 +87,33 @@ class IncludeUnused(unittest.TestCase):
         self.assertIn("include.unused[fb_spline.mac]", keys(q))
 
 
+class Multsgn(unittest.TestCase):
+    """maxima.multsgn: make_multsgn() with an option STACK no longer knows ("blank" until STACK
+    2025033100) makes STACK refuse the question (TM1 03 05, TM3 10 T04)."""
+
+    def test_blank_in_text_and_variables(self):
+        q = question('ta: 2*x;\nd: (make_multsgn("blank"), 3*a);',
+                     algebraic_input(hint="x^2"),
+                     text='<p>{@(make_multsgn("blank"), 2*g)@} [[input:ans1]] [[validation:ans1]]</p>')
+        fs = {f["key"]: f for f in rules.findings(block(q))}
+        self.assertIn("maxima.multsgn[blank]", fs)
+        self.assertEqual(fs["maxima.multsgn[blank]"]["level"], "required")
+        out = rules.apply(q, 0, ["maxima.multsgn[blank]"], [])[0]
+        self.assertNotIn('"blank"', out)
+        self.assertEqual(out.count('make_multsgn("onum")'), 2, out)
+        self.assertNotIn("maxima.multsgn[blank]", keys(out))
+
+    def test_unknown_option_without_fix(self):
+        q = question('ta: 2*x;\nd: (make_multsgn("kreuz"), 3*a);', algebraic_input(hint="x^2"))
+        fs = {f["key"]: f for f in rules.findings(block(q))}
+        self.assertIn("maxima.multsgn[kreuz]", fs)
+        self.assertFalse(fs["maxima.multsgn[kreuz]"]["fixable"])
+
+    def test_valid_options_not_reported(self):
+        q = question('ta: 2*x;\nd: (make_multsgn("onum"), make_multsgn("space"), make_multsgn(OPT), 3*a);',
+                     algebraic_input(hint="x^2"))
+        self.assertFalse(any(k.startswith("maxima.multsgn") for k in keys(q)))
+
+
 if __name__ == "__main__":
     unittest.main()

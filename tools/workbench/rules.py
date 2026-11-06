@@ -1022,6 +1022,41 @@ def r_raw_in_math(Q_):
     return out
 
 
+MULTSGN = re.compile(r'make_multsgn\(\s*"([^"]*)"\s*\)')
+MULTSGN_XML = re.compile(r'make_multsgn\(\s*(?:"|&quot;)blank(?:"|&quot;)\s*\)')
+MULTSGN_OPTIONS = ("cross", "dot", "onum", "none", "space")
+
+
+def r_multsgn(Q_):
+    """make_multsgn() with an option STACK does not know: STACK refuses the question
+    ("make_multsgn received un-supported option"). "blank" was an option until STACK 2025033100
+    (a thin space); the fix replaces it by "onum" (a cross between numbers only, no space between
+    numbers), everywhere in the question. Other options are reported without a fix."""
+    codes = [code for _place, code in _cas_sources(Q_)]
+    for inp in Q_.inputs:
+        codes.append(inp.get("tans") or "")
+        codes += sq.castext_cas_parts(inp.get("syntaxhint") or "")
+    for prt in Q_.prts:
+        codes += [node.get("testoptions") or "" for node in prt["nodes"]]
+    found = {}
+    for code in codes:
+        for opt in MULTSGN.findall(sq.strip_comments(code or "")):
+            if opt not in MULTSGN_OPTIONS:
+                found[opt] = found.get(opt, 0) + 1
+    out = []
+    for opt, n in found.items():
+        fix = None
+        if opt == "blank":
+            def fix(q):
+                return MULTSGN_XML.sub('make_multsgn("onum")', q)
+        out.append(F("maxima.multsgn", opt, "required", "Unknown option of make_multsgn()",
+                     '%d× make_multsgn("%s"): STACK knows only %s and refuses the question ("make_multsgn '
+                     'received un-supported option").%s' % (n, opt, ", ".join('"%s"' % o for o in MULTSGN_OPTIONS),
+                     ' "blank" (a thin space until STACK 2025033100) becomes "onum": a cross between numbers only.'
+                     if opt == "blank" else " Choose one of these."), fix))
+    return out
+
+
 def r_unit_names(Q_):
     """A question variable named like a STACK unit (g, m, mm, s, N, t, h, ...) in a question in
     units mode: the value hides the unit inside the question, and in a student's answer the name
@@ -1357,7 +1392,7 @@ def r_scenes(Q_):
 
 
 RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_scenes, r_graphic_inputs, r_input_settings, r_prts,
-         r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_raw_in_math, r_unit_names, r_matrix_inputs, r_unused_files, r_semicolons,
+         r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_raw_in_math, r_multsgn, r_unit_names, r_matrix_inputs, r_unused_files, r_semicolons,
          r_include_branch, r_include_dist, r_includes, r_legacy_functions, r_qtest_length]
 
 
