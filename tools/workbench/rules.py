@@ -399,7 +399,11 @@ def r_includes(Q_):
     Uses are searched in all Maxima code: question variables, feedback variables, CAS parts of the
     texts and of the syntax hints, model answers, PRT nodes (SAns, TAns, test options); a function
     counts only when called ("angle("), so that a variable of the same name does not count. Files
-    needed by a needed file count as needed; *_EN.mac files are never proposed."""
+    needed by a needed file count as needed; *_EN.mac files are never proposed.
+
+    What other findings of the review will need counts as used, so that their fixes and this one
+    do not contradict: a local copy of a function of an included file (functions.legacy deletes
+    it), and the syntax hints {@meclib_h_...@} that inputs.syntaxhint puts in (fb_value.mac)."""
     names = meclib_names()
     included = {}                       # file -> url
     for url in Q_.includes:
@@ -407,7 +411,10 @@ def r_includes(Q_):
         if m and m.group(1) in names:
             included[m.group(1)] = url
     used, own = _question_idents(Q_)
+    own -= {n for n in own if n.endswith("(") and any(n in names[f][0] for f in included)}
     used -= own
+    for hint in _hint_proposals(Q_).values():
+        used |= _code_idents(hint.strip("{@}"))
     out = []
     # needed files: a used name defined in an included file (the first one, if several define it),
     # then what the code of a needed file uses from the other included files
@@ -578,7 +585,7 @@ def r_input_settings(Q_):
                          _input_fix(inp["name"], changes), WIKI + "Style-Guide-for-Questions-in-Engineering-Mechanics"))
         hint = (inp.get("syntaxhint") or "").strip()
         want = SYNTAX_HINTS[inp["type"]]
-        if hint != want and (not hint or hint.lower() in PLAIN_HINTS):
+        if inp["name"] in _hint_proposals(Q_):
             if has_fb_value:
                 out.append(F("inputs.syntaxhint", inp["name"], "recommended", "Multilingual syntax hint",
                              "Input %s: syntax hint %s → %s (German/English, from fb_value.mac)."
@@ -592,6 +599,18 @@ def r_input_settings(Q_):
                              % (inp["name"], '"%s"' % hint if hint else "empty", want, url),
                              _include_fix(url, _input_fix(inp["name"], {"syntaxhint": want})),
                              WIKI + "Multilingual-questions"))
+    return out
+
+
+def _hint_proposals(Q_):
+    """Inputs whose syntax hint inputs.syntaxhint replaces: name -> new hint ({@meclib_h_...@})."""
+    out = {}
+    for inp in Q_.inputs:
+        if inp["name"] in Q_.graphic or inp["type"] not in INPUT_TARGETS:
+            continue
+        hint, want = (inp.get("syntaxhint") or "").strip(), SYNTAX_HINTS[inp["type"]]
+        if hint != want and (not hint or hint.lower() in PLAIN_HINTS):
+            out[inp["name"]] = want
     return out
 
 
@@ -1427,6 +1446,9 @@ def apply(text, index, apply_keys, reject_keys):
         raise ValueError("question %d is not a STACK question" % index)
     q = text[a:b]
     applied = []
+    # the include fixes last: they depend on what the other fixes put in or take out (each finding
+    # is recomputed on the current state, so an include that became needed is no longer "unused")
+    apply_keys = sorted(apply_keys, key=lambda k: k.startswith(("include.unused[", "include.missing[")))
     for key in apply_keys:
         f = next((f for f in findings(q) if f["key"] == key and f["fix"]), None)
         if f:

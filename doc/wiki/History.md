@@ -1,5 +1,9 @@
 ### Dev Branch
 
+2026 11 06
+- [[Meclib Workbench]], review: `include.unused` no longer reports a file that another proposed fix needs - `fb_value.mac` when `inputs.syntaxhint` puts in `{@meclib_h_alg@}` etc., the file of a local copy of a meclib function that `functions.legacy` deletes (TM1 08 11b, 11c; 13 questions of TM1). Applying the fixes does the include fixes last, so an include is no longer removed and added again at the end
+- [[Meclib Workbench]]: regression tests of its own (`tools/workbench/tests/`, Python `unittest`, no Maxima needed): `tests/run_tests.bat` or `python -m unittest discover -s tests -v` in `tools/workbench`; first cases for the review rule `include.unused`
+
 2026 11 01
 - [[fb_floats()]]: if the answer contains only one number, the hint on a deviating value no longer names it ("Marked number 6.25: The value is too large ..." becomes "The value is too large ..."); also inside a function argument or exponent with a single number
 - [[Meclib Workbench]], Check: PRTs with simplification off whose feedback comes from a meclib function that builds its text with `castext()` (e.g. `fb_unit`) failed with "ssearch: unsuitable optional arguments": the nested castext ran with `simp: false`; the castext renderer of `Maxima/tests/harness.mac` now also computes with `simp: true` in nested calls

@@ -738,6 +738,14 @@ of the file that calls `fb_check` (e.g. `cr_check`). "used by" links of a
 scene case open the Maxima test file. The tree (`tree.js`) is a component of
 its own, meant for the question folders of the Questions page, too.
 
+**Tests of the workbench itself** (`tools/workbench/tests/`): Python `unittest`
+cases for the workbench code, so far for the review rules (`test_rules.py`:
+small STACK questions with the findings expected, and the result of applying
+the fixes). No Maxima and no running workbench needed. Run
+`tests/run_tests.bat`, or in `tools/workbench`:
+`python -m unittest discover -s tests -v`. A changed or new rule should get a
+case here.
+
 ## How closely the graphic matches STACK
 
 The pages build the graphic the way STACK 4.13.1 does for a `[[jsxgraph]]`
