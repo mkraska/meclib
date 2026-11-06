@@ -6,6 +6,7 @@ meclib Maxima files of the working copy only to know which names each file defin
 
 Each case is a small STACK question with just what triggers the rule under test.
 """
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -113,6 +114,171 @@ class Multsgn(unittest.TestCase):
         q = question('ta: 2*x;\nd: (make_multsgn("onum"), make_multsgn("space"), make_multsgn(OPT), 3*a);',
                      algebraic_input(hint="x^2"))
         self.assertFalse(any(k.startswith("maxima.multsgn") for k in keys(q)))
+
+
+def prt(name, nodes, fv=""):
+    """A PRT; nodes: [(sans, tans, falsefeedback, quiet)]."""
+    out = "<prt><name>%s</name><value>1.0000000</value><autosimplify>1</autosimplify><feedbackstyle>2</feedbackstyle>" % name
+    out += "<feedbackvariables><text><![CDATA[%s]]></text></feedbackvariables>" % fv
+    for k, (sans, tans, fb, quiet) in enumerate(nodes):
+        out += ("<node><name>%d</name><answertest>AlgEquiv</answertest><sans>%s</sans><tans>%s</tans><testoptions></testoptions>"
+                "<quiet>%s</quiet><truescoremode>=</truescoremode><truescore>1</truescore><truepenalty></truepenalty>"
+                "<truenextnode>-1</truenextnode><trueanswernote>%s-%d-T</trueanswernote>"
+                '<truefeedback format="html"><text></text></truefeedback>'
+                "<falsescoremode>=</falsescoremode><falsescore>0</falsescore><falsepenalty></falsepenalty>"
+                "<falsenextnode>-1</falsenextnode><falseanswernote>%s-%d-F</falseanswernote>"
+                '<falsefeedback format="html"><text><![CDATA[%s]]></text></falsefeedback></node>'
+                % (k, sans, tans, quiet, name, k, name, k, fb))
+    return out + "</prt>\n"
+
+
+def prt_of(text, name):
+    return next(p for p in rules.Q(block(text)).prts if p["name"] == name)
+
+
+FBV_QV = 'stack_include("%sfb_value.mac");\nA: 2*F;\nB: 3*F;' % MAIN
+
+
+class FbVars(unittest.TestCase):
+    """prt.fb-floats, part 1: {@fb_vars(...)@} in node feedback becomes fb_floats() in the feedback
+    variables (the conversion of TM1 08 11c, decided 2026-11-06). The inputs of these cases are
+    not the nodes' SAns, so that part 2 (adding feedback) stays out."""
+
+    def convert(self, q):
+        self.assertIn("prt.fb-floats[prt]", keys(q))
+        return rules.apply(q, 0, ["prt.fb-floats[prt]"], [])[0]
+
+    def test_simple(self):
+        q = question(FBV_QV, algebraic_input(tans="A", hint="x^2"),
+                     prt("A", [("S_A", "A", "{@fb_vars(S_A, A, [F])@}", "0")]))
+        out = self.convert(q)
+        p = prt_of(out, "A")
+        self.assertEqual(p["feedbackvariables"].strip(), "[txt, ok]: fb_floats(S_A, A, 0.005);")
+        self.assertEqual(p["nodes"][0]["falsefeedback"], "{@txt@}")
+        self.assertEqual(p["nodes"][0]["quiet"], "1")
+        self.assertEqual((p["nodes"][0]["answertest"], p["nodes"][0]["sans"], p["nodes"][0]["tans"]), ("AlgEquiv", "S_A", "A"))
+        self.assertTrue(qvars_of(out).startswith("fb_dims: [];\n"), qvars_of(out))
+        k = keys(out)
+        self.assertNotIn("prt.fb-floats[prt]", k)
+        self.assertIn("qv.fb-dims[fb_dims]", k)          # empty fb_dims: hint to fill in
+
+    def test_several_calls_and_existing_variables(self):
+        q = question(FBV_QV, algebraic_input(tans="A", hint="x^2"),
+                     prt("A", [("S_A", "A", "{@fb_vars(S_A, A)@}", "0"),
+                               ("S_A", "B", "Text {@fb_vars(S_A, B, [])@}", "1")], fv="d: 1\n/* note */"))
+        p = prt_of(self.convert(q), "A")
+        self.assertEqual(p["feedbackvariables"],
+                         "d: 1\n/* note */;\n[txt1, ok1]: fb_floats(S_A, A, 0.005);\n[txt2, ok2]: fb_floats(S_A, B, 0.005);")
+        self.assertEqual([n["falsefeedback"] for n in p["nodes"]], ["{@txt1@}", "Text {@txt2@}"])
+
+    def test_names_taken(self):
+        q = question(FBV_QV, algebraic_input(tans="A", hint="x^2"),
+                     prt("A", [("S_A", "A", "{@fb_vars(S_A, A)@}", "0")], fv="ok: true;"))
+        p = prt_of(self.convert(q), "A")
+        self.assertIn("[txt1, ok1]: fb_floats(S_A, A, 0.005);", p["feedbackvariables"])
+        self.assertEqual(p["nodes"][0]["falsefeedback"], "{@txt1@}")
+
+    def test_label_reported_not_converted(self):
+        q = question(FBV_QV, algebraic_input(tans="A", hint="x^2"),
+                     prt("A", [("S_A", "A", r'{@fb_vars(S_A, A, [], "\\(F_x\\):")@}', "0")]))
+        k = keys(q)
+        self.assertIn("prt.fb-vars-label[fb_vars]", k)
+        self.assertNotIn("prt.fb-floats[prt]", k)
+
+    def test_fb_dims_kept(self):
+        q = question('fb_dims: [F = "N"];\n' + FBV_QV, algebraic_input(tans="A", hint="x^2"),
+                     prt("A", [("S_A", "A", "{@fb_vars(S_A, A)@}", "0")]))
+        out = self.convert(q)
+        self.assertEqual(qvars_of(out).count("fb_dims"), 1)
+        self.assertNotIn("qv.fb-dims[fb_dims]", keys(out))
+
+
+def input_of(name, typ, tans):
+    return ("<input><name>%s</name><type>%s</type><tans>%s</tans><syntaxhint>x</syntaxhint></input>\n" % (name, typ, tans))
+
+
+def prt_test(name, nodes, fv=""):
+    """A PRT with answer tests of its own: nodes [(answertest, sans, tans, testoptions, falsefeedback, falsenextnode)]."""
+    out = prt(name, [(n[1], n[2], n[4], "0") for n in nodes], fv)
+    for k, n in enumerate(nodes):
+        out = out.replace("<name>%d</name><answertest>AlgEquiv</answertest>" % k, "<name>%d</name><answertest>%s</answertest>" % (k, n[0]), 1)
+        node = re.search(r"<node><name>%d</name>.*?</node>" % k, out, re.S).group(0)
+        new = node.replace("<testoptions></testoptions>", "<testoptions>%s</testoptions>" % n[3]).replace(
+            "<falsenextnode>-1</falsenextnode>", "<falsenextnode>%s</falsenextnode>" % n[5])
+        out = out.replace(node, new)
+    return out
+
+
+class FbFloatsAdd(unittest.TestCase):
+    """prt.fb-floats, parts 2 and 3: nodes that compare an algebraic input (AlgEquiv) or a numerical
+    input with its model answer get fb_floats() / fb_unit() (decided 2026-11-06)."""
+
+    def apply(self, q):
+        self.assertIn("prt.fb-floats[prt]", keys(q))
+        return rules.apply(q, 0, ["prt.fb-floats[prt]"], [])[0]
+
+    def test_algebraic_first_node_only(self):
+        # node 1 compares with the model answer, node 2 checks a typical error (-A): only node 1
+        q = question(FBV_QV, input_of("S_A", "algebraic", "A"),
+                     prt_test("A", [("AlgEquiv", "S_A", "A", "", "<p>Typischer Fehler?</p>", "1"),
+                                    ("AlgEquiv", "S_A", "-A", "", "Vorzeichen!", "-1")]),
+                     text="<p>[[input:S_A]] [[validation:S_A]]</p>")
+        out = self.apply(q)
+        p = prt_of(out, "A")
+        self.assertEqual(p["feedbackvariables"].strip(), "[txt, ok]: fb_floats(S_A, A, 0.005);")
+        self.assertEqual(p["nodes"][0]["falsefeedback"], "{@txt@}<p>Typischer Fehler?</p>")   # before the rest
+        self.assertEqual(p["nodes"][0]["quiet"], "1")
+        self.assertEqual(p["nodes"][1]["falsefeedback"], "Vorzeichen!")
+        self.assertEqual(p["nodes"][1]["quiet"], "0")
+        self.assertTrue(qvars_of(out).startswith("fb_dims: [];"))
+        self.assertNotIn("prt.fb-floats[prt]", keys(out))
+
+    def test_numerical_gets_fb_unit(self):
+        q = question(FBV_QV, input_of("S_A", "numerical", "A") + input_of("S_B", "numerical", "B"),
+                     prt_test("A", [("AlgEquiv", "S_A", "A", "", "", "-1")]) +
+                     prt_test("B", [("NumRelative", "S_B", "B", "0.01", "", "-1")]),
+                     text="<p>[[input:S_A]] [[validation:S_A]] [[input:S_B]] [[validation:S_B]]</p>")
+        out = self.apply(q)
+        self.assertEqual(prt_of(out, "A")["nodes"][0]["falsefeedback"], "{@fb_unit(S_A, A, 0.005)@}")
+        self.assertEqual(prt_of(out, "B")["nodes"][0]["falsefeedback"], "{@fb_unit(S_B, B, 0.01)@}")
+        self.assertEqual(prt_of(out, "A")["feedbackvariables"], "")
+        self.assertNotIn("fb_dims", qvars_of(out))       # fb_unit needs no fb_dims
+
+    def test_replace_and_add_in_one_prt(self):
+        q = question(FBV_QV, input_of("S_A", "algebraic", "A") + input_of("S_B", "algebraic", "B"),
+                     prt_test("A", [("AlgEquiv", "S_A", "A", "", "{@fb_vars(S_A, A)@}", "1"),
+                                    ("AlgEquiv", "S_B", "B", "", "", "-1")]),
+                     text="<p>[[input:S_A]] [[validation:S_A]] [[input:S_B]] [[validation:S_B]]</p>")
+        p = prt_of(self.apply(q), "A")
+        self.assertEqual(p["feedbackvariables"],
+                         "[txt1, ok1]: fb_floats(S_A, A, 0.005);\n[txt2, ok2]: fb_floats(S_B, B, 0.005);")
+        self.assertEqual([n["falsefeedback"] for n in p["nodes"]], ["{@txt1@}", "{@txt2@}"])
+
+    def test_not_touched(self):
+        # meclib feedback already there, another answer test on an algebraic input, SAns not an input
+        q = question(FBV_QV, input_of("S_A", "algebraic", "A"),
+                     prt_test("A", [("AlgEquiv", "S_A", "A", "", "{@fb_floats(S_A, A, 0.005)[1]@}", "-1")]) +
+                     prt_test("B", [("EqualComAss", "S_A", "A", "", "", "-1")]) +
+                     prt_test("C", [("AlgEquiv", "ratsimp(S_A)", "A", "", "", "-1")]),
+                     text="<p>[[input:S_A]] [[validation:S_A]]</p>")
+        self.assertNotIn("prt.fb-floats[prt]", keys(q))
+
+
+class FbDims(unittest.TestCase):
+    """qv.fb-dims: fb_floats() without the units of the variables."""
+
+    def case(self, qv):
+        return keys(question(qv + "\n" + FBV_QV, algebraic_input(tans="A", hint="x^2"),
+                             prt("A", [("S_A", "A", "{@fb_floats(S_A, A, 0.005)[1]@}", "1")])))
+
+    def test_missing_empty_filled(self):
+        self.assertIn("qv.fb-dims[fb_dims]", self.case(""))
+        self.assertIn("qv.fb-dims[fb_dims]", self.case("fb_dims: [];"))
+        self.assertNotIn("qv.fb-dims[fb_dims]", self.case('fb_dims: [F = "N"];'))
+
+    def test_without_fb_floats(self):
+        q = question(FBV_QV, algebraic_input(tans="A", hint="x^2"))
+        self.assertNotIn("qv.fb-dims[fb_dims]", keys(q))
 
 
 if __name__ == "__main__":

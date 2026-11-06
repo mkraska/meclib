@@ -35,9 +35,12 @@ The review of the [[Meclib Workbench]] (Questions page, **Review** at the top of
 | [`prt.feedbackformat`](#prtfeedbackformat) | recommended | yes | Format of PRT feedback |
 | [`prt.tolerance`](#prttolerance) | hint | yes | Relative tolerance |
 | [`grade.default`](#gradedefault) | recommended | yes | Default mark |
+| [`prt.fb-floats`](#prtfb-floats) | recommended | yes | meclib feedback fb_floats() / fb_unit() |
+| [`prt.fb-vars-label`](#prtfb-vars-label) | hint | no | fb_vars() with a label |
 | **Maxima code and includes** | | | |
 | [`include.lang-specific`](#includelang-specific) | recommended | yes | Language-specific library |
 | [`maxima.multsgn`](#maximamultsgn) | required | yes | Unknown option of make_multsgn() |
+| [`qv.fb-dims`](#qvfb-dims) | hint | no | fb_floats() without fb_dims |
 | [`qv.unit-name`](#qvunit-name) | required | no | question variable … is a unit |
 | [`maxima.semicolon`](#maximasemicolon) | recommended | yes | Missing ; in Maxima code |
 | [`include.branch`](#includebranch) | hint | yes | Include from branch … |
@@ -276,6 +279,32 @@ A question with PRTs but default mark 0 gives no points. The fix sets the defaul
 Message:
 > The question has PRTs but default mark 0: it gives no points. Set it to 1.
 
+### `prt.fb-floats`
+
+Level: **recommended** · automatic fix: **yes** · function `r_fb_floats()`
+
+meclib feedback on the answers to algebraic and numerical inputs.
+
+(1) `{@fb_vars(sans, tans, ...)@}` in the feedback of a PRT node becomes [txt, ok]: fb_floats(sans, tans, 0.005); in the PRT's feedback variables and `{@txt@}` in the feedback; the list of variables (3rd argument) and the tolerance (5th) of fb_vars are dropped, fb_floats marks the deviating terms itself. (2) A node with AlgEquiv that compares an algebraic input with its model answer and has no meclib feedback gets the same, `{@txt@}` at the start of its false branch (also if the false branch goes on to nodes for typical errors: the feedback of fb_floats is generic). (3) A node that compares a numerical input with its model answer gets `{@fb_unit(sans, tans, tol)@}` at the start of its false branch (tol: the tolerance of NumRelative, else 0.005). Names txt1, ok1, ... for several calls in one PRT or where txt/ok are taken. The nodes become quiet; the answer tests stay (ok is not used, the grading does not change). If fb_floats comes in and the question variables lack fb_dims, the fix adds fb_dims: []; to fill in (see qv.fb-dims).
+
+Message:
+> PRT …: …. fb_floats(sans, tans, 0.005) goes into the feedback variables as [txt, ok], `{@txt@}` into the feedback (at the start of the false branch); fb_unit() directly into the false branch; the nodes become quiet; the answer tests stay (the grading does not change).…
+
+See also: https://github.com/mkraska/meclib/wiki/fb_floats()
+
+### `prt.fb-vars-label`
+
+Level: **hint** · automatic fix: **no** · function `r_fb_floats()`
+
+meclib feedback on the answers to algebraic and numerical inputs.
+
+Calls of fb_vars with a label (4th argument, e.g. for vector components): fb_vars shows the label only when it has something to say, fb_floats has none; no automatic fix.
+
+Message:
+> …: fb_vars() with a label (…); fb_floats() has none, convert by hand (e.g. vector components).
+
+See also: https://github.com/mkraska/meclib/wiki/fb_floats()
+
 ## Maxima code and includes
 
 ### `include.lang-specific`
@@ -297,6 +326,17 @@ make_multsgn() with an option STACK does not know: STACK refuses the question ("
 
 Message:
 > …× make_multsgn("…"): STACK knows only … and refuses the question ("make_multsgn received un-supported option").…
+
+### `qv.fb-dims`
+
+Level: **hint** · automatic fix: **no** · function `r_fb_dims()`
+
+The question uses fb_floats() without the units of the variables (fb_dims missing or empty), so its unit check is off. Declare fb_dims: [a = "m", q_0 = "N/m", ...] in the question variables (wiki fb_floats(), Units).
+
+Message:
+> The question uses fb_floats(), but fb_dims …: without the units of the variables there is no unit check. Declare e.g. fb_dims: [a = "m", q_0 = "N/m"]; in the question variables.
+
+See also: https://github.com/mkraska/meclib/wiki/fb_floats()#units
 
 ### `qv.unit-name`
 

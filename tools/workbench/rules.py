@@ -104,6 +104,13 @@ def _set_node_text(q, prt, node_index, tag, value):
     return q[:m.start()] + p + q[m.end():]
 
 
+def _set_prt_text(q, prt, tag, value):
+    """<tag><text>value</text></tag> of the PRT named prt (e.g. its feedback variables)."""
+    m = _named(q, "prt", prt)
+    block = qfile._replace_text_child(m.group(0), tag, value, qfile._newline(q))[0]
+    return q[:m.start()] + block + q[m.end():]
+
+
 def _set_text(q, tag, value):
     return qfile._replace_text_child(q, tag, value, qfile._newline(q))[0]
 
@@ -1057,6 +1064,191 @@ def r_multsgn(Q_):
     return out
 
 
+FB_VARS_CALL = re.compile(r"\{@\s*fb_vars\(")
+FB_DIMS = re.compile(r"(?m)^\s*fb_dims\s*:(?!=)\s*(.*)")
+
+
+def _close_paren(src, i):
+    """Index after the ")" that closes the bracket opened just before src[i] (strings skipped), or -1."""
+    depth = 0
+    while i < len(src):
+        c = src[i]
+        if c == '"':
+            i += 1
+            while i < len(src) and src[i] != '"':
+                i += 2 if src[i] == "\\" else 1
+        elif c in "([{":
+            depth += 1
+        elif c in ")]}":
+            if depth == 0:
+                return i + 1
+            depth -= 1
+        i += 1
+    return -1
+
+
+def _fb_vars_calls(text):
+    """The calls {@fb_vars(...)@} of a castext: [(whole call, arguments)]."""
+    out = []
+    for m in FB_VARS_CALL.finditer(text):
+        end = _close_paren(text, m.end())
+        tail = re.match(r"\s*@\}", text[end:]) if end > 0 else None
+        if tail:
+            out.append((text[m.start():end + tail.end()], split_args(text[m.end():])))
+    return out
+
+
+def _fb_vars_label(args):
+    """The label (4th argument) of a call of fb_vars, if it is a non-empty string."""
+    return len(args) > 3 and args[3] not in ('""', "")
+
+
+def _fb_floats_plan(Q_):
+    """What prt.fb-floats changes, by PRT: {prt: {"vars": [(node index, branch, call, sans, tans)],
+    "add": [(node index, sans, tans)], "unit": [(node index, sans, tans, tolerance)], "names": [suffix,
+    ...]}} - fb_vars calls to replace, nodes that get fb_floats (algebraic inputs) or fb_unit
+    (numerical inputs); "names" are the suffixes of txt/ok, one per vars and add entry (in this
+    order). Also [(where, call)] of the fb_vars calls with a label (not converted)."""
+    plan, labelled = {}, []
+    inputs = {i["name"]: i for i in Q_.inputs if i["name"] not in Q_.graphic}
+    flat = lambda e: re.sub(r"\s+", "", e or "")
+    for prt in Q_.prts:
+        vs, add, unit = [], [], []
+        for k, node in enumerate(prt["nodes"]):
+            for br in ("true", "false"):
+                for call, args in _fb_vars_calls(node.get(br + "feedback") or ""):
+                    if len(args) < 2:
+                        continue
+                    if _fb_vars_label(args):
+                        labelled.append(("%s node %d" % (prt["name"], k + 1), call))
+                    else:
+                        vs.append((k, br, call, args[0], args[1]))
+            if re.search(r"\{@\s*(fb_|txt)", _feedback(node)):
+                continue                    # meclib feedback already there (or fb_vars, handled above)
+            sans, inp = node["sans"].strip(), inputs.get(node["sans"].strip())
+            # the node that compares with the model answer (later nodes check typical errors)
+            if not inp or flat(node["tans"]) != flat(inp.get("tans")):
+                continue
+            if inp["type"] == "algebraic" and node["answertest"] == "AlgEquiv":
+                add.append((k, sans, node["tans"].strip()))
+            elif inp["type"] == "numerical":
+                tol = (node.get("testoptions") or "").strip()
+                if node["answertest"] != "NumRelative" or not re.fullmatch(r"\d*\.?\d+(?:[eE]-?\d+)?", tol):
+                    tol = "0.005"
+                unit.append((k, sans, node["tans"].strip(), tol))
+        if not (vs or add or unit):
+            continue
+        taken = set(IDENT.findall(sq.strip_comments(prt["feedbackvariables"] or "")))
+        names, n, count = [], 0, len(vs) + len(add)
+        for _ in range(count):
+            suffix = ""
+            if count > 1 or "txt" in taken or "ok" in taken:
+                n += 1
+                while "txt%d" % n in taken or "ok%d" % n in taken:
+                    n += 1
+                suffix = str(n)
+            names.append(suffix)
+        plan[prt["name"]] = {"vars": vs, "add": add, "unit": unit, "names": names}
+    return plan, labelled
+
+
+def r_fb_floats(Q_):
+    """meclib feedback on the answers to algebraic and numerical inputs.
+
+    prt.fb-floats: (1) {@fb_vars(sans, tans, ...)@} in the feedback of a PRT node becomes
+    [txt, ok]: fb_floats(sans, tans, 0.005); in the PRT's feedback variables and {@txt@} in the
+    feedback; the list of variables (3rd argument) and the tolerance (5th) of fb_vars are dropped,
+    fb_floats marks the deviating terms itself. (2) A node with AlgEquiv that compares an algebraic
+    input with its model answer and has no meclib feedback gets the same, {@txt@} at the start of
+    its false branch (also if the false branch goes on to nodes for typical errors: the feedback of
+    fb_floats is generic). (3) A node that compares a numerical input with its model answer gets
+    {@fb_unit(sans, tans, tol)@} at the start of its false branch (tol: the tolerance of
+    NumRelative, else 0.005). Names txt1, ok1, ... for several calls in one PRT or where txt/ok are
+    taken. The nodes become quiet; the answer tests stay (ok is not used, the grading does not
+    change). If fb_floats comes in and the question variables lack fb_dims, the fix adds
+    fb_dims: []; to fill in (see qv.fb-dims).
+
+    prt.fb-vars-label: calls of fb_vars with a label (4th argument, e.g. for vector components):
+    fb_vars shows the label only when it has something to say, fb_floats has none; no automatic fix."""
+    plan, labelled = _fb_floats_plan(Q_)
+    out = []
+    if plan:
+        nv = sum(len(v["vars"]) for v in plan.values())
+        na = sum(len(v["add"]) for v in plan.values())
+        nu = sum(len(v["unit"]) for v in plan.values())
+        floats = nv + na > 0
+
+        def fix(q):
+            Q2 = Q(q)
+            plan2, _ = _fb_floats_plan(Q2)
+            for prt in Q2.prts:
+                pl = plan2.get(prt["name"])
+                if not pl:
+                    continue
+                P = prt["name"]
+                calls = [(c[3], c[4]) for c in pl["vars"]] + [(a[1], a[2]) for a in pl["add"]]
+                if calls:
+                    fv = (prt["feedbackvariables"] or "").rstrip()
+                    if fv and not sq.strip_comments(fv).rstrip().endswith((";", "$")):
+                        fv += ";"
+                    lines = ["[txt%s, ok%s]: fb_floats(%s, %s, 0.005);" % (x, x, sa, ta)
+                             for x, (sa, ta) in zip(pl["names"], calls)]
+                    q = _set_prt_text(q, P, "feedbackvariables", "\n".join(([fv] if fv else []) + lines))
+                texts = {}                  # (node, branch) -> new text
+                get = lambda k, br: texts.get((k, br), prt["nodes"][k].get(br + "feedback") or "")
+                for x, c in zip(pl["names"], pl["vars"]):
+                    texts[(c[0], c[1])] = get(c[0], c[1]).replace(c[2], "{@txt%s@}" % x, 1)
+                for x, a in zip(pl["names"][len(pl["vars"]):], pl["add"]):
+                    texts[(a[0], "false")] = "{@txt%s@}" % x + get(a[0], "false")
+                for u in pl["unit"]:
+                    texts[(u[0], "false")] = "{@fb_unit(%s, %s, %s)@}" % (u[1], u[2], u[3]) + get(u[0], "false")
+                for (k, br), text in texts.items():
+                    q = _set_node_text(q, P, k, br + "feedback", text)
+                for k in sorted({k for k, _br in texts}):
+                    q = _set_node(q, P, k, "quiet", "1")
+            if any(v["vars"] or v["add"] for v in plan2.values()) and not FB_DIMS.search(sq.strip_comments(Q(q).qvars)):
+                q = _set_text(q, "questionvariables", "fb_dims: [];\n" + Q(q).qvars)
+            return q
+        parts = []
+        if nv:
+            parts.append("%d× {@fb_vars(...)@} → fb_floats()" % nv)
+        if na:
+            parts.append("%d node(s) of algebraic inputs get fb_floats()" % na)
+        if nu:
+            parts.append("%d node(s) of numerical inputs get fb_unit()" % nu)
+        out.append(F("prt.fb-floats", "prt", "recommended", "meclib feedback fb_floats() / fb_unit()",
+                     "PRT %s: %s. fb_floats(sans, tans, 0.005) goes into the feedback variables as [txt, ok], "
+                     "{@txt@} into the feedback (at the start of the false branch); fb_unit() directly into the false "
+                     "branch; the nodes become quiet; the answer tests stay (the grading does not change).%s"
+                     % (", ".join(sorted(plan)), "; ".join(parts),
+                        " The question variables get fb_dims: []; - fill in the units of the variables."
+                        if floats and not FB_DIMS.search(sq.strip_comments(Q_.qvars)) else ""),
+                     fix, WIKI + "fb_floats()"))
+    if labelled:
+        out.append(F("prt.fb-vars-label", "fb_vars", "hint", "fb_vars() with a label",
+                     "%s: fb_vars() with a label (%s); fb_floats() has none, convert by hand (e.g. vector "
+                     "components)." % (", ".join(dict.fromkeys(w for w, _c in labelled)),
+                                       "; ".join(c for _w, c in labelled[:2]) + (" ..." if len(labelled) > 2 else "")),
+                     None, WIKI + "fb_floats()"))
+    return out
+
+
+def r_fb_dims(Q_):
+    """qv.fb-dims: the question uses fb_floats() without the units of the variables (fb_dims
+    missing or empty), so its unit check is off. Declare fb_dims: [a = "m", q_0 = "N/m", ...] in the question
+    variables (wiki fb_floats(), Units)."""
+    uses = any("fb_floats(" in _code_idents(code) for _place, code in _cas_sources(Q_))
+    if not uses:
+        return []
+    m = FB_DIMS.search(sq.strip_comments(Q_.qvars))
+    if m and not re.match(r"\[\s*\]", m.group(1)):
+        return []
+    return [F("qv.fb-dims", "fb_dims", "hint", "fb_floats() without fb_dims",
+              "The question uses fb_floats(), but fb_dims %s: without the units of the variables there is no unit "
+              "check. Declare e.g. fb_dims: [a = \"m\", q_0 = \"N/m\"]; in the question variables."
+              % ("is empty" if m else "is missing"), None, WIKI + "fb_floats()#units")]
+
+
 def r_unit_names(Q_):
     """A question variable named like a STACK unit (g, m, mm, s, N, t, h, ...) in a question in
     units mode: the value hides the unit inside the question, and in a student's answer the name
@@ -1392,7 +1584,7 @@ def r_scenes(Q_):
 
 
 RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_scenes, r_graphic_inputs, r_input_settings, r_prts,
-         r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_raw_in_math, r_multsgn, r_unit_names, r_matrix_inputs, r_unused_files, r_semicolons,
+         r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_raw_in_math, r_multsgn, r_fb_floats, r_fb_dims, r_unit_names, r_matrix_inputs, r_unused_files, r_semicolons,
          r_include_branch, r_include_dist, r_includes, r_legacy_functions, r_qtest_length]
 
 
