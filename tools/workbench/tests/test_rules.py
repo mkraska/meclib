@@ -233,6 +233,26 @@ class FbFloatsAdd(unittest.TestCase):
         self.assertTrue(qvars_of(out).startswith("fb_dims: [];"))
         self.assertNotIn("prt.fb-floats[prt]", keys(out))
 
+    def test_markdown_branch_becomes_html(self):
+        # TM1 08 02a: false branch in Markdown, STACK escaped the [[lang]] blocks of {@txt@}
+        q = question(FBV_QV, input_of("S_A", "algebraic", "A"),
+                     prt_test("A", [("AlgEquiv", "S_A", "A", "", "", "-1")]).replace(
+                         '<falsefeedback format="html">', '<falsefeedback format="markdown">'),
+                     text="<p>[[input:S_A]] [[validation:S_A]]</p>")
+        n = prt_of(self.apply(q), "A")["nodes"][0]
+        self.assertEqual((n["falsefeedback"], n["falseformat"]), ("{@txt@}", "html"))
+
+    def test_all_nodes_of_the_prt_become_html(self):
+        # one format per PRT: the untouched node 2 and the true branches become html, too
+        q = question(FBV_QV, input_of("S_A", "algebraic", "A"),
+                     prt_test("A", [("AlgEquiv", "S_A", "A", "", "", "1"),
+                                    ("AlgEquiv", "S_A", "-A", "", "Vorzeichen!", "-1")]).replace(
+                         'feedback format="html">', 'feedback format="markdown">'),
+                     text="<p>[[input:S_A]] [[validation:S_A]]</p>")
+        p = prt_of(self.apply(q), "A")
+        self.assertEqual({n[br + "format"] for n in p["nodes"] for br in ("true", "false")}, {"html"})
+        self.assertEqual(p["nodes"][1]["falsefeedback"], "Vorzeichen!")
+
     def test_numerical_gets_fb_unit(self):
         q = question(FBV_QV, input_of("S_A", "numerical", "A") + input_of("S_B", "numerical", "B"),
                      prt_test("A", [("AlgEquiv", "S_A", "A", "", "", "-1")]) +
@@ -262,6 +282,38 @@ class FbFloatsAdd(unittest.TestCase):
                      prt_test("C", [("AlgEquiv", "ratsimp(S_A)", "A", "", "", "-1")]),
                      text="<p>[[input:S_A]] [[validation:S_A]]</p>")
         self.assertNotIn("prt.fb-floats[prt]", keys(q))
+
+
+
+class FeedbackFormat(unittest.TestCase):
+    """prt.feedbackformat: one finding per PRT, the fix sets all branches to html (STACK wants one
+    format for all nodes of a PRT)."""
+
+    def test_whole_prt(self):
+        q = question(FBV_QV, input_of("S_A", "algebraic", "A"),
+                     prt_test("A", [("AlgEquiv", "S_A", "A", "", "Falsch.", "1"),
+                                    ("AlgEquiv", "S_A", "-A", "", "", "-1")]).replace(
+                         '<falsefeedback format="html"><text><![CDATA[Falsch.', '<falsefeedback format="markdown"><text><![CDATA[Falsch.'),
+                     text="<p>[[input:S_A]] [[validation:S_A]]</p>")
+        k = keys(q)
+        self.assertIn("prt.feedbackformat[A]", k)
+        out = rules.apply(q, 0, ["prt.feedbackformat[A]"], [])[0]
+        p = prt_of(out, "A")
+        self.assertEqual({n[br + "format"] for n in p["nodes"] for br in ("true", "false")}, {"html"})
+        self.assertNotIn("prt.feedbackformat[A]", keys(out))
+
+    def test_empty_markdown_branches_reported(self):
+        # Marklar writes format markdown into every branch, also the empty ones
+        q = question(FBV_QV, input_of("S_A", "algebraic", "A"),
+                     prt_test("A", [("AlgEquiv", "S_A", "A", "", "", "-1")]).replace('format="html"', 'format="markdown"'),
+                     text="<p>[[input:S_A]] [[validation:S_A]]</p>")
+        self.assertIn("prt.feedbackformat[A]", keys(q))
+
+    def test_all_html_not_reported(self):
+        q = question(FBV_QV, input_of("S_A", "algebraic", "A"),
+                     prt_test("A", [("AlgEquiv", "S_A", "A", "", "Falsch.", "-1")]),
+                     text="<p>[[input:S_A]] [[validation:S_A]]</p>")
+        self.assertFalse(any(x.startswith("prt.feedbackformat") for x in keys(q)))
 
 
 class FbDims(unittest.TestCase):

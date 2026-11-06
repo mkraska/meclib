@@ -175,6 +175,8 @@
   .stack-prt .prtwb { display: block; margin: 2px 0 8px; padding: 3px 8px; border-left: 3px solid #c9d6e3; background: #f6f8fa; }
   .stack-prt .prtwb .prtinfo { margin-top: 0; }
   .stackprtfeedback { background: #fcf8e3; margin: 0.2em -0.2em 0.5em; padding: 0.2em 0.5em 0.2em 0.2em; display: inline-block; vertical-align: top; color: var(--ink); font-size: 14px; }
+  /* feedback in format Markdown: Moodle shows it without the yellow background (review rule prt.feedbackformat) */
+  .stackprtfeedback.wb-markdown { background: #ececec; }
   .stackprtfeedback .correct, .stackprtfeedback .partiallycorrect, .stackprtfeedback .incorrect { background: transparent; font-weight: 700; }
   /* Moodle draws the symbols with its icon font (fa fa-check / fa-times / fa-adjust); the same glyphs as characters, no font needed */
   .stackprtfeedback i.fa { font-style: normal; font-weight: 400; display: inline-block; width: 1.1em; }
@@ -1526,7 +1528,10 @@ function showCheck() {
       if (!(parseInt(p.feedbackstyle ?? "1", 10) >= 2)) el.classList.add("block");
       const blocks = [];   // meclib scenes in the feedback
       const fb = (p.feedback[lang] || []).map(([fmt, text]) => toHTML(text || "", fmt, blocks)).join("");
-      el.innerHTML = prtFeedbackHTML(name, p, score, fb, blocks) + '<div class="prtwb">' +
+      // Markdown feedback: no yellow background in Moodle (only if the review's html change was ignored)
+      const md = fb && (p.feedback[lang] || []).some(([fmt, text]) => fmt === "markdown" && (text || "").trim());
+      el.innerHTML = prtFeedbackHTML(name, p, score, fb, blocks, md) + '<div class="prtwb">' +
+        (md ? '<div class="hint">Markdown format, so no yellow background in Moodle (review: prt.feedbackformat)</div>' : "") +
         (p.testfeedback.length ? `<div class="hint">answer test: ${esc(p.testfeedback.join(" "))}</div>` : "") +
         (p.errors.length ? `<div class="prterr">${esc(p.errors.join("\n"))}</div>` : "") +
         `<div class="prtinfo"><span>PRT <b>${esc(name)}</b></span><span>score ${esc(p.score)}</span>` +
@@ -1550,7 +1555,7 @@ const PRT_SYMBOLS = {
   incorrect: '<span style="font-size: 1.5em; color:red;"><i class="fa fa-times"></i></span>',
   partiallycorrect: '<span style="font-size: 1.5em; color:orange;"><i class="fa fa-adjust"></i></span>',
 };
-function prtFeedbackHTML(name, p, score, fb, blocks) {
+function prtFeedbackHTML(name, p, score, fb, blocks, markdown) {
   const style = parseInt(p.feedbackstyle ?? "1", 10);
   const cls = score >= 1 - 1e-7 ? "correct" : score <= 1e-7 ? "incorrect" : "partiallycorrect";
   let std = "";
@@ -1564,7 +1569,8 @@ function prtFeedbackHTML(name, p, score, fb, blocks) {
   const inner = style === 0 ? fb : style === 3 ? std : std + fb;
   if (!inner) return "";
   const tag = style === 2 || style === 3 ? "span" : "div";
-  return `<${tag} class="stackprtfeedback stackprtfeedback-${esc(name)}">${inner}</${tag}>`;
+  return `<${tag} class="stackprtfeedback stackprtfeedback-${esc(name)}${markdown ? " wb-markdown" : ""}"` +
+    `${markdown ? ' title="Markdown format, so no yellow background in Moodle"' : ""}>${inner}</${tag}>`;
 }
 // model answer as a student would type it (as STACK shows it): stackunits(8, cm) -> 8*cm; with a
 // decimal comma, decimals get a comma and the list separator becomes ";" (the input processing

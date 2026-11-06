@@ -30,9 +30,9 @@ The review of the [[Meclib Workbench]] (Questions page, **Review** at the top of
 | [`matrix.layout`](#matrixlayout) | recommended / hint | partly | Layout of a matrix input |
 | **PRTs and grading** | | | |
 | [`prt.simp`](#prtsimp) | recommended | yes | PRT simplification with fb_unit |
+| [`prt.feedbackformat`](#prtfeedbackformat) | recommended | yes | Format of PRT feedback |
 | [`prt.feedbackstyle`](#prtfeedbackstyle) | recommended / hint | partly | PRT feedback style |
 | [`prt.quiet`](#prtquiet) | recommended | yes | Quiet answer test |
-| [`prt.feedbackformat`](#prtfeedbackformat) | recommended | yes | Format of PRT feedback |
 | [`prt.tolerance`](#prttolerance) | hint | yes | Relative tolerance |
 | [`grade.default`](#gradedefault) | recommended | yes | Default mark |
 | [`prt.fb-floats`](#prtfb-floats) | recommended | yes | meclib feedback fb_floats() / fb_unit() |
@@ -219,6 +219,19 @@ Message:
 
 See also: https://github.com/mkraska/meclib/wiki/fb_unit
 
+### `prt.feedbackformat`
+
+Level: **recommended** · automatic fix: **yes** · function `r_prts()`
+
+Settings of the PRTs:
+
+Every branch of every PRT in format html. Markdown is only the default of question generators; in Moodle it suppresses the yellow feedback background (the workbench preview shows it anyway), and STACK escapes texts inserted with `{@...@}`, e.g. the `[[lang]]` blocks of meclib feedback. STACK wants one format per PRT, so the fix sets all branches.
+
+Message:
+> PRT …: feedback format … → html for all nodes. In Markdown, Moodle shows the feedback without the yellow background, and STACK escapes texts inserted with `{@...@}` (e.g. `[[lang]]` blocks of meclib feedback)….
+
+See also: https://github.com/mkraska/meclib/wiki/Meclib-tutorial:-Add-Meclib-feedback-functions
+
 ### `prt.feedbackstyle`
 
 Level: **recommended / hint** · automatic fix: **partly** · function `r_prts()`
@@ -243,19 +256,6 @@ Where the feedback comes from a meclib function, the answer test's own feedback 
 
 Message:
 > PRT …: the feedback comes from a meclib function; switch the answer test's own feedback off (quiet).
-
-See also: https://github.com/mkraska/meclib/wiki/Meclib-tutorial:-Add-Meclib-feedback-functions
-
-### `prt.feedbackformat`
-
-Level: **recommended** · automatic fix: **yes** · function `r_prts()`
-
-Settings of the PRTs:
-
-The node feedback in format html; Markdown suppresses the yellow feedback background (reject the proposal only if the feedback is meant as a dynamic part of the question text).
-
-Message:
-> PRT …, … feedback: format … → html; Markdown suppresses the yellow feedback background (reject only if the feedback is meant as a dynamic part of the question text)….
 
 See also: https://github.com/mkraska/meclib/wiki/Meclib-tutorial:-Add-Meclib-feedback-functions
 
@@ -285,7 +285,7 @@ Level: **recommended** · automatic fix: **yes** · function `r_fb_floats()`
 
 meclib feedback on the answers to algebraic and numerical inputs.
 
-(1) `{@fb_vars(sans, tans, ...)@}` in the feedback of a PRT node becomes [txt, ok]: fb_floats(sans, tans, 0.005); in the PRT's feedback variables and `{@txt@}` in the feedback; the list of variables (3rd argument) and the tolerance (5th) of fb_vars are dropped, fb_floats marks the deviating terms itself. (2) A node with AlgEquiv that compares an algebraic input with its model answer and has no meclib feedback gets the same, `{@txt@}` at the start of its false branch (also if the false branch goes on to nodes for typical errors: the feedback of fb_floats is generic). (3) A node that compares a numerical input with its model answer gets `{@fb_unit(sans, tans, tol)@}` at the start of its false branch (tol: the tolerance of NumRelative, else 0.005). Names txt1, ok1, ... for several calls in one PRT or where txt/ok are taken. The nodes become quiet; the answer tests stay (ok is not used, the grading does not change). If fb_floats comes in and the question variables lack fb_dims, the fix adds fb_dims: []; to fill in (see qv.fb-dims).
+(1) `{@fb_vars(sans, tans, ...)@}` in the feedback of a PRT node becomes [txt, ok]: fb_floats(sans, tans, 0.005); in the PRT's feedback variables and `{@txt@}` in the feedback; the list of variables (3rd argument) and the tolerance (5th) of fb_vars are dropped, fb_floats marks the deviating terms itself. (2) A node with AlgEquiv that compares an algebraic input with its model answer and has no meclib feedback gets the same, `{@txt@}` at the start of its false branch (also if the false branch goes on to nodes for typical errors: the feedback of fb_floats is generic). (3) A node that compares a numerical input with its model answer gets `{@fb_unit(sans, tans, tol)@}` at the start of its false branch (tol: the tolerance of NumRelative, else 0.005). Names txt1, ok1, ... for several calls in one PRT or where txt/ok are taken. All nodes of the PRT get the format html (one format per PRT; in Markdown, STACK escapes the inserted text, e.g. the `[[lang]]` blocks). The nodes become quiet; the answer tests stay (ok is not used, the grading does not change). If fb_floats comes in and the question variables lack fb_dims, the fix adds fb_dims: []; to fill in (see qv.fb-dims).
 
 Message:
 > PRT …: …. fb_floats(sans, tans, 0.005) goes into the feedback variables as [txt, ok], `{@txt@}` into the feedback (at the start of the false branch); fb_unit() directly into the false branch; the nodes become quiet; the answer tests stay (the grading does not change).…

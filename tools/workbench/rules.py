@@ -95,6 +95,13 @@ def _set_node_format(q, prt, node_index, branch, fmt):
     return q[:m.start()] + p + q[m.end():]
 
 
+def _prt_html(q, prt):
+    """All feedback branches of the PRT in format html (STACK wants one format for all nodes of a PRT)."""
+    m = _named(q, "prt", prt)
+    block = re.sub(r'<(true|false)feedback(\s+format="[^"]*")?\s*>', r'<\1feedback format="html">', m.group(0))
+    return q[:m.start()] + block + q[m.end():]
+
+
 def _set_node_text(q, prt, node_index, tag, value):
     m = _named(q, "prt", prt)
     nodes = _blocks(m.group(0), "node")
@@ -659,9 +666,10 @@ def r_prts(Q_):
     prt.quiet: where the feedback comes from a meclib function, the answer test's own feedback is
     switched off (quiet).
 
-    prt.feedbackformat: the node feedback in format html; Markdown suppresses the yellow feedback
-    background (reject the proposal only if the feedback is meant as a dynamic part of the
-    question text).
+    prt.feedbackformat: every branch of every PRT in format html. Markdown is only the default of
+    question generators; in Moodle it suppresses the yellow feedback background (the workbench
+    preview shows it anyway), and STACK escapes texts inserted with {@...@}, e.g. the [[lang]]
+    blocks of meclib feedback. STACK wants one format per PRT, so the fix sets all branches.
 
     prt.tolerance: a relative tolerance other than 0.005 (the maintainer's standard) is a hint."""
     out = []
@@ -686,21 +694,22 @@ def r_prts(Q_):
                                                             " (check the feedback variables afterwards)"),
                          lambda q, P=P: _set_in(q, "prt", P, "autosimplify", "0"), WIKI + "fb_unit",
                          default=not prt["feedbackvariables"].strip()))
+        # format: html for every branch of every PRT (STACK wants one format per PRT; Markdown is
+        # only the default of question generators and loses the yellow feedback background)
+        branches = [("%s node %d %s" % (P, k + 1, br), node.get(br + "feedback") or "", node.get(br + "format"))
+                    for k, node in enumerate(prt["nodes"]) for br in ("true", "false")]
+        if any(f != "html" for _w, _fb, f in branches):
+            unsafe = [w for w, fb, f in branches if f != "html" and
+                      re.search(r"[\\*_#`\n]", re.sub(r"\{@.*?@\}", "", fb, flags=re.S).strip())]
+            fmts = sorted({f for _w, _fb, f in branches if f != "html"})
+            out.append(F("prt.feedbackformat", P, "recommended", "Format of PRT feedback",
+                         "PRT %s: feedback format %s → html for all nodes. In Markdown, Moodle shows the feedback "
+                         "without the yellow background, and STACK escapes texts inserted with {@...@} (e.g. "
+                         "[[lang]] blocks of meclib feedback)%s." % (P, ", ".join(fmts), "" if not unsafe else
+                         "; %s contain Markdown-like characters, check them after the change" % ", ".join(unsafe)),
+                         lambda q, P=P: _prt_html(q, P), WIKI + "Meclib-tutorial:-Add-Meclib-feedback-functions"))
         for k, node in enumerate(prt["nodes"]):
             where = "%s node %d" % (P, k + 1)
-            for br in ("true", "false"):
-                fb = node.get(br + "feedback") or ""
-                if fb.strip() and node.get(br + "format") != "html":
-                    plain = re.sub(r"\{@.*?@\}", "", fb, flags=re.S).strip()
-                    safe = not plain or not re.search(r"[\\*_#`\n]", plain)
-                    out.append(F("prt.feedbackformat", "%s %s" % (where, br), "recommended",
-                                 "Format of PRT feedback",
-                                 "PRT %s, %s feedback: format %s → html; Markdown suppresses the yellow feedback "
-                                 "background (reject only if the feedback is meant as a dynamic part of the question "
-                                 "text)%s." % (where, br, node.get(br + "format"), "" if safe else
-                                               "; the text contains Markdown-like characters, check it after the change"),
-                                 lambda q, P=P, k=k, br=br: _set_node_format(q, P, k, br, "html"),
-                                 WIKI + "Meclib-tutorial:-Add-Meclib-feedback-functions"))
             if re.search(r"\{@\s*fb_", _feedback(node)) and node.get("quiet") != "1":
                 out.append(F("prt.quiet", where, "recommended", "Quiet answer test",
                              "PRT %s: the feedback comes from a meclib function; switch the answer test's own "
@@ -1164,9 +1173,10 @@ def r_fb_floats(Q_):
     fb_floats is generic). (3) A node that compares a numerical input with its model answer gets
     {@fb_unit(sans, tans, tol)@} at the start of its false branch (tol: the tolerance of
     NumRelative, else 0.005). Names txt1, ok1, ... for several calls in one PRT or where txt/ok are
-    taken. The nodes become quiet; the answer tests stay (ok is not used, the grading does not
-    change). If fb_floats comes in and the question variables lack fb_dims, the fix adds
-    fb_dims: []; to fill in (see qv.fb-dims).
+    taken. All nodes of the PRT get the format html (one format per PRT; in Markdown, STACK
+    escapes the inserted text, e.g. the [[lang]] blocks). The nodes become quiet; the answer
+    tests stay (ok is not used, the grading does not change). If fb_floats comes in and the
+    question variables lack fb_dims, the fix adds fb_dims: []; to fill in (see qv.fb-dims).
 
     prt.fb-vars-label: calls of fb_vars with a label (4th argument, e.g. for vector components):
     fb_vars shows the label only when it has something to say, fb_floats has none; no automatic fix."""
@@ -1204,6 +1214,10 @@ def r_fb_floats(Q_):
                     texts[(u[0], "false")] = "{@fb_unit(%s, %s, %s)@}" % (u[1], u[2], u[3]) + get(u[0], "false")
                 for (k, br), text in texts.items():
                     q = _set_node_text(q, P, k, br + "feedback", text)
+                # HTML for all nodes of the PRT (one format per PRT): in Markdown, STACK escapes the
+                # inserted text ([[lang]] blocks, &nbsp;)
+                if texts:
+                    q = _prt_html(q, P)
                 for k in sorted({k for k, _br in texts}):
                     q = _set_node(q, P, k, "quiet", "1")
             if any(v["vars"] or v["add"] for v in plan2.values()) and not FB_DIMS.search(sq.strip_comments(Q(q).qvars)):
