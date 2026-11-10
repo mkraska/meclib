@@ -405,7 +405,7 @@ Dir Infobox auf volle Grad runden oder Ursache der Ungenauigkeit ermitteln - noc
       </feedbackvariables>
       <node>
         <name>0</name>
-        <description></description>
+        <description>Comments on selected directions for force balance</description>
         <answertest>AlgEquiv</answertest>
         <sans>ok</sans>
         <tans>true</tans>
@@ -452,7 +452,7 @@ nameA: fb_reaction_name(obj, names, i_A, "A");]]></text>
         <truenextnode>-1</truenextnode>
         <trueanswernote>FA_label-1-T</trueanswernote>
         <truefeedback format="markdown">
-          <text>\({@nameA@} = \)</text>
+          <text>\\\({@nameA@} = \\\)</text>
         </truefeedback>
         <falsescoremode>=</falsescoremode>
         <falsescore>0</falsescore>
@@ -460,7 +460,7 @@ nameA: fb_reaction_name(obj, names, i_A, "A");]]></text>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>FA_label-1-F</falseanswernote>
         <falsefeedback format="markdown">
-          <text>\({@nameA@} = \)</text>
+          <text>\\\({@nameA@} = \\\)</text>
         </falsefeedback>
       </node>
     </prt>
@@ -487,7 +487,7 @@ nameB: fb_reaction_name(obj, names, i_B, "B");]]></text>
         <truenextnode>-1</truenextnode>
         <trueanswernote>FB_label-1-T</trueanswernote>
         <truefeedback format="markdown">
-          <text>\({@nameB@} = \)</text>
+          <text>\\\({@nameB@} = \\\)</text>
         </truefeedback>
         <falsescoremode>=</falsescoremode>
         <falsescore>0</falsescore>
@@ -495,7 +495,7 @@ nameB: fb_reaction_name(obj, names, i_B, "B");]]></text>
         <falsenextnode>-1</falsenextnode>
         <falseanswernote>FB_label-1-F</falseanswernote>
         <falsefeedback format="markdown">
-          <text>\({@nameB@} = \)</text>
+          <text>\\\({@nameB@} = \\\)</text>
         </falsefeedback>
       </node>
     </prt>
@@ -581,7 +581,7 @@ nameB: fb_reaction_name(obj, names, i_B, "B");]]></text>
       </feedbackvariables>
       <node>
         <name>0</name>
-        <description></description>
+        <description>Reaction at A</description>
         <answertest>AlgEquiv</answertest>
         <sans>okA</sans>
         <tans>true</tans>
@@ -606,7 +606,7 @@ nameB: fb_reaction_name(obj, names, i_B, "B");]]></text>
       </node>
       <node>
         <name>1</name>
-        <description></description>
+        <description>Reaction at B</description>
         <answertest>AlgEquiv</answertest>
         <sans>okB</sans>
         <tans>true</tans>
@@ -631,7 +631,7 @@ nameB: fb_reaction_name(obj, names, i_B, "B");]]></text>
       </node>
       <node>
         <name>2</name>
-        <description></description>
+        <description>System boundaries</description>
         <answertest>AlgEquiv</answertest>
         <sans>okSys</sans>
         <tans>true</tans>
@@ -656,7 +656,7 @@ nameB: fb_reaction_name(obj, names, i_B, "B");]]></text>
       </node>
       <node>
         <name>3</name>
-        <description></description>
+        <description>Number of objects</description>
         <answertest>AlgEquiv</answertest>
         <sans>okR</sans>
         <tans>true</tans>

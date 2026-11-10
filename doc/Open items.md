@@ -2,7 +2,7 @@
 
 Working notes for continuing meclib work with Claude in a new session. Not a wiki page:
 this file lives in `doc/` and not in `doc/wiki/`, so the wiki sync does not publish it.
-Last update: 2026-10-25.
+Last update: 2026-11-06.
 
 ## Getting back up to speed (for Claude)
 
@@ -15,9 +15,12 @@ Then read the following, in this order. That is enough; do not scan the whole re
 2. `doc/wiki/History.md`, the top section "Dev Branch". It lists what changed recently, in Martin's words.
 3. `tools/workbench/README.md`, as far as the task needs it. The headings are an index:
    Questions, Evaluation, Tests, Configuration (offline, STACK API), Files, Planned.
-4. For Maxima feedback functions: `Maxima/tests/README.md`. Run the offline tests with
+4. For review rules and other workbench code: `tools/workbench/tests/` (Python `unittest`, no Maxima needed).
+   Run `tools/workbench/tests/run_tests.bat` (or `python -m unittest discover -s tests -v` in `tools/workbench`)
+   before handing over. A changed or new rule gets a test case first (it must fail with the old code).
+5. For Maxima feedback functions: `Maxima/tests/README.md`. Run the offline tests with
    `Maxima/tests/run_tests.bat` (Windows). The result is written to `run_tests.log`.
-5. `doc/wiki/Meclib Workbench.md` and `doc/wiki/Testing a new STACK version.md`, when the workbench or a STACK upgrade is the topic.
+6. `doc/wiki/Meclib Workbench.md` and `doc/wiki/Testing a new STACK version.md`, when the workbench or a STACK upgrade is the topic.
 
 Further context:
 
@@ -31,6 +34,8 @@ Working rules, in short:
 - Write files directly into the clone. Martin reviews the diffs and commits himself with GitHub Desktop.
 - Ask before bulk edits in ambiguous cases.
 - New entries go at the top of `doc/wiki/History.md` (dated, wiki links in `[[...]]`).
+- After changing review rules: `python build_rules_doc.py` (wiki page "Meclib Workbench Review Rules").
+- Do not run `build_help.py` without a wiki clone: it then drops many entries from `syntax_help.json`.
 - `doc/wiki/` is published to the wiki by the GitHub Action on push to `dev2026`.
 - The git status shown inside the device shell is unreliable (CRLF artefacts). Never commit from there.
 
@@ -42,16 +47,20 @@ Environment facts:
 - Workbench: `tools/workbench/start_workbench.bat`, then open http://localhost:8765/. Restart it after changes to the Python code.
 - Offline: run `python fetch_vendor.py` once.
 
-## Status (2026-10-25)
+## Status (2026-11-06)
 
-- Everything up to the changes of 2026-10-24 is committed and pushed, **except `doc/wiki/History.md`** (entries 2026-10-23 and 2026-10-24).
-- STACK issue #1940 (quadratic step in `996_call_modification` filter): the PR from branch `iss1940` has been **merged** by the STACK developers. The fix will reach the Moodle server with the next STACK release. After that upgrade, measure the compile time of `fb_fbd.mac` again (before: 19 s, after the `fb_lang()` change: 8 s). The `iss1940` branch in Martin's fork of moodle-qtype_stack can be deleted.
+- Committed and pushed up to 2026-11-01. The changes of 2026-11-06 (review rules `include.unused` fix,
+  `maxima.multsgn`, `prt.fb-floats`, `prt.fb-vars-label`, `qv.fb-dims`, `prt.feedbackformat` per PRT; editor: closing
+  brackets before `@}`, one-line code editors for model answer and syntax hint; preview: Markdown feedback grey;
+  `tools/workbench/tests/`) are in Martin's clone, not committed yet. Details in `doc/wiki/History.md`, 2026 11 06.
+- To check by Martin: one question converted by `prt.fb-floats` in the workbench (Check with a wrong answer).
+- STACK issue #1940: merged; after the next STACK release on the Moodle server, measure the compile time of
+  `fb_fbd.mac` again (before: 19 s, after the `fb_lang()` change: 8 s). Branch `iss1940` in Martin's fork can go.
 
 ## Open items
 
 ### Short term
 
-- Commit `doc/wiki/History.md`.
 - Review rule for verbatim copies of `meclib.js` in question texts (found in TM1 06 01 Aufgabe 2c, fixed by hand). Add the rule only if more such questions turn up.
 
 ### Performance and refactoring ideas (no decision yet)
@@ -66,10 +75,17 @@ Environment facts:
 
 See "Planned" in `tools/workbench/README.md`: folder tree, review of a whole folder, templates, editor assistants, bulk edits, gitsync split files, and more.
 
-- Importing into Moodle directly from the workbench is possible in two ways:
-  - browser automation of "Import as new version"
-  - `qbank_gitsync`, once the Moodle admin installs it
-- Not started, waiting for the admin.
+- Rename a question variable throughout the question (question and feedback variables, CAS parts of the texts,
+  question note, model answers, syntax hints, SAns/TAns/test options, question tests; not inside strings and
+  comments; the new name must be free and not a unit): as the fix of `qv.unit-name` (e.g. `g` → `g0`, checked by
+  default) and as "rename variable" in the editor.
+- Way back to Moodle (2026-11-06): `qbank_gitsync` not before February 2027, and IT is still deciding whether to
+  install it at all - do not depend on it.
+  - Bulk changes only between two courses, on the whole course backup (.mbz: download, change, restore). To check:
+    the questions are in Moodle's backup format there, not Moodle XML.
+  - Single changes in between: browser automation of "Import as new version".
+  - Export and import of a category only if "import as new version" works for a whole category (otherwise the
+    quizzes keep pointing to the old questions).
 
 ### Feedback functions (from earlier sessions, still open)
 
@@ -82,10 +98,10 @@ See "Planned" in `tools/workbench/README.md`: folder tree, review of a whole fol
   - The optional 4th argument is undocumented.
 - `fb_spline()`: will be reformatted anyway (GitHub issue).
 - `contact`:
-  - Not decided: whether the grey snap cross at the contact point follows the `hide` state of the referenced object.
+  - Done (code and wiki page `contact`): the grey cross is shown only while the referenced object is deactivated.
   - Not decided: the extent of the grid-snap suppression.
   - Update the wiki pages for `fb_contact()` and `"contact"` (list references for several reference objects).
-- Crosshair setup: unify by bulk edit once bulk editing exists.
+- Crosshair setup: unify by bulk edit (course backup, see Workbench).
 
 ### Questions
 

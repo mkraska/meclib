@@ -294,6 +294,30 @@
   // until a double click on it lets it follow the cursor again
   let boxPin = null;
   function hideBox() { if (box) box.style.display = "none"; boxCtx = null; boxCm = null; }
+  // Math in the help texts (\( ... \)) is typeset with the page's MathJax (2 or 3). A page
+  // without MathJax can name one with setMathJax(url); it is then loaded on first use.
+  let mathUrl = null, mathLoading = null;
+  function setMathJax(url) { mathUrl = url || null; }
+  function haveMathJax() { return !!(window.MathJax && (MathJax.Hub || MathJax.typesetPromise)); }
+  function loadMathJax() {
+    if (haveMathJax()) return Promise.resolve(true);
+    if (!mathUrl) return Promise.resolve(false);
+    if (!mathLoading) {
+      const mj = document.createElement("script"); mj.type = "text/x-mathjax-config";
+      mj.text = 'MathJax.Hub.Config({messageStyle: "none", skipStartupTypeset: true, tex2jax: {inlineMath: [["\\\\(","\\\\)"]], displayMath: [["\\\\[","\\\\]"]], processEscapes: true}});';
+      document.head.appendChild(mj);
+      mathLoading = loadScript(mathUrl).then(() => true, () => false);
+    }
+    return mathLoading;
+  }
+  function typesetBox(done) {
+    if (!/\\[(\[]/.test(box.textContent)) return;          // no math in the box
+    loadMathJax().then((ok) => {
+      if (!ok || !haveMathJax()) return;
+      if (MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, box], done);
+      else MathJax.typesetPromise([box]).then(done, () => {});
+    });
+  }
   function escHTML(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
   function codeSpans(s) { return escHTML(s).replace(/`([^`]+)`/g, "<code>$1</code>"); }
   function sigHTML(e, arg) {
@@ -351,10 +375,16 @@
       box.addEventListener("dblclick", () => { boxPin = null; if (boxCm) updateBox(boxCm); });
       document.body.appendChild(box);
     }
-    box.innerHTML = boxHTML(ctx.entry, arg);
+    const html = boxHTML(ctx.entry, arg);
+    const fresh = html !== box.dataset.src;              // typeset only when the content changes
+    if (fresh) { box.innerHTML = html; box.dataset.src = html; }
     boxCtx = ctx;
     boxCm = cm;
     box.style.display = "block";
+    placeBox(cm);
+    if (fresh) typesetBox(() => { if (boxCm === cm && box.dataset.src === html) placeBox(cm); });
+  }
+  function placeBox(cm) {
     if (boxPin) { box.style.left = boxPin.left + "px"; box.style.top = boxPin.top + "px"; return; }
     const c = cm.cursorCoords(null, "page");
     const h = box.offsetHeight;
@@ -714,5 +744,5 @@
     };
   }
 
-  window.MeclibEditor = { load, field, setHelp, configure, available: () => ready };
+  window.MeclibEditor = { load, field, setHelp, configure, setMathJax, available: () => ready };
 })();

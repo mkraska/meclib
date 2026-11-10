@@ -857,6 +857,7 @@ async function start() {
     if (initEd.plain) initEd = null; else initEd.set(text);
     if (syntaxHelp) MeclibEditor.setHelp(syntaxHelp);
     MeclibEditor.configure({ autocomplete: true, closeBrackets: true, semicolon: false });
+    MeclibEditor.setMathJax(F.resolveUrl(config.mathjax[$("mathjax").value]));   // math in the help box
   } catch (e) { logLine("warn", "Code editor not available (plain text field instead): " + e.message); }
   loadQuestionFolders();
   loadGraphicList();
