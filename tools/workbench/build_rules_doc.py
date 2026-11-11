@@ -26,7 +26,7 @@ AREAS = [  # (title, key prefixes)
     ("PRTs and grading", ("prt.", "grade.")),
     ("Maxima code and includes", ("include.", "functions.", "maxima.", "qv.")),
     ("Graphics (meclib)", ("graphic.", "state.", "index.", "tans.")),
-    ("Files and question tests", ("files.", "tests.")),
+    ("Files, variants and question tests", ("files.", "variants.", "tests.")),
 ]
 LEVELS = ["required", "recommended", "hint"]
 

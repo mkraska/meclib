@@ -23,6 +23,8 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+# plots of plot() in castext (STACK's IMAGE_DIR): the server serves them under /plots/ (URL_BASE)
+PLOT_DIR = HERE / ".cache" / "plots"
 REPO = HERE.parent.parent
 
 
@@ -143,6 +145,18 @@ def mstring(text):
     return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
+def gnuplot_for(maxima):
+    """gnuplot of a Maxima installation (Windows: <maxima>\\gnuplot\\bin\\gnuplot.exe next to
+    bin\\maxima.bat), else the one on the PATH; None if there is none."""
+    if maxima:
+        root = Path(maxima).resolve().parent.parent
+        for p in (root / "gnuplot" / "bin" / "gnuplot.exe", root / "gnuplot" / "bin" / "wgnuplot.exe"):
+            if p.is_file():
+                return p
+    found = shutil.which("gnuplot")
+    return Path(found) if found else None
+
+
 class MaximaError(RuntimeError):
     pass
 
@@ -215,6 +229,16 @@ class MaximaSession:
         b = text.find("true)$", a)
         return text[a:b + len("true)$")] if a >= 0 and b > a else ""
 
+    def _plot_setup(self):
+        PLOT_DIR.mkdir(parents=True, exist_ok=True)
+        lines = ["IMAGE_DIR: %s$" % mpath(str(PLOT_DIR).replace("\\", "/") + "/"),
+                 "maxima_tempdir: %s$" % mpath(str(self.tmp).replace("\\", "/") + "/"),
+                 'URL_BASE: "/plots/"$']
+        gp = gnuplot_for(self.maxima)
+        if gp:
+            lines.append("GNUPLOT_CMD: %s$" % mpath(str(gp).replace("\\", "/")))
+        return "\n".join(lines)
+
     def _prelude(self):
         lib = self.libdir
         harness = REPO / "Maxima" / "tests" / "harness.mac"
@@ -225,6 +249,11 @@ class MaximaSession:
             "file_search_lisp: cons(%s, file_search_lisp)$" % mpath(str(lib) + "/###.{lisp}"),
             self._stack_setup(),
             "load(%s)$" % mpath(lib / "stackmaxima.mac"),
+            # plot(): STACK_SETUP() of the local template writes to <maxima_userdir>/plots/ and links
+            # the files as file:/// - a page served by the workbench cannot load those. The plots go
+            # to the workbench's cache and are served under /plots/; gnuplot is the one next to the
+            # chosen Maxima (Windows), not c:/maxima-<version>/ as the template guesses.
+            self._plot_setup(),
             # as STACK's maximalocal.mac
             'load("stats")$', 'load("distrib")$', 'load("descriptive")$',
             # castext() renderer and resolve_lang() shared with the offline Maxima tests

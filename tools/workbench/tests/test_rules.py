@@ -333,5 +333,107 @@ class FbDims(unittest.TestCase):
         self.assertNotIn("qv.fb-dims[fb_dims]", keys(q))
 
 
+def with_note(text, note):
+    return text.replace("<questionvariables>", "<questionnote><text><![CDATA[%s]]></text></questionnote>\n<questionvariables>" % note, 1)
+
+
+def with_seeds(text, seeds):
+    return text.replace("</question>", "".join("<deployedseed>%d</deployedseed>\n" % s for s in seeds) + "</question>", 1)
+
+
+class Variants(unittest.TestCase):
+    """variants.*: randomised questions need deployed variants and a question note
+    (agents/stack_essentials.md of STACK, read 2026-11-11)."""
+
+    QV = "a: rand([2, 3, 5]);\nta: a*x;"
+
+    def test_random_without_seeds_and_note(self):
+        k = keys(question(self.QV, algebraic_input(hint="x^2")))
+        self.assertIn("variants.none", k)
+        self.assertIn("variants.note", k)
+
+    def test_random_with_seeds_and_note(self):
+        q = with_seeds(with_note(question(self.QV, algebraic_input(hint="x^2")), "{@a@}"), [1, 2])
+        k = keys(q)
+        self.assertFalse(any(x.startswith("variants.") for x in k), k)
+
+    def test_not_random(self):
+        k = keys(question("a: 3;\nta: a*x;", algebraic_input(hint="x^2")))
+        self.assertFalse(any(x.startswith("variants.") for x in k), k)
+
+    def test_variable_named_rand(self):
+        # a variable named rand... makes the question random for STACK, so all three findings
+        k = keys(question("randval: 3;\nta: randval*x;", algebraic_input(hint="x^2")))
+        self.assertIn("variants.rand-name[randval]", k)
+        self.assertIn("variants.none", k)
+
+    def test_rand_in_string_or_comment(self):
+        k = keys(question('/* rand(3) */ s: "rand";\nta: x;', algebraic_input(hint="x^2")))
+        self.assertNotIn("variants.none", k)
+
+
+def with_test(text, tc=1, note="A-1-T"):
+    return text.replace("</question>", "<qtest><testcase>%d</testcase><description>d</description>"
+                        "<testinput><name>S_A</name><value>A</value></testinput>"
+                        "<expected><name>A</name><expectedscore>1</expectedscore><expectedpenalty>0</expectedpenalty>"
+                        "<expectedanswernote>%s</expectedanswernote></expected></qtest>\n</question>" % (tc, note), 1)
+
+
+class Approval(unittest.TestCase):
+    """Approval of question tests (Tests column, 2026-11-11): recorded in the question description
+    with a fingerprint; stale when variables, inputs, PRTs or the test change, not for feedback texts."""
+
+    def base(self):
+        return with_test(question("A: 2*F;\nta: A;", input_of("S_A", "algebraic", "A"),
+                                  prt_test("A", [("AlgEquiv", "S_A", "A", "", "Falsch.", "-1")]),
+                                  text="<p>[[input:S_A]] [[validation:S_A]]</p>"))
+
+    def test_approve_and_stale(self):
+        q, label = rules.approve(self.base(), 0, 1)
+        self.assertEqual(label, "test 1 approved")
+        self.assertIn("Tests approved: 1 [", rules.Q(block(q)).data.get("questiondescription", "") or q)
+        self.assertEqual(rules.approvals(block(q)), {"1": {"date": rules.time.strftime("%Y-%m-%d"), "current": True}})
+        # a feedback text does not matter
+        q2 = q.replace("Falsch.", "Leider falsch.")
+        self.assertTrue(rules.approvals(block(q2))["1"]["current"])
+        # the question variables do
+        q3 = q.replace("A: 2*F;", "A: 3*F;")
+        self.assertFalse(rules.approvals(block(q3))["1"]["current"])
+
+    def test_approve_with_expected(self):
+        exp = {"A": {"score": "1", "penalty": "0", "note": "A-0-T"}}
+        q, label = rules.approve(self.base(), 0, 1, exp)
+        self.assertIn("replaced", label)
+        t = rules.qfile.qtests(block(q))[0]
+        e = t["expected"]["A"]
+        self.assertEqual((float(e["score"]), float(e["penalty"]), e["note"]), (1.0, 0.0, "A-0-T"))
+        # approving again with the same values changes nothing but the approval
+        _q, label2 = rules.approve(q, 0, 1, exp)
+        self.assertEqual(label2, "test 1 approved")
+        self.assertEqual(t["inputs"], {"S_A": "A"})
+        self.assertTrue(rules.approvals(block(q))["1"]["current"])
+
+    def test_review_keeps_approval(self):
+        q, _ = rules.approve(self.base(), 0, 1)
+        fs = [f["key"] for f in rules.findings(block(q)) if f["fixable"]]
+        out, _ = rules.apply(q, 0, fs[:1], [])
+        self.assertIn("1", rules.approvals(block(out)))
+
+
+class Locked(unittest.TestCase):
+    """state.locked: the legacy state "locked"; for a spline it is a state of its own (TM1 09 05, 2026-11-11)."""
+
+    def test_spline_not_reported(self):
+        q = question('initdata: [["spline","",[0,0],[0,1],[2,1],[0.6,1],[1.5,1],"b-","locked"]];\nta: x;', algebraic_input(hint="x^2"))
+        self.assertFalse(any(k.startswith("state.locked") for k in keys(q)), keys(q))
+
+    def test_beam_still_reported(self):
+        q = question('initdata: [["beam","",[0,0],[2,0],0.13,"locked"], ["spline","",[0,0],[0,1],[2,1],[0.6,1],[1.5,1],"b-","locked"]];\nta: x;',
+                     algebraic_input(hint="x^2"))
+        k = keys(q)
+        self.assertIn("state.locked[beam]", k)
+        self.assertNotIn("state.locked[untested]", k)
+
+
 if __name__ == "__main__":
     unittest.main()

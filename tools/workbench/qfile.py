@@ -429,6 +429,37 @@ def _insert_after_last(q, closing, block, nl, fallbacks):
     return q[:line] + block + nl + q[line:]
 
 
+DEPLOYED_LINE = re.compile(r"[ \t]*<deployedseed>\s*-?\d+\s*</deployedseed>[ \t]*\r?\n?")
+
+
+def deployed_seeds(q):
+    """The deployed seeds of a question block, in file order."""
+    return [int(s) for s in re.findall(r"<deployedseed>\s*(-?\d+)\s*</deployedseed>", q)]
+
+
+def seeds_op(text, index, seeds):
+    """The question with exactly these deployed seeds (sorted, without repeats), where STACK
+    writes them: after the PRTs, before the question tests. Returns (new text, label)."""
+    a, b, qtype = question_span(text, index)
+    if qtype != "stack":
+        raise ValueError("question %d is not a STACK question" % index)
+    seeds = sorted({int(s) for s in seeds})
+    nl = _newline(text)
+    q = text[a:b]
+    old = deployed_seeds(q)
+    q = DEPLOYED_LINE.sub("", q)
+    if seeds:
+        m = re.search(r"\n([ \t]*)<prt>", q) or re.search(r"\n([ \t]*)<input>", q)
+        indent = m.group(1) if m else "    "
+        block = nl.join("%s<deployedseed>%d</deployedseed>" % (indent, s) for s in seeds)
+        q = _insert_after_last(q, "</prt>", block, nl, ["<qtest>", "<hint"])
+    added, removed = sorted(set(seeds) - set(old)), sorted(set(old) - set(seeds))
+    label = "deployed variants: " + ", ".join(
+        ([("+" + ", +".join(map(str, added)))] if added else []) + ([("-" + ", -".join(map(str, removed)))] if removed else [])
+    ) if added or removed else "deployed variants unchanged"
+    return text[:a] + q + text[b:], label
+
+
 def add_input(text, index, name, kind, tans=None, tol="0.005", labels=""):
     """New input S_<name> and PRT <name> (see INPUT_KINDS). Returns (text, input name, prt name)."""
     if kind not in INPUT_KINDS:

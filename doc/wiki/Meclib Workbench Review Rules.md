@@ -55,7 +55,10 @@ The review of the [[Meclib Workbench]] (Questions page, **Review** at the top of
 | [`graphic.feedback-interactive`](#graphicfeedback-interactive) | required | yes | Interactive graphic in the feedback |
 | [`index.literal`](#indexliteral) | hint | no | Object index as a number |
 | [`tans.copy`](#tanscopy) | hint | no | Model answer of the graphic |
-| **Files and question tests** | | | |
+| **Files, variants and question tests** | | | |
+| [`variants.none`](#variantsnone) | required | no | Randomised question without deployed variants |
+| [`variants.note`](#variantsnote) | required | no | Randomised question without question note |
+| [`variants.rand-name`](#variantsrand-name) | recommended | no | Variable named rand... |
 | [`files.unused`](#filesunused) | recommended | yes | Unused embedded file |
 | [`tests.value-length`](#testsvalue-length) | required | yes | Test input too long for Moodle |
 
@@ -422,7 +425,7 @@ See also: https://github.com/mkraska/meclib/wiki/Home
 
 Level: **recommended / hint** · automatic fix: **partly** · function `r_locked()`
 
-The legacy object state "locked" in the objects of a meclib graphic (initdata etc.): fb_system() counts only "SHOW"/"show" as shown. Replacing it by "SHOW" is offered (recommended, with fix) for the object types with a regression test for this - types that appear with "SHOW" in a scene of tests/scenes/ (state_show.json: beam, q, fix1, fix12, fix123, bar, force, moment); other types get a hint only.
+The legacy object state "locked" in the objects of a meclib graphic (initdata etc.): fb_system() counts only "SHOW"/"show" as shown. Replacing it by "SHOW" is offered (recommended, with fix) for the object types with a regression test for this - types that appear with "SHOW" in a scene of tests/scenes/ (state_show.json: beam, q, fix1, fix12, fix123, bar, force, moment); other types get a hint only. Not reported: types for which "locked" is a state of their own (spline: active, inactive, locked, pure; no "SHOW").
 
 Messages:
 > Objects of type … with the legacy state "locked": replace by "SHOW" (fb_system() counts only "SHOW" as shown; regression test: tests/scenes/state_show.json).
@@ -477,7 +480,40 @@ The model answer of a graphic's input is its initial state (tans equal to init):
 Message:
 > The model answer of … is the initial state (init). Usually it is derived from it: tansdata: copy(initdata) with changes, tans: stackjson_stringify(tansdata).
 
-## Files and question tests
+## Files, variants and question tests
+
+### `variants.none`
+
+Level: **required** · automatic fix: **no** · function `r_variants()`
+
+Randomised questions (STACK's rule: a word of the question variables beginning with rand, multiselqn or stack_seed; agents/stack_essentials.md, "Deploy variants").
+
+No deployed variant. Students may get any variant, including one nobody has tested, and the API runs no tests. Deploy variants in the Tests column (survey of seeds).
+
+Message:
+> The question is randomised but has no deployed variants: students may get any variant, also one nobody has tested, and STACK runs no tests. Deploy variants in the Tests column (survey of seeds, distinct question notes).
+
+### `variants.note`
+
+Level: **required** · automatic fix: **no** · function `r_variants()`
+
+Randomised questions (STACK's rule: a word of the question variables beginning with rand, multiselqn or stack_seed; agents/stack_essentials.md, "Deploy variants").
+
+The question note is empty. STACK tells variants apart by their notes only; show every value that distinguishes the variants, and the answer.
+
+Message:
+> The question note is empty: STACK tells variants apart by their notes only. Show every value that distinguishes the variants, and the answer, e.g. `\(`F = `{@F@}``\)`, answer `{@ta1@}`.
+
+### `variants.rand-name`
+
+Level: **recommended** · automatic fix: **no** · function `r_variants()`
+
+Randomised questions (STACK's rule: a word of the question variables beginning with rand, multiselqn or stack_seed; agents/stack_essentials.md, "Deploy variants").
+
+A question variable whose name begins with rand makes STACK treat the question as randomised; rename it.
+
+Message:
+> The question variable … begins with "rand": STACK then treats the question as randomised (deployed variants, tests per variant). Rename it.
 
 ### `files.unused`
 

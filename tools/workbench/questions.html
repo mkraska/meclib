@@ -106,6 +106,57 @@
   .qtests .qtform input { width: 100%; font-size: 12px; }
   .qtests .qtmsg { width: 100%; font-size: 11px; white-space: pre-wrap; }
   .qtests .qtmsg.bad { color: var(--err); }
+  /* Tests column (instead of the editor): deployed variants and question tests */
+  /* the editor bar in the Tests view: its own buttons and jump list */
+  #sideEdit.tests .edonly, #sideEdit:not(.tests) .tvonly { display: none !important; }
+  #sideEdit .tvonly { display: flex; flex-direction: column; gap: 4px; }
+  #sideEdit .tvonly .pair { display: flex; gap: 3px; }
+  #tvTools button.qfail { background: #f8dcda; color: var(--err); border-color: #e3a19b; }
+  table.vtab button.tc { min-width: 24px; padding: 1px 5px; font-size: 12px; margin: 0 2px 2px 0; }
+  table.vtab button.tc.p { background: #dcefdc; color: var(--ok); border-color: #9cc99c; }
+  table.vtab button.tc.f { background: #f8dcda; color: var(--err); border-color: #e3a19b; }
+  table.vtab button.tc.sp { box-shadow: inset 0 -3px 0 #3a9a3a; } table.vtab button.tc.sf { box-shadow: inset 0 -3px 0 #c0392b; }
+  table.vtab button.tc.cur { outline: 2px solid var(--accent); outline-offset: 1px; }
+  table.vtab tr.rest td { opacity: .75; }
+  table.vtab td.tres, table.vtab th:last-child { white-space: nowrap; width: 1%; }
+  /* coverage: the branches of the PRTs (rows) reached by the tests (columns) */
+  table.cov { border-collapse: collapse; font-size: 12px; }
+  table.cov th { font-weight: 400; color: var(--muted); padding: 1px 6px; text-align: center; }
+  table.cov th:first-child, table.cov td:first-child { text-align: left; }
+  table.cov td { padding: 1px 6px; border-top: 1px solid var(--line); text-align: center; }
+  table.cov td.n { font-family: var(--mono); color: var(--muted); font-size: 11.5px; }
+  table.cov tr.miss td { background: #fbecea; color: var(--err); }
+  table.cov .h { color: var(--muted); }
+  #covPop { position: fixed; z-index: 80; max-width: 460px; max-height: 70vh; overflow: auto; background: #fff;
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; box-shadow: 0 6px 24px rgba(0, 0, 0, .18); }
+  /* the route of a PRT (node values) and the test details */
+  .route { margin: 0 0 10px; display: flex; flex-direction: column; gap: 4px; }
+  .route .rstep { border: 1px solid var(--line); border-left: 3px solid #9cc99c; border-radius: 0; padding: 3px 6px; font-size: 12px; }
+  .route .rstep.false { border-left-color: #e3a19b; } .route .rstep.error { border-left-color: var(--err); }
+  .route .rstep .rhead { font-weight: 600; } .route .rstep .rnote { color: var(--muted); font-size: 11.5px; }
+  .route .rstep .rnote code { font-family: var(--mono); }
+  #tvDetail table.exp { border-collapse: collapse; font-size: 12px; margin: 4px 0; }
+  #tvDetail table.exp td, #tvDetail table.exp th { padding: 1px 6px; border-top: 1px solid var(--line); text-align: left; }
+  #tvDetail table.exp th { font-weight: 400; color: var(--muted); }
+  #tvDetail .diff { color: var(--err); font-weight: 600; }
+  .apbadge { font-size: 11.5px; padding: 1px 7px; border-radius: 4px; }
+  .apbadge.ok { background: #dcefdc; color: var(--ok); } .apbadge.stale { background: #fbf1dc; color: #a35a00; }
+  .apbadge.no { background: #fbf1dc; color: #a35a00; }
+  table.vtab th button.tc.ap { box-shadow: inset 0 3px 0 #3a9a3a; } table.vtab th button.tc.apstale { box-shadow: inset 0 3px 0 #e0a030; }
+  #testsToggle.need { background: #f8dcda; color: var(--err); border-color: #e3a19b; font-weight: 600; }
+  #testView .tvbox { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 0 0 10px; }
+  #testView .tvrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; }
+  #testView .tvrow input[type=number] { width: 4.5em; }
+  table.vtab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.vtab th { text-align: left; font-weight: 400; color: var(--muted); padding: 2px 4px; }
+  table.vtab td { padding: 2px 4px; border-top: 1px solid var(--line); vertical-align: top; }
+  table.vtab tr.cur td { background: #eef3fa; }
+  table.vtab tr.dep td.note { font-weight: 600; }
+  table.vtab td.err { color: var(--err); }
+  table.vtab .dup { color: #a35a00; font-size: 11.5px; }
+  table.vtab .dup.bad { color: var(--err); font-weight: 600; }
+  table.vtab .tres span { display: inline-block; min-width: 1.1em; text-align: center; }
+  table.vtab .tres .p { color: var(--ok); } table.vtab .tres .f { color: var(--err); font-weight: 600; }
   /* the folder tree (tree.js): folder names as written, the folder files are dropped into marked */
   #folders details.troot > summary { text-transform: none; letter-spacing: 0; word-break: break-all; }
   #folders details.troot > summary .tlabel, #folders details.tbranch > summary .tlabel { color: var(--accent); }
@@ -367,12 +418,23 @@
       <label><input type="checkbox" id="optCloseBrackets"> add closing brackets</label>
       <label><input type="checkbox" id="optSemicolon"> add <code>;</code> after <code>:</code> (Maxima)</label>
       <label title="F2 in an editor switches it, too"><input type="checkbox" id="optHelpBox"> syntax help box (F2)</label>
+      <div class="sbhead">Question tests</div>
+      <label title="the approval holds for question variables, options, inputs and PRTs (without feedback texts) as they were; a change asks for approval again"><input type="checkbox" id="optApprovalFp"> approval lapses when the question changes</label>
       <span class="hint">F1: help on the function at the cursor</span></div></details>
     <span class="pair"><button id="undoBtn" disabled title="nothing to undo">↶</button><button id="redoBtn" disabled title="nothing to redo">↷</button></span>
-    <button id="snippetBtn" title="insert a text snippet at the cursor (templates/snippets/)">Snippet</button>
-    <button id="toGraphic" title="open the question's graphic (first [[jsxgraph]] block, evaluated initdata) on the Graphic page">Graphic ↗</button>
+    <button id="snippetBtn" class="edonly" title="insert a text snippet at the cursor (templates/snippets/)">Snippet</button>
+    <button id="toGraphic" class="edonly" title="open the question's graphic (first [[jsxgraph]] block, evaluated initdata) on the Graphic page">Graphic ↗</button>
+    <button id="testsToggle" title="question tests and deployed variants (instead of the editor); red: something to do">Tests</button>
+    <div class="tvonly">
+      <button id="testsBack" title="back to the editor">← Editor</button>
+      <button id="varSurvey" title="evaluate the question variables and the question note for the seeds 1..N (N in the column)">Survey</button>
+      <button id="varRunTests" title="run all question tests (fast check) on every deployed variant">Tests on deployed</button>
+      <div id="tvTools" class="tvonly"></div>
+    </div>
     <hr>
-    <nav id="railEdit" class="jump" aria-label="editor sections"></nav>
+    <nav id="railEdit" class="jump edonly" aria-label="editor sections"></nav>
+    <nav id="railTests" class="jump tvonly" aria-label="test sections">
+      <a href="#" data-jump="tvVariants">Variants and tests</a><a href="#" data-jump="tvDetail">Test details</a><a href="#" data-jump="tvCoverage">Coverage</a><a href="#" data-jump="tvTestBox">Test messages</a></nav>
   </aside>
   <div id="editCol">
     <section>
@@ -412,6 +474,27 @@
         <p class="hint">Changes are saved to the file automatically (a copy of the file as it was when
           opened: <code>.bak</code> next to it). Ctrl+Enter: save, evaluate and update the preview.</p>
       </div>
+      <div id="testView" hidden>
+        <div class="tvrow"><span id="testsNeed" class="hint"></span></div>
+        <div class="tvbox" id="tvVariants">
+          <div class="tvrow"><b>Variants and tests</b><span class="hint">survey: seeds 1 to</span>
+            <input type="number" id="varCount" min="1" max="500" value="10" title="how many seeds the survey evaluates (question variables and note only)"></div>
+          <div id="varInfo" class="hint"></div>
+          <table id="varTable" class="vtab"></table>
+          <p class="hint">A test button runs that test on that variant in the preview (green passed, red failed, a bar below:
+            result in STACK itself); a test number in the head runs the test on every deployed variant.</p>
+        </div>
+        <div class="tvbox" id="tvDetail"><span class="hint">Run a test (a button in the matrix): its route through the PRTs and its approval show here.</span></div>
+        <div class="tvbox" id="tvCoverage">
+          <div class="tvrow"><b>Coverage</b><span id="covInfo" class="hint"></span></div>
+          <div id="covView"></div>
+          <p class="hint">● the expected route of the test passes this branch; ○ a test that names only the last answer note:
+            the branch is from the route of a run (write the full route). Red: no test reaches the branch.</p>
+        </div>
+        <div class="tvbox" id="tvTestBox">
+          <div id="qtestBar" class="qtests" title="question tests (STACK's &lt;qtest&gt;, exported to Moodle with the question)"></div>
+        </div>
+      </div>
     </section>
   </div>
 
@@ -424,7 +507,6 @@
     <button id="evaluate" class="primary" title="Ctrl+Enter: save, evaluate the question and update the preview">Update</button>
     <button id="fillBtn" class="primary" title="Model answer: fill in the model answers (the graphic starts from the model answer of its objects input)">TAns</button>
     <button id="checkBtn" class="primary" title="evaluate the PRTs with the current answers (Alt+Enter)">Check</button>
-    <div id="qtestBar" class="qtests" title="question tests (STACK's &lt;qtest&gt;, exported to Moodle with the question)"></div>
     <span class="pair" title="language of the [[lang]] blocks"><button id="lang-de">de</button><button id="lang-en">en</button></span>
     <span class="pair" title="decimal separator (question option, saved in the file)"><button id="dec-point" class="dec">0<b>.</b>5</button><button id="dec-comma" class="dec">0<b>,</b>5</button></span>
     <button id="simpToggle" title="simplify (question option, saved in the file)">simp</button>
@@ -734,6 +816,8 @@ async function selectQuestion(index) {
   for (const k of Object.keys(testResults)) delete testResults[k];     // the tests of another question
   for (const k of Object.keys(stackResults)) delete stackResults[k];
   stackSummary = "";
+  variantsData = null; for (const k of Object.keys(seedResults)) delete seedResults[k];
+  for (const k of Object.keys(actualRoutes)) delete actualRoutes[k];
   activeTest = null; testDeleteArmed = null; leaveTestMode(false);
   if (!(await flush())) return;
   if ($("inputDialog").open) $("inputDialog").close("");   // it belongs to the question it was opened for
@@ -1295,8 +1379,11 @@ function renderPRTGraphs() {
   box.innerHTML = prts.map((p) => {
     const notes = lastCheck && lastCheck.prts && lastCheck.prts[p.name] ? String(lastCheck.prts[p.name].notes || "") : "";
     const { svg, warn } = prtGraphSVG(p, new Set(notes.split("|").map((x) => x.trim()).filter(Boolean)), width);
-    return `<div data-prt="${esc(p.name)}"><div class="gtitle">${esc(p.name)}</div>${warn.map((w) => `<div class="gwarn">${esc(w)}</div>`).join("")}${svg}</div>`;
+    const trace = lastCheck && lastCheck.prts && lastCheck.prts[p.name] && lastCheck.prts[p.name].trace;
+    return `<div data-prt="${esc(p.name)}"><div class="gtitle">${esc(p.name)}</div>${warn.map((w) => `<div class="gwarn">${esc(w)}</div>`).join("")}${svg}` +
+      (trace && trace.length ? routeHTML(trace) : "") + "</div>";
   }).join("");
+  typeset(box);
   for (const g of box.querySelectorAll(".gnode")) g.addEventListener("click", () => {
     const P = g.closest("[data-prt]").dataset.prt, el = document.getElementById("node-" + P + "-" + g.dataset.node);
     if (!el) return;
@@ -2132,26 +2219,25 @@ function renderTests() {
   const bar = $("qtestBar");
   if (!bar) return;
   const tests = (result && result.qtests) || [];
-  bar.innerHTML = '<span class="qtl">Tests</span>';
-  for (const qt of tests) {
-    const b = document.createElement("button");
-    const sr = stackResults[qt.testcase];
-    b.className = "small" + (testResults[qt.testcase] ? (testResults[qt.testcase].pass ? " qpass" : " qfail") : "") +
-      (sr ? (sr.pass ? " spass" : " sfail") : "") +
-      (activeTest === qt.testcase ? " qcur" : "");
-    b.textContent = qt.testcase;
-    const r = testResults[qt.testcase];
-    b.title = (qt.description || "(no description)") + "\n" +
-      Object.entries(qt.inputs).map(([n, v]) => `${n} = ${v}`).join("\n") + "\nexpected: " +
-      Object.entries(qt.expected).map(([p, e]) => `${p}: ${e.note} (score ${e.score || "-"})`).join(", ") +
-      (r ? "\nfast check: " + (r.pass ? "passed" : "FAILED: " + r.reasons.join("; ")) : "") +
-      (sr ? "\nSTACK: " + (sr.pass ? "passed" : "FAILED: " + sr.reasons.join("; ")) + ` (${sr.seconds} s)` : "") + "\nclick: fill the inputs and check";
-    b.addEventListener("click", () => runTest(qt));
-    bar.appendChild(b);
+  bar.innerHTML = "";
+  // the test actions are in the editor bar of the Tests view; the tests themselves in the matrix
+  const tools = $("tvTools");
+  tools.innerHTML = "";
+  let pair = null, last = null;
+  const tool = (label, title, fn) => {
+    const b = document.createElement("button"); b.textContent = label; b.title = title; b.addEventListener("click", fn);
+    if (label.length <= 2) { if (!pair || pair.children.length >= 3) { pair = document.createElement("span"); pair.className = "pair"; tools.appendChild(pair); } pair.appendChild(b); }
+    else { pair = null; tools.appendChild(b); }
+    last = b;
+  };
+  if (result && (result.inputs || []).length && !testMode) {
+    tool("+", (tests.length ? "" : "no question tests yet - ") + "new test case: the preview goes into test mode, where the inputs take CAS expressions with question variables", () => enterTestMode(null));
+    const cov = coverage();
+    if (!tests.length || cov.missing) last.classList.add("qfail");
+    last.addEventListener("mouseenter", () => showCoverageCallout(last));
+    last.addEventListener("mouseleave", hideCoverageCallout);
   }
-  const tool = (label, title, fn) => { const b = document.createElement("button"); b.className = "small"; b.textContent = label; b.title = title; b.addEventListener("click", fn); bar.appendChild(b); };
-  if (result && (result.inputs || []).length && !testMode) tool("+", "new test case: the preview goes into test mode, where the inputs take CAS expressions with question variables", () => enterTestMode(null));
-  if (tests.length) tool("▶", "run all tests (fast check in Maxima)", runAllTests);
+  if (tests.length) tool("▶", "run all tests on the variant in the preview (fast check in Maxima)", runAllTests);
   if (tests.length) tool(stackRunning ? "STACK …" : "STACK ▶", stackApi && stackApi.built
     ? `run all tests in STACK itself (STACK API in Docker: STACK ${(stackApi.settings || {}).release || ""}, Maxima ${(stackApi.settings || {}).maxima || ""}); ` +
       "STACK compiles the question for every test, which takes seconds to a minute with large includes; the result shows as a line under each button"
@@ -2166,6 +2252,302 @@ function renderTests() {
   const sf = Object.entries(stackResults).filter(([tc, x]) => !x.pass && tests.some((t) => String(t.testcase) === tc));
   if (stackSummary) { const m = document.createElement("div"); m.className = "qtmsg " + (sf.length ? "bad" : "info"); m.textContent = stackSummary +
     (sf.length ? "\n" + sf.map(([tc, x]) => `test ${tc}: ` + x.reasons.join("; ")).join("\n") : ""); bar.appendChild(m); }
+  renderVariants();
+}
+
+// ---------------------------------------------------------------- Tests column: deployed variants
+// The column replaces the editor ("Tests" in the editor bar). Survey: question variables and note
+// of seeds 1..N (POST /api/q/variants); a tick deploys a seed (POST /api/q/seeds, written to the
+// file at once); "Tests on deployed" runs the fast check of every test on every deployed seed.
+let variantsData = null;          // {variants: [{seed, note: {de, en}, error}], random, has_note}
+const seedResults = {};           // seed -> {testcase: pass}
+function showTestsView(on) {
+  $("testView").hidden = !on; $("editView").hidden = on;
+  $("sideEdit").classList.toggle("tests", on);
+  $("testsToggle").classList.toggle("on", on);
+  store(QSTORE_KEY, { testsView: on });
+  if (!on) refreshEditors();
+}
+function deployedSeeds() { return ((result && result.seeds) || []).map((s) => parseInt(s, 10)).filter((s) => !isNaN(s)); }
+// what needs doing: the reasons shown beside the column's switch (red)
+function testsNeeds() {
+  const needs = [];
+  if (!result) return needs;
+  const tests = result.qtests || [];
+  if ((result.inputs || []).length && !tests.length) needs.push("no question tests");
+  else if (tests.length) { const c = coverage(); if (c.missing) needs.push(`${c.missing} branch${c.missing > 1 ? "es" : ""} without a test`); }
+  if (Object.values(testResults).some((r) => r && !r.pass) || Object.values(seedResults).some((m) => Object.values(m).some((p) => !p)))
+    needs.push("failing tests");
+  if (result.random && !deployedSeeds().length) needs.push("randomised, no deployed variants");
+  const notApproved = tests.filter((q) => approvalState(q.testcase) !== "ok");
+  if (notApproved.length) needs.push(`test${notApproved.length > 1 ? "s" : ""} ${notApproved.map((q) => q.testcase).join(", ")} not approved` +
+    (notApproved.some((q) => approvalState(q.testcase) === "stale") ? " (or out of date)" : ""));
+  if (variantsData) {
+    const dep = new Set(deployedSeeds()), seen = new Map();
+    for (const v of variantsData.variants) if (dep.has(v.seed)) {
+      if (v.error) needs.push(`variant ${v.seed}: error`);
+      const n = v.note.de || v.note.en;
+      if (seen.has(n)) needs.push(`variants ${seen.get(n)} and ${v.seed}: same note`); else seen.set(n, v.seed);
+    }
+  }
+  return needs;
+}
+function renderVariants() {
+  const needs = testsNeeds();
+  $("testsToggle").classList.toggle("need", needs.length > 0);
+  $("testsToggle").title = "question tests and deployed variants (instead of the editor)" + (needs.length ? "\nto do: " + needs.join("; ") : "");
+  $("testsNeed").textContent = needs.length ? "To do: " + needs.join("; ") : "";
+  const t = $("varTable");
+  if (!t) return;
+  const dep = deployedSeeds(), cur = parseInt($("seed").value, 10);
+  const info = [];
+  if (result) info.push(result.random ? "randomised question" : "not randomised (no rand... in the question variables)");
+  info.push(dep.length ? `${dep.length} deployed` : "no deployed variants");
+  if (!variantsData) info.push("Survey shows the question notes");
+  $("varInfo").textContent = info.join(" · ");
+  // rows: the deployed variants first, then the others of the survey (or the variant in the preview)
+  const rows = variantsData ? variantsData.variants.slice() : dep.map((s) => ({ seed: s, note: { de: "", en: "" }, error: "" }));
+  if (!variantsData && !isNaN(cur) && !rows.some((v) => v.seed === cur)) rows.push({ seed: cur, note: { de: "", en: "" }, error: "" });
+  rows.sort((a, b) => (dep.includes(b.seed) - dep.includes(a.seed)) || a.seed - b.seed);
+  const tests = (result && result.qtests) || [];
+  const firstOf = new Map();          // note -> first seed with it
+  for (const v of [...rows].sort((a, b) => a.seed - b.seed)) { const n = v.note[lang] || v.note.de || v.note.en; if (n && !firstOf.has(n)) firstOf.set(n, v.seed); }
+  const tip = (qt) => (qt.description || "(no description)") + "\n" + Object.entries(qt.inputs).map(([n, v]) => `${n} = ${v}`).join("\n") +
+    "\nexpected: " + Object.entries(qt.expected).map(([p, e]) => `${p}: ${e.note} (score ${e.score || "-"})`).join(", ");
+  let h = `<tr><th>deploy</th><th>seed</th><th>question note</th><th>${tests.map((q) =>
+    `<button class="small tc${approvalState(q.testcase) === "ok" ? " ap" : approvalState(q.testcase) === "stale" ? " apstale" : ""}" data-col="${q.testcase}" title="${esc(tip(q))}&#10;${esc(approvalText(q.testcase))}&#10;click: run on every deployed variant">${q.testcase}</button>`).join("") || "tests"}</th></tr>`;
+  for (const v of rows) {
+    const n = v.note[lang] || v.note.de || v.note.en, isDep = dep.includes(v.seed);
+    let dup = "";
+    if (n && firstOf.get(n) !== v.seed) {
+      const clash = isDep && dep.includes(firstOf.get(n));
+      dup = ` <span class="dup${clash ? " bad" : ""}">same as ${firstOf.get(n)}</span>`;
+    }
+    const res = seedResults[v.seed] || {};
+    const cells = tests.map((q) => {
+      const r = res[q.testcase], here = v.seed === cur;
+      const sr = here ? stackResults[q.testcase] : null, fr = here ? testResults[q.testcase] : null;
+      const cls = "small tc" + (r === true ? " p" : r === false ? " f" : "") + (sr ? (sr.pass ? " sp" : " sf") : "") +
+        (here && activeTest === q.testcase ? " cur" : "");
+      const t = tip(q) + (r === undefined ? "\nnot run on this variant" : r ? "\npassed" : "\nFAILED" + (fr && !fr.pass ? ": " + fr.reasons.join("; ") : "")) +
+        (sr ? "\nSTACK: " + (sr.pass ? "passed" : "FAILED: " + sr.reasons.join("; ")) : "") + "\nclick: this test on this variant, in the preview";
+      return `<button class="${cls}" data-cell="${v.seed}:${q.testcase}" title="${esc(t)}">${q.testcase}</button>`;
+    }).join("");
+    h += `<tr class="${isDep ? "dep" : "rest"}${v.seed === cur ? " cur" : ""}"><td><input type="checkbox" data-seed="${v.seed}"${isDep ? " checked" : ""}></td>` +
+      `<td><button class="small" data-show="${v.seed}" title="show this variant in the preview">${v.seed}</button></td>` +
+      (v.error ? `<td class="note err">${esc(v.error)}</td>` : `<td class="note">${n ? toHTML(n, "html", []) : '<span class="hint">-</span>'}${dup}</td>`) +
+      `<td class="tres">${cells}</td></tr>`;
+  }
+  t.innerHTML = h;
+  for (const c of t.querySelectorAll("input[data-seed]")) c.addEventListener("change", () => {
+    const s = parseInt(c.dataset.seed, 10), set = new Set(deployedSeeds());
+    if (c.checked) set.add(s); else set.delete(s);
+    deploySeeds([...set]);
+  });
+  for (const b of t.querySelectorAll("button[data-show]")) b.addEventListener("click", () => {
+    $("seed").value = b.dataset.show; $("seed").dataset.userSet = "1"; evaluate(false);
+  });
+  for (const b of t.querySelectorAll("button[data-cell]")) b.addEventListener("click", () => {
+    const [sd, tc] = b.dataset.cell.split(":").map((x) => parseInt(x, 10));
+    runCell(sd, tc);
+  });
+  for (const b of t.querySelectorAll("button[data-col]")) b.addEventListener("click", () => runColumn(parseInt(b.dataset.col, 10)));
+  renderTestDetail();
+  const cov = coverage();
+  $("covView").innerHTML = coverageTable(cov);
+  $("covInfo").textContent = cov.rows.length ? `${cov.rows.length - cov.missing} of ${cov.rows.length} branches reached` : "";
+  if (window.MathJax && MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, t]);
+  else if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([t]).catch(() => {});
+}
+// ---------------------------------------------------------------- route, test details, approval
+function typeset(el) {
+  if (window.MathJax && MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, el]);
+  else if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([el]).catch(() => {});
+}
+// the nodes a PRT visited (trace from the server): answer test, the compared values, result,
+// score after the branch, the branch's answer note and the answer test's own note
+function routeHTML(trace) {
+  return '<div class="route">' + trace.map((t) => `<div class="rstep ${esc(t.result)}">` +
+    `<span class="rhead">Node ${esc(t.node)}: ${esc(t.answertest)}(${esc(t.sansexpr)}, ${esc(t.tansexpr)}${t.options ? ", " + esc(t.options) : ""}) → ${esc(t.result)}</span><br>` +
+    `SAns ${t.sans || "?"} &nbsp; TAns ${t.tans || "?"}<br>` +
+    `<span class="rnote">score ${esc(t.score)} · <code>${esc(t.note || "-")}</code>${t.atnote ? " · " + esc(t.atnote) : ""}</span></div>`).join("") + "</div>";
+}
+function approvalState(tc) {
+  const a = ((result && result.approvals) || {})[String(tc)];
+  if (!a) return "no";
+  return a.current || !$("optApprovalFp").checked ? "ok" : "stale";
+}
+function approvalText(tc) {
+  const a = ((result && result.approvals) || {})[String(tc)], st = approvalState(tc);
+  return st === "ok" ? `approved ${a.date}` + (a.current ? "" : " (question changed since)") :
+    st === "stale" ? `approved ${a.date}, but the question changed since: approve again` : "not approved";
+}
+// what the run of test qt gave: per PRT score, penalty and the route (answer notes of the branches)
+function actualExpected(chk) {
+  const out = {};
+  for (const [P, r] of Object.entries(chk.prts || {})) {
+    if (r.bail) out[P] = { score: "", penalty: "", note: P + "-bail" };
+    else if (r.skipped) out[P] = { score: "", penalty: "", note: "NULL" };
+    else out[P] = { score: r.score, penalty: r.penalty, note: (r.trace || []).map((t) => t.note).filter(Boolean).join(" | ") };
+  }
+  return out;
+}
+let lastTestRun = null;           // {tc, seed}: the run whose check is lastCheck
+function renderTestDetail() {
+  const box = $("tvDetail");
+  if (!box) return;
+  const qt = ((result && result.qtests) || []).find((q) => q.testcase === activeTest);
+  const sd = parseInt($("seed").value, 10) || 1;
+  if (!qt || !lastCheck || !lastTestRun || lastTestRun.tc !== qt.testcase || lastTestRun.seed !== sd) {
+    box.innerHTML = '<span class="hint">Run a test (a button in the matrix): its route through the PRTs and its approval show here.</span>';
+    return;
+  }
+  const st = approvalState(qt.testcase), r = testResults[qt.testcase], act = actualExpected(lastCheck);
+  let h = `<div class="tvrow"><b>Test ${esc(qt.testcase)}</b><span class="hint">${esc(qt.description || "")} · variant ${sd}</span>` +
+    `<span class="apbadge ${st}">${esc(approvalText(qt.testcase))}</span>` +
+    `<span class="${r && r.pass ? "hint" : "diff"}">${r ? (r.pass ? "passed" : "failed") : ""}</span></div>`;
+  h += '<div class="hint">' + Object.entries(qt.inputs).map(([n, v]) => {
+    const tex = lastCheck.inputs && lastCheck.inputs[n] && lastCheck.inputs[n].tex;
+    return `${esc(n)} = ${esc(v)}${tex ? " → " + tex : ""}`; }).join(" · ") + "</div>";
+  for (const [P, e] of Object.entries(qt.expected)) {
+    const a = act[P] || { score: "", penalty: "", note: "(not run)" };
+    const same = (x, y) => (x === "" && y === "") || Math.abs(parseFloat(x) - parseFloat(y)) < 1e-6;
+    h += `<div style="margin-top:6px"><b>PRT ${esc(P)}</b></div><table class="exp"><tr><th></th><th>score</th><th>penalty</th><th>route (answer notes)</th></tr>` +
+      `<tr><th>expected</th><td>${esc(e.score)}</td><td>${esc(e.penalty)}</td><td><code>${esc(e.note)}</code></td></tr>` +
+      `<tr><th>this run</th><td class="${same(e.score, a.score) ? "" : "diff"}">${esc(a.score)}</td><td>${esc(a.penalty)}</td>` +
+      `<td class="${e.note === a.note ? "" : "diff"}"><code>${esc(a.note)}</code></td></tr></table>`;
+    const tr = lastCheck.prts && lastCheck.prts[P] && lastCheck.prts[P].trace;
+    if (tr && tr.length) h += routeHTML(tr);
+  }
+  h += '<div class="tvrow"><button id="approveBtn" class="small primary" title="record this run (score, penalty, full route) as the expected result and approve the test">' +
+    (st === "ok" ? "Approve again" : "Approve") + '</button><span class="hint">The expected results become those of this run: score, penalty and the full route.</span></div>';
+  box.innerHTML = h;
+  $("approveBtn").addEventListener("click", () => approveTest(qt.testcase, act));
+  typeset(box);
+}
+async function approveTest(tc, expected) {
+  if (!(await flush())) return;
+  const backup = !backedUp.has(file.path);
+  try {
+    const r = await postJSON("/api/q/approve", { path: file.path, index: qindex, rev: file.rev, testcase: tc, expected, backup });
+    if (backup) backedUp.add(file.path);
+    file.rev = r.rev; showHistory(r.history);
+    showMessages([{ cls: "info", text: r.label + "." }]);
+    await evaluate(false);
+    const qt = ((result && result.qtests) || []).find((q) => q.testcase === tc);
+    if (qt) await runTest(qt);
+  } catch (e) {
+    if (e.conflict) { conflict = true; showConflict(); }
+    else showMessages([{ cls: "err", text: e.message }], true);
+  }
+  renderVariants();
+}
+// ---------------------------------------------------------------- coverage of the PRT branches
+// Rows: every branch (node true/false) of every PRT, with its answer note; a test reaches a branch
+// if its expected route names the branch's note ("solid"). A test that names only the last note
+// of a PRT with several nodes (STACK before 4.13 compared only that one) gets the branches of the
+// route of its last run as "hollow" marks. agents/stack_essentials.md: write the full route.
+const actualRoutes = {};          // testcase -> {prt: [notes of the last run]}
+function coverage() {
+  const rows = [], tests = (result && result.qtests) || [];
+  for (const p of (result && result.prts) || [])
+    p.nodes.forEach((n, k) => { for (const br of ["true", "false"]) rows.push({ prt: p.name, node: k + 1, br, note: (n[br + "answernote"] || "").trim() }); });
+  const cell = {};                  // "row index:testcase" -> "s" solid | "h" hollow
+  for (const qt of tests) for (const [P, e] of Object.entries(qt.expected || {})) {
+    const prt = ((result && result.prts) || []).find((x) => x.name === P);
+    if (!prt) continue;
+    const exp = String(e.note || "").replace(/^\[|\]$/g, "").split("|").map((x) => x.trim()).filter((x) => x && x !== "NULL" && x !== P + "-bail");
+    const mark = (notes, kind) => rows.forEach((r, i) => {
+      if (r.prt === P && r.note && notes.includes(r.note) && cell[i + ":" + qt.testcase] !== "s") cell[i + ":" + qt.testcase] = kind; });
+    mark(exp, "s");
+    if (exp.length <= 1 && prt.nodes.length > 1) mark(((actualRoutes[qt.testcase] || {})[P]) || [], "h");
+  }
+  const reached = rows.map((r, i) => tests.some((qt) => cell[i + ":" + qt.testcase]));
+  return { rows, tests, cell, reached, missing: reached.filter((x) => !x).length };
+}
+function coverageTable(cov) {
+  if (!cov.rows.length) return '<span class="hint">no PRTs</span>';
+  let h = `<table class="cov"><tr><th>PRT, node, branch</th><th>answer note</th>${cov.tests.map((q) => `<th>${q.testcase}</th>`).join("") || "<th>tests</th>"}</tr>`;
+  cov.rows.forEach((r, i) => {
+    h += `<tr class="${cov.reached[i] ? "" : "miss"}"><td>${esc(r.prt)} ${r.node} ${r.br === "true" ? "T" : "F"}</td><td class="n">${esc(r.note || "-")}</td>` +
+      (cov.tests.map((q) => { const c = cov.cell[i + ":" + q.testcase]; return `<td>${c === "s" ? "●" : c === "h" ? '<span class="h">○</span>' : ""}</td>`; }).join("") || "<td></td>") + "</tr>";
+  });
+  return h + "</table>";
+}
+function showCoverageCallout(anchor) {
+  if (!result) return;
+  const cov = coverage();
+  if (!(!cov.tests.length || cov.missing)) return;
+  let pop = $("covPop");
+  if (!pop) { pop = document.createElement("div"); pop.id = "covPop"; document.body.appendChild(pop); }
+  pop.innerHTML = `<div class="hint" style="margin-bottom:4px">${cov.tests.length ? cov.missing + " branch(es) without a test" : "No question tests yet"} -
+    a test per branch: every node once true and once false</div>` + coverageTable(cov);
+  const r = anchor.getBoundingClientRect();
+  pop.style.left = Math.min(r.right + 8, window.innerWidth - 470) + "px";
+  pop.style.top = Math.max(8, Math.min(r.top, window.innerHeight - pop.offsetHeight - 8)) + "px";
+}
+function hideCoverageCallout() { const p = $("covPop"); if (p) p.remove(); }
+// one test on one variant, shown in the preview
+async function runCell(sd, tc) {
+  if (testMode) return;
+  if ((parseInt($("seed").value, 10) || 1) !== sd) {
+    $("seed").value = sd; $("seed").dataset.userSet = "1";
+    await evaluate(false);
+  }
+  const qt = ((result && result.qtests) || []).find((q) => q.testcase === tc);
+  if (qt) await runTest(qt);
+  renderVariants();
+}
+// one test on every deployed variant (or the variant in the preview); the last one stays shown
+async function runColumn(tc) {
+  const dep = deployedSeeds();
+  for (const sd of dep.length ? dep : [parseInt($("seed").value, 10) || 1]) await runCell(sd, tc);
+}
+async function surveyVariants() {
+  if (!file || qindex === null) return;
+  if (!(await flush())) return;
+  const count = Math.max(1, Math.min(500, parseInt($("varCount").value, 10) || 10));
+  store(QSTORE_KEY, { varCount: count });
+  try {
+    variantsData = await withProgress("Survey of variants", postJSON("/api/q/variants", { path: file.path, index: qindex, src: $("src").value, count }));
+    $("status").textContent = `survey: ${variantsData.variants.length} variants`;
+  } catch (e) { showMessages([{ cls: "err", text: "Survey failed: " + e.message }], true); }
+  renderVariants();
+}
+async function deploySeeds(seeds) {
+  if (!(await flush())) return;
+  const backup = !backedUp.has(file.path);
+  try {
+    const r = await postJSON("/api/q/seeds", { path: file.path, index: qindex, rev: file.rev, seeds, backup });
+    if (backup) backedUp.add(file.path);
+    file.rev = r.rev; showHistory(r.history);
+    if (result) result.seeds = r.seeds.map(String);
+    $("status").textContent = r.label;
+    loadReview();
+  } catch (e) {
+    if (e.conflict) { conflict = true; showConflict(); }
+    else showMessages([{ cls: "err", text: e.message }], true);
+  }
+  renderVariants();
+}
+async function runTestsOnDeployed() {
+  const dep = deployedSeeds(), tests = (result && result.qtests) || [];
+  if (!tests.length) { showMessages([{ cls: "warn", text: "No question tests yet." }], true); return; }
+  const seeds = dep.length ? dep : [parseInt($("seed").value, 10) || 1];
+  const keep = $("seed").value;
+  for (const [k, s] of seeds.entries()) {
+    $("seed").value = s;
+    await evaluate(false);
+    if (!result) break;
+    $("status").textContent = `tests on variant ${s} (${k + 1} of ${seeds.length}) ...`;
+    seedResults[s] = {};
+    await runAllTests();
+    renderVariants();
+  }
+  $("seed").value = keep;
+  await evaluate(false);
+  const bad = Object.entries(seedResults).filter(([, m]) => Object.values(m).some((p) => !p)).map(([s]) => s);
+  $("status").textContent = bad.length ? `tests failed on variant(s) ${bad.join(", ")}` : `all tests passed on ${seeds.length} variant(s)`;
 }
 // a test's answers as the STACK API takes them: as typed (decimal separator of the question); a
 // choice input as the number of the chosen entry (checkbox: one key name_k per ticked entry), a
@@ -2227,7 +2609,14 @@ async function runTest(qt, quiet) {
   lastCheck = null;
   render(true);
   await check();
-  if (lastCheck) testResults[qt.testcase] = compareTest(qt, lastCheck);
+  if (lastCheck) {
+    testResults[qt.testcase] = compareTest(qt, lastCheck);
+    lastTestRun = { tc: qt.testcase, seed: parseInt($("seed").value, 10) || 1 };
+    for (const [P, r] of Object.entries(lastCheck.prts || {}))     // the actual route, for the coverage
+      if (!r.skipped) (actualRoutes[qt.testcase] = actualRoutes[qt.testcase] || {})[P] = String(r.notes || "").split(" | ").filter(Boolean);
+    const sd = parseInt($("seed").value, 10) || 1;
+    (seedResults[sd] = seedResults[sd] || {})[qt.testcase] = testResults[qt.testcase].pass;
+  }
   if (!quiet) renderTests();
   return testResults[qt.testcase];
 }
@@ -2980,6 +3369,16 @@ $("saveAs").addEventListener("click", async () => {
   try { const r = await postJSON("/api/q/saveas", { path: file.path, index: qindex, folder, filename: name }); loadFolders(); showMessages([{ cls: "info", text: "Saved as " + r.path }]); openFile(r.path); }
   catch (e) { showMessages([{ cls: "err", text: e.message }]); }
 });
+$("testsToggle").addEventListener("click", () => showTestsView($("testView").hidden));
+$("testsBack").addEventListener("click", () => showTestsView(false));
+$("varSurvey").addEventListener("click", surveyVariants);
+$("optApprovalFp").checked = stored(QSTORE_KEY).approvalFp !== false;
+$("optApprovalFp").addEventListener("change", () => { store(QSTORE_KEY, { approvalFp: $("optApprovalFp").checked }); renderVariants(); });
+for (const a of document.querySelectorAll("#railTests a[data-jump]")) a.addEventListener("click", (e) => {
+  e.preventDefault(); $(a.dataset.jump).scrollIntoView({ behavior: "smooth", block: "start" });
+});
+$("varRunTests").addEventListener("click", runTestsOnDeployed);
+{ const st = stored(QSTORE_KEY); if (st.varCount) $("varCount").value = st.varCount; if (st.testsView) showTestsView(true); }
 $("toGraphic").addEventListener("click", async () => {
   if (!result || !saved) { showMessages([{ cls: "warn", text: "Evaluate the question first." }]); return; }
   if (!(await flush())) return;

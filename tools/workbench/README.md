@@ -592,6 +592,64 @@ answer is modified on the Maxima level), `stack_include` of `fb_fbd.mac` and
 empty `[[lang]]` declaration (so that the feedback functions' texts get a
 language), Markdown format. It has no PRT yet and therefore default mark 0.
 
+### Tests column
+
+"Tests" in the editor bar replaces the editor by the Tests column ("← Editor"
+goes back); the choice is kept. It follows STACK's guidelines for question
+authoring (`agents/stack_essentials.md` in moodle-qtype_stack): a randomised
+question needs deployed variants with distinct question notes, and every
+question with inputs needs question tests.
+
+- **Variants:** "Survey" evaluates the question variables and the question
+  note for the seeds 1..N (N on the page, default 10, kept) and the deployed
+  seeds, one Maxima run per seed (POST `/api/q/variants`; the progress box
+  shows the seed). Errors and repeated notes are marked ("same as 3"; red
+  when two deployed variants share a note). A tick deploys a variant or takes
+  it out: `<deployedseed>` is written to the file at once, after the PRTs
+  (POST `/api/q/seeds`, undo as other edits). The seed button shows the
+  variant in the preview.
+- **Matrix of variants and tests:** each row (deployed variants first, then
+  the other surveyed ones) has a button per question test. A click shows that
+  variant in the preview, fills in the test and checks it; green passed, red
+  failed, grey not run on that variant, a bar below: the result in STACK
+  itself (variant in the preview). A test number in the head runs the test on
+  every deployed variant; "Tests on deployed" runs all tests on all of them.
+- **Test details:** after a test has run on a variant: its inputs (expression
+  and value), per PRT the expected and the actual score, penalty and route
+  (differences in red), and the route node by node: answer test with SAns,
+  TAns and options, the compared values typeset, the result, the score after
+  the branch, the branch's answer note and the answer test's own note. The
+  same boxes appear below each PRT graph after a Check.
+- **Approval:** "Approve" makes this run the expected result (score, penalty,
+  full route of answer notes, without the answer tests' own notes) and records
+  the approval in the question description ("Tests approved: 2 [2026-11-11
+  c7db0766]", POST `/api/q/approve`). The fingerprint covers question
+  variables and options, inputs, the PRTs without their feedback texts, and
+  the test itself; when it changes, the approval is out of date (setting in
+  `⋯`: "approval lapses when the question changes", on by default). A test
+  number in the head of the matrix has a green bar when approved, an amber
+  one when out of date.
+- **Coverage:** every branch (node true/false) of every PRT with its answer
+  note, against the tests: ● the expected route of the test names the
+  branch's note; ○ a test that names only the last note of a PRT with several
+  nodes (STACK before 4.13 compared only that one): the branch is from the
+  route of its last run - write the full route. A branch no test reaches is
+  red; then "+" and "Tests" are red, and the matrix shows as a callout on
+  "+". Aim: every node once true and once false.
+- **Editor bar** in this view: ← Editor (back to the editor), Survey, Tests on deployed, new test (+, red
+  while there is none), run all tests on the variant in the preview (▶),
+  STACK ▶, edit (✎) and delete (✕) the test last run, and jumps to the
+  sections; the editor's buttons (snippets, graphic, sections) are hidden.
+- "Tests" in the editor bar is red when something is to do: no question tests,
+  a branch without a test, tests not approved (or out of date), failing tests, a randomised question without deployed variants, deployed
+  variants with the same note or with an error (the reasons are in its tooltip
+  and at the top of the column).
+
+A question is randomised as STACK decides it (`has_random_variants()`): a word
+of the question variables that begins with `rand`, `multiselqn` or
+`stack_seed`. The review reports a randomised question without deployed
+variants or without question note, and a variable named `rand...`.
+
 ### Evaluation
 
 Each question is evaluated in its own Maxima session (Maxima with STACK's
@@ -646,7 +704,10 @@ Rendering follows STACK where it matters for checking a question: the
 question options (decimal separator, multiplication sign, ...), castext
 (`{@...@}`, `{#...#}`, `[[if]]`, `[[foreach]]`, `[[define]]`, `[[comment]]`,
 `[[lang]]`), math mode detection for `{@...@}`, and Markdown texts including
-Markdown's backslash escapes. In Markdown, write math as `\\\( ... \\\)`:
+Markdown's backslash escapes. `plot()` in castext (also `{@plot(...)@}` in
+the feedback) writes its SVG to `.cache/plots/` (emptied at server start),
+served under `/plots/`; gnuplot is taken from the Maxima installation
+(`<maxima>/gnuplot/bin/gnuplot.exe`), else from the PATH. In Markdown, write math as `\\\( ... \\\)`:
 STACK detects math mode for `{@...@}` only after three backslashes (with
 `\\( {@x@} \\)` it puts extra delimiters around `x`, which breaks the
 formula). HTML blocks inside Markdown (lines starting with `<p>`, `<div>`,

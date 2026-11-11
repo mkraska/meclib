@@ -102,6 +102,7 @@ import hashlib
 import json
 import mimetypes
 import re
+import shutil
 import sys
 import threading
 import time
@@ -131,7 +132,7 @@ import stack_question  # noqa: E402
 import qfile  # noqa: E402
 import rules  # noqa: E402
 import history  # noqa: E402
-from maxima_session import MaximaSession, MaximaError, list_maxima, stack_versions, maxima_version  # noqa: E402
+from maxima_session import MaximaSession, MaximaError, list_maxima, stack_versions, maxima_version, PLOT_DIR  # noqa: E402
 
 INBOX = CACHE / "questions"      # copies of files dropped onto the page
 STATE = qfile.State(CACHE / "workbench_state.json")
@@ -635,6 +636,12 @@ class Handler(SimpleHTTPRequestHandler):
             cfg["maxima_list"] = maxima_list(cfg)
             cfg["maxima_current"] = current_maxima(cfg)
             return self.send_json(local_libraries(stack_info(cfg)))
+        if parsed.path.startswith("/plots/"):      # plot() in castext (maxima_session.PLOT_DIR)
+            name = urllib.parse.unquote(parsed.path[len("/plots/"):])
+            p = PLOT_DIR / name
+            if "/" in name or "\\" in name or not p.is_file() or p.suffix.lower() not in (".svg", ".png"):
+                return self.send_error(404)
+            return self.send_bytes(p.read_bytes(), "image/svg+xml" if p.suffix.lower() == ".svg" else "image/png")
         if parsed.path.startswith("/logos/"):
             name = urllib.parse.unquote(parsed.path[len("/logos/"):])
             p = LOGOS / name
@@ -733,6 +740,33 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json(res)
         except (ValueError, OSError, MaximaError) as err:
             return self.send_json({"error": str(err)}, 500)
+
+    def variants(self, cfg, req):
+        """POST /api/q/variants {path, index, src, count}: the question note (and errors) of the
+        variants with seeds 1 .. count and of the deployed seeds, one Maxima run per seed in the
+        question's session (the page shows the progress)."""
+        target = allowed_path(cfg, req["path"])
+        text, _ = qfile.read_file(target)
+        index, src = int(req["index"]), req.get("src", "local")
+        qel = stack_question.question_element(text, index)
+        data = stack_question.question_data(qel)
+        deployed = [int(s) for s in data["seeds"] if re.match(r"^-?\d+$", s.strip())]
+        count = max(1, min(int(req.get("count") or 10), 500))
+        seeds = list(range(1, count + 1)) + [s for s in deployed if not 1 <= s <= count]
+        PROGRESS.update(busy=True, since=time.time(), phase="Maxima session: starting Maxima and loading STACK's library")
+        out = []
+        try:
+            entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg), current_stack())
+            resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
+            for k, seed in enumerate(seeds):
+                set_phase("variant %d of %d (seed %d)" % (k + 1, len(seeds), seed))
+                v, names = stack_question.variant(entry[0], data, seed, resolver, entry[2], load_includes=k == 0)
+                entry[2] = names
+                out.append(v)
+        finally:
+            PROGRESS["busy"] = False
+        return {"variants": out, "deployed": deployed, "random": stack_question.is_random(data),
+                "has_note": bool((data.get("questionnote") or "").strip())}
 
     def stack_grade(self, cfg, req):
         """POST /api/q/stackgrade {path, index, seed, src, lang, runs: [{testcase, answers}]}: the
@@ -867,6 +901,8 @@ class Handler(SimpleHTTPRequestHandler):
                 result.update({"name": data["name"], "format": data["formats"]["questiontext"],
                                "formats": data["formats"], "prts": data["prts"],
                                "seeds": data["seeds"], "decimals": data["decimals"], "penalty": data["penalty"],
+                               "random": stack_question.is_random(data),
+                               "approvals": rules.approvals(text[slice(*qfile.question_span(text, index)[:2])]),
                                "simplify": data["questionsimplify"], "maxima_start": round(entry[0].started, 1),
                                "maxima_spare": getattr(entry[0], "from_spare", False),
                                "files": stack_question.embedded_files(qel)})
@@ -965,6 +1001,32 @@ class Handler(SimpleHTTPRequestHandler):
                 a, b, _ = qfile.question_span(new, index)
                 return self.send_json({"rev": rev, "label": label, "qtests": qfile.qtests(new[a:b]),
                                        "history": history.status(target, index)})
+            if path == "/api/q/seeds":
+                target = allowed_path(cfg, req["path"])
+                text, rev = qfile.read_file(target)
+                if req.get("rev") and req["rev"] != rev:
+                    raise qfile.ConflictError("the file was changed outside the workbench")
+                index = int(req["index"])
+                new, label = qfile.seeds_op(text, index, req.get("seeds") or [])
+                rev = qfile.write_file(target, new, rev, bool(req.get("backup")))
+                history.record(target, text, new, index, label)
+                a, b, _ = qfile.question_span(new, index)
+                return self.send_json({"rev": rev, "label": label, "seeds": qfile.deployed_seeds(new[a:b]),
+                                       "history": history.status(target, index)})
+            if path == "/api/q/approve":
+                target = allowed_path(cfg, req["path"])
+                text, rev = qfile.read_file(target)
+                if req.get("rev") and req["rev"] != rev:
+                    raise qfile.ConflictError("the file was changed outside the workbench")
+                index = int(req["index"])
+                new, label = rules.approve(text, index, req["testcase"], req.get("expected"))
+                rev = qfile.write_file(target, new, rev, bool(req.get("backup")))
+                history.record(target, text, new, index, label)
+                a, b, _ = qfile.question_span(new, index)
+                return self.send_json({"rev": rev, "label": label, "qtests": qfile.qtests(new[a:b]),
+                                       "approvals": rules.approvals(new[a:b]), "history": history.status(target, index)})
+            if path == "/api/q/variants":
+                return self.send_json(self.variants(cfg, req))
             if path == "/api/q/stackgrade":
                 return self.send_json(self.stack_grade(cfg, req))
             if path == "/api/q/duplicate":
@@ -1228,6 +1290,7 @@ def main():
     stack_question.STACK_VERSION = current_stack()     # the security map of the chosen STACK version
     port = args.port or load_config().get("port", 8765)
     stop_previous_server(port)
+    shutil.rmtree(PLOT_DIR, ignore_errors=True)        # plots of the previous run
     server = None
     for _ in range(10):
         try:

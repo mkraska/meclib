@@ -866,8 +866,19 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
         if raw_req:
             args.append(mstring(raw_by_input.get(n["sans"].strip(), "")) if n["sans"].strip() in raw_by_input else "false")
         at = "AT%s(%s)" % (n["answertest"], ", ".join(args))
-        body = ['print("@@PRTST@@")', "simp: %s" % ("true" if at_simp else "false"),
-                "%%_t: errcatch(%s)" % at, "simp: true"]
+        # the route for the page (node values in the PRT graph and the test details): per node
+        # visited its name, SAns and TAns (LaTeX and Maxima form), the result, the answer test's
+        # own note and the score after the branch
+        key = lambda k: mstring("prt:%s:trace:%s" % (P, k))
+        show = lambda ex, k: ("block([%%_x: errcatch(%s)], if %%_x = [] then (meclib_out(%s, \"?\"), meclib_out(%s, \"?\"))"
+                              " else (meclib_out(%s, fb_tmpl_tostring(%%_x[1])), meclib_out(%s, string(%%_x[1]))))"
+                              % (ex, key(k), key(k + "raw"), key(k), key(k + "raw")))
+        body = ['print("@@PRTST@@")', "meclib_out(%s, %s)" % (key("node"), mstring(n["name"])),
+                show(args[0], "sans"), show(args[1], "tans"),
+                "simp: %s" % ("true" if at_simp else "false"),
+                "%%_t: errcatch(%s)" % at, "simp: true",
+                "meclib_out(%s, if %%_t = [] then \"error\" else string(%%_t[1][2]))" % key("result"),
+                "meclib_out(%s, if %%_t = [] or length(%%_t[1]) < 3 then \"\" else if stringp(%%_t[1][3]) then %%_t[1][3] else string(%%_t[1][3]))" % key("atnote")]
 
         def branch(b):
             score = (n[b + "score"] or "0").strip()
@@ -896,6 +907,7 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
                        v("node"),
                        "" if quiet else ", if length(%%_t) > 3 and stringp(%%_t[4]) and slength(%%_t[4]) > 0 then %s: append(%s, [%%_t[4]])" % (v("atfb"), v("atfb")),
                        branch("true"), branch("false")))
+        body.append("meclib_out(%s, string(%s))" % (key("score"), v("score")))
         branches.append("if %s = %s then (%s)" % (v("node"), mstring(n["name"]), ", ".join(body)))
     loop = " elseif ".join(b[3:] for b in branches) if branches else "true then 0"
     code.append("while %s # \"-1\" and %s < 100 do (%s: %s + 1, if %s else %s: \"-1\")$"
@@ -1139,6 +1151,60 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None, tes
     }
 
 
+RANDOM_WORD = re.compile(r"(?<![A-Za-z0-9_%])(rand\w*|multiselqn\w*|stack_seed)")
+
+
+def is_random(data):
+    """Whether STACK treats the question as randomised (has_random_variants() in question.php):
+    a word of the question variables that begins with rand, multiselqn or stack_seed. STACK
+    4.14.0 and earlier do not look into included libraries."""
+    code = re.sub(r'"(?:\\.|[^"\\])*"', '""', strip_comments(data.get("questionvariables") or ""))
+    return bool(RANDOM_WORD.search(code))
+
+
+def variant(session, data, seed, resolver, previous_names=(), load_includes=True):
+    """One variant for the survey of seeds: the question variables with this seed and the
+    question note. load_includes=False leaves out the stack_include statements (loaded by the
+    previous variant in the same session; kill() only removes the question's own names).
+    Returns ({seed, note: {de, en}, error}, names assigned)."""
+    names, code = [], []
+    if previous_names:
+        code.append("kill(%s)$" % ",".join(previous_names))
+    code.append("simp: %s$" % ("true" if data["questionsimplify"] else "false"))
+    code.append("stackfltsep: %s$" % mstring(data["decimals"]))
+    code.extend(option_commands(data))
+    if uses_units(data):
+        code.append("stack_unit_si_declare(true)$")
+    code.append("stack_randseed(%d)$" % seed)
+    for stmt, line, _ins in split_statements(data["questionvariables"]):
+        clean = strip_comments(stmt)
+        if INCLUDE.search(clean) and not load_includes:
+            continue
+        try:
+            clean = INCLUDE.sub(lambda m: "load(%s)" % mpath(resolver.local_file(m.group(1))), clean)
+        except ValueError:
+            continue
+        if forbidden_identifiers(clean):
+            continue
+        m = ASSIGN.match(clean) or FUNDEF.match(clean)
+        ml = LISTASSIGN.match(clean)
+        for nm in [m.group(1)] if m else [x.strip() for x in ml.group(1).split(",")] if ml else []:
+            if re.match(r"^[A-Za-z_%][A-Za-z0-9_%]*$", nm) and nm not in names:
+                names.append(nm)
+        code.append("%%_r: errcatch(eval_string(%s))$" % mstring(clean + "$"))
+        code.append('if %%_r = [] then meclib_out("err", %s)$' % mstring("question variables, line %d" % line))
+    langs = languages_used(data["questiontext"])
+    note = data.get("questionnote") or ""
+    if note.strip():
+        code.append('block([%%_c: errcatch(castext(%s))], if %%_c = [] then meclib_out("err", "question note") else ('
+                    'meclib_out("note:de", stack_resolve_lang(%%_c[1], %s)), meclib_out("note:en", stack_resolve_lang(%%_c[1], %s))))$'
+                    % (mstring(normalize_block_tags(note)), mstring(pick_lang("de", langs)), mstring(pick_lang("en", langs))))
+    _stdout, results = session.run_with_results("\n".join(code))
+    first = lambda k: (results.get(k) or [""])[0]
+    return ({"seed": seed, "note": {"de": first("note:de"), "en": first("note:en")},
+             "error": "; ".join(results.get("err") or [])}, names)
+
+
 def answer_code(data, answers, langs, resolver, checked, qv_names=(), texprs=None):
     """Code for the student's answers (as STACK: simp:false, then name: value) and the PRTs
     whose inputs are all answered. Fills checked with what is evaluated. texprs: inputs of the
@@ -1251,6 +1317,25 @@ def fv_names(prt):
     return out
 
 
+def prt_trace(results, name, prt):
+    """The nodes a PRT visited (see prt_code): [{node (number from 1), answertest, options, sans,
+    tans (LaTeX), sansraw, tansraw, result (true/false/error), atnote, score (after the
+    branch), note (the branch's answer note)}]."""
+    get = lambda k: results.get("prt:%s:trace:%s" % (name, k), [])
+    nodes = {n["name"]: (k, n) for k, n in enumerate(prt["nodes"])}
+    out = []
+    for i, nd in enumerate(get("node")):
+        k, n = nodes.get(nd, (None, {}))
+        pick = lambda k2: (get(k2)[i] if i < len(get(k2)) else "")
+        res = pick("result")
+        out.append({"node": (k + 1) if k is not None else nd, "answertest": n.get("answertest", ""),
+                    "options": n.get("testoptions", ""), "sansexpr": n.get("sans", ""), "tansexpr": n.get("tans", ""),
+                    "sans": pick("sans"), "tans": pick("tans"), "sansraw": pick("sansraw"), "tansraw": pick("tansraw"),
+                    "result": res, "atnote": pick("atnote"), "score": pick("score"),
+                    "note": n.get(("true" if res == "true" else "false") + "answernote", "") if res in ("true", "false") else ""})
+    return out
+
+
 def check_results(checked, results, stdout, data):
     def first(key, default=None):
         return results.get(key, [default])[0]
@@ -1301,6 +1386,7 @@ def check_results(checked, results, stdout, data):
             "errors": errors.get(name, []),
             "variables": [{"name": n, "raw": first("prtvar:%s:%s" % (name, n)), "tex": first("prttex:%s:%s" % (name, n))}
                           for n in fv_names(prts[name])],
+            "trace": prt_trace(results, name, prts[name]),
         }
         if invalid:
             res = {"skipped": "invalid input: " + ", ".join(invalid)}
