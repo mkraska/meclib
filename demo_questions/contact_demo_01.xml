@@ -8,9 +8,9 @@
     <questiontext format="markdown">
       <text><![CDATA[**TM1 02 02**[[lang code="de"]] [[/lang]][[lang code="other"]] [[/lang]]
 
-<p>[[input:objects]] [[validation:objects]]</p>
-<p>[[input:names]] [[validation:names]]</p>
-<div style="float:right">
+<p hidden>[[input:objects]] [[validation:objects]]</p>
+<p hidden>[[input:names]] [[validation:names]]</p>
+<div style="float:right; margin: 0 0 0.5em 1.5em;">
 [[jsxgraph width='450px' height='350px' input-ref-objects="stateRef" input-ref-names="fbd_names" ]]
 var mode  = "STACK";
 const initstring = {#init#};
@@ -81,7 +81,7 @@ Stellen Sie für jede Richtung das Kräftegleichgewicht auf. Verwenden Sie dabei
 <p>Zahlenwerte bitte auf 5% genau.</p>]]></text>
     </questiontext>
     <generalfeedback format="markdown">
-      <text><![CDATA[<div style="float:right">
+      <text><![CDATA[<div style="float:right; margin: 0 0 0.5em 1.5em;">
 [[jsxgraph width='250px' height='250px' ]]
 var mode  = "STACK";
 var stateRef;
@@ -154,8 +154,8 @@ initdata: [
   ["point", "S", C],
   ["force", "G", C, [C[1], C[2]-1.5], 10, "locked"],
   ["angle", "\\alpha", PBi, PBi+[0,2], 0.9*r, alpha],
-  ["contact", "", PA, [uBx, uBy], "Die Gabel", 3],
-  ["contact", "", PB, [uAx, uAy], "Die Gabel", 3],
+  ["contact", "", PA, [-uBx, -uBy], "Die Gabel", 3],
+  ["contact", "", PB, [-uAx, -uAy], "Die Gabel", 3],
   ["forceGen", "F", [PAo[1]-1, 3*r]],
   ["dir", "1", V, 0, 10, 1.5*r, "active"],
   ["dir", "2", V, 90, 10, 1.5*r, "active"]
@@ -180,8 +180,8 @@ refdata: [
   ["point", "S", C],
   ["force", "G", C, [C[1], C[2]-1.5], 10, "locked"],
   ["angle", "\\alpha", PBi, PBi+[0,2], 0.9*r, alpha],
-  ["contact", "", PA, [uBx, uBy], "Die Gabel", 3 ],
-  ["contact", "", PB, [uAx, uAy], "Die Gabel", 3 ],
+  ["contact", "", PA, [-uBx, -uBy], "Die Gabel", 3 ],
+  ["contact", "", PB, [-uAx, -uAy], "Die Gabel", 3 ],
   ["forceGen", "F_1", [PAo[1]-1, 3*r]],
   /* dir1/dir2 bleiben an derselben Position wie in initdata (Index 15/16, siehe i_dir1/i_dir2
      unten), die geloesten Kraefte kommen wie bei einem echten Freischnitt erst danach dazu.
@@ -217,18 +217,20 @@ gfbdata: [
   ["point", "S", C],
   ["force", "G", C, [C[1], C[2]-1.5], 10, "locked"],
   ["angle", "\\alpha", PBi, PBi+[0,2], 0.9*r, alpha],
-  ["contact", "", PA, [uBx, uBy], "Die Gabel", 3 ],
-  ["contact", "", PB, [uAx, uAy], "Die Gabel", 3 ],
+  ["contact", "", PA, [-uBx, -uBy], "Die Gabel", 3 ],
+  ["contact", "", PB, [-uAx, -uAy], "Die Gabel", 3 ],
   ["dir", "1", V, 90+alpha, 10, 1.5*r],
   ["dir", "2", V, alpha, 10, 1.5*r],
-  ["force", "A", PA-[uBx,uBy], PA, 10, "locked"],
-  ["force", "B", PB-[uAx,uAy], PB, 10, "locked"]
+  ["force", "A", PA-[uBx,uBy], PA, 10, "SHOW"],
+  ["force", "B", PB-[uAx,uAy], PB, 10, "SHOW"]
 ];
 gfb: stackjson_stringify(gfbdata);
 
 
 stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/fb_value.mac" );
 stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/fb_fbd.mac" );
+/* question tests: input values longer than STACK's 255 characters */
+qt1_objects: "[[\"grid\",\"\",\"\",-2.28547736248,5.04341991865,-1.69507355841,7,40],[\"polygon\",\"Die Gabel\",[4.04341991865,0.10370805886],[3.93923101205,0.694592710668],[0,0],[-0.694592710668,3.93923101205],[-1.28547736248,3.83504210545],[-0.486695745207,-0.695073558407],\"hide\"],[\"circle\",\"\",[1.62231915069,2.31691186136],1.9999999999999998,0,\"SHOW\"],[\"line\",\"black\",[-0.577680849309,3.82231915069],[2.31691186136,2.31691186136],\"-.\"],[\"line\",\"black\",[1.62231915069,1.62231915069],[0.116911861358,4.51691186136],\"-.\"],[\"dim\",\"D\",[-0.377680849309,2.31691186136],[3.62231915069,2.31691186136],2.5],[\"point\",\"A\",[1.96961550602,0.347296355334]],[\"point\",\"B\",[-0.347296355334,1.96961550602]],[\"point\",\"S\",[1.62231915069,2.31691186136]],[\"force\",\"G\",[1.62231915069,2.31691186136],[1.62231915069,0.816911861358],10,\"locked\"],[\"angle\",\"\\\\alpha\",[-0.694592710668,3.93923101205],[-0.694592710668,5.93923101205],1.8,10],[\"contact\",\"\",[1.96961550602,0.347296355334],[0.173648177667,-0.984807753012],\"Die Gabel\",3,\"hide\",\"hide\",\"hide\"],[\"contact\",\"\",[-0.347296355334,1.96961550602],[-0.984807753012,-0.173648177667],\"Die Gabel\",3,\"hide\",\"hide\",\"hide\"],[\"forceGen\",\"F_1\",[3.04341991865,6]],[\"dir\",\"1\",[0,0],100.0000000000191,10,3,\"active\"],[\"dir\",\"2\",[0,0],10.000000000019085,10,3,\"active\"],[\"force\",\"A\",[2.1355442971927516,-0.5937325813945928],[1.9696155060199996,0.3472963553340025],10,\"active\"],[\"force\",\"B\",[-1.3002784298508308,1.801579054151055],[-0.34729635533399983,1.96961550602],10,\"active\"]]";
 ]]></text>
     </questionvariables>
     <specificfeedback format="moodle_auto_format">
@@ -238,13 +240,15 @@ stack_include("https://raw.githubusercontent.com/mkraska/meclib/dev2026/Maxima/f
       <text>{@ta1@}</text>
     </questionnote>
     <questiondescription format="html">
-      <text>Todo:
+      <text><![CDATA[<p>Revised by Meclib Workbench 2026-11-11 00:12</p>
+
+Todo:
 
 Kräfteeingabe dynamisieren mit Anzeige der Variablennamen via formatives feedback - erledigt (FA_label/FB_label).
 
 Feedback zu dir zusammengefasst und Parallelität ausgeschlossen - erledigt (PRT "dir").
 
-Dir Infobox auf volle Grad runden oder Ursache der Ungenauigkeit ermitteln - noch offen.</text>
+Dir Infobox auf volle Grad runden oder Ursache der Ungenauigkeit ermitteln - noch offen.]]></text>
     </questiondescription>
     <questionsimplify>1</questionsimplify>
     <assumepositive>0</assumepositive>
@@ -279,7 +283,7 @@ Dir Infobox auf volle Grad runden oder Ursache der Ungenauigkeit ermitteln - noc
       <syntaxattribute>0</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>
-      <forbidfloat>1</forbidfloat>
+      <forbidfloat>0</forbidfloat>
       <requirelowestterms>0</requirelowestterms>
       <checkanswertype>0</checkanswertype>
       <mustverify>0</mustverify>
@@ -311,7 +315,7 @@ Dir Infobox auf volle Grad runden oder Ursache der Ungenauigkeit ermitteln - noc
       <boxsize>8</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint>Zahl mit Einheit</syntaxhint>
+      <syntaxhint>{@meclib_h_unit@}</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords>sin, cos</forbidwords>
       <allowwords></allowwords>
@@ -329,7 +333,7 @@ Dir Infobox auf volle Grad runden oder Ursache der Ungenauigkeit ermitteln - noc
       <boxsize>8</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint>Zahl mit Einheit</syntaxhint>
+      <syntaxhint>{@meclib_h_unit@}</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>
@@ -347,7 +351,7 @@ Dir Infobox auf volle Grad runden oder Ursache der Ungenauigkeit ermitteln - noc
       <boxsize>8</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint>Zahl mit Einheit</syntaxhint>
+      <syntaxhint>{@meclib_h_unit@}</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords>sin, cos</forbidwords>
       <allowwords></allowwords>
@@ -365,7 +369,7 @@ Dir Infobox auf volle Grad runden oder Ursache der Ungenauigkeit ermitteln - noc
       <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint>Ausdruck</syntaxhint>
+      <syntaxhint>{@meclib_h_alg@}</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>
@@ -383,7 +387,7 @@ Dir Infobox auf volle Grad runden oder Ursache der Ungenauigkeit ermitteln - noc
       <boxsize>15</boxsize>
       <strictsyntax>1</strictsyntax>
       <insertstars>3</insertstars>
-      <syntaxhint>Ausdruck</syntaxhint>
+      <syntaxhint>{@meclib_h_alg@}</syntaxhint>
       <syntaxattribute>1</syntaxattribute>
       <forbidwords></forbidwords>
       <allowwords></allowwords>
@@ -502,7 +506,7 @@ nameB: fb_reaction_name(obj, names, i_B, "B");]]></text>
     <prt>
       <name>FA</name>
       <value>1.0000000</value>
-      <autosimplify>1</autosimplify>
+      <autosimplify>0</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text></text>
@@ -536,7 +540,7 @@ nameB: fb_reaction_name(obj, names, i_B, "B");]]></text>
     <prt>
       <name>FB</name>
       <value>1.0000000</value>
-      <autosimplify>1</autosimplify>
+      <autosimplify>0</autosimplify>
       <feedbackstyle>2</feedbackstyle>
       <feedbackvariables>
         <text></text>
@@ -816,11 +820,89 @@ GG2: sum_dir(obj, names, d2);
     </prt>
     <qtest>
       <testcase>1</testcase>
-      <description></description>
-    </qtest>
-    <qtest>
-      <testcase>2</testcase>
-      <description></description>
+      <description>TAns</description>
+      <testinput>
+        <name>names</name>
+        <value>[0,[17,18],"SHOW",0,0,"D","A","B","S",G,"\alpha",[17],[18],0,"1","2",A,B]</value>
+      </testinput>
+      <testinput>
+        <name>objects</name>
+        <value>qt1_objects</value>
+      </testinput>
+      <testinput>
+        <name>S_FA</name>
+        <value>dispsf(FA,3)*N</value>
+      </testinput>
+      <testinput>
+        <name>S_FB</name>
+        <value>dispsf(FB,3)*N</value>
+      </testinput>
+      <testinput>
+        <name>S_FG</name>
+        <value>dispsf(FG,3)*N</value>
+      </testinput>
+      <testinput>
+        <name>S_GG1</name>
+        <value>GG1_tans</value>
+      </testinput>
+      <testinput>
+        <name>S_GG2</name>
+        <value>GG2_tans</value>
+      </testinput>
+      <expected>
+        <name>dir</name>
+        <expectedscore>1.0000000</expectedscore>
+        <expectedpenalty>0.0000000</expectedpenalty>
+        <expectedanswernote>dir-1-T</expectedanswernote>
+      </expected>
+      <expected>
+        <name>FA_label</name>
+        <expectedscore>0.0000000</expectedscore>
+        <expectedpenalty>0.0000000</expectedpenalty>
+        <expectedanswernote>FA_label-1-T</expectedanswernote>
+      </expected>
+      <expected>
+        <name>FB_label</name>
+        <expectedscore>0.0000000</expectedscore>
+        <expectedpenalty>0.0000000</expectedpenalty>
+        <expectedanswernote>FB_label-1-T</expectedanswernote>
+      </expected>
+      <expected>
+        <name>FA</name>
+        <expectedscore>1.0000000</expectedscore>
+        <expectedpenalty>0.0000000</expectedpenalty>
+        <expectedanswernote>FA-1-T</expectedanswernote>
+      </expected>
+      <expected>
+        <name>FB</name>
+        <expectedscore>1.0000000</expectedscore>
+        <expectedpenalty>0.0000000</expectedpenalty>
+        <expectedanswernote>FB-1-T</expectedanswernote>
+      </expected>
+      <expected>
+        <name>fbd</name>
+        <expectedscore>1.0000000</expectedscore>
+        <expectedpenalty>0.0000000</expectedpenalty>
+        <expectedanswernote>fbd-4-T</expectedanswernote>
+      </expected>
+      <expected>
+        <name>FG</name>
+        <expectedscore>1.0000000</expectedscore>
+        <expectedpenalty>0.0000000</expectedpenalty>
+        <expectedanswernote>FG-1-T</expectedanswernote>
+      </expected>
+      <expected>
+        <name>GG1</name>
+        <expectedscore>1.0000000</expectedscore>
+        <expectedpenalty>0.0000000</expectedpenalty>
+        <expectedanswernote>GG1-1-T</expectedanswernote>
+      </expected>
+      <expected>
+        <name>GG2</name>
+        <expectedscore>1.0000000</expectedscore>
+        <expectedpenalty>0.0000000</expectedpenalty>
+        <expectedanswernote>GG2-1-T</expectedanswernote>
+      </expected>
     </qtest>
     <hint format="html">
       <text><![CDATA[<p>Hinweis 1</p>]]></text>

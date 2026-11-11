@@ -417,7 +417,7 @@ answers, so a PRT edit shows its effect at once. A new variant (seed) or
 another question starts empty; **Restart** clears the answers and the
 feedback by hand (as "Start again" in Moodle's preview).
 
-Approximations: STACK's input validation is not reproduced. The workbench
+Approximations: STACK's input validation is only approximated. The workbench
 converts a decimal comma to a point (and `;` to `,`), inserts `*` for spaces
 and implied products according to "insert stars", and accepts whatever then
 parses in Maxima (no forbidden words, no syntax checks). One rule of STACK's
@@ -887,7 +887,7 @@ instead.
 - `frame.js` - builds and runs a graphic in a STACK-like frame (shared by the
   pages)
 - `style.css` - shared styles
-- `tree.js` - collapsible tree of the side column (Tests page)
+- `tree.js` - collapsible tree of the side column (Tests page, folders of the Questions page)
 - `mtests.py` - reads the Maxima test files for the Tests page
 - `server.py` - local server (listens on this computer only; writing
   requests need the header `X-Workbench: 1`, which other web sites cannot
@@ -912,7 +912,12 @@ instead.
 
 ## Planned
 
-- a tree of folders, files and questions with context menus for their actions
+- the questions of a file in the folder tree, context menus for their actions
+- renaming a question variable throughout a question (fix of the review rule
+  `qv.unit-name`, and in the editor)
+- the way back to Moodle without gitsync: bulk edits on a whole course backup
+  (.mbz) between two courses, browser automation of "Import as new version"
+  for single changes
 - review of all questions in a folder at once
 - templates for inputs and PRTs from the wiki
 - editor assistants, e.g. `tansdata: copy(initdata)` with index variables,
@@ -920,8 +925,8 @@ instead.
 - bulk edits across questions (e.g. unifying the crosshair setup)
 - keeping review rules, syntax help and wiki pages in step (`build_help.py`
   already lists differences)
-- choosing the STACK version on the pages instead of always the newest one
-- split files compatible with STACK's gitsync (category files, YAML)
+- split files compatible with STACK's gitsync (category files, YAML); testing
+  gitsync on the Moodle server is planned for February 2027
 - automatic multilingual castext: de/en versions of the texts kept together
   in `[[lang]]` blocks (not urgent)
 - expected feedback per test case
