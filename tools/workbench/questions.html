@@ -238,6 +238,20 @@
   #inInfo .bad { color: #b3261e; font-weight: 600; }
   table.inp button.del { color: var(--err); }
   .msg.goto { cursor: pointer; }
+  details.msggroup > summary { cursor: pointer; list-style: none; display: flex; gap: 4px; align-items: baseline; }
+  details.msggroup > summary::-webkit-details-marker { display: none; }
+  details.msggroup > summary::before { content: "\25B8"; color: var(--muted); font-size: 11px; }
+  details.msggroup[open] > summary::before { content: "\25BE"; }
+  details.msggroup > summary > .msg { flex: 1; }
+  details.msggroup > .msg { margin-left: 16px; }
+  /* sign of life while Maxima evaluates (Update, Check): elapsed time and what the server is doing */
+  #busyBox { position: fixed; right: 16px; bottom: 16px; z-index: 70; max-width: 420px; padding: 10px 14px;
+    background: #fff; border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 6px 24px rgba(0, 0, 0, .18);
+    font-size: 13px; white-space: pre-wrap; }
+  #busyBox .spin { display: inline-block; width: 0.8em; height: 0.8em; margin-right: 6px; border: 2px solid #c9d6e3;
+    border-top-color: #4a78a8; border-radius: 50%; animation: busyspin 1s linear infinite; vertical-align: -1px; }
+  #busyBox .hint { display: block; margin-top: 6px; }
+  @keyframes busyspin { to { transform: rotate(360deg); } }
   .msg.goto:hover { text-decoration: underline; }
   .ed input.name { width: 100%; font-weight: 600; }
   .ed details { margin-top: 10px; }
@@ -533,6 +547,28 @@ function loadScript(src) {
     const s = document.createElement("script"); s.src = src; s.onload = resolve; s.onerror = () => reject(new Error("could not load " + src));
     document.head.appendChild(s);
   });
+}
+// Sign of life for a long request (Update, Check): after 2 s a box shows the elapsed time and what
+// the server is doing (GET /api/q/progress, once a second); after 60 s a note that the first run
+// after a start may take up to 3 minutes (MaximaSession.FIRST_RUN_TIMEOUT), then it fails.
+async function withProgress(what, promise) {
+  const t0 = Date.now();
+  let box = null, phase = "", stop = false;
+  const draw = () => {
+    if (stop) return;
+    const sec = Math.round((Date.now() - t0) / 1000);
+    if (sec < 2) return;
+    if (!box) { box = document.createElement("div"); box.id = "busyBox"; document.body.appendChild(box); }
+    box.innerHTML = `<span class="spin"></span><b>${esc(what)}</b> running · ${sec} s` + (phase ? "\n" + esc(phase) : "") +
+      (sec >= 60 ? '<span class="hint">Still working. The first run after a start of Maxima may take up to 3 minutes; ' +
+        "after that it is stopped with a message.</span>" : "");
+  };
+  const tick = setInterval(async () => {
+    draw();
+    try { const p = await (await fetch("/api/q/progress")).json(); if (p.busy) phase = p.phase; } catch (e) { /* server busy */ }
+  }, 1000);
+  try { return await promise; }
+  finally { stop = true; clearInterval(tick); if (box) box.remove(); }
 }
 async function postJSON(url, body, raw) {
   const data0 = raw ? raw.body : JSON.stringify(body);
@@ -1484,7 +1520,7 @@ async function check() {
   $("checkBtn").disabled = true;
   try {
     body.seed = parseInt($("seed").value, 10) || 1;
-    const r = await postJSON("/api/q/check", body);
+    const r = await withProgress("Check", postJSON("/api/q/check", body));
     $("status").textContent = "checked in " + r.seconds + " s";
     lastCheck = r.check; lastCheck.timing = r.timing;
     result.timing = r.timing; result.first_run = r.first_run; renderMessages();
@@ -1492,7 +1528,7 @@ async function check() {
     renderVariables();
     renderPRTGraphs();
   } catch (e) {
-    $("status").textContent = "";
+    $("status").textContent = "Check failed (see messages)";
     showMessages([{ cls: "err", text: "Check failed: " + e.message }], true);
   } finally { $("checkBtn").disabled = false; }
 }
@@ -2331,7 +2367,7 @@ async function evaluate(firstTime) {
   try {
     const seed = parseInt($("seed").value, 10) || 1;
     const prev = result, hadCheck = !!lastCheck;
-    result = await postJSON("/api/q/eval", { path: file.path, index: qindex, seed, src: $("src").value });
+    result = await withProgress("Evaluation", postJSON("/api/q/eval", { path: file.path, index: qindex, seed, src: $("src").value }));
     if (firstTime && result.seeds && result.seeds.length && !$("seed").dataset.userSet) {
       // first deployed variant of the question, if it has any
       const s0 = parseInt(result.seeds[0], 10);
@@ -2350,7 +2386,7 @@ async function evaluate(firstTime) {
     renderTests();
     if (keep && hadCheck) await check();
   } catch (e) {
-    $("status").textContent = "";
+    $("status").textContent = "Evaluation failed (see messages)";
     showMessages([{ cls: "err", text: "Evaluation failed: " + e.message }]);
   } finally { $("evaluate").disabled = false; }
 }
@@ -2684,12 +2720,15 @@ function renderInputs() {
 }
 
 function renderMessages() {
-  const msgs = [];
+  const msgs = [], printed = [];
   for (const s of result.statements || []) {
     if (s.note) msgs.push({ cls: "warn", text: `question variables, line ${s.line}: ${s.note}`, line: s.line, ch: s.ch });
     else if (s.error) msgs.push({ cls: "err", text: `question variables, line ${s.line}: ${s.source}\n${s.error}`, line: s.line });
-    else if (s.output) msgs.push({ cls: "info", text: `question variables, line ${s.line} printed:\n${s.output}` });
+    else if (s.output) printed.push({ cls: "info", text: `line ${s.line} printed:\n${s.output}`, line: s.line });
   }
+  // what the question variables print (e.g. with debug:true): one collapsed group
+  if (printed.length === 1) msgs.push(Object.assign(printed[0], { text: "question variables, " + printed[0].text }));
+  else if (printed.length) msgs.push({ cls: "info", text: `question variables: ${printed.length} lines printed output`, children: printed });
   for (const [k, v] of Object.entries(result.castext_errors || {})) msgs.push({ cls: "err", text: `${k}: ${v}` });
   for (const inp of result.inputs || []) {      // STACK refuses choice inputs without a proper list
     if (!MCQ_TYPES.includes(inp.type)) continue;
@@ -2704,11 +2743,13 @@ function renderMessages() {
   // the slow lines of the question variables in line order (the PRTs' times are at their feedback)
   const tm = timingSummary();
   if (tm) {
-    msgs.push({ cls: "info", text: tm });
+    const lines = [];
     for (const [l, v] of result.timing) {
       const m = /^question variables, line (\d+)$/.exec(l);
-      if (m && v >= 0.05) msgs.push({ cls: "info", text: `${l}: ${v.toFixed(2)} s`, line: parseInt(m[1], 10) });
+      if (m && v >= 0.05) lines.push({ cls: "info", text: `${l}: ${v.toFixed(2)} s`, line: parseInt(m[1], 10) });
     }
+    msgs.push({ cls: "info", text: tm + (lines.length ? ` (${lines.length} slow line${lines.length > 1 ? "s" : ""} of the question variables)` : ""),
+                children: lines });
   }
   showMessages(msgs.length ? msgs : [{ cls: "info", text: "no messages" }]);
   renderTiming();
@@ -2743,13 +2784,28 @@ function prtTimes(name) {
   return (v === undefined ? "" : `<span>Variables ${v.toFixed(2)} s</span>`) + (n === undefined ? "" : `<span>Nodes ${n.toFixed(2)} s</span>`);
 }
 
+// Messages: errors first, then warnings, then the rest (also when appended to the list shown);
+// a message with children is a collapsed group (e.g. the slow lines under the Maxima times)
+const MSG_RANK = { err: 0, warn: 1 };
+function messageElement(m) {
+  const d = document.createElement("div"); d.className = "msg " + m.cls; d.textContent = m.text;
+  if (m.line) { d.classList.add("goto"); d.title = "go to line " + m.line; d.addEventListener("click", () => gotoLine("questionvariables", m.line, m.ch)); }
+  if (!m.children || !m.children.length) return d;
+  const g = document.createElement("details"); g.className = "msggroup";
+  const s = document.createElement("summary"); s.appendChild(d); g.appendChild(s);
+  for (const c of m.children) g.appendChild(messageElement(c));
+  return g;
+}
 function showMessages(list, append) {
   const box = $("messages");
   if (!append) box.innerHTML = "";
-  for (const m of list) {
-    const d = document.createElement("div"); d.className = "msg " + m.cls; d.textContent = m.text;
-    if (m.line) { d.classList.add("goto"); d.title = "go to line " + m.line; d.addEventListener("click", () => gotoLine("questionvariables", m.line, m.ch)); }
-    box.appendChild(d);
+  const rank = (m) => MSG_RANK[m.cls] ?? 2;
+  for (const m of [...list].sort((a, b) => rank(a) - rank(b))) {
+    const el = messageElement(m);
+    el.dataset.rank = rank(m);
+    // before the first shown message of a lower rank (so errors stay on top)
+    const after = [...box.children].find((c) => (parseInt(c.dataset.rank ?? "2", 10)) > rank(m));
+    box.insertBefore(el, after || null);
   }
 }
 

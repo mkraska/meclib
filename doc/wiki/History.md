@@ -1,5 +1,10 @@
 ### Dev Branch
 
+2026 11 11
+- [[Meclib Workbench]], Questions page: while Maxima evaluates (Update, Check), a box shows after 2 s the elapsed time and what the server is doing (starting Maxima, loading an include from GitHub, evaluating), after 60 s with a note on the time limit. The first run in a new Maxima session may take 180 s instead of 60 s (on Windows the first Check of the `fb_unit()` test suite took over a minute and was stopped without a visible message)
+- [[Meclib Workbench]], messages: errors first, then warnings, then the rest, also for a failed Check; the output printed by the question variables (e.g. `debug:true`) and the slow lines under the Maxima times are collapsed groups; a failed Update or Check is also named in the status line
+- [[Meclib Workbench]]: tests of `maxima_session.py` without Maxima (`tools/workbench/tests/test_maxima_session.py`)
+
 2026 11 06
 - [[Meclib Workbench]], review: `include.unused` no longer reports a file that another proposed fix needs - `fb_value.mac` when `inputs.syntaxhint` puts in `{@meclib_h_alg@}` etc., the file of a local copy of a meclib function that `functions.legacy` deletes (TM1 08 11b, 11c; 13 questions of TM1). Applying the fixes does the include fixes last, so an include is no longer removed and added again at the end
 - [[Meclib Workbench]], review: new rule `maxima.multsgn` (required) - `make_multsgn()` with an option STACK does not know; STACK refuses such a question ("make_multsgn received un-supported option"). `"blank"` was an option until STACK 2025033100, the fix replaces it by `"onum"` (TM1 03 05, TM3 10 T04); other options are reported without a fix

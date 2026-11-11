@@ -148,6 +148,10 @@ class MaximaError(RuntimeError):
 
 
 class MaximaSession:
+    # the first evaluation in a new session may take much longer (Windows: Maxima's first loads,
+    # virus scanner); the page shows the elapsed time meanwhile
+    FIRST_RUN_TIMEOUT = 180
+
     def __init__(self, maxima=None, timeout=60, stack=None):
         self.maxima = find_maxima(maxima)
         if not self.maxima:
@@ -156,6 +160,7 @@ class MaximaSession:
         if not self.libdir:
             raise MaximaError("STACK's Maxima library not found under config/stack/<version>/maxima/")
         self.timeout = timeout
+        self.used = False           # has run_with_results() run yet (see FIRST_RUN_TIMEOUT)
         self.tmp = Path(tempfile.mkdtemp(prefix="meclib-maxima-"))
         self.counter = 0
         self.lock = threading.Lock()
@@ -270,6 +275,9 @@ class MaximaSession:
         """Like run(), but the code may call meclib_out(key, text); returns (stdout, {key: [texts]})."""
         outfile = self.tmp / ("out%d.txt" % (self.counter + 1))
         outfile.write_text("", encoding="utf-8")
+        if timeout is None and not self.used:
+            timeout = max(self.timeout, self.FIRST_RUN_TIMEOUT)
+        self.used = True
         text = self.run("meclib_out_file: %s$\n%s\nmeclib_out_file: false$" % (mpath(outfile), code), timeout)
         results = {}
         raw = outfile.read_text(encoding="utf-8")

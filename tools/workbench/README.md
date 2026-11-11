@@ -265,7 +265,10 @@ line Alt+G) and syntax highlighting:
   between `\(`/`\)`, `\[`/`\]` with one to three backslashes
 
 Tab inserts two spaces. Messages about a line of the question variables
-(errors, assumed semicolons) jump to that line when clicked. Without the
+(errors, assumed semicolons) jump to that line when clicked. Errors are listed
+first, then warnings, then the rest (also a failed Check, added later); what
+the question variables print (e.g. with `debug:true`) and the slow lines under
+the Maxima times are collapsed groups. Without the
 editor library (no network, see Configuration) the fields are plain text
 fields.
 
@@ -598,6 +601,14 @@ server keeps one more session started in the background: a question evaluated
 for the first time takes it at once (status line: "Maxima session started in
 advance"), and the next one starts. A change of the Maxima or STACK version
 closes all sessions and starts the spare one with the new version.
+
+A run of Maxima (Update, Check) is stopped after 60 s; the first run in a new
+session may take 180 s (on Windows it can take much longer than the next
+ones). While it runs, a box at the lower right shows after 2 s the elapsed
+time and what the server is doing (starting Maxima, loading an include from
+GitHub, evaluating; GET `/api/q/progress`), after 60 s with a note on the
+limit. A run that is stopped is reported at the top of the messages and in
+the status line.
 
 Maxima is found on the PATH or in the usual Windows install locations
 (every `C:\maxima-*`, `Program Files`, `LOCALAPPDATA`); otherwise set

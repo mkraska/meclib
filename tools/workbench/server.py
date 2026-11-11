@@ -215,6 +215,14 @@ class SessionPool:
 
 POOL = SessionPool()
 
+# what the last evaluation or check is doing, for the page's sign of life while it waits
+# (GET /api/q/progress): {"busy": bool, "phase": text, "since": time of the start}
+PROGRESS = {"busy": False, "phase": "", "since": 0.0}
+
+
+def set_phase(phase):
+    PROGRESS["phase"] = phase
+
 
 def current_maxima(cfg=None):
     """The Maxima executable the sessions use: the one chosen in the page header (kept in the
@@ -617,6 +625,9 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         query = urllib.parse.parse_qs(parsed.query)
+        if parsed.path == "/api/q/progress":
+            return self.send_json({"busy": PROGRESS["busy"], "phase": PROGRESS["phase"],
+                                   "seconds": round(time.time() - PROGRESS["since"], 1) if PROGRESS["busy"] else 0})
         if parsed.path == "/api/config":
             cfg = load_config()
             cfg["local_branch"] = git_branch()
@@ -827,11 +838,25 @@ class Handler(SimpleHTTPRequestHandler):
                 index, src = int(req["index"]), req.get("src", "local")
                 qel = stack_question.question_element(text, index)
                 data = stack_question.question_data(qel)
-                entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg), current_stack())
-                resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
-                answers = req.get("answers") if path == "/api/q/check" else None
-                result = stack_question.evaluate(entry[0], data, int(req.get("seed", 1)), resolver, entry[2], answers,
-                                                 req.get("test_exprs") if answers is not None else None)
+                PROGRESS.update(busy=True, since=time.time(), phase="Maxima session: starting Maxima and loading STACK's library")
+                try:
+                    entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg), current_stack())
+                    first = not entry[0].used
+                    evaluating = "evaluating with Maxima" + (" (first run in this session, may take longer)" if first else "")
+
+                    def fetch_shown(url, *a, **k):
+                        set_phase("loading %s from GitHub" % url.rsplit("/", 1)[-1])
+                        try:
+                            return fetch(url, *a, **k)
+                        finally:
+                            set_phase(evaluating)
+                    resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch_shown)
+                    answers = req.get("answers") if path == "/api/q/check" else None
+                    set_phase(evaluating)
+                    result = stack_question.evaluate(entry[0], data, int(req.get("seed", 1)), resolver, entry[2], answers,
+                                                     req.get("test_exprs") if answers is not None else None)
+                finally:
+                    PROGRESS["busy"] = False
                 result["offline"] = resolver.offline
                 entry[2] = result["kill"]
                 # the first run of its kind in a session includes Maxima's warm-up (about 0.2 s,
