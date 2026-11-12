@@ -28,6 +28,7 @@ The review of the [[Meclib Workbench]] (Questions page, **Review** at the top of
 | [`feedback.inputs`](#feedbackinputs) | recommended | no | Input used in the … |
 | [`matrix.feedback`](#matrixfeedback) | recommended / hint | partly | Element-wise feedback for a matrix input |
 | [`matrix.layout`](#matrixlayout) | recommended / hint | partly | Layout of a matrix input |
+| [`inputs.no-prt`](#inputsno-prt) | hint | yes | Input not graded by any PRT |
 | **PRTs and grading** | | | |
 | [`prt.simp`](#prtsimp) | recommended | yes | PRT simplification with fb_unit |
 | [`prt.feedbackformat`](#prtfeedbackformat) | recommended | yes | Format of PRT feedback |
@@ -37,11 +38,12 @@ The review of the [[Meclib Workbench]] (Questions page, **Review** at the top of
 | [`grade.default`](#gradedefault) | recommended | yes | Default mark |
 | [`prt.fb-floats`](#prtfb-floats) | recommended | yes | meclib feedback fb_floats() / fb_unit() |
 | [`prt.fb-vars-label`](#prtfb-vars-label) | hint | no | fb_vars() with a label |
+| [`prt.no-input`](#prtno-input) | recommended | no | PRT reads no input |
 | **Maxima code and includes** | | | |
 | [`include.lang-specific`](#includelang-specific) | recommended | yes | Language-specific library |
 | [`maxima.multsgn`](#maximamultsgn) | required | yes | Unknown option of make_multsgn() |
 | [`qv.fb-dims`](#qvfb-dims) | hint | no | fb_floats() without fb_dims |
-| [`qv.unit-name`](#qvunit-name) | required | no | question variable … is a unit |
+| [`qv.unit-name`](#qvunit-name) | required | yes | question variable … is a unit |
 | [`maxima.semicolon`](#maximasemicolon) | recommended | yes | Missing ; in Maxima code |
 | [`include.branch`](#includebranch) | hint | yes | Include from branch … |
 | [`include.dist`](#includedist) | required | yes | Include of a removed compact copy |
@@ -61,6 +63,7 @@ The review of the [[Meclib Workbench]] (Questions page, **Review** at the top of
 | [`variants.rand-name`](#variantsrand-name) | recommended | no | Variable named rand... |
 | [`files.unused`](#filesunused) | recommended | yes | Unused embedded file |
 | [`tests.value-length`](#testsvalue-length) | required | yes | Test input too long for Moodle |
+| [`tests.none`](#testsnone) | recommended | yes | No question tests |
 
 ## Security
 
@@ -207,6 +210,15 @@ Messages:
 
 See also: https://github.com/mkraska/meclib/wiki/Matrix-input
 
+### `inputs.no-prt`
+
+Level: **hint** · automatic fix: **yes** · function `r_input_prt()`
+
+Inputs and PRTs that do not meet: an input that no PRT reads is never graded (often left over after a change), a PRT that reads no input does not depend on the student's answer. A PRT reads an input when its name occurs in the feedback variables, SAns, TAns or the options of a node. Inputs bound to a graphic are left to the graphic rules (graphic.unused-input).
+
+Message:
+> Input … is read by no PRT (feedback variables, SAns, TAns, test options), so its answer is never graded. Add a PRT for it, or delete the input if it is left over (the fix deletes it with its placeholders).
+
 ## PRTs and grading
 
 ### `prt.simp`
@@ -308,6 +320,15 @@ Message:
 
 See also: https://github.com/mkraska/meclib/wiki/fb_floats()
 
+### `prt.no-input`
+
+Level: **recommended** · automatic fix: **no** · function `r_input_prt()`
+
+Inputs and PRTs that do not meet: an input that no PRT reads is never graded (often left over after a change), a PRT that reads no input does not depend on the student's answer. A PRT reads an input when its name occurs in the feedback variables, SAns, TAns or the options of a node. Inputs bound to a graphic are left to the graphic rules (graphic.unused-input).
+
+Message:
+> PRT … reads no input (feedback variables, SAns, TAns, test options), so it does not depend on the student's answer. Probably a node compares question variables only, or an input was renamed.
+
 ## Maxima code and includes
 
 ### `include.lang-specific`
@@ -343,12 +364,12 @@ See also: https://github.com/mkraska/meclib/wiki/fb_floats()#units
 
 ### `qv.unit-name`
 
-Level: **required** · automatic fix: **no** · function `r_unit_names()`
+Level: **required** · automatic fix: **yes** · function `r_unit_names()`
 
 A question variable named like a STACK unit (g, m, mm, s, N, t, h, ...) in a question in units mode: the value hides the unit inside the question, and in a student's answer the name counts as the unit (STACK allows unit names before it forbids the teacher's variable names) - e.g. "m g" of a meclib force in the names input only works because g is also gram. Without units mode the same answer would be invalid. Rename the variable (g -> g0).
 
 Message:
-> The question is in units mode, where … is a STACK unit. The question variable … hides the unit in the question, and in answers … still counts as the unit: e.g. a meclib force "m g" in the names input is accepted only because … is also a unit - in a question without units it would be rejected as a question variable. In grading the unit is replaced by the variable's value: an answer using the unit … is accepted as valid and marked wrong (STACK 4.13.1: 300000 g m/s^2 for 300 N with g: 10*m/s^2 gives ATUnits_incompatible_units). Rename the variable (e.g. …0).
+> The question is in units mode, where … is a STACK unit. The question variable … hides the unit in the question, and in answers … still counts as the unit: e.g. a meclib force "m g" in the names input is accepted only because … is also a unit - in a question without units it would be rejected as a question variable. In grading the unit is replaced by the variable's value: an answer using the unit … is accepted as valid and marked wrong (STACK 4.13.1: 300000 g m/s^2 for 300 N with g: 10*m/s^2 gives ATUnits_incompatible_units). The fix renames the variable to …0 everywhere (Maxima code, castext, tests).
 
 ### `maxima.semicolon`
 
@@ -532,3 +553,12 @@ Test input values longer than STACK's database column (255 characters): the impo
 
 Message:
 > Test …: the value of … is longer than the 255 characters STACK can store for a test input; importing the question into Moodle fails ("error writing to the database"). The fix moves it into a question variable (…), the test input then holds its name.
+
+### `tests.none`
+
+Level: **recommended** · automatic fix: **yes** · function `r_tests_none()`
+
+A question with inputs needs question tests (agents/stack_essentials.md). The fix adds test case "TAns" with the model answers as written (e.g. the name of a question variable, so it holds for every variant; a choice input gets its correct entries). Expected: full marks along the true branches of each PRT, a guess - run the test in the Tests column and approve its actual route.
+
+Message:
+> The question has inputs but no question tests; STACK's guidelines want a test per branch of every PRT. The fix adds test "TAns" with the model answers (…), expecting full marks along the true branches of each PRT: run it in the Tests column and approve the actual result.

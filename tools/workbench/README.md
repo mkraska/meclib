@@ -139,7 +139,7 @@ hides the files column.
 **Side bars**: each column has a narrow bar beside it with its buttons and
 its sections, always in reach while the column scrolls.
 
-- Editor bar: ↶ / ↷ (undo, redo), Snippet, Graphic ↗, then the sections Review,
+- Editor bar: ↶ / ↷ (undo, redo), Rename, Snippet, Graphic ↗, then the sections Review,
   Variables, Text, Inputs, Options, General FB, Specific FB, Note, PRTs and
   each PRT by name.
 - Preview bar: Restart, Update (save and evaluate, Ctrl+Enter), TAns (model answers), Check, the question tests, de / en, `0.5` / `0,5`,
@@ -466,6 +466,18 @@ the wiki page [Meclib Workbench Review Rules](https://github.com/mkraska/meclib/
 findings): after a change of the rules run `python build_rules_doc.py`, which
 also names rule functions without an explanation.
 
+**Rename** renames a question or feedback variable, an input or a PRT
+everywhere in the question (select the name first to take it): in Maxima code
+(question and feedback variables, model answers, SAns/TAns/options and scores
+of the nodes, values of test inputs) as an identifier outside strings and
+comments, in the Maxima parts of the texts (`{@..@}`, `{#..#}`, `[[if]]`,
+`[[define]]`, `[[foreach]]`, not their plain text), for an input also
+`[[input:]]`, `[[validation:]]`, `input-ref-` and the test inputs, for a PRT
+`[[feedback:]]` and the expected test results. Answer notes stay as they are.
+The new name must be free and, for a variable or input, not a STACK unit. A
+name that is a PRT and also a variable is asked for (POST `/api/q/rename`).
+The fix of `qv.unit-name` uses it (`g` → `g0`).
+
 **Snippet ...** inserts a text snippet at the cursor of the field last
 edited: the interactive and the fixed [[jsxgraph]] block, the empty
 `[[lang]]` declaration, the hints for the free body diagram input (de/en).
@@ -594,13 +606,15 @@ language), Markdown format. It has no PRT yet and therefore default mark 0.
 
 ### Tests column
 
-"Tests" in the editor bar replaces the editor by the Tests column ("← Editor"
-goes back); the choice is kept. It follows STACK's guidelines for question
+"Tests" in the editor bar replaces the editor by the Tests column; there the same button reads
+"Editor" and goes back. The choice is kept. It follows STACK's guidelines for question
 authoring (`agents/stack_essentials.md` in moodle-qtype_stack): a randomised
 question needs deployed variants with distinct question notes, and every
 question with inputs needs question tests.
 
-- **Variants:** "Survey" evaluates the question variables and the question
+- **Variants:** the question notes of the deployed variants are loaded by
+  themselves when the column shows a question (and after a change of the
+  deployed seeds; POST `/api/q/variants` with `seeds`). "Survey" evaluates the question variables and the question
   note for the seeds 1..N (N on the page, default 10, kept) and the deployed
   seeds, one Maxima run per seed (POST `/api/q/variants`; the progress box
   shows the seed). Errors and repeated notes are marked ("same as 3"; red
@@ -613,7 +627,9 @@ question with inputs needs question tests.
   variant in the preview, fills in the test and checks it; green passed, red
   failed, grey not run on that variant, a bar below: the result in STACK
   itself (variant in the preview). A test number in the head runs the test on
-  every deployed variant; "Tests on deployed" runs all tests on all of them.
+  every deployed variant; "Tests on deployed" runs all tests on all of them. These two run in
+  one request (POST `/api/q/testrun`): per variant the question variables once, then each test
+  (its inputs and the PRTs) as a short run of its own; the preview is not touched.
 - **Test details:** after a test has run on a variant: its inputs (expression
   and value), per PRT the expected and the actual score, penalty and route
   (differences in red), and the route node by node: answer test with SAns,
@@ -629,6 +645,10 @@ question with inputs needs question tests.
   `⋯`: "approval lapses when the question changes", on by default). A test
   number in the head of the matrix has a green bar when approved, an amber
   one when out of date.
+- **Inputs and PRTs:** which PRT reads which input (feedback variables,
+  SAns, TAns, options), both in the order of the question text; red: an
+  input no PRT grades (not one bound to a graphic), a PRT that reads no
+  input. The review rules `inputs.no-prt` and `prt.no-input` say the same.
 - **Coverage:** every branch (node true/false) of every PRT with its answer
   note, against the tests: ● the expected route of the test names the
   branch's note; ○ a test that names only the last note of a PRT with several
@@ -636,7 +656,7 @@ question with inputs needs question tests.
   route of its last run - write the full route. A branch no test reaches is
   red; then "+" and "Tests" are red, and the matrix shows as a callout on
   "+". Aim: every node once true and once false.
-- **Editor bar** in this view: ← Editor (back to the editor), Survey, Tests on deployed, new test (+, red
+- **Editor bar** in this view: Editor (the switch, back to the editor), Survey, Tests on deployed, new test (+, red
   while there is none), run all tests on the variant in the preview (▶),
   STACK ▶, edit (✎) and delete (✕) the test last run, and jumps to the
   sections; the editor's buttons (snippets, graphic, sections) are hidden.
@@ -659,6 +679,10 @@ server keeps one more session started in the background: a question evaluated
 for the first time takes it at once (status line: "Maxima session started in
 advance"), and the next one starts. A change of the Maxima or STACK version
 closes all sessions and starts the spare one with the new version.
+
+A `stack_include` file is loaded once per session: later runs leave it out while the file is
+unchanged and the question variables (now and in the run before) assign no name the file
+defines; otherwise it is loaded again.
 
 A run of Maxima (Update, Check) is stopped after 60 s; the first run in a new
 session may take 180 s (on Windows it can take much longer than the next
@@ -985,8 +1009,8 @@ instead.
 ## Planned
 
 - the questions of a file in the folder tree, context menus for their actions
-- renaming a question variable throughout a question (fix of the review rule
-  `qv.unit-name`, and in the editor)
+- a lean mode for batch test runs (no TeX of SAns/TAns, no feedback castext);
+  Maxima in WSL or goemaxima in Docker (Maxima on Windows is several times slower)
 - the way back to Moodle without gitsync: bulk edits on a whole course backup
   (.mbz) between two courses, browser automation of "Import as new version"
   for single changes

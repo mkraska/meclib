@@ -435,5 +435,76 @@ class Locked(unittest.TestCase):
         self.assertNotIn("state.locked[untested]", k)
 
 
+
+def prt_ab(name, sans, tans="ta", nodes=None):
+    nodes = nodes or [("0", sans, tans, "-1", "-1")]
+    body = "".join("<node><name>%s</name><answertest>AlgEquiv</answertest><sans>%s</sans><tans>%s</tans>"
+                   "<truescore>1</truescore><truenextnode>%s</truenextnode><trueanswernote>%s-%d-T</trueanswernote>"
+                   "<falsescore>0</falsescore><falsenextnode>%s</falsenextnode><falseanswernote>%s-%d-F</falseanswernote></node>"
+                   % (n, sa, ta, tn, name, k + 1, fn, name, k + 1) for k, (n, sa, ta, tn, fn) in enumerate(nodes))
+    return "<prt><name>%s</name><value>1</value><feedbackvariables><text></text></feedbackvariables>%s</prt>\n" % (name, body)
+
+
+class InputPrt(unittest.TestCase):
+    """inputs.no-prt, prt.no-input (2026-11-12, idea from the STACK editor of T. Bock)."""
+
+    def test_both_used(self):
+        k = keys(question("ta: x;", algebraic_input(hint="x"), prt_ab("prt1", "ans1")))
+        self.assertFalse({x for x in k if x.startswith(("inputs.no-prt", "prt.no-input"))}, k)
+
+    def test_input_without_prt(self):
+        q = question("ta: x;", algebraic_input(hint="x") + algebraic_input("ans2", hint="x"), prt_ab("prt1", "ans1"),
+                     text="<p>[[input:ans1]] [[validation:ans1]] [[input:ans2]] [[validation:ans2]]</p>")
+        self.assertIn("inputs.no-prt[ans2]", keys(q))
+
+    def test_prt_without_input(self):
+        k = keys(question("ta: x;", algebraic_input(hint="x"), prt_ab("prt1", "ans1") + prt_ab("prt2", "ta")))
+        self.assertIn("prt.no-input[PRT prt2]", k)
+        self.assertNotIn("prt.no-input[PRT prt1]", k)
+
+    def test_graphic_input_left_to_graphic_rules(self):
+        q = question("ta: x;", algebraic_input("objects", hint="x"), prt_ab("prt1", "ta"),
+                     text="<p>[[input:objects]]</p>")
+        self.assertNotIn("inputs.no-prt[objects]", keys(q))
+
+
+class TestsNone(unittest.TestCase):
+    """tests.none: a question with inputs and no tests gets test "TAns" (2026-11-12)."""
+
+    def test_adds_tans_test(self):
+        q = question("ta: x;", algebraic_input(hint="x"),
+                     prt_ab("prt1", "ans1", nodes=[("0", "ans1", "ta", "1", "-1"), ("1", "ans1", "ta", "-1", "-1")]))
+        self.assertIn("tests.none", keys(q))
+        f = next(f for f in rules.findings(block(q)) if f["rule"] == "tests.none")
+        t = rules.qfile.qtests(f["fix"](block(q)))
+        self.assertEqual(len(t), 1)
+        self.assertEqual(t[0]["description"], "TAns")
+        self.assertEqual(t[0]["inputs"], {"ans1": "ta"})
+        self.assertEqual(t[0]["expected"]["prt1"]["note"], "prt1-1-T | prt1-2-T")
+        self.assertNotIn("tests.none", {f2["key"] for f2 in rules.findings(f["fix"](block(q)))})
+
+    def test_choice_input(self):
+        inp = "<input><name>ans1</name><type>radio</type><tans>mc</tans></input>\n"
+        f = next(f for f in rules.findings(block(question("mc: [[1,true],[2,false]];", inp, prt_ab("prt1", "ans1"))))
+                 if f["rule"] == "tests.none")
+        self.assertIn("first(mcq_correct(mc))", f["message"])
+
+
+
+class UnitName(unittest.TestCase):
+    """qv.unit-name: the fix renames the variable everywhere (2026-11-12)."""
+
+    def test_fix_renames(self):
+        inp = "<input><name>ans1</name><type>units</type><tans>m*g</tans></input>\n"
+        q = question("g: 10*m/s^2;\nm: 2*kg;", inp, prt_ab("prt1", "ans1", "m*g"),
+                     text="<p>g = {@g@} [[input:ans1]] [[validation:ans1]] [[feedback:prt1]]</p>")
+        f = next(f for f in rules.findings(block(q)) if f["key"] == "qv.unit-name[g]")
+        new = f["fix"](block(q))
+        self.assertIn("g0: 10*m/s^2;", new)
+        self.assertIn("{@g0@}", new)
+        self.assertIn("<tans>m*g0</tans>", new)
+        self.assertNotIn("qv.unit-name[g]", {x["key"] for x in rules.findings(new)})
+
+
 if __name__ == "__main__":
     unittest.main()

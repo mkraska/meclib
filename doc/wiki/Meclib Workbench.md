@@ -72,7 +72,7 @@ The workbench approximates STACK closely, but not completely: STACK's input vali
 ## Planned
 
 - the questions of a file in the folder tree, context menus for their actions
-- renaming a question variable throughout a question: as the fix of the review rule `qv.unit-name` (a variable named like a unit, e.g. `g` → `g0`) and in the editor
+- faster test runs: a lean mode for batch runs, Maxima in WSL or goemaxima in Docker (Maxima on Windows is several times slower than on Linux)
 - the way back to Moodle without gitsync: bulk edits on a whole course backup between two courses, browser automation of "Import as new version" for single changes
 - review of all questions in a folder at once
 - templates for inputs and PRTs from the wiki

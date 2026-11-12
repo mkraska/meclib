@@ -75,10 +75,10 @@ Environment facts:
 
 See "Planned" in `tools/workbench/README.md`: folder tree, review of a whole folder, templates, editor assistants, bulk edits, gitsync split files, and more.
 
-- Rename a question variable throughout the question (question and feedback variables, CAS parts of the texts,
-  question note, model answers, syntax hints, SAns/TAns/test options, question tests; not inside strings and
-  comments; the new name must be free and not a unit): as the fix of `qv.unit-name` (e.g. `g` → `g0`, checked by
-  default) and as "rename variable" in the editor.
+- Speed of Maxima on Windows (2026-11-12): the timing of a batch test run shows the time is spent computing in
+  Maxima (TM1 09 04: about 0.12 s per PRT on Windows, 0.03 s on Linux). Next: a lean mode for batch runs (no TeX of
+  SAns/TAns, no feedback castext), then Maxima in WSL (Ubuntu 22.04 has Maxima 5.45.1 as the Moodle server) or
+  goemaxima in Docker.
 - Way back to Moodle (2026-11-06): `qbank_gitsync` not before February 2027, and IT is still deciding whether to
   install it at all - do not depend on it.
   - Bulk changes only between two courses, on the whole course backup (.mbz: download, change, restore). To check:

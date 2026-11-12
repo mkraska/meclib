@@ -102,6 +102,8 @@
   .qtests button.spass { box-shadow: inset 0 -3px 0 #3a9a3a; }      /* result in STACK itself */
   .qtests button.sfail { box-shadow: inset 0 -3px 0 #c0392b; }
   .qtests .qtmsg.info { color: var(--muted); }
+  .qtests details.qtmsg summary { cursor: pointer; } .qtests table.exp { border-collapse: collapse; margin: 4px 0; }
+  .qtests table.exp td, .qtests table.exp th { padding: 1px 8px; border-top: 1px solid var(--line); text-align: left; font-weight: 400; }
   .qtests .qtform { width: 100%; display: flex; flex-direction: column; gap: 3px; margin-top: 3px; }
   .qtests .qtform input { width: 100%; font-size: 12px; }
   .qtests .qtmsg { width: 100%; font-size: 11px; white-space: pre-wrap; }
@@ -126,6 +128,7 @@
   table.cov td { padding: 1px 6px; border-top: 1px solid var(--line); text-align: center; }
   table.cov td.n { font-family: var(--mono); color: var(--muted); font-size: 11.5px; }
   table.cov tr.miss td { background: #fbecea; color: var(--err); }
+  table.cov.ip th.miss { background: #fbecea; color: var(--err); }
   table.cov .h { color: var(--muted); }
   #covPop { position: fixed; z-index: 80; max-width: 460px; max-height: 70vh; overflow: auto; background: #fff;
     border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; box-shadow: 0 6px 24px rgba(0, 0, 0, .18); }
@@ -135,6 +138,9 @@
   .route .rstep.false { border-left-color: #e3a19b; } .route .rstep.error { border-left-color: var(--err); }
   .route .rstep .rhead { font-weight: 600; } .route .rstep .rnote { color: var(--muted); font-size: 11.5px; }
   .route .rstep .rnote code { font-family: var(--mono); }
+  .route .rval { background: #eef2f7; border-radius: 3px; padding: 0 4px; }   /* the compared values, apart from their labels */
+  #tvDetail details > summary { cursor: pointer; } #tvDetail details.prt { margin-top: 6px; }
+  #tvDetail details > summary.tvrow { display: list-item; } #tvDetail details > summary.tvrow > * { margin-right: 6px; }
   #tvDetail table.exp { border-collapse: collapse; font-size: 12px; margin: 4px 0; }
   #tvDetail table.exp td, #tvDetail table.exp th { padding: 1px 6px; border-top: 1px solid var(--line); text-align: left; }
   #tvDetail table.exp th { font-weight: 400; color: var(--muted); }
@@ -422,11 +428,11 @@
       <label title="the approval holds for question variables, options, inputs and PRTs (without feedback texts) as they were; a change asks for approval again"><input type="checkbox" id="optApprovalFp"> approval lapses when the question changes</label>
       <span class="hint">F1: help on the function at the cursor</span></div></details>
     <span class="pair"><button id="undoBtn" disabled title="nothing to undo">↶</button><button id="redoBtn" disabled title="nothing to redo">↷</button></span>
+    <button id="renameBtn" class="edonly" title="rename a question or feedback variable, an input or a PRT everywhere in the question (Maxima code, the Maxima parts of the texts, placeholders, tests); select the name first to take it">Rename</button>
     <button id="snippetBtn" class="edonly" title="insert a text snippet at the cursor (templates/snippets/)">Snippet</button>
     <button id="toGraphic" class="edonly" title="open the question's graphic (first [[jsxgraph]] block, evaluated initdata) on the Graphic page">Graphic ↗</button>
     <button id="testsToggle" title="question tests and deployed variants (instead of the editor); red: something to do">Tests</button>
     <div class="tvonly">
-      <button id="testsBack" title="back to the editor">← Editor</button>
       <button id="varSurvey" title="evaluate the question variables and the question note for the seeds 1..N (N in the column)">Survey</button>
       <button id="varRunTests" title="run all question tests (fast check) on every deployed variant">Tests on deployed</button>
       <div id="tvTools" class="tvonly"></div>
@@ -434,7 +440,7 @@
     <hr>
     <nav id="railEdit" class="jump edonly" aria-label="editor sections"></nav>
     <nav id="railTests" class="jump tvonly" aria-label="test sections">
-      <a href="#" data-jump="tvVariants">Variants and tests</a><a href="#" data-jump="tvDetail">Test details</a><a href="#" data-jump="tvCoverage">Coverage</a><a href="#" data-jump="tvTestBox">Test messages</a></nav>
+      <a href="#" data-jump="tvVariants">Variants and tests</a><a href="#" data-jump="tvDetail">Test details</a><a href="#" data-jump="tvInputs">Inputs and PRTs</a><a href="#" data-jump="tvCoverage">Coverage</a><a href="#" data-jump="tvTestBox">Test messages</a></nav>
   </aside>
   <div id="editCol">
     <section>
@@ -485,6 +491,12 @@
             result in STACK itself); a test number in the head runs the test on every deployed variant.</p>
         </div>
         <div class="tvbox" id="tvDetail"><span class="hint">Run a test (a button in the matrix): its route through the PRTs and its approval show here.</span></div>
+        <div class="tvbox" id="tvInputs">
+          <div class="tvrow"><b>Inputs and PRTs</b><span id="ipInfo" class="hint"></span></div>
+          <div id="ipView"></div>
+          <p class="hint">● the PRT reads the input (feedback variables, SAns, TAns or options), in the order of the question text.
+            A test that changes an input acts on the PRTs of its row. Red: an input no PRT grades, a PRT that reads no input.</p>
+        </div>
         <div class="tvbox" id="tvCoverage">
           <div class="tvrow"><b>Coverage</b><span id="covInfo" class="hint"></span></div>
           <div id="covView"></div>
@@ -505,7 +517,7 @@
       <label><input type="radio" name="sidePreview" value="right"> right of the preview</label></div></details>
     <button id="restartBtn" class="primary" title="clear all answers and the feedback; the graphic starts from its initial state (as Moodle's &quot;Start again&quot;)">Restart</button>
     <button id="evaluate" class="primary" title="Ctrl+Enter: save, evaluate the question and update the preview">Update</button>
-    <button id="fillBtn" class="primary" title="Model answer: fill in the model answers (the graphic starts from the model answer of its objects input)">TAns</button>
+    <button id="fillBtn" class="primary" title="Model answer: fill in the model answers (the graphic starts from the model answer of its objects input); in test mode the model answer as written, e.g. the name of its variable">TAns</button>
     <button id="checkBtn" class="primary" title="evaluate the PRTs with the current answers (Alt+Enter)">Check</button>
     <span class="pair" title="language of the [[lang]] blocks"><button id="lang-de">de</button><button id="lang-en">en</button></span>
     <span class="pair" title="decimal separator (question option, saved in the file)"><button id="dec-point" class="dec">0<b>.</b>5</button><button id="dec-comma" class="dec">0<b>,</b>5</button></span>
@@ -816,7 +828,7 @@ async function selectQuestion(index) {
   for (const k of Object.keys(testResults)) delete testResults[k];     // the tests of another question
   for (const k of Object.keys(stackResults)) delete stackResults[k];
   stackSummary = "";
-  variantsData = null; for (const k of Object.keys(seedResults)) delete seedResults[k];
+  variantsData = null; for (const k of Object.keys(seedResults)) delete seedResults[k]; lastBatchTiming = null;
   for (const k of Object.keys(actualRoutes)) delete actualRoutes[k];
   activeTest = null; testDeleteArmed = null; leaveTestMode(false);
   if (!(await flush())) return;
@@ -1256,6 +1268,41 @@ async function prtOp(body) {
     return null;
   }
 }
+// rename a variable, input or PRT everywhere (POST /api/q/rename, qfile.rename_op)
+$("renameBtn").addEventListener("click", async () => {
+  if (!file || qindex === null) return;
+  const ID = /^[A-Za-z][A-Za-z0-9_]*$/;
+  const sel = String(window.getSelection() || "").trim();
+  const old = (prompt("Rename: name of the question variable, feedback variable, input or PRT", ID.test(sel) ? sel : "") || "").trim();
+  if (!old) return;
+  const nw = (prompt(`New name for ${old}:`, old) || "").trim();
+  if (!nw || nw === old) return;
+  if (!ID.test(nw)) { showMessages([{ cls: "err", text: "New name: a letter, then letters, digits or _" }]); return; }
+  if (!(await flush())) return;
+  let kind = null;
+  for (;;) {
+    const backup = !backedUp.has(file.path);
+    try {
+      const r = await postJSON("/api/q/rename", { path: file.path, index: qindex, rev: file.rev, old, new: nw, kind, backup });
+      if (r.ambiguous) {
+        kind = (prompt(`${r.question} Type ${r.ambiguous.join(" or ")}:`, r.ambiguous[0]) || "").trim();
+        if (!r.ambiguous.includes(kind)) return;
+        continue;
+      }
+      if (backup) backedUp.add(file.path);
+      file.rev = r.rev;
+      fillEditor(r.fields);
+      showHistory(r.history);
+      showMessages([{ cls: "info", text: r.label + "." }]);
+      loadReview();
+      evaluate(false);
+    } catch (e) {
+      if (e.conflict) { conflict = true; showConflict(); }
+      else showMessages([{ cls: "err", text: e.message }]);
+    }
+    return;
+  }
+});
 $("addPrt").addEventListener("click", async () => {
   const name = (prompt("Name of the new PRT (e.g. sys2):") || "").trim();
   if (!name) return;
@@ -1726,6 +1773,8 @@ function studentSyntax(v) {
 function fillModelAnswers() {
   if (!result) return;
   for (const inp of result.inputs || []) {
+    // test mode: the model answer as written (e.g. Qmax), so the test holds for every variant
+    if (testMode && exprInput(inp) && inp.tans) { inputValues[inp.name] = inp.tans; continue; }
     let v = inp.tans_raw;
     if (v == null) continue;
     if (inp.type === "string" || inp.type === "notes") { try { v = JSON.parse(v); } catch (e) { /* not a string literal */ } }
@@ -2222,6 +2271,7 @@ function renderTests() {
   bar.innerHTML = "";
   // the test actions are in the editor bar of the Tests view; the tests themselves in the matrix
   const tools = $("tvTools");
+  hideCoverageCallout();   // its anchor "+" is rebuilt (or gone in test mode): mouseleave would never come
   tools.innerHTML = "";
   let pair = null, last = null;
   const tool = (label, title, fn) => {
@@ -2231,7 +2281,7 @@ function renderTests() {
     last = b;
   };
   if (result && (result.inputs || []).length && !testMode) {
-    tool("+", (tests.length ? "" : "no question tests yet - ") + "new test case: the preview goes into test mode, where the inputs take CAS expressions with question variables", () => enterTestMode(null));
+    tool("+", (tests.length ? "" : "no question tests yet - ") + "new test case: the preview goes into test mode, where the inputs take CAS expressions with question variables", () => { hideCoverageCallout(); enterTestMode(null); });
     const cov = coverage();
     if (!tests.length || cov.missing) last.classList.add("qfail");
     last.addEventListener("mouseenter", () => showCoverageCallout(last));
@@ -2250,6 +2300,7 @@ function renderTests() {
   const r = activeTest !== null && testResults[activeTest];
   if (r && !r.pass) { const m = document.createElement("div"); m.className = "qtmsg bad"; m.textContent = `test ${activeTest} failed: ` + r.reasons.join("\n"); bar.appendChild(m); }
   const sf = Object.entries(stackResults).filter(([tc, x]) => !x.pass && tests.some((t) => String(t.testcase) === tc));
+  if (lastBatchTiming) bar.insertAdjacentHTML("beforeend", batchTimingHTML(lastBatchTiming));
   if (stackSummary) { const m = document.createElement("div"); m.className = "qtmsg " + (sf.length ? "bad" : "info"); m.textContent = stackSummary +
     (sf.length ? "\n" + sf.map(([tc, x]) => `test ${tc}: ` + x.reasons.join("; ")).join("\n") : ""); bar.appendChild(m); }
   renderVariants();
@@ -2261,11 +2312,13 @@ function renderTests() {
 // file at once); "Tests on deployed" runs the fast check of every test on every deployed seed.
 let variantsData = null;          // {variants: [{seed, note: {de, en}, error}], random, has_note}
 const seedResults = {};           // seed -> {testcase: pass}
+let lastBatchTiming = null;       // times of the last runBatch, shown in the test messages
 function showTestsView(on) {
   $("testView").hidden = !on; $("editView").hidden = on;
   $("sideEdit").classList.toggle("tests", on);
-  $("testsToggle").classList.toggle("on", on);
   store(QSTORE_KEY, { testsView: on });
+  testsToggleState();
+  if (on) loadDeployedNotes();
   if (!on) refreshEditors();
 }
 function deployedSeeds() { return ((result && result.seeds) || []).map((s) => parseInt(s, 10)).filter((s) => !isNaN(s)); }
@@ -2292,10 +2345,19 @@ function testsNeeds() {
   }
   return needs;
 }
+// the switch between editor and tests: "Tests" (red when something is to do) or, in the Tests
+// view, "Editor"
+function testsToggleState(needs) {
+  const b = $("testsToggle"), inTests = !$("testView").hidden;
+  needs = needs || testsNeeds();
+  b.textContent = inTests ? "Editor" : "Tests";
+  b.classList.toggle("need", !inTests && needs.length > 0);
+  b.title = inTests ? "back to the editor" :
+    "question tests and deployed variants (instead of the editor)" + (needs.length ? "\nto do: " + needs.join("; ") : "");
+}
 function renderVariants() {
   const needs = testsNeeds();
-  $("testsToggle").classList.toggle("need", needs.length > 0);
-  $("testsToggle").title = "question tests and deployed variants (instead of the editor)" + (needs.length ? "\nto do: " + needs.join("; ") : "");
+  testsToggleState(needs);
   $("testsNeed").textContent = needs.length ? "To do: " + needs.join("; ") : "";
   const t = $("varTable");
   if (!t) return;
@@ -2303,11 +2365,11 @@ function renderVariants() {
   const info = [];
   if (result) info.push(result.random ? "randomised question" : "not randomised (no rand... in the question variables)");
   info.push(dep.length ? `${dep.length} deployed` : "no deployed variants");
-  if (!variantsData) info.push("Survey shows the question notes");
+  if (!variantsData || variantsData.partial) info.push(variantsData ? "notes of the deployed variants; Survey for seeds 1..N" : "Survey shows the question notes");
   $("varInfo").textContent = info.join(" · ");
   // rows: the deployed variants first, then the others of the survey (or the variant in the preview)
   const rows = variantsData ? variantsData.variants.slice() : dep.map((s) => ({ seed: s, note: { de: "", en: "" }, error: "" }));
-  if (!variantsData && !isNaN(cur) && !rows.some((v) => v.seed === cur)) rows.push({ seed: cur, note: { de: "", en: "" }, error: "" });
+  if ((!variantsData || variantsData.partial) && !isNaN(cur) && !rows.some((v) => v.seed === cur)) rows.push({ seed: cur, note: { de: "", en: "" }, error: "" });
   rows.sort((a, b) => (dep.includes(b.seed) - dep.includes(a.seed)) || a.seed - b.seed);
   const tests = (result && result.qtests) || [];
   const firstOf = new Map();          // note -> first seed with it
@@ -2354,6 +2416,7 @@ function renderVariants() {
   for (const b of t.querySelectorAll("button[data-col]")) b.addEventListener("click", () => runColumn(parseInt(b.dataset.col, 10)));
   renderTestDetail();
   const cov = coverage();
+  renderInputPrts();
   $("covView").innerHTML = coverageTable(cov);
   $("covInfo").textContent = cov.rows.length ? `${cov.rows.length - cov.missing} of ${cov.rows.length} branches reached` : "";
   if (window.MathJax && MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, t]);
@@ -2366,10 +2429,13 @@ function typeset(el) {
 }
 // the nodes a PRT visited (trace from the server): answer test, the compared values, result,
 // score after the branch, the branch's answer note and the answer test's own note
+// STACK typesets true/false as \mathbf{!BOOLTRUE!} (bold capitals); shown as Maxima writes them
+function boolTex(t) { return t && String(t).replace(/\\mathbf\{!?(?:BOOL)?(TRUE|FALSE|True|False)!?\}/g, (m, w) => "\\mathrm{" + w.toLowerCase() + "}"); }
+const detailOpen = { box: true };   // open/closed state of the test details (box and PRTs) across runs
 function routeHTML(trace) {
   return '<div class="route">' + trace.map((t) => `<div class="rstep ${esc(t.result)}">` +
     `<span class="rhead">Node ${esc(t.node)}: ${esc(t.answertest)}(${esc(t.sansexpr)}, ${esc(t.tansexpr)}${t.options ? ", " + esc(t.options) : ""}) → ${esc(t.result)}</span><br>` +
-    `SAns ${t.sans || "?"} &nbsp; TAns ${t.tans || "?"}<br>` +
+    `SAns <span class="rval">${boolTex(t.sans) || "?"}</span> &nbsp; TAns <span class="rval">${boolTex(t.tans) || "?"}</span><br>` +
     `<span class="rnote">score ${esc(t.score)} · <code>${esc(t.note || "-")}</code>${t.atnote ? " · " + esc(t.atnote) : ""}</span></div>`).join("") + "</div>";
 }
 function approvalState(tc) {
@@ -2403,25 +2469,29 @@ function renderTestDetail() {
     return;
   }
   const st = approvalState(qt.testcase), r = testResults[qt.testcase], act = actualExpected(lastCheck);
-  let h = `<div class="tvrow"><b>Test ${esc(qt.testcase)}</b><span class="hint">${esc(qt.description || "")} · variant ${sd}</span>` +
+  let h = `<details data-k="box"${detailOpen.box ? " open" : ""}><summary class="tvrow"><b>Test ${esc(qt.testcase)}</b><span class="hint">${esc(qt.description || "")} · variant ${sd}</span>` +
     `<span class="apbadge ${st}">${esc(approvalText(qt.testcase))}</span>` +
-    `<span class="${r && r.pass ? "hint" : "diff"}">${r ? (r.pass ? "passed" : "failed") : ""}</span></div>`;
-  h += '<div class="hint">' + Object.entries(qt.inputs).map(([n, v]) => {
+    `<span class="${r && r.pass ? "hint" : "diff"}">${r ? (r.pass ? "passed" : "failed") : ""}</span></summary>`;
+  // inputs and PRTs in the order of the question text, as in the editor (byTextOrder)
+  const ordered = (obj, tag) => byTextOrder(Object.keys(obj).map((name) => ({ name })), tag).map((x) => [x.name, obj[x.name]]);
+  h += '<div class="hint">' + ordered(qt.inputs, "input").map(([n, v]) => {
     const tex = lastCheck.inputs && lastCheck.inputs[n] && lastCheck.inputs[n].tex;
     return `${esc(n)} = ${esc(v)}${tex ? " → " + tex : ""}`; }).join(" · ") + "</div>";
-  for (const [P, e] of Object.entries(qt.expected)) {
+  for (const [P, e] of ordered(qt.expected, "feedback")) {
     const a = act[P] || { score: "", penalty: "", note: "(not run)" };
     const same = (x, y) => (x === "" && y === "") || Math.abs(parseFloat(x) - parseFloat(y)) < 1e-6;
-    h += `<div style="margin-top:6px"><b>PRT ${esc(P)}</b></div><table class="exp"><tr><th></th><th>score</th><th>penalty</th><th>route (answer notes)</th></tr>` +
+    h += `<details class="prt" data-k="prt:${esc(P)}"${detailOpen["prt:" + P] === false ? "" : " open"}><summary><b>PRT ${esc(P)}</b></summary><table class="exp"><tr><th></th><th>score</th><th>penalty</th><th>route (answer notes)</th></tr>` +
       `<tr><th>expected</th><td>${esc(e.score)}</td><td>${esc(e.penalty)}</td><td><code>${esc(e.note)}</code></td></tr>` +
       `<tr><th>this run</th><td class="${same(e.score, a.score) ? "" : "diff"}">${esc(a.score)}</td><td>${esc(a.penalty)}</td>` +
       `<td class="${e.note === a.note ? "" : "diff"}"><code>${esc(a.note)}</code></td></tr></table>`;
     const tr = lastCheck.prts && lastCheck.prts[P] && lastCheck.prts[P].trace;
     if (tr && tr.length) h += routeHTML(tr);
+    h += "</details>";
   }
   h += '<div class="tvrow"><button id="approveBtn" class="small primary" title="record this run (score, penalty, full route) as the expected result and approve the test">' +
-    (st === "ok" ? "Approve again" : "Approve") + '</button><span class="hint">The expected results become those of this run: score, penalty and the full route.</span></div>';
+    (st === "ok" ? "Approve again" : "Approve") + '</button><span class="hint">The expected results become those of this run: score, penalty and the full route.</span></div></details>';
   box.innerHTML = h;
+  box.querySelectorAll("details[data-k]").forEach((d) => d.addEventListener("toggle", () => { detailOpen[d.dataset.k] = d.open; }));
   $("approveBtn").addEventListener("click", () => approveTest(qt.testcase, act));
   typeset(box);
 }
@@ -2450,7 +2520,7 @@ async function approveTest(tc, expected) {
 const actualRoutes = {};          // testcase -> {prt: [notes of the last run]}
 function coverage() {
   const rows = [], tests = (result && result.qtests) || [];
-  for (const p of (result && result.prts) || [])
+  for (const p of byTextOrder((result && result.prts) || [], "feedback"))
     p.nodes.forEach((n, k) => { for (const br of ["true", "false"]) rows.push({ prt: p.name, node: k + 1, br, note: (n[br + "answernote"] || "").trim() }); });
   const cell = {};                  // "row index:testcase" -> "s" solid | "h" hollow
   for (const qt of tests) for (const [P, e] of Object.entries(qt.expected || {})) {
@@ -2473,6 +2543,24 @@ function coverageTable(cov) {
       (cov.tests.map((q) => { const c = cov.cell[i + ":" + q.testcase]; return `<td>${c === "s" ? "●" : c === "h" ? '<span class="h">○</span>' : ""}</td>`; }).join("") || "<td></td>") + "</tr>";
   });
   return h + "</table>";
+}
+// inputs x PRTs: which PRT reads which input (result.prtinputs, from the server), both in the
+// order of the question text; inputs bound to a graphic count as read
+function renderInputPrts() {
+  const v = $("ipView");
+  if (!v) return;
+  const map = (result && result.prtinputs) || {};
+  const inputs = byTextOrder((result && result.inputs) || [], "input"), prts = byTextOrder((result && result.prts) || [], "feedback");
+  if (!inputs.length && !prts.length) { v.innerHTML = ""; $("ipInfo").textContent = ""; return; }
+  const reads = (p, i) => (map[p.name] || []).includes(i.name);
+  const graphic = (i) => new RegExp("input-ref-" + i.name + "\\s*=").test(textOrder()) || /^(objects|names)\d*$/.test(i.name);
+  const lone = inputs.filter((i) => !prts.some((p) => reads(p, i)) && !graphic(i)), empty = prts.filter((p) => !inputs.some((i) => reads(p, i)));
+  let h = `<table class="cov ip"><tr><th>input \\ PRT</th>${prts.map((p) => `<th class="${empty.includes(p) ? "miss" : ""}">${esc(p.name)}</th>`).join("")}</tr>`;
+  for (const i of inputs)
+    h += `<tr class="${lone.includes(i) ? "miss" : ""}"><td>${esc(i.name)}</td>${prts.map((p) => `<td>${reads(p, i) ? "●" : ""}</td>`).join("")}</tr>`;
+  v.innerHTML = h + "</table>";
+  const bad = [lone.length ? `${lone.length} input(s) without PRT` : "", empty.length ? `${empty.length} PRT(s) without input` : ""].filter(Boolean);
+  $("ipInfo").textContent = `${inputs.length} input(s), ${prts.length} PRT(s)` + (bad.length ? " - " + bad.join(", ") : "");
 }
 function showCoverageCallout(anchor) {
   if (!result) return;
@@ -2498,10 +2586,78 @@ async function runCell(sd, tc) {
   if (qt) await runTest(qt);
   renderVariants();
 }
-// one test on every deployed variant (or the variant in the preview); the last one stays shown
+// one test on every deployed variant (or the variant in the preview)
 async function runColumn(tc) {
   const dep = deployedSeeds();
-  for (const sd of dep.length ? dep : [parseInt($("seed").value, 10) || 1]) await runCell(sd, tc);
+  await runBatch(dep.length ? dep : [parseInt($("seed").value, 10) || 1], [tc]);
+}
+// the times of a batch run: per variant the run of the question variables and of each test, as
+// wall time (server and Maxima) / time in Maxima; the difference is the handover to Maxima
+function batchTimingHTML(t) {
+  const f = (x) => (x == null ? "?" : Number(x).toFixed(2));
+  const slow = (list) => (list || []).filter((x) => x[1] >= 0.05).map((x) => `${esc(x[0])} ${f(x[1])}`).join(", ");
+  let wall = 0, cas = 0;
+  const rows = t.runs.map((r) => {
+    const v = (r.time || {}).variables || {}, ts = (r.time || {}).tests || {};
+    wall += v.wall || 0; cas += v.maxima || 0;
+    const cells = Object.entries(ts).map(([tc, x]) => { wall += x.wall || 0; cas += x.maxima || 0;
+      return `<td title="${slow(x.slow)}">${f(x.wall)} / ${f(x.maxima)}</td>`; }).join("");
+    return `<tr><td>${r.seed}</td><td title="${slow(v.slow)}">${f(v.wall)} / ${f(v.maxima)}${v.includes ? " (includes loaded)" : ""}</td>${cells}</tr>`;
+  });
+  const tcs = Object.keys(((t.runs[0] || {}).time || {}).tests || {});
+  return `<details class="qtmsg info"><summary>Timing: ${f(t.seconds)} s in all; Maxima runs ${f(wall)} s, of it computing in Maxima ${f(cas)} s,
+    the rest (${f(wall - cas)} s) handing over to Maxima and back</summary>
+    <table class="exp"><tr><th>variant</th><th>question variables</th>${tcs.map((tc) => `<th>test ${esc(tc)}</th>`).join("")}</tr>${rows.join("")}</table>
+    <span class="hint">seconds: wall time / time computing in Maxima; the tooltip names the slowest parts</span></details>`;
+}
+// tests on variants in one request (/api/q/testrun): per variant the question variables once, the
+// includes once per session; the preview is not touched (a cell button shows a run in it)
+async function runBatch(seeds, tcs) {
+  if (!file || qindex === null || testMode) return;
+  if (!(await flush())) return;
+  let data;
+  try {
+    data = await withProgress("Question tests", postJSON("/api/q/testrun",
+      { path: file.path, index: qindex, src: $("src").value, seeds, testcases: tcs || null }));
+  } catch (e) { showMessages([{ cls: "err", text: "Test run failed: " + e.message }], true); return; }
+  const tests = (result && result.qtests) || [], agg = {};
+  for (const run of data.runs) {
+    seedResults[run.seed] = seedResults[run.seed] || {};
+    for (const qt of tests) {
+      const chk = run.tests[String(qt.testcase)];
+      if (!chk) continue;
+      const r = compareTest(qt, chk);
+      if (run.error) { r.pass = false; r.reasons.unshift("question variables: " + run.error); }
+      seedResults[run.seed][qt.testcase] = r.pass;
+      for (const [P, x] of Object.entries(chk.prts || {}))      // the actual route, for the coverage
+        if (!x.skipped) (actualRoutes[qt.testcase] = actualRoutes[qt.testcase] || {})[P] = String(x.notes || "").split(" | ").filter(Boolean);
+      const a = agg[qt.testcase] = agg[qt.testcase] || { pass: true, reasons: [] };
+      if (!r.pass) { a.pass = false; a.reasons.push(...r.reasons.map((x) => `variant ${run.seed}: ${x}`)); }
+    }
+  }
+  Object.assign(testResults, agg);
+  lastBatchTiming = { seconds: data.seconds, runs: data.runs.map((r) => ({ seed: r.seed, time: r.time })) };
+  const bad = Object.entries(agg).filter(([, a]) => !a.pass).map(([tc]) => tc);
+  $("status").textContent = (bad.length ? `test(s) ${bad.join(", ")} failed` : `${Object.keys(agg).length} test(s) passed`) +
+    ` on ${seeds.length} variant(s) in ${data.seconds} s`;
+  renderTests();
+}
+// the question notes of the deployed variants, without a survey: when the Tests column shows a
+// question for which there is none yet, and after a change of the deployed seeds (variantsData.partial)
+let notesLoading = false;
+async function loadDeployedNotes(force) {
+  if (!file || qindex === null || !result || $("testView").hidden || notesLoading) return;
+  if (variantsData && !(force && variantsData.partial)) return;
+  const dep = deployedSeeds();
+  if (!dep.length) { if (variantsData && variantsData.partial) { variantsData = null; renderVariants(); } return; }
+  notesLoading = true;
+  const at = [file.path, qindex];
+  try {
+    const d = await withProgress("Question notes of the deployed variants",
+      postJSON("/api/q/variants", { path: file.path, index: qindex, src: $("src").value, seeds: dep }));
+    if (file && file.path === at[0] && qindex === at[1]) { variantsData = Object.assign(d, { partial: true }); renderVariants(); }
+  } catch (e) { showMessages([{ cls: "err", text: "Question notes failed: " + e.message }], true); }
+  finally { notesLoading = false; }
 }
 async function surveyVariants() {
   if (!file || qindex === null) return;
@@ -2524,6 +2680,7 @@ async function deploySeeds(seeds) {
     if (result) result.seeds = r.seeds.map(String);
     $("status").textContent = r.label;
     loadReview();
+    loadDeployedNotes(true);
   } catch (e) {
     if (e.conflict) { conflict = true; showConflict(); }
     else showMessages([{ cls: "err", text: e.message }], true);
@@ -2534,20 +2691,10 @@ async function runTestsOnDeployed() {
   const dep = deployedSeeds(), tests = (result && result.qtests) || [];
   if (!tests.length) { showMessages([{ cls: "warn", text: "No question tests yet." }], true); return; }
   const seeds = dep.length ? dep : [parseInt($("seed").value, 10) || 1];
-  const keep = $("seed").value;
-  for (const [k, s] of seeds.entries()) {
-    $("seed").value = s;
-    await evaluate(false);
-    if (!result) break;
-    $("status").textContent = `tests on variant ${s} (${k + 1} of ${seeds.length}) ...`;
-    seedResults[s] = {};
-    await runAllTests();
-    renderVariants();
-  }
-  $("seed").value = keep;
-  await evaluate(false);
+  for (const s of seeds) seedResults[s] = {};
+  await runBatch(seeds, null);
   const bad = Object.entries(seedResults).filter(([, m]) => Object.values(m).some((p) => !p)).map(([s]) => s);
-  $("status").textContent = bad.length ? `tests failed on variant(s) ${bad.join(", ")}` : `all tests passed on ${seeds.length} variant(s)`;
+  if (bad.length) $("status").textContent += ` - variant(s) ${bad.join(", ")}`;
 }
 // a test's answers as the STACK API takes them: as typed (decimal separator of the question); a
 // choice input as the number of the chosen entry (checkbox: one key name_k per ticked entry), a
@@ -2774,6 +2921,7 @@ async function evaluate(firstTime) {
     render(keep);
     renderTests();
     if (keep && hadCheck) await check();
+    loadDeployedNotes();
   } catch (e) {
     $("status").textContent = "Evaluation failed (see messages)";
     showMessages([{ cls: "err", text: "Evaluation failed: " + e.message }]);
@@ -3370,7 +3518,6 @@ $("saveAs").addEventListener("click", async () => {
   catch (e) { showMessages([{ cls: "err", text: e.message }]); }
 });
 $("testsToggle").addEventListener("click", () => showTestsView($("testView").hidden));
-$("testsBack").addEventListener("click", () => showTestsView(false));
 $("varSurvey").addEventListener("click", surveyVariants);
 $("optApprovalFp").checked = stored(QSTORE_KEY).approvalFp !== false;
 $("optApprovalFp").addEventListener("change", () => { store(QSTORE_KEY, { approvalFp: $("optApprovalFp").checked }); renderVariants(); });

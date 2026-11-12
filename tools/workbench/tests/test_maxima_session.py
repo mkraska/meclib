@@ -36,5 +36,24 @@ class FirstRunTimeout(unittest.TestCase):
         self.assertEqual(s.seen, [10])
 
 
+class TempDir(unittest.TestCase):
+    """maxima_tempdir: backslashes on Windows (STACK's plot() runs `del` on it)."""
+
+    def test_windows(self):
+        name = maxima_session.os.name
+        try:
+            maxima_session.os.name = "nt"
+            lit = maxima_session.mtempdir("C:/Users/x/Temp/wb")
+        finally:
+            maxima_session.os.name = name
+        # Maxima literal of C:\Users\x\Temp\wb\ (each backslash escaped)
+        self.assertEqual(lit, r'"C:\\Users\\x\\Temp\\wb\\"')
+        self.assertNotIn("/", lit)
+
+    def test_linux(self):
+        if maxima_session.os.name != "nt":
+            self.assertEqual(maxima_session.mtempdir("/tmp/wb"), '"/tmp/wb/"')
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -469,6 +469,69 @@ def r_includes(Q_):
     return out
 
 
+# Inputs and PRTs that do not meet: an input that no PRT reads is never graded (often left over
+# after a change), a PRT that reads no input does not depend on the student's answer. A PRT reads an
+# input when its name occurs in the feedback variables, SAns, TAns or the options of a node.
+# Inputs bound to a graphic are left to the graphic rules (graphic.unused-input).
+def r_input_prt(Q_):
+    names = [i["name"] for i in Q_.inputs]
+    used = qfile._prts_using(Q_.block, names)
+    read = {n for v in used.values() for n in v}
+    out = []
+    for n in names:
+        if n in read or n in Q_.graphic or re.match(r"^(objects|names)\d*$", n):
+            continue
+        out.append(F("inputs.no-prt", n, "hint", "Input not graded by any PRT",
+                     "Input %s is read by no PRT (feedback variables, SAns, TAns, test options), so its answer is never "
+                     "graded. Add a PRT for it, or delete the input if it is left over (the fix deletes it with its "
+                     "placeholders)." % n, lambda q, n=n: qfile._delete_input_q(q, n)))
+    for p in Q_.prts:
+        if p["name"] not in used:
+            out.append(F("prt.no-input", "PRT " + p["name"], "recommended", "PRT reads no input",
+                         "PRT %s reads no input (feedback variables, SAns, TAns, test options), so it does not depend on "
+                         "the student's answer. Probably a node compares question variables only, or an input was renamed."
+                         % p["name"]))
+    return out
+
+
+# A question with inputs needs question tests (agents/stack_essentials.md). The fix adds test case
+# "TAns" with the model answers as written (e.g. the name of a question variable, so it holds for
+# every variant; a choice input gets its correct entries). Expected: full marks along the true
+# branches of each PRT, a guess - run the test in the Tests column and approve its actual route.
+def r_tests_none(Q_):
+    if not Q_.inputs or qfile.qtests(Q_.block):
+        return []
+    inputs = {}
+    for i in Q_.inputs:
+        ta = (i.get("tans") or "").strip()
+        if not ta:
+            continue
+        inputs[i["name"]] = ("mcq_correct(%s)" % ta if i.get("type") == "checkbox" else
+                             "first(mcq_correct(%s))" % ta if i.get("type") in sq.MCQ_TYPES else ta)
+    if not inputs:
+        return []
+    expected = {}
+    for p in Q_.prts:
+        route, seen, k = [], set(), 0
+        nodes = {n["name"]: n for n in p["nodes"]}
+        name = p["nodes"][0]["name"] if p["nodes"] else None
+        while name in nodes and name not in seen:
+            seen.add(name)
+            n = nodes[name]
+            if n.get("trueanswernote"):
+                route.append(n["trueanswernote"])
+            name = (n.get("truenextnode") or "-1").strip()
+        expected[p["name"]] = {"score": "1", "penalty": "0", "note": " | ".join(route) or "NULL"}
+
+    def fix(q):
+        return qfile.qtest_op(q, 0, {"op": "add", "description": "TAns", "inputs": inputs, "expected": expected})[0]
+    return [F("tests.none", "", "recommended", "No question tests",
+              "The question has inputs but no question tests; STACK's guidelines want a test per branch of every PRT. "
+              "The fix adds test \"TAns\" with the model answers (%s), expecting full marks along the true branches "
+              "of each PRT: run it in the Tests column and approve the actual result."
+              % ", ".join("%s = %s" % kv for kv in inputs.items()), fix)]
+
+
 # Test input values longer than STACK's database column (255 characters): the import into Moodle
 # fails with "error writing to the database". The fix moves them into question variables.
 def r_qtest_length(Q_):
@@ -1326,6 +1389,11 @@ def r_unit_names(Q_):
         found += [n for n in names if n in sq.STACK_UNITS and n not in found]
     if not found:
         return []
+
+    def fix(q, n):
+        used = qfile._identifiers(q)
+        new = next(c for c in [n + "0", n + "_0"] + ["%s%d" % (n, k) for k in range(1, 100)] if c not in used)
+        return qfile.rename_op(q, 0, n, new, "variable")[0]
     return [F("qv.unit-name", n, "required", "question variable %s is a unit" % n,
               "The question is in units mode, where %s is a STACK unit. The question variable %s hides the "
               "unit in the question, and in answers %s still counts as the unit: e.g. a meclib force "
@@ -1333,8 +1401,8 @@ def r_unit_names(Q_):
               "without units it would be rejected as a question variable. In grading the unit is replaced "
               "by the variable's value: an answer using the unit %s is accepted as valid and marked wrong "
               "(STACK 4.13.1: 300000 g m/s^2 for 300 N with g: 10*m/s^2 gives ATUnits_incompatible_units). "
-              "Rename the variable (e.g. %s0)."
-              % (n, n, n, n, n, n)) for n in found]
+              "The fix renames the variable to %s0 everywhere (Maxima code, castext, tests)."
+              % (n, n, n, n, n, n), lambda q, n=n: fix(q, n)) for n in found]
 
 
 # Matrix inputs (wiki "Matrix input", "Matrix Feedback"): a table row label | input | validation
@@ -1640,7 +1708,7 @@ def r_scenes(Q_):
 
 RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_scenes, r_graphic_inputs, r_input_settings, r_prts,
          r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_raw_in_math, r_multsgn, r_fb_floats, r_fb_dims, r_variants, r_unit_names, r_matrix_inputs, r_unused_files, r_semicolons,
-         r_include_branch, r_include_dist, r_includes, r_legacy_functions, r_qtest_length]
+         r_include_branch, r_include_dist, r_includes, r_legacy_functions, r_qtest_length, r_input_prt, r_tests_none]
 
 
 # ---------------------------------------------------------------------- metadata in the description

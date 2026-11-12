@@ -627,6 +627,140 @@ def prt_op(text, index, op):
     return text[:a] + q + text[b:], label
 
 
+# ---------------------------------------------------------------------- renaming
+# A question variable, feedback variable, input or PRT gets a new name everywhere: in Maxima code
+# (question and feedback variables, SAns/TAns/options/scores of the nodes, model answers, values of
+# test inputs) as an identifier outside strings and comments, in the Maxima parts of castext
+# ({@..@}, {#..#}, [[if test=..]], [[define]], [[foreach]]) - not in its plain text -, and for an
+# input also [[input:..]], [[validation:..]], input-ref-.. and the test inputs, for a PRT
+# [[feedback:..]] and the expected results of the tests. Answer notes (e.g. prt1-1-T) stay as they are.
+MAXIMA_TAGS = ("questionvariables", "feedbackvariables", "sans", "tans", "testoptions", "truescore",
+               "falsescore", "truepenalty", "falsepenalty", "value")
+CASTEXT_TAGS = ("questiontext", "generalfeedback", "specificfeedback", "questionnote", "truefeedback",
+                "falsefeedback", "prtcorrect", "prtpartiallycorrect", "prtincorrect", "syntaxhint")
+
+
+def _ident_re(name):
+    return re.compile(r"(?<![A-Za-z0-9_%&?])" + re.escape(name) + r"(?![A-Za-z0-9_%])")
+
+
+def rename_in_maxima(code, old, new):
+    """code with the identifier old replaced by new, outside strings and comments."""
+    rx, out, i, n = _ident_re(old), [], 0, len(code)
+    while i < n:
+        if code.startswith("/*", i):
+            j = code.find("*/", i + 2)
+            j = n if j < 0 else j + 2
+            out.append(code[i:j]); i = j; continue
+        if code[i] == '"':
+            j = i + 1
+            while j < n and code[j] != '"':
+                j += 2 if code[j] == "\\" else 1
+            out.append(code[i:j + 1]); i = j + 1; continue
+        j = i
+        while j < n and code[j] != '"' and not code.startswith("/*", j):
+            j += 1
+        out.append(rx.sub(new, code[i:j])); i = j
+    return "".join(out)
+
+
+def rename_in_castext(text, old, new):
+    """castext with old replaced by new in its Maxima parts only."""
+    import stack_question as sq
+    text = sq.CT_CAS.sub(lambda m: "{%s%s%s}" % (m.group(1), rename_in_maxima(m.group(2), old, new), m.group(1)), text)
+
+    def block(m):
+        if m.group(1).lower() not in sq.CAS_BLOCKS:
+            return m.group(0)
+        attrs = sq.CT_ATTR.sub(lambda a: a.group(0).replace(a.group(1) if a.group(1) is not None else a.group(2),
+                                                            rename_in_maxima(a.group(1) if a.group(1) is not None else a.group(2), old, new), 1),
+                               m.group(2))
+        return m.group(0).replace(m.group(2), attrs, 1)
+    return sq.CT_BLOCK.sub(block, text)
+
+
+def _map_content(q, tags, fn):
+    """Applies fn to the text content of every <tag> (its <text> child where it has one), CDATA
+    or entity-encoded; untouched content stays byte for byte."""
+    def one(m):
+        raw = m.group(2)
+        t = re.match(r"(\s*<text>)(.*?)(</text>\s*)$", raw, re.S)
+        pre, body, post = (t.group(1), t.group(2), t.group(3)) if t else ("", raw, "")
+        c = re.match(r"(\s*<!\[CDATA\[)(.*)(\]\]>\s*)$", body, re.S)
+        if c:
+            new = c.group(1) + fn(c.group(2)) + c.group(3)
+        else:
+            dec = _decode(body)
+            res = fn(dec)
+            new = body if res == dec else encode_plain(res)
+        return m.group(1) + pre + new + post + m.group(3)
+    for tag in tags:
+        q = re.sub(r"(<%s(?:\s[^>]*)?>)(.*?)(</%s>)" % (tag, tag), one, q, flags=re.S)
+    return q
+
+
+def _identifiers(q):
+    """Identifiers used in the Maxima code and castext Maxima parts of a question block."""
+    import stack_question as sq
+    found = set()
+
+    def collect(code):
+        found.update(sq.IDENT.findall(re.sub(r'"(?:\\.|[^"\\])*"', '""', sq.strip_comments(code))))
+        return code
+    _map_content(q, MAXIMA_TAGS, collect)
+    _map_content(q, CASTEXT_TAGS, lambda t: ([collect(p) for p in sq.castext_cas_parts(t)], t)[1])
+    return found
+
+
+class AmbiguousName(ValueError):
+    """The name is that of a PRT and also of an input or variable: kind must be given."""
+    def __init__(self, name, kinds):
+        super().__init__("%s is %s: which one?" % (name, " and ".join("a " + k for k in kinds)))
+        self.kinds = kinds
+
+
+def rename_op(text, index, old, new, kind=None):
+    """Renames old to new in question index. kind (input, PRT, variable) is found from the name;
+    a PRT may share its name with an input or variable (AmbiguousName unless kind is given).
+    Returns (new text, label)."""
+    a, b, qtype = question_span(text, index)
+    if qtype != "stack":
+        raise ValueError("question %d is not a STACK question" % index)
+    q = text[a:b]
+    old, new = (old or "").strip(), (new or "").strip()
+    if not NAME.match(new):
+        raise ValueError("new name: a letter, then letters, digits or _")
+    inputs = re.findall(r"<input>\s*<name>([^<]*)</name>", q)
+    prts = re.findall(r"<prt>\s*<name>([^<]*)</name>", q)
+    used = _identifiers(q)
+    kinds = ([] if old not in prts else ["PRT"]) + (["input"] if old in inputs else ["variable"] if old in used else [])
+    if not kinds:
+        raise ValueError("%s is not a question variable, feedback variable, input or PRT of this question" % old)
+    if kind is None and len(kinds) > 1:
+        raise AmbiguousName(old, kinds)
+    kind = kind or kinds[0]
+    if kind not in kinds:
+        raise ValueError("%s is not a %s of this question" % (old, kind))
+    if new in inputs or new in prts or new in used:
+        raise ValueError("%s is already used in this question" % new)
+    import stack_question as sq
+    if kind != "PRT" and new in sq.STACK_UNITS:
+        raise ValueError("%s is a STACK unit; a variable or input of that name hides the unit" % new)
+    if kind != "PRT":
+        q = _map_content(q, MAXIMA_TAGS, lambda c: rename_in_maxima(c, old, new))
+        q = _map_content(q, CASTEXT_TAGS, lambda c: rename_in_castext(c, old, new))
+    if kind == "input":
+        q = re.sub(r"(<input>\s*<name>)%s(</name>)" % re.escape(old), r"\g<1>%s\2" % new, q)
+        q = re.sub(r"(<testinput>\s*<name>)%s(</name>)" % re.escape(old), r"\g<1>%s\2" % new, q)
+        q = re.sub(r"\[\[(\s*)(input|validation):%s(\s*)\]\]" % re.escape(old), r"[[\1\2:%s\3]]" % new, q)
+        q = re.sub(r"\binput-ref-%s(?=\s*=)" % re.escape(old), "input-ref-" + new, q)
+    elif kind == "PRT":
+        q = re.sub(r"(<prt>\s*<name>)%s(</name>)" % re.escape(old), r"\g<1>%s\2" % new, q)
+        q = re.sub(r"(<expected>\s*<name>)%s(</name>)" % re.escape(old), r"\g<1>%s\2" % new, q)
+        q = re.sub(r"\[\[(\s*)feedback:%s(\s*)\]\]" % re.escape(old), r"[[\1feedback:%s\2]]" % new, q)
+    return text[:a] + q + text[b:], "%s %s renamed to %s" % (kind, old, new)
+
+
 def prt_root(prt_block):
     """The first node: the one no other node leads to (as STACK determines it)."""
     names = re.findall(r"<node>\s*<name>([^<]*)</name>", prt_block)

@@ -59,6 +59,11 @@ Endpoints
                             the file changed on disk since rev
   POST /api/q/eval          {path, index, seed, src} -> question variables, model answers and
                             rendered texts, evaluated with STACK's Maxima library
+  POST /api/q/rename        {path, index, rev, old, new, kind?, backup} -> a variable, input or PRT
+                            renamed everywhere (qfile.rename_op); {ambiguous: kinds} if old names a
+                            PRT and also an input or variable
+  POST /api/q/testrun       {path, index, src, seeds, testcases} -> the question tests on these
+                            variants, one run of the question variables per variant
   POST /api/q/check         like eval, plus {answers: {input: raw text}} -> "check": validation of the
                             answers and the PRT results (score, penalty, answer notes, feedback)
                             optional test_exprs {input: CAS expression}: test mode, these inputs get
@@ -742,8 +747,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json({"error": str(err)}, 500)
 
     def variants(self, cfg, req):
-        """POST /api/q/variants {path, index, src, count}: the question note (and errors) of the
-        variants with seeds 1 .. count and of the deployed seeds, one Maxima run per seed in the
+        """POST /api/q/variants {path, index, src, count[, seeds]}: the question note (and errors) of
+        the variants with seeds 1 .. count and of the deployed seeds (or only those in seeds), one Maxima run per seed in the
         question's session (the page shows the progress)."""
         target = allowed_path(cfg, req["path"])
         text, _ = qfile.read_file(target)
@@ -753,6 +758,8 @@ class Handler(SimpleHTTPRequestHandler):
         deployed = [int(s) for s in data["seeds"] if re.match(r"^-?\d+$", s.strip())]
         count = max(1, min(int(req.get("count") or 10), 500))
         seeds = list(range(1, count + 1)) + [s for s in deployed if not 1 <= s <= count]
+        if req.get("seeds") is not None:      # only these (e.g. the deployed ones)
+            seeds = [int(x) for x in req["seeds"]]
         PROGRESS.update(busy=True, since=time.time(), phase="Maxima session: starting Maxima and loading STACK's library")
         out = []
         try:
@@ -760,13 +767,40 @@ class Handler(SimpleHTTPRequestHandler):
             resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
             for k, seed in enumerate(seeds):
                 set_phase("variant %d of %d (seed %d)" % (k + 1, len(seeds), seed))
-                v, names = stack_question.variant(entry[0], data, seed, resolver, entry[2], load_includes=k == 0)
+                v, names = stack_question.variant(entry[0], data, seed, resolver, entry[2], load_includes=None)
                 entry[2] = names
                 out.append(v)
         finally:
             PROGRESS["busy"] = False
         return {"variants": out, "deployed": deployed, "random": stack_question.is_random(data),
                 "has_note": bool((data.get("questionnote") or "").strip())}
+
+    def test_run(self, cfg, req):
+        """POST /api/q/testrun {path, index, src, seeds, testcases}: the question tests (default
+        all) on the variants with these seeds, in the question's session: per variant one run of
+        the question variables, then one short run per test (stack_question.run_tests). The
+        includes are loaded once per session (stack_question.include_plan).
+        -> {runs: [{seed, error, tests: {testcase: check}}], seconds}"""
+        target = allowed_path(cfg, req["path"])
+        text, _ = qfile.read_file(target)
+        index, src = int(req["index"]), req.get("src", "local")
+        data = stack_question.question_data(stack_question.question_element(text, index))
+        seeds = [int(x) for x in req.get("seeds") or [1]]
+        testcases = req.get("testcases")
+        t0 = time.time()
+        PROGRESS.update(busy=True, since=t0, phase="Maxima session: starting Maxima and loading STACK's library")
+        out = []
+        try:
+            entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg), current_stack())
+            resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
+            for k, seed in enumerate(seeds):
+                set_phase("tests on variant %d (%d of %d)" % (seed, k + 1, len(seeds)))
+                r, names = stack_question.run_tests(entry[0], data, seed, resolver, entry[2], testcases)
+                entry[2] = names
+                out.append(r)
+        finally:
+            PROGRESS["busy"] = False
+        return {"runs": out, "seconds": round(time.time() - t0, 2)}
 
     def stack_grade(self, cfg, req):
         """POST /api/q/stackgrade {path, index, seed, src, lang, runs: [{testcase, answers}]}: the
@@ -989,6 +1023,20 @@ class Handler(SimpleHTTPRequestHandler):
                 history.record(target, text, new, index, label)
                 return self.send_json({"rev": rev, "label": label, "fields": qfile.question_fields(new, index),
                                        "history": history.status(target, index)})
+            if path == "/api/q/rename":      # {path, index, rev, old, new, kind?, backup}
+                target = allowed_path(cfg, req["path"])
+                text, rev = qfile.read_file(target)
+                if req.get("rev") and req["rev"] != rev:
+                    raise qfile.ConflictError("the file was changed outside the workbench")
+                index = int(req["index"])
+                try:
+                    new, label = qfile.rename_op(text, index, req.get("old"), req.get("new"), req.get("kind") or None)
+                except qfile.AmbiguousName as e:
+                    return self.send_json({"ambiguous": e.kinds, "question": str(e)})
+                rev = qfile.write_file(target, new, rev, bool(req.get("backup")))
+                history.record(target, text, new, index, label)
+                return self.send_json({"rev": rev, "label": label, "fields": qfile.question_fields(new, index),
+                                       "history": history.status(target, index)})
             if path == "/api/q/qtest":
                 target = allowed_path(cfg, req["path"])
                 text, rev = qfile.read_file(target)
@@ -1027,6 +1075,8 @@ class Handler(SimpleHTTPRequestHandler):
                                        "approvals": rules.approvals(new[a:b]), "history": history.status(target, index)})
             if path == "/api/q/variants":
                 return self.send_json(self.variants(cfg, req))
+            if path == "/api/q/testrun":
+                return self.send_json(self.test_run(cfg, req))
             if path == "/api/q/stackgrade":
                 return self.send_json(self.stack_grade(cfg, req))
             if path == "/api/q/duplicate":

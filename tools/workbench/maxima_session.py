@@ -140,6 +140,15 @@ def mpath(path):
     return '"' + str(path).replace("\\", "/").replace('"', '\\"') + '"'
 
 
+def mtempdir(path):
+    """maxima_tempdir as a Maxima string literal. On Windows with backslashes: STACK's plot()
+    deletes its .plt file with `del <maxima_tempdir>...`, and del takes "/Users" for a switch;
+    its German message (cp850 "ü") then breaks Maxima's UTF-8 reading of the output."""
+    if os.name == "nt":
+        return '"' + str(path).replace("/", "\\").rstrip("\\").replace("\\", "\\\\") + '\\\\"'
+    return mpath(str(path) + "/")
+
+
 def mstring(text):
     """Python text as a Maxima string literal."""
     return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
@@ -232,7 +241,7 @@ class MaximaSession:
     def _plot_setup(self):
         PLOT_DIR.mkdir(parents=True, exist_ok=True)
         lines = ["IMAGE_DIR: %s$" % mpath(str(PLOT_DIR).replace("\\", "/") + "/"),
-                 "maxima_tempdir: %s$" % mpath(str(self.tmp).replace("\\", "/") + "/"),
+                 "maxima_tempdir: %s$" % mtempdir(self.tmp),
                  'URL_BASE: "/plots/"$']
         gp = gnuplot_for(self.maxima)
         if gp:
