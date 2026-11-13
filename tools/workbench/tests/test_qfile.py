@@ -113,6 +113,14 @@ class Rename(unittest.TestCase):
             self.assertIn(part, t)
         self.assertNotIn("ans1", t)
 
+    def test_text_with_file(self):
+        """A text with an attached image (<file> after <text>) is renamed, the file kept."""
+        q = RQ.replace("[[/jsxgraph]]]]></text></questiontext>",
+                       '[[/jsxgraph]]]]></text>\n<file name="a.png" encoding="base64">QUJD</file></questiontext>')
+        t, _ = qfile.rename_op(q, 0, "a", "a0", "variable")
+        self.assertIn("{@a0@}", t)
+        self.assertIn('<file name="a.png" encoding="base64">QUJD</file>', t)
+
     def test_refused(self):
         for old, new in (("a", "b"), ("zz", "y"), ("ans1", "1x")):
             with self.assertRaises(ValueError):

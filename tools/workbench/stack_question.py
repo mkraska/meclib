@@ -16,6 +16,7 @@ Not reproduced: STACK's input validation (insert stars, syntax hints, forbidden 
 syntax) - except the rejection of question variable names in answers (question_variable_words) and castext blocks other than the ones listed above (they are left as text).
 """
 
+import hashlib
 import os
 import re
 import time
@@ -934,6 +935,16 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
     return code
 
 
+def unsafe_expr(expr):
+    """Why a test expression cannot go into the generated Maxima code, or None: a ; or $ outside
+    strings would end the statement and break the rest of the run (e.g. a graphic's answer
+    [0;0;...] in decimal-comma syntax), as would an unclosed string, bracket or comment."""
+    code = re.sub(r'"(?:\\.|[^"\\])*"', '""', expr)
+    if re.search(r"[;$]", code):
+        return "; or $ in the expression"
+    return incomplete_code(expr)
+
+
 def test_inputs(data, test_exprs):
     """{input: expression} of the test mode of the page: the inputs whose answer is a CAS
     expression with question variables (not choice, matrix, string and notes inputs; not blank)."""
@@ -1046,7 +1057,7 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None, tes
     itype = {i["name"]: i.get("type") for i in data["inputs"]}
     for qt in data.get("qtests", []):
         for name, expr in qt["inputs"].items():
-            if not expr.strip() or forbidden_identifiers(expr):
+            if not expr.strip() or forbidden_identifiers(expr) or unsafe_expr(expr):
                 continue
             pick = ""
             if itype.get(name) in MCQ_TYPES:
@@ -1058,7 +1069,7 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None, tes
     # (%_tv_<input>, false if the expression fails) for answer_code()
     texprs = test_inputs(data, test_exprs) if answers is not None else {}
     for name, expr in texprs.items():
-        if forbidden_identifiers(expr):
+        if forbidden_identifiers(expr) or unsafe_expr(expr):
             code.append("%%_tv_%s: false$" % name)
             continue
         code.append('block([%%_v: errcatch(%s)], if %%_v # [] then (%%_tv_%s: string(%%_v[1]), meclib_out(%s, %%_tv_%s))'
@@ -1153,6 +1164,7 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None, tes
         "check": check_results(checked, results, stdout, data) if answers is not None else None,
         "timing": timing(results),
         "includes_reused": bool(skip_includes),
+        "includes_note": getattr(session, "include_note", ""),
         # which inputs each PRT reads (feedback variables, SAns, TAns, options): matrix in the Tests column
         "prtinputs": {p["name"]: prt_required_inputs(p, [i["name"] for i in data["inputs"]]) for p in data["prts"]},
         # names to kill before the next evaluation in the same Maxima session
@@ -1173,12 +1185,18 @@ def is_random(data):
     return bool(RANDOM_WORD.search(code))
 
 
-_INCLUDE_NAMES = {}     # (path, mtime) -> names an include file defines
+_INCLUDE_NAMES = {}     # (path, checksum) -> names an include file defines
+
+
+def file_sum(path):
+    """Checksum of a file's content: a file fetched again from GitHub with the same content is
+    the same include (its time changes with every fetch)."""
+    return hashlib.sha1(Path(path).read_bytes()).hexdigest()
 
 
 def include_names(path):
     """Names that a Maxima file assigns or defines as functions at the top level."""
-    key = (str(path), os.path.getmtime(path))
+    key = (str(path), file_sum(path))
     if key not in _INCLUDE_NAMES:
         names = set()
         for st, _l, _i in split_statements(open(path, encoding="utf-8", errors="replace").read()):
@@ -1208,21 +1226,35 @@ def include_plan(session, data, resolver, previous_names=()):
     file changed (or another one is included), and when the question - now or in the run before -
     assigns a name an include defines (e.g. redefines one of its functions): kill() would have
     removed it, or the question's definition would stay for the next run.
+    The file's content counts (a checksum), not its time. session.include_note says what was
+    decided and why, for the messages of the page.
     Returns (skip, signature to record with mark_includes() after the run)."""
     sig = {}
+    session.include_note = ""
     for st, _l, _i in split_statements(data["questionvariables"]):
         for m in INCLUDE.finditer(strip_comments(st)):
             try:
                 path = resolver.local_file(m.group(1))
             except (ValueError, OSError):
                 return False, None
-            sig[m.group(1)] = (str(path), os.path.getmtime(path))
+            sig[m.group(1)] = (str(path), file_sum(path))
     if not sig:
         return False, None
     loaded = getattr(session, "includes_loaded", None) or {}
     defined = set().union(*(include_names(p) for p, _t in sig.values()))
     clash = defined & (question_names(data["questionvariables"]) | set(previous_names))
-    return all(loaded.get(u) == v for u, v in sig.items()) and not clash, sig
+    short = lambda u: u.rstrip("/").rsplit("/", 1)[-1]
+    new = [short(u) for u in sig if u not in loaded]
+    changed = [short(u) for u in sig if u in loaded and loaded[u] != sig[u]]
+    if clash:
+        session.include_note = "loaded again: the question variables assign %s, defined in the include" % ", ".join(sorted(clash))
+    elif changed:
+        session.include_note = "loaded again: %s changed" % ", ".join(changed)
+    elif new:
+        session.include_note = "loaded: %s (first time in this Maxima session)" % ", ".join(new)
+    else:
+        session.include_note = "reused: already loaded in this Maxima session, unchanged"
+    return not (clash or changed or new), sig
 
 
 def mark_includes(session, sig):
@@ -1307,7 +1339,7 @@ def run_tests(session, data, seed, resolver, previous_names=(), testcases=None):
         code.append(simp)
         for n, e in exprs.items():
             used_tv.add(n)
-            if forbidden_identifiers(e):
+            if forbidden_identifiers(e) or unsafe_expr(e):
                 code.append("%%_tv_%s: false$" % n)
                 continue
             pick = ""

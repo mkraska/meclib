@@ -684,7 +684,11 @@ def _map_content(q, tags, fn):
     or entity-encoded; untouched content stays byte for byte."""
     def one(m):
         raw = m.group(2)
-        t = re.match(r"(\s*<text>)(.*?)(</text>\s*)$", raw, re.S)
+        # the <text> child: CDATA (up to its end, it cannot contain ]]>) or plain text; after it
+        # there may be <file> elements (images of the text), kept as they are
+        t = re.match(r"(\s*<text>)(\s*<!\[CDATA\[.*?\]\]>\s*|[^<]*)(</text>.*)$", raw, re.S)
+        if not t and re.search(r"<\w", raw):
+            return m.group(0)               # other child elements only: nothing to do
         pre, body, post = (t.group(1), t.group(2), t.group(3)) if t else ("", raw, "")
         c = re.match(r"(\s*<!\[CDATA\[)(.*)(\]\]>\s*)$", body, re.S)
         if c:

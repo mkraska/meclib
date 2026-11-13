@@ -185,6 +185,29 @@ fb_check(fb_floats(g-0.317*a*c/m, g-(3-6/sqrt(5))*c*a/m, 0.01), true,
   "",
   "fb_floats+fb_dims: right answer");
 
+/* tolerance 0 (a node that grades exactly): every deviating number is reported, blurred as by
+   fb_unit with a tolerance, never the exact deviation of fb_unit(..., 0) (2026-11-13) */
+fb_check(fb_floats(1.234*a, 1.2345*a, 0), false,
+  "&nbsp;Der Betrag ist um mindestens 0.04% zu klein.",
+  "&nbsp;The value is too small by at least 0.04%.",
+  "fb_floats tol 0: small deviation, blurred");
+fb_check(fb_floats(1.414*a, sqrt(2)*a, 0), false,
+  "&nbsp;Der Betrag ist um mindestens 0.01% zu klein.",
+  "&nbsp;The value is too small by at least 0.01%.",
+  "fb_floats tol 0: rounded root");
+fb_check(fb_floats(-1.234*a, 1.2345*a, 0), false,
+  "&nbsp;Pr&uuml;fen Sie das Vorzeichen.",
+  "&nbsp;Check the sign.",
+  "fb_floats tol 0: sign");
+fb_check(fb_floats(2*a, 2*a, 0), true, "", "", "fb_floats tol 0: exact answer");
+fb_check(fb_floats(sqrt(2)*a, sqrt(2)*a, 0), true, "", "", "fb_floats tol 0: float() noise ignored");
+
+/* a model answer that is zero has no unit to compare with: no unit statement (2026-11-12, TM1 09 01c,
+   Qmax = 0 in variants without a vertical reaction) */
+fb_check_str(fb_dimension(0.317*a*c, 0), "", "", "fb_dimension: model answer 0, no unit check");
+fb_check_str(fb_dimension(0.317*a*c, 0*g), "", "", "fb_dimension: model answer 0*g, no unit check");
+fb_check_str(fb_dimension(0.317*a*c, g), "&nbsp;Ihr Ergebnis hat die Einheit \\({\\frac{\\mathrm{kg}\\,\\mathrm{m}}{\\mathrm{s}^2}}\\) statt \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).", "&nbsp;Your result has the unit \\({\\frac{\\mathrm{kg}\\,\\mathrm{m}}{\\mathrm{s}^2}}\\) instead of \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).", "fb_dimension: model answer not zero, unit checked");
+
 /* a summand with a wrong unit: its numbers and those of the other summands are not judged
    (sqrt(13)*a is 3.606*a, but 4*a would be named as well) */
 fb_check(fb_floats((4*a-3)*c, c*(sqrt(13)*a-3*a), 0.01), false,

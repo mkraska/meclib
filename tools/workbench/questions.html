@@ -130,6 +130,11 @@
   table.cov tr.miss td { background: #fbecea; color: var(--err); }
   table.cov.ip th.miss { background: #fbecea; color: var(--err); }
   table.cov .h { color: var(--muted); }
+  /* review state of the files in the tree (applyFileStates) */
+  #folders li.rs-required { color: var(--err); }
+  #folders li.rs-recommended { color: #b35c00; }
+  #folders li.rs-ok, #folders li.rs-hint { color: var(--ok); }
+  #folders li.rs-hint::after { content: " \2022"; color: var(--muted); }
   #covPop { position: fixed; z-index: 80; max-width: 460px; max-height: 70vh; overflow: auto; background: #fff;
     border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; box-shadow: 0 6px 24px rgba(0, 0, 0, .18); }
   /* the route of a PRT (node values) and the test details */
@@ -707,7 +712,9 @@ async function loadFolders() {
       hint: (d.source === "config" ? "(config)" : "") + (d.exists ? "" : " - not found"), title: d.path,
       open: d.source !== "inbox", cls: samePath(d.path, currentFolder || "") ? "cur" : "",
       onClick: () => setFolder(d.path), children: [],
-      tools: [{ label: "New file", onClick: () => newFile(d.path) }].concat(d.source === "added"
+      tools: [{ label: "New file", onClick: () => newFile(d.path) },
+              { label: "Check", title: "review state of all files in this folder again (the colours of the file names)",
+                onClick: () => loadFileStates(d.files.map((f) => d.path + "/" + f), true) }].concat(d.source === "added"
         ? [{ label: "Remove", title: "remove from this list (the folder stays on disk)",
              onClick: async () => { await postJSON("/api/q/folders", { remove: d.path }); loadFolders(); } }] : []) };
     const branch = (sub) => {          // the node of a subfolder ("a/b"), created on demand
@@ -726,7 +733,7 @@ async function loadFolders() {
     };
     for (const f of d.files) {
       const cut = f.lastIndexOf("/"), full = d.path + "/" + f;
-      (cut < 0 ? root : branch(f.slice(0, cut))).children.push({ id: "f:" + full, label: f.slice(cut + 1), title: full,
+      (cut < 0 ? root : branch(f.slice(0, cut))).children.push({ id: "f:" + full, label: f.slice(cut + 1).replace(/\.xml$/i, ""), title: full, key: full,
         onClick: () => { setFolder(d.path); openFile(full); } });
     }
     if (!d.files.length) root.children.push({ id: "q:" + d.path + "#none", label: "no .xml files" });
@@ -737,6 +744,8 @@ async function loadFolders() {
     $("folderFilter").addEventListener("input", () => qtree.filter($("folderFilter").value));
   }
   qtree.render(roots);
+  applyFileStates();
+  loadFileStates(data.folders.flatMap((d) => d.files.map((f) => d.path + "/" + f)));
   // the open file marked (paths compared as on Windows: either slash, any case)
   if (file) for (const d of data.folders) for (const f of d.files)
     if (samePath(file.path, d.path + "/" + f)) qtree.select("f:" + d.path + "/" + f, true);
@@ -750,6 +759,44 @@ async function loadFolders() {
   }
   if (!currentFolder && data.folders.length) setFolder(data.folders[0].path, true);
 }
+// review state of the files in the tree (POST /api/q/states: worst state of their STACK questions,
+// computed on the server without Maxima and cached): red required findings, orange recommended
+// ones or tests to do (coverage, approval), green none (a dot: hints only), uncoloured not yet known
+const fileStates = new Map();     // lower-case path with / -> state
+const stateKey = (p) => String(p).replace(/\\/g, "/").toLowerCase();
+let statesRun = 0;
+// force: these files again (the open file after a change, a folder's "Check"); otherwise the files
+// not known yet, in a background run that a newer one (the tree built again) replaces
+async function loadFileStates(paths, force) {
+  const run = force ? null : ++statesRun;
+  const todo = force ? paths : paths.filter((p) => !fileStates.has(stateKey(p)));
+  for (let i = 0; i < todo.length; i += 8) {       // a few files per request: the colours come in as they are done
+    if (run !== null && run !== statesRun) return; // the tree was built again meanwhile
+    try {
+      const r = await postJSON("/api/q/states", { paths: todo.slice(i, i + 8) });
+      for (const [p, st] of Object.entries(r.states)) fileStates.set(stateKey(p), st);
+    } catch (e) { return; }
+    applyFileStates();
+  }
+}
+function applyFileStates() {
+  for (const li of document.querySelectorAll("#folders li[data-key]")) {
+    const st = fileStates.get(stateKey(li.dataset.key));
+    li.classList.remove("rs-required", "rs-recommended", "rs-hint", "rs-ok");
+    let tip = li.dataset.key;
+    if (st && st.level) {
+      li.classList.add("rs-" + st.level);
+      const c = st.counts || {};
+      tip += "\n" + (st.level === "ok" ? "review: nothing to do" :
+        `review: ${c.required || 0} required, ${c.recommended || 0} recommended, ${c.hint || 0} hints`) +
+        ((st.titles || []).length ? "\n- " + st.titles.join("\n- ") : "") +
+        ((st.tests || []).length ? "\ntests: " + st.tests.join("; ") : "");
+    }
+    li.title = tip;
+  }
+}
+// after the review of the open question (it changed, or was loaded): its file's state again
+function refreshFileState() { if (file) loadFileStates([file.path], true); }
 function samePath(a, b) { return String(a).replace(/\\/g, "/").toLowerCase() === String(b).replace(/\\/g, "/").toLowerCase(); }
 function setFolder(path, quiet) {
   currentFolder = path;
@@ -831,6 +878,7 @@ async function selectQuestion(index) {
   variantsData = null; for (const k of Object.keys(seedResults)) delete seedResults[k]; lastBatchTiming = null;
   for (const k of Object.keys(actualRoutes)) delete actualRoutes[k];
   activeTest = null; testDeleteArmed = null; leaveTestMode(false);
+  if (!$("testView").hidden) showTestsView(false);     // another question opens in the editor
   if (!(await flush())) return;
   if ($("inputDialog").open) $("inputDialog").close("");   // it belongs to the question it was opened for
   qindex = index; markSelected();
@@ -1704,9 +1752,9 @@ function showCheck() {
         (md ? '<div class="hint">Markdown format, so no yellow background in Moodle (review: prt.feedbackformat)</div>' : "") +
         (p.testfeedback.length ? `<div class="hint">answer test: ${esc(p.testfeedback.join(" "))}</div>` : "") +
         (p.errors.length ? `<div class="prterr">${esc(p.errors.join("\n"))}</div>` : "") +
-        `<div class="prtinfo"><span>PRT <b>${esc(name)}</b></span><span>score ${esc(p.score)}</span>` +
+        `<div class="prtinfo"><span>PRT <b>${esc(name)}</b></span><span>score ${esc(fmtScore(p.score))}</span>` +
         (p.feedbackstyle === "0" ? "<span>formative: no mark, no penalty</span>" :
-          `<span>mark ${(score * value).toFixed(2).replace(/\.?0+$/, "")} / ${value.toString()}</span><span>penalty ${esc(p.penalty)}</span>`) +
+          `<span>mark ${(score * value).toFixed(2).replace(/\.?0+$/, "")} / ${value.toString()}</span><span>penalty ${esc(fmtScore(p.penalty))}</span>`) +
         `<span>notes: ${esc(p.notes || "-")}</span>${prtTimes(name)}</div></div>`;
       runGraphics(el, blocks);
     }
@@ -1802,6 +1850,7 @@ async function loadReview() {
     review = r.findings;
   } catch (e) { review = []; }
   renderReview();
+  refreshFileState();
 }
 function renderReview() {
   const open = review.filter((f) => !f.rejected && f.level !== "hint");
@@ -1834,11 +1883,45 @@ async function applyReview(rejectRest) {
     showHistory(r.history);
     review = r.findings; renderReview();
     showMessages([{ cls: "info", text: `Applied ${r.applied.length} fix(es)` + (rejectRest ? `, rejected ${reject.length}.` : ".") }]);
-    evaluate(false);
+    await evaluate(false);
+    if (r.applied.includes("tests.none")) await fillTansTest();
   } catch (e) {
     if (e.conflict) { conflict = true; showConflict(); }
     else showMessages([{ cls: "err", text: e.message }]);
   }
+}
+// after the fix of tests.none: the new test "TAns" is opened in test mode with the model answers
+// (expression inputs as written, e.g. Qmax; an input bound to a graphic as the graphic writes it
+// when it shows the model answer - its model answer itself, e.g. [] for names, is no answer),
+// checked on the variant in the preview and saved with that result as the expected one (the
+// model solution's behaviour, full route); not approved - autogenerated tests are approved by hand
+async function fillTansTest() {
+  const qt = ((result && result.qtests) || []).filter((q) => q.description === "TAns").pop();
+  if (!qt) return;
+  const seed = parseInt($("seed").value, 10) || 1;
+  enterTestMode(qt.testcase);
+  fillModelAnswers();
+  // the graphics write their inputs (names, objects) once they show the model answer: wait until
+  // none of the bound inputs is empty any more ("" or [], the model answer of names), at most 10 s
+  const bound = ((result && result.inputs) || []).filter((i) => !exprInput(i) && new RegExp("input-ref-" + i.name + "\\s*=").test(textOrder()));
+  const empty = (i) => ["", "[]"].includes(String(inputValues[i.name] ?? "").trim());
+  await new Promise((r) => setTimeout(r, 600));
+  for (let t = 0; t < 47 && bound.some(empty); t++) await new Promise((r) => setTimeout(r, 200));
+  const stale = bound.filter(empty);
+  if (stale.length) {
+    leaveTestMode(true);
+    showMessages([{ cls: "warn", text: `Test ${qt.testcase} "TAns" added, but the graphic did not fill ${stale.map((i) => i.name).join(", ")} ` +
+      "in 10 s: no expected results yet. Open the test in test mode, press TAns, wait for the graphic and replace the test." }], true);
+    return;
+  }
+  const before = file.rev;
+  await saveTest("replace", qt, qt.description);
+  if (file.rev === before) {
+    showMessages([{ cls: "warn", text: `Test ${qt.testcase} "TAns" added, but its run failed: no expected results yet.` }], true);
+    return;
+  }
+  showMessages([{ cls: "info", text: `Test ${qt.testcase} "TAns" added; its expected results are those of the model answers on variant ${seed}. ` +
+    "Check them in the Tests column and approve the test." }], true);
 }
 $("reviewApply").addEventListener("click", () => applyReview(false));
 $("reviewApplyReject").addEventListener("click", () => applyReview(true));
@@ -2246,6 +2329,13 @@ function testAnswerNote(expected, actual) {
   }
   return [!msgs.length, msgs];
 }
+// a score, penalty or mark for display: 2 decimals (the file keeps Moodle's 7), more only where
+// 2 would round the value (e.g. 0.3333 or 0.125); text other than a number as it is
+function fmtScore(x) {
+  if (x === null || x === undefined || String(x).trim() === "" || isNaN(Number(x))) return x ?? "";
+  const n = Number(x), s = n.toFixed(2);
+  return Math.abs(Number(s) - n) < 1e-9 ? s : n.toFixed(4).replace(/0+$/, "");
+}
 function compareTest(qt, chk) {
   const reasons = [];
   const num = (x) => (x === "" || x === null || x === undefined ? null : Math.round(parseFloat(x) * 10000) / 10000);
@@ -2255,10 +2345,10 @@ function compareTest(qt, chk) {
     const score = r.skipped ? null : num(r.score), pen = r.skipped ? null : num(r.penalty);
     const es = num(exp.score);
     if ((es === null) !== (score === null) || (es !== null && Math.abs(es - score) > 1e-6))
-      if (es !== -1) reasons.push(`${prt}: score ${score ?? "-"}, expected ${es ?? "-"}`);
+      if (es !== -1) reasons.push(`${prt}: score ${score === null ? "-" : fmtScore(score)}, expected ${es === null ? "-" : fmtScore(es)}`);
     const ep = exp.penalty === "" ? num(result.penalty) : num(exp.penalty);
     if (exp.note !== "NULL" && exp.note !== prt + "-bail" && (pen === null || Math.abs(ep - pen) > 1e-6) && ep !== -1)
-      reasons.push(`${prt}: penalty ${pen ?? "-"}, expected ${ep}`);
+      reasons.push(`${prt}: penalty ${pen === null ? "-" : fmtScore(pen)}, expected ${fmtScore(ep)}`);
     const [ok, msgs] = testAnswerNote(exp.note, notes);
     if (!ok) reasons.push(`${prt}: ` + msgs.join("; "));
   }
@@ -2375,7 +2465,7 @@ function renderVariants() {
   const firstOf = new Map();          // note -> first seed with it
   for (const v of [...rows].sort((a, b) => a.seed - b.seed)) { const n = v.note[lang] || v.note.de || v.note.en; if (n && !firstOf.has(n)) firstOf.set(n, v.seed); }
   const tip = (qt) => (qt.description || "(no description)") + "\n" + Object.entries(qt.inputs).map(([n, v]) => `${n} = ${v}`).join("\n") +
-    "\nexpected: " + Object.entries(qt.expected).map(([p, e]) => `${p}: ${e.note} (score ${e.score || "-"})`).join(", ");
+    "\nexpected: " + Object.entries(qt.expected).map(([p, e]) => `${p}: ${e.note} (score ${e.score === "" ? "-" : fmtScore(e.score)})`).join(", ");
   let h = `<tr><th>deploy</th><th>seed</th><th>question note</th><th>${tests.map((q) =>
     `<button class="small tc${approvalState(q.testcase) === "ok" ? " ap" : approvalState(q.testcase) === "stale" ? " apstale" : ""}" data-col="${q.testcase}" title="${esc(tip(q))}&#10;${esc(approvalText(q.testcase))}&#10;click: run on every deployed variant">${q.testcase}</button>`).join("") || "tests"}</th></tr>`;
   for (const v of rows) {
@@ -2436,7 +2526,7 @@ function routeHTML(trace) {
   return '<div class="route">' + trace.map((t) => `<div class="rstep ${esc(t.result)}">` +
     `<span class="rhead">Node ${esc(t.node)}: ${esc(t.answertest)}(${esc(t.sansexpr)}, ${esc(t.tansexpr)}${t.options ? ", " + esc(t.options) : ""}) → ${esc(t.result)}</span><br>` +
     `SAns <span class="rval">${boolTex(t.sans) || "?"}</span> &nbsp; TAns <span class="rval">${boolTex(t.tans) || "?"}</span><br>` +
-    `<span class="rnote">score ${esc(t.score)} · <code>${esc(t.note || "-")}</code>${t.atnote ? " · " + esc(t.atnote) : ""}</span></div>`).join("") + "</div>";
+    `<span class="rnote">score ${esc(fmtScore(t.score))} · <code>${esc(t.note || "-")}</code>${t.atnote ? " · " + esc(t.atnote) : ""}</span></div>`).join("") + "</div>";
 }
 function approvalState(tc) {
   const a = ((result && result.approvals) || {})[String(tc)];
@@ -2481,8 +2571,8 @@ function renderTestDetail() {
     const a = act[P] || { score: "", penalty: "", note: "(not run)" };
     const same = (x, y) => (x === "" && y === "") || Math.abs(parseFloat(x) - parseFloat(y)) < 1e-6;
     h += `<details class="prt" data-k="prt:${esc(P)}"${detailOpen["prt:" + P] === false ? "" : " open"}><summary><b>PRT ${esc(P)}</b></summary><table class="exp"><tr><th></th><th>score</th><th>penalty</th><th>route (answer notes)</th></tr>` +
-      `<tr><th>expected</th><td>${esc(e.score)}</td><td>${esc(e.penalty)}</td><td><code>${esc(e.note)}</code></td></tr>` +
-      `<tr><th>this run</th><td class="${same(e.score, a.score) ? "" : "diff"}">${esc(a.score)}</td><td>${esc(a.penalty)}</td>` +
+      `<tr><th>expected</th><td>${esc(fmtScore(e.score))}</td><td>${esc(fmtScore(e.penalty))}</td><td><code>${esc(e.note)}</code></td></tr>` +
+      `<tr><th>this run</th><td class="${same(e.score, a.score) ? "" : "diff"}">${esc(fmtScore(a.score))}</td><td>${esc(fmtScore(a.penalty))}</td>` +
       `<td class="${e.note === a.note ? "" : "diff"}"><code>${esc(a.note)}</code></td></tr></table>`;
     const tr = lastCheck.prts && lastCheck.prts[P] && lastCheck.prts[P].trace;
     if (tr && tr.length) h += routeHTML(tr);
@@ -2503,9 +2593,18 @@ async function approveTest(tc, expected) {
     if (backup) backedUp.add(file.path);
     file.rev = r.rev; showHistory(r.history);
     showMessages([{ cls: "info", text: r.label + "." }]);
-    await evaluate(false);
-    const qt = ((result && result.qtests) || []).find((q) => q.testcase === tc);
-    if (qt) await runTest(qt);
+    // no Maxima: the approval only writes the expected results (those of the run on screen) and a
+    // line of the question description; the reply has the tests and approvals as they are now
+    if (result) {
+      const byTc = Object.fromEntries((r.qtests || []).map((q) => [String(q.testcase), q]));
+      for (const q of result.qtests || []) if (byTc[String(q.testcase)]) q.expected = byTc[String(q.testcase)].expected;
+      result.approvals = r.approvals || {};
+      const qt = (result.qtests || []).find((q) => q.testcase === tc);
+      if (qt && lastCheck && lastTestRun && lastTestRun.tc === tc) testResults[tc] = compareTest(qt, lastCheck);
+    }
+    renderTests();
+    renderTestDetail();
+    refreshFileState();
   } catch (e) {
     if (e.conflict) { conflict = true; showConflict(); }
     else showMessages([{ cls: "err", text: e.message }], true);
@@ -2586,10 +2685,16 @@ async function runCell(sd, tc) {
   if (qt) await runTest(qt);
   renderVariants();
 }
-// one test on every deployed variant (or the variant in the preview)
+// one test on every deployed variant (or the variant in the preview); then the test is run once
+// more on the variant in the preview (the first deployed one if that is not deployed), so that it
+// is the active test with its details and approval. The summary over all variants is kept.
 async function runColumn(tc) {
-  const dep = deployedSeeds();
-  await runBatch(dep.length ? dep : [parseInt($("seed").value, 10) || 1], [tc]);
+  const dep = deployedSeeds(), cur = parseInt($("seed").value, 10) || 1;
+  await runBatch(dep.length ? dep : [cur], [tc]);
+  const all = testResults[tc], status = $("status").textContent;
+  await runCell(!dep.length || dep.includes(cur) ? cur : dep[0], tc);
+  if (all && !all.pass) { testResults[tc] = all; renderTests(); }
+  $("status").textContent = status;
 }
 // the times of a batch run: per variant the run of the question variables and of each test, as
 // wall time (server and Maxima) / time in Maxima; the difference is the handover to Maxima
@@ -2774,8 +2879,13 @@ async function runAllTests() {
   renderTests();
   $("status").textContent = `tests: ${pass} of ${tests.length} passed`;
 }
-// inputs that take an expression in test mode: not choice, matrix, string and notes inputs
-function exprInput(inp) { return !MCQ_TYPES.includes(inp.type) && !["matrix", "string", "notes"].includes(inp.type); }
+// inputs that take an expression in test mode: not choice, matrix, string and notes inputs,
+// and not inputs bound to a graphic (input-ref-...): the graphic writes its state into them in
+// the students' syntax (e.g. [0;0;...] with decimal comma), which is an answer, not a CAS expression
+function exprInput(inp) {
+  return !MCQ_TYPES.includes(inp.type) && !["matrix", "string", "notes"].includes(inp.type) &&
+    !new RegExp("input-ref-" + inp.name + "\\s*=").test(textOrder());
+}
 function enterTestMode(tc) {
   if (!result) return;
   const qt = tc === null ? null : (result.qtests || []).find((t) => t.testcase === tc);
@@ -2844,7 +2954,7 @@ async function currentTestData() {
   for (const prt of result.prts || []) {
     const r = lastCheck.prts[prt.name];
     if (!r || r.skipped) expected[prt.name] = r && r.bail ? { score: "", penalty: "", note: prt.name + "-bail" } : { score: "", penalty: "", note: "NULL" };
-    else expected[prt.name] = { score: r.score, penalty: r.penalty, note: String(r.notes || "").split(" | ").filter(Boolean).pop() || "NULL" };
+    else expected[prt.name] = { score: r.score, penalty: r.penalty, note: String(r.notes || "").split(" | ").filter(Boolean).join(" | ") || "NULL" };   // the full route (agents/stack_essentials.md)
   }
   return { inputs, expected };
 }
@@ -2864,6 +2974,7 @@ async function saveTest(action, qt, description) {
     const r = await postJSON("/api/q/qtest", body);
     if (backup) backedUp.add(file.path);
     file.rev = r.rev; showHistory(r.history);
+    if (r.fields) fillEditor(r.fields);     // question variables qt<n>_<input> of long test inputs
     leaveTestMode(true);
     if (action !== "describe") {
       const tc = action === "add" ? Math.max(...r.qtests.map((t) => t.testcase)) : qt.testcase;
@@ -2885,6 +2996,7 @@ async function deleteTest(tc) {
     const r = await postJSON("/api/q/qtest", { path: file.path, index: qindex, rev: file.rev, op: "delete", testcase: tc, backup });
     if (backup) backedUp.add(file.path);
     file.rev = r.rev; showHistory(r.history);
+    if (r.fields) fillEditor(r.fields);     // its question variables qt<n>_<input> are gone
     delete testResults[tc]; activeTest = null;
     showMessages([{ cls: "info", text: r.label + "." }]);
     await evaluate(false);
@@ -2973,6 +3085,11 @@ function toHTML(text, format, blocks) {
     // Input placeholders are kept away from Markdown (underscores in input names).
     const ph = [];
     t = protect(t, /\[\[\s*(input|validation|feedback):[A-Za-z0-9_]+\s*\]\]/g, "PH", ph);
+    // Moodle's Markdown (Michelf MarkdownExtra) turns a backslash escape such as \| into a word-like
+    // placeholder first, so an underscore next to one is inside a word and starts or ends no
+    // emphasis: \(\|Q\|_\max\) ... \(\|M\|_\max\) stays as it is. marked would read the two _ as
+    // <em>...</em>; such an underscore is escaped for it.
+    t = t.replace(/(\\[\\`*_{}\[\]()>#+\-.!:|])_|_(?=\\[\\`*_{}\[\]()>#+\-.!:|])/g, (m, esc) => (esc || "") + "\\_");
     t = window.marked.parse(t);
     t = t.replace(/&#92;/g, "\\").replace(/&#40;/g, "(").replace(/&#91;/g, "[").replace(/&#123;/g, "{")
          .replace(/&#41;/g, ")").replace(/&#93;/g, "]").replace(/&#125;/g, "}").replace(/&#95;/g, "_");
@@ -3275,6 +3392,7 @@ function renderMessages() {
   if (!result.languages || !result.languages.length)
     msgs.push({ cls: "warn", text: "The question text has no [[lang]] block, so STACK sets no language: [[lang]] blocks (e.g. in the meclib feedback functions' texts) stay empty - as in Moodle." });
   for (const inc of result.includes || []) msgs.push({ cls: "info", text: `stack_include ${inc}\n→ follows the meclib source selector (${$("src").value})` });
+  if ((result.includes || []).length && result.includes_note) msgs.push({ cls: "info", text: "includes " + result.includes_note });
   for (const note of result.offline || []) msgs.push({ cls: "warn", text: note });
   // where Maxima spent the time (last Update or Check): the parts in the order they ran, then
   // the slow lines of the question variables in line order (the PRTs' times are at their feedback)
@@ -3552,7 +3670,18 @@ $("split").addEventListener("click", async () => {
     `The original file is renamed to ${baseName(file.path)}.orig (kept as a backup, no longer listed).`)) return;
   const k = stackQs.findIndex((q) => q.index === qindex);
   try {
-    const r = await postJSON("/api/q/split", { path: file.path });
+    let r = await postJSON("/api/q/split", { path: file.path });
+    if (r.existing) {          // split before: those files (maybe edited since) are never written again
+      const list = r.existing.slice(0, 8).map(baseName).join("\n") + (r.existing.length > 8 ? `\n... (${r.existing.length} in all)` : "");
+      if (!r.new.length) {
+        alert(`All ${r.existing.length} question(s) of this file already have their files (split before` +
+          (r.orig.length ? ", see " + r.orig.map(baseName).join(", ") : "") + `). Nothing written; the file stays as it is.`);
+        return;
+      }
+      if (!confirm(`${r.existing.length} question(s) already have their files (split before, maybe edited since), e.g.\n${list}\n\n` +
+        `These stay as they are. Write only the ${r.new.length} new question(s)?\n${r.new.map(baseName).join("\n")}`)) return;
+      r = await postJSON("/api/q/split", { path: file.path, only_new: true });
+    }
     file = null; qindex = null; saved = null;
     await openFile(r.files[Math.max(k, 0)]);     // the question that was open, now in its own file
     fileMsg(`${r.files.length} STACK question(s) written to ${r.folders.map(baseName).join(", ")}; ` +

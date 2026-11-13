@@ -62,12 +62,17 @@ class IncludePlan(unittest.TestCase):
         self.assertTrue(self.plan(qv)[0])
 
     def test_changed_file(self):
+        """The content counts, not the time (a file fetched again from GitHub is newer, but the same)."""
         qv = 'stack_include("https://x/lib.mac");\na: f(2);'
         sq.mark_includes(self.session, self.plan(qv)[1])
         import os
         st = os.stat(self.inc)
         os.utime(self.inc, (st.st_atime, st.st_mtime + 10))
+        self.assertTrue(self.plan(qv)[0])
+        self.assertIn("reused", self.session.include_note)
+        self.inc.write_text("f(x) := x^3$\nlibval: 3$\n", encoding="utf-8")
         self.assertFalse(self.plan(qv)[0])
+        self.assertIn("lib.mac changed", self.session.include_note)
 
     def test_clash(self):
         qv = 'stack_include("https://x/lib.mac");\nlibval: 4;'

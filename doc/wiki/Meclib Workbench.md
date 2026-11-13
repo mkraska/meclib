@@ -69,6 +69,8 @@ The workbench and the offline tests use STACK's Maxima library, security map and
 
 The workbench approximates STACK closely, but not completely: STACK's input validation is only approximated (decimal comma, insert stars, and a question variable used in an answer makes it invalid; no forbidden words, no syntax checks), and answer test messages appear as message keys. The question tests can be run in STACK itself (STACK ▶, with the STACK API set up). Check the final question in Moodle before using it with students.
 
+The software the workbench uses and the projects whose ideas it takes up are listed on [[Acknowledgements]].
+
 ## Planned
 
 - the questions of a file in the folder tree, context menus for their actions

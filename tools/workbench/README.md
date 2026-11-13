@@ -106,7 +106,17 @@ the start state as `state`.
   system's folder dialog; it may open behind the browser window) or by
   pasting a path into the field below (kept until removed), and the
   workbench inbox (`.cache/questions/`).
-  Each folder lists its `.xml` files, including subfolders.
+  Each folder lists its `.xml` files, including subfolders. The file names are
+  coloured by the review state of their STACK questions (the worst one in a
+  file): red a required finding, orange recommended findings or tests to do
+  (PRT branches without a test, tests not approved or out of date - from the
+  saved tests, without Maxima), green nothing to do (with a dot: hints only),
+  uncoloured not checked yet. The server reviews the files in the background
+  (POST `/api/q/states`, a few files per request) and caches the result in
+  `.cache/review_states.json` by file time and version of `rules.py`; the tooltip
+  lists the counts and titles. The open file is checked again after each change;
+  "Check" at a folder checks its files again (changed files only, the rest comes
+  from the cache).
 - Dropping a Moodle XML file onto the page (or clicking the drop area) copies
   it into the folder last chosen in the list (the browser does not tell the
   page where a dropped file came from, so the copy is what you edit).
@@ -125,8 +135,11 @@ file: the category path below "top" (`$module$/top/06 Kinematik` ->
 entry ("import as new version" accepts exactly one `<question>` element, and a
 category entry counts as one); for a plain import choose the category in
 Moodle's import form. The original file is renamed to
-`<name>.xml.orig` (kept as a backup, no longer listed), and the question that
-was open is opened from its new file. The files column shows folders by
+`<name>.xml.orig` (kept as a backup, no longer listed, and a sign that the
+category has been split), and the question that was open is opened from its
+new file. A question that already has its file (split before, maybe edited
+since) is never written again: the split then lists those files and offers to
+write only the new questions (or writes nothing if there are none). The files column shows folders by
 their last name (full path as tooltip) and files in subfolders under the
 subfolder name.
 
@@ -680,9 +693,12 @@ for the first time takes it at once (status line: "Maxima session started in
 advance"), and the next one starts. A change of the Maxima or STACK version
 closes all sessions and starts the spare one with the new version.
 
-A `stack_include` file is loaded once per session: later runs leave it out while the file is
-unchanged and the question variables (now and in the run before) assign no name the file
-defines; otherwise it is loaded again.
+A `stack_include` file is loaded once per session: later runs leave it out while its content is
+unchanged (a checksum: a file fetched again from GitHub with the same content counts as unchanged)
+and the question variables (now and in the run before) assign no name the file defines; otherwise
+it is loaded again. A change in the working copy (meclib source "local working copy") is picked up
+by the next Update or Check. The messages say what happened ("includes reused: ..." or "includes
+loaded again: fb_value.mac changed").
 
 A run of Maxima (Update, Check) is stopped after 60 s; the first run in a new
 session may take 180 s (on Windows it can take much longer than the next

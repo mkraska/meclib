@@ -18,7 +18,7 @@ The function works in three steps:
 
 - `sans` student's answer
 - `tans` teacher's answer (exact or decimal)
-- `tol` relative tolerance of each number, e.g. `0.01` for 1 %
+- `tol` relative tolerance of each number, e.g. `0.01` for 1 %. Use the tolerance of the grading: with a node that grades exactly (`AlgEquiv(sans, tans)`) `tol = 0`, so that every deviating number is named; with a node that grades with `ok` the tolerance of this call. The feedback should name only deviations that lower the grade. With `tol = 0` the messages stay blurred as for a tolerance ("too small by at least 0.04%"), never the exact deviation that [[fb_unit]] gives for its own tolerance 0, which students could use to correct their result by proportion.
 
 Returns a list `[text, ok]`:
 - `text` the feedback text, empty if everything matches
@@ -56,7 +56,7 @@ The units are strings, read by a small parser of the library and not by Maxima, 
 - "In the marked term, a function (e.g. sin, exp, ln) or an exponent has an argument with a unit." (e.g. `sin(a)`)
 - for the whole answer: "Your result has the unit kg·m/s² instead of m/s²." and the like
 
-If a summand has a wrong unit, the numbers are not judged (neither marked nor named): with a wrong unit, a number cannot be right or wrong. A variable that is not declared, or a unit that the parser does not know, switches the check off for that summand (for the model answer: altogether), so that a typo is reported by [[fb_vars]] and not as a wrong unit. Without `fb_dims` there is no unit check.
+If a summand has a wrong unit, the numbers are not judged (neither marked nor named): with a wrong unit, a number cannot be right or wrong. A variable that is not declared, or a unit that the parser does not know, switches the check off for that summand (for the model answer: altogether), so that a typo is reported by [[fb_vars]] and not as a wrong unit. Without `fb_dims` there is no unit check. If the model answer is zero, there is no unit check either: 0 has no unit to compare with (0 is 0 m as well as 0 N), so an answer such as `F*a` for a model answer `0` gets no "wrong unit" message.
 
 `fb_dimension(sans, tans)` does the unit check of the whole answer alone, e.g. together with [[fb_vars]]; it returns the text, `""` if the unit is right or cannot be checked.
 

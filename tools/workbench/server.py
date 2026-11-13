@@ -84,13 +84,16 @@ Endpoints
   POST /api/q/scene         {path, index, rev, block, to: "static" | "interactive", dry?} [[jsxgraph]] block
                             number block of the question text made static (bound inputs deleted) or
                             interactive (hidden inputs objects, names added) -> {plan} (dry) or {rev, plan, fields}
+  POST /api/q/states        {paths} -> {states: {path: review state}}: per file the worst review state of
+                            its STACK questions and the tests left to do (folder tree colours; cached)
   POST /api/q/review        {path, index} -> {rev, findings}: the review rules (rules.py) for a question
   POST /api/q/review-apply  {path, index, rev, apply: [keys], reject: [keys]} -> fixes applied, rejected
                             findings recorded in the question description -> {rev, applied, fields, findings}
   POST /api/q/saveas        {path, index, folder, filename} one question into a new file
   POST /api/q/upload        a dropped XML file (body; headers X-File-Name, X-Folder) -> copied
                             into that folder
-  POST /api/q/split         {path} -> one file per STACK question, in <folder>/<file name>/
+  POST /api/q/split         {path, only_new} -> one file per STACK question, in <folder>/<file name>/;
+                            existing files are never overwritten ({existing, new} without only_new)
   POST /api/pick-folder     {title, initial} -> {path} chosen in the system's folder dialog
                             ("" if cancelled), shown by a separate Python process (tkinter)
   POST /api/shutdown        stops this server (used by the next start to replace it)
@@ -601,6 +604,76 @@ def regenerate_fixtures():
     return problems
 
 
+# ---------------------------------------------------------------------- review states (folder tree)
+# Per file the worst review state of its STACK questions (rules.review_state: findings per level
+# without fix previews, and what the saved tests leave to do), for colouring the folder tree.
+# Cached in .cache/review_states.json by file time and size and by the version of rules.py.
+STATES_FILE = CACHE / "review_states.json"
+STATES_LOCK = threading.Lock()
+_states = None
+LEVEL_RANK = {"ok": 0, "hint": 1, "recommended": 2, "required": 3}
+
+
+def rules_version():
+    return hashlib.sha1((HERE / "rules.py").read_bytes()).hexdigest()[:12]
+
+
+def file_state(target):
+    text, _rev = qfile.read_file(target)
+    st = {"level": "ok", "counts": {"required": 0, "recommended": 0, "hint": 0}, "tests": [], "titles": [], "questions": 0}
+    k = 0
+    while True:
+        try:
+            a, b, qtype = qfile.question_span(text, k)
+        except (ValueError, IndexError):
+            break
+        k += 1
+        if qtype != "stack":
+            continue
+        q = rules.review_state(text[a:b])
+        st["questions"] += 1
+        if LEVEL_RANK[q["level"]] > LEVEL_RANK[st["level"]]:
+            st["level"] = q["level"]
+        for lv in st["counts"]:
+            st["counts"][lv] += q["counts"][lv]
+        st["tests"] += q["tests"]
+        st["titles"] = list(dict.fromkeys(st["titles"] + q["titles"]))[:6]
+    if not st["questions"]:
+        st["level"] = None
+    return st
+
+
+def review_states(cfg, paths):
+    global _states
+    with STATES_LOCK:
+        if _states is None:
+            try:
+                _states = json.loads(STATES_FILE.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                _states = {}
+        ver, out, changed = rules_version(), {}, False
+        for p in paths:
+            try:
+                target = allowed_path(cfg, p)
+                stat = target.stat()
+                sig = [stat.st_mtime_ns, stat.st_size, ver]
+                c = _states.get(str(target))
+                if not c or c.get("sig") != sig:
+                    c = {"sig": sig, "state": file_state(target)}
+                    _states[str(target)] = c
+                    changed = True
+                out[p] = c["state"]
+            except Exception as err:          # unreadable file: no colour
+                out[p] = {"level": None, "error": str(err)}
+        if changed:
+            try:
+                STATES_FILE.parent.mkdir(parents=True, exist_ok=True)
+                STATES_FILE.write_text(json.dumps(_states), encoding="utf-8")
+            except OSError:
+                pass
+        return out
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(HERE), **kwargs)
@@ -957,6 +1030,8 @@ class Handler(SimpleHTTPRequestHandler):
                 questions = qfile.list_questions(new)
                 return self.send_json({"path": str(target), "rev": rev, "questions": questions,
                                        "index": questions[-1]["index"]})
+            if path == "/api/q/states":       # {paths} -> {path: review state of the file} (folder tree)
+                return self.send_json({"states": review_states(cfg, req.get("paths") or [])})
             if path == "/api/q/review":
                 target = allowed_path(cfg, req["path"])
                 text, rev = qfile.read_file(target)
@@ -1047,8 +1122,10 @@ class Handler(SimpleHTTPRequestHandler):
                 rev = qfile.write_file(target, new, rev, bool(req.get("backup")))
                 history.record(target, text, new, index, label)
                 a, b, _ = qfile.question_span(new, index)
+                # fields: a long test input goes into a question variable qt<n>_<input> (and out
+                # again): the editor must show the new question variables, or its next save drops it
                 return self.send_json({"rev": rev, "label": label, "qtests": qfile.qtests(new[a:b]),
-                                       "history": history.status(target, index)})
+                                       "fields": qfile.question_fields(new, index), "history": history.status(target, index)})
             if path == "/api/q/seeds":
                 target = allowed_path(cfg, req["path"])
                 text, rev = qfile.read_file(target)
@@ -1097,7 +1174,7 @@ class Handler(SimpleHTTPRequestHandler):
                 rev = qfile.write_file(target, new, None)
                 return self.send_json({"path": str(target), "rev": rev, "questions": qfile.list_questions(new)})
             if path == "/api/q/split":
-                return self.send_json(self.split_file(allowed_path(cfg, req["path"])))
+                return self.send_json(self.split_file(allowed_path(cfg, req["path"]), bool(req.get("only_new"))))
         except qfile.ConflictError as err:
             return self.send_json({"error": str(err), "conflict": True}, 409)
         except (MaximaError, ValueError, KeyError, IndexError, OSError, ET.ParseError) as err:
@@ -1145,16 +1222,19 @@ class Handler(SimpleHTTPRequestHandler):
         except (OSError, ValueError) as err:
             return self.send_json({"error": str(err)}, 400)
 
-    def split_file(self, source):
+    def split_file(self, source, only_new=False):
         """Writes each STACK question of a file as its own file (one question per file, as
         qbank_gitsync keeps them), named after the question, into a folder per category next to
         the file: the category path below "top" ("$module$/top/06 Kinematik/Teil A" ->
         06 Kinematik/Teil A/). The files contain no category entry: Moodle's "import as new
         version" refuses a file with more than one <question> element, and a category entry is
         one. The questions are cut out of the original text, so CDATA sections and formatting stay as exported. The
-        original is renamed to <name>.xml.orig (no longer listed, kept as a backup)."""
+        original is renamed to <name>.xml.orig (no longer listed, kept as a backup, and a sign that the category
+        is split). A question whose file already exists (split before, maybe edited since) is never written
+        again: without only_new nothing is written and {"existing": [...], "new": [...]} returned; with only_new
+        only the questions without a file are written."""
         text, _ = qfile.read_file(source)
-        written, category = [], ""
+        plan, category = [], ""
         for a, b, qtype in qfile.spans(text):
             if qtype == "category":
                 category = stack_question.text_of(ET.fromstring(text[a:b]), "category/text") or ""
@@ -1166,13 +1246,25 @@ class Handler(SimpleHTTPRequestHandler):
                 parts = parts[1:]
             folder = source.parent.joinpath(*[qfile.safe_filename(p, "") for p in parts]) if parts \
                 else source.parent / source.stem
-            folder.mkdir(parents=True, exist_ok=True)
             qname = stack_question.text_of(ET.fromstring(text[a:b]), "name/text") or "question"
-            target = unique_path(folder, qfile.safe_filename(qname))
-            target.write_text(qfile.new_file_text([text[a:b]]), encoding="utf-8", newline="")
+            plan.append((folder, folder / qfile.safe_filename(qname), text[a:b]))
+        if not plan:
+            raise ValueError("the file has no STACK questions")
+        existing = [str(t) for _f, t, _q in plan if t.exists()]
+        if existing and not only_new:
+            return {"existing": existing, "new": [str(t) for _f, t, _q in plan if not t.exists()],
+                    "orig": sorted(str(p) for p in source.parent.glob("*.orig"))}
+        written, before = [], set(existing)
+        for folder, target, q in plan:
+            if str(target) in before:
+                continue                    # split before: the file (maybe edited since) stays
+            folder.mkdir(parents=True, exist_ok=True)
+            target = unique_path(folder, target.name)   # two questions of the same name in this file
+            target.write_text(qfile.new_file_text([q]), encoding="utf-8", newline="")
             written.append(str(target))
         if not written:
-            raise ValueError("the file has no STACK questions")
+            raise ValueError("all %d questions of the file already have their files (split before); nothing written"
+                             % len(plan))
         orig = unique_path(source.parent, source.name + ".orig")
         os.replace(source, orig)
         folders = sorted({str(Path(w).parent) for w in written})

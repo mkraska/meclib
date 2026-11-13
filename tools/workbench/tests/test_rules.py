@@ -153,7 +153,7 @@ class FbVars(unittest.TestCase):
                      prt("A", [("S_A", "A", "{@fb_vars(S_A, A, [F])@}", "0")]))
         out = self.convert(q)
         p = prt_of(out, "A")
-        self.assertEqual(p["feedbackvariables"].strip(), "[txt, ok]: fb_floats(S_A, A, 0.005);")
+        self.assertEqual(p["feedbackvariables"].strip(), "[txt, ok]: fb_floats(S_A, A, 0);")
         self.assertEqual(p["nodes"][0]["falsefeedback"], "{@txt@}")
         self.assertEqual(p["nodes"][0]["quiet"], "1")
         self.assertEqual((p["nodes"][0]["answertest"], p["nodes"][0]["sans"], p["nodes"][0]["tans"]), ("AlgEquiv", "S_A", "A"))
@@ -168,14 +168,36 @@ class FbVars(unittest.TestCase):
                                ("S_A", "B", "Text {@fb_vars(S_A, B, [])@}", "1")], fv="d: 1\n/* note */"))
         p = prt_of(self.convert(q), "A")
         self.assertEqual(p["feedbackvariables"],
-                         "d: 1\n/* note */;\n[txt1, ok1]: fb_floats(S_A, A, 0.005);\n[txt2, ok2]: fb_floats(S_A, B, 0.005);")
+                         "d: 1\n/* note */;\n[txt1, ok1]: fb_floats(S_A, A, 0);\n[txt2, ok2]: fb_floats(S_A, B, 0);")
         self.assertEqual([n["falsefeedback"] for n in p["nodes"]], ["{@txt1@}", "Text {@txt2@}"])
+
+    def test_same_call_in_both_branches(self):
+        """fb_vars in the true and the false branch (TM1 09 05, 06, 2026-11-13): one fb_floats call,
+        {@txt@} in the false branch, the true branch's fb_vars dropped (its feedback is empty)."""
+        p0 = prt("A", [("S_A", "A", "{@fb_vars(S_A, A, [])@}", "0")]).replace(
+            '<truefeedback format="html"><text></text></truefeedback>',
+            '<truefeedback format="html"><text><![CDATA[{@fb_vars(S_A, A, [])@}]]></text></truefeedback>')
+        p = prt_of(self.convert(question(FBV_QV, algebraic_input(tans="A", hint="x^2"), p0)), "A")
+        self.assertEqual(p["feedbackvariables"].strip(), "[txt, ok]: fb_floats(S_A, A, 0);")
+        self.assertEqual(p["nodes"][0]["falsefeedback"], "{@txt@}")
+        self.assertEqual(p["nodes"][0]["truefeedback"], "")
+
+    def test_existing_call_other_names(self):
+        """A PRT with [text, ok]: fb_floats(S_A, A, ...) and {@text@} gets no second call (TM1 05 01,
+        2026-11-13), and a comment-only feedback variables text gets no stray ;."""
+        q = question(FBV_QV, algebraic_input(tans="A", hint="x^2"),
+                     prt("A", [("S_A", "A", "{@text@}", "1")], fv="[text, ok]: fb_floats(S_A, A, 0);"))
+        self.assertNotIn("prt.fb-floats[prt]", keys(q))
+        q = question(FBV_QV, algebraic_input(tans="A", hint="x^2"),
+                     prt("A", [("S_A", "A", "{@fb_vars(S_A, A, [])@}", "0")], fv="/* note */"))
+        p = prt_of(self.convert(q), "A")
+        self.assertEqual(p["feedbackvariables"], "/* note */\n[txt, ok]: fb_floats(S_A, A, 0);")
 
     def test_names_taken(self):
         q = question(FBV_QV, algebraic_input(tans="A", hint="x^2"),
                      prt("A", [("S_A", "A", "{@fb_vars(S_A, A)@}", "0")], fv="ok: true;"))
         p = prt_of(self.convert(q), "A")
-        self.assertIn("[txt1, ok1]: fb_floats(S_A, A, 0.005);", p["feedbackvariables"])
+        self.assertIn("[txt1, ok1]: fb_floats(S_A, A, 0);", p["feedbackvariables"])
         self.assertEqual(p["nodes"][0]["falsefeedback"], "{@txt1@}")
 
     def test_label_reported_not_converted(self):
@@ -225,7 +247,7 @@ class FbFloatsAdd(unittest.TestCase):
                      text="<p>[[input:S_A]] [[validation:S_A]]</p>")
         out = self.apply(q)
         p = prt_of(out, "A")
-        self.assertEqual(p["feedbackvariables"].strip(), "[txt, ok]: fb_floats(S_A, A, 0.005);")
+        self.assertEqual(p["feedbackvariables"].strip(), "[txt, ok]: fb_floats(S_A, A, 0);")
         self.assertEqual(p["nodes"][0]["falsefeedback"], "{@txt@}<p>Typischer Fehler?</p>")   # before the rest
         self.assertEqual(p["nodes"][0]["quiet"], "1")
         self.assertEqual(p["nodes"][1]["falsefeedback"], "Vorzeichen!")
@@ -271,13 +293,13 @@ class FbFloatsAdd(unittest.TestCase):
                      text="<p>[[input:S_A]] [[validation:S_A]] [[input:S_B]] [[validation:S_B]]</p>")
         p = prt_of(self.apply(q), "A")
         self.assertEqual(p["feedbackvariables"],
-                         "[txt1, ok1]: fb_floats(S_A, A, 0.005);\n[txt2, ok2]: fb_floats(S_B, B, 0.005);")
+                         "[txt1, ok1]: fb_floats(S_A, A, 0);\n[txt2, ok2]: fb_floats(S_B, B, 0);")
         self.assertEqual([n["falsefeedback"] for n in p["nodes"]], ["{@txt1@}", "{@txt2@}"])
 
     def test_not_touched(self):
         # meclib feedback already there, another answer test on an algebraic input, SAns not an input
         q = question(FBV_QV, input_of("S_A", "algebraic", "A"),
-                     prt_test("A", [("AlgEquiv", "S_A", "A", "", "{@fb_floats(S_A, A, 0.005)[1]@}", "-1")]) +
+                     prt_test("A", [("AlgEquiv", "S_A", "A", "", "{@fb_floats(S_A, A, 0)[1]@}", "-1")]) +
                      prt_test("B", [("EqualComAss", "S_A", "A", "", "", "-1")]) +
                      prt_test("C", [("AlgEquiv", "ratsimp(S_A)", "A", "", "", "-1")]),
                      text="<p>[[input:S_A]] [[validation:S_A]]</p>")
@@ -321,7 +343,7 @@ class FbDims(unittest.TestCase):
 
     def case(self, qv):
         return keys(question(qv + "\n" + FBV_QV, algebraic_input(tans="A", hint="x^2"),
-                             prt("A", [("S_A", "A", "{@fb_floats(S_A, A, 0.005)[1]@}", "1")])))
+                             prt("A", [("S_A", "A", "{@fb_floats(S_A, A, 0)[1]@}", "1")])))
 
     def test_missing_empty_filled(self):
         self.assertIn("qv.fb-dims[fb_dims]", self.case(""))
@@ -480,7 +502,7 @@ class TestsNone(unittest.TestCase):
         self.assertEqual(len(t), 1)
         self.assertEqual(t[0]["description"], "TAns")
         self.assertEqual(t[0]["inputs"], {"ans1": "ta"})
-        self.assertEqual(t[0]["expected"]["prt1"]["note"], "prt1-1-T | prt1-2-T")
+        self.assertEqual(t[0]["expected"], {})       # filled by running and approving the test on the page
         self.assertNotIn("tests.none", {f2["key"] for f2 in rules.findings(f["fix"](block(q)))})
 
     def test_choice_input(self):
@@ -489,6 +511,109 @@ class TestsNone(unittest.TestCase):
                  if f["rule"] == "tests.none")
         self.assertIn("first(mcq_correct(mc))", f["message"])
 
+
+
+class TestsGraphicInputEmpty(unittest.TestCase):
+    """tests.graphic-input-empty: a test whose graphic input is [] (TM1 09 T03, 2026-11-13)."""
+
+    def test_empty_names(self):
+        qt = ("<qtest><testcase>1</testcase><testinput><name>names</name><value>[]</value></testinput>"
+              "<expected><name>prt1</name><expectedanswernote>prt1-1-T</expectedanswernote></expected></qtest>\n")
+        text = '<p>[[jsxgraph input-ref-names="fbd_names"]] [[/jsxgraph]] [[input:names]] [[validation:names]]</p>'
+        q = question("ta: x;", algebraic_input("names", hint="x"), prt_ab("prt1", "names") + qt, text=text)
+        self.assertIn("tests.graphic-input-empty[test 1]", keys(q))
+        self.assertNotIn("tests.graphic-input-empty[test 1]", keys(q.replace("<value>[]</value>", "<value>[1,2]</value>")))
+
+
+class TestsMissingVar(unittest.TestCase):
+    """tests.missing-var: a test input naming a qt<n>_ variable that is not there (2026-11-12, TM1 09 06)."""
+
+    def test_missing_and_present(self):
+        qt = ("<qtest><testcase>1</testcase><testinput><name>ans1</name><value>qt1_ans1</value></testinput>"
+              "<expected><name>prt1</name><expectedanswernote>prt1-1-T</expectedanswernote></expected></qtest>\n")
+        q = question("ta: x;", algebraic_input(hint="x"), prt_ab("prt1", "ans1") + qt)
+        self.assertIn("tests.missing-var[test 1]", keys(q))
+        q = question("ta: x;\nqt1_ans1: x;", algebraic_input(hint="x"), prt_ab("prt1", "ans1") + qt)
+        self.assertNotIn("tests.missing-var[test 1]", keys(q))
+
+
+
+class FbFloatsTol(unittest.TestCase):
+    """prt.fb-floats-tol: the tolerance of fb_floats() is that of the grading (2026-11-13): the
+    feedback names only the deviations that lower the grade."""
+
+    def finding(self, fv, sans="S_A", tans="A", test="AlgEquiv", opt=""):
+        p = prt("A", [(sans, tans, "{@txt@}", "1")], fv=fv)
+        p = p.replace("<answertest>AlgEquiv</answertest>", "<answertest>%s</answertest>" % test)
+        p = p.replace("<testoptions></testoptions>", "<testoptions>%s</testoptions>" % opt)
+        q = question(FBV_QV, algebraic_input(tans="A", hint="x^2"), p)
+        return [f for f in rules.findings(block(q)) if f["rule"] == "prt.fb-floats-tol"], q
+
+    def test_exact_grading_wants_zero(self):
+        fs, q = self.finding("[txt, ok]: fb_floats(S_A, A, 0.005);")
+        self.assertEqual([f["level"] for f in fs], ["recommended"])
+        self.assertIn("[txt, ok]: fb_floats(S_A, A, 0);", prt_of(fs[0]["fix"](block(q)), "A")["feedbackvariables"])
+        self.assertEqual(self.finding("[txt, ok]: fb_floats(S_A, A, 0);")[0], [])
+
+    def test_numrelative(self):
+        fs, q = self.finding("[txt, ok]: fb_floats(S_A, A, 0);", test="NumRelative", opt="0.01")
+        self.assertIn("[txt, ok]: fb_floats(S_A, A, 0.01);", prt_of(fs[0]["fix"](block(q)), "A")["feedbackvariables"])
+
+    def test_graded_by_ok(self):
+        self.assertEqual(self.finding("[txt, ok]: fb_floats(S_A, A, 0.005);", sans="ok", tans="true")[0], [])
+
+    def test_no_matching_node(self):
+        fs, _ = self.finding("[txt, ok]: fb_floats(S_A, B, 0.005);")
+        self.assertEqual([(f["level"], f["fix"]) for f in fs], [("hint", None)])
+
+
+class CairnChecks(unittest.TestCase):
+    """Rules from the rule collection of Cairn for Stack (2026-11-13)."""
+
+    def test_html_comment(self):
+        q = question("ta: x;", algebraic_input(hint="x"), prt_ab("prt1", "ans1"),
+                     text='<p>[[input:ans1]] [[validation:ans1]]</p><!-- [[include src="x.html" /]] --><!-- plain -->')
+        f = next(f for f in rules.findings(block(q)) if f["rule"] == "text.html-comment")
+        new = f["fix"](block(q))
+        self.assertIn('[[comment]] [[include src="x.html" /]] [[/comment]]', new)
+        self.assertIn("<!-- plain -->", new)
+        self.assertNotIn("text.html-comment", {x["rule"] for x in rules.findings(new)})
+
+    def test_unreachable(self):
+        p = prt_ab("prt1", "ans1", nodes=[("0", "ans1", "ta", "-1", "-1"), ("1", "ans1", "ta", "-1", "-1")])
+        k = keys(question("ta: x;", algebraic_input(hint="x"), p))
+        self.assertIn("prt.unreachable[PRT prt1]", k)
+        p = prt_ab("prt1", "ans1", nodes=[("0", "ans1", "ta", "1", "-1"), ("1", "ans1", "ta", "-1", "-1")])
+        self.assertNotIn("prt.unreachable[PRT prt1]", keys(question("ta: x;", algebraic_input(hint="x"), p)))
+
+    def test_jsxgraph(self):
+        text = "<p>[[jsxgraph]] var a = {@ta@}; [[input:ans1]] [[/jsxgraph]] [[validation:ans1]]</p>"
+        q = question("ta: x;", algebraic_input(hint="x"), prt_ab("prt1", "ans1"), text=text)
+        k = keys(q)
+        self.assertIn("graphic.input-in-jsxgraph", k)
+        self.assertIn("graphic.castext-in-jsxgraph", k)
+        f = next(f for f in rules.findings(block(q)) if f["rule"] == "graphic.castext-in-jsxgraph")
+        self.assertIn("var a = {#ta#};", f["fix"](block(q)))
+
+    def test_castext_in_maxima(self):
+        q = question("ta: x;", algebraic_input(hint="x"), prt_ab("prt1", "ans1", "{@ta@}"))
+        f = next(f for f in rules.findings(block(q)) if f["rule"] == "prt.castext-in-maxima")
+        self.assertIn("<tans>ta</tans>", f["fix"](block(q)))
+        q = question("ta: x;", algebraic_input(hint="x"),
+                     prt_ab("prt1", "ans1").replace("<text></text>", '<text>t: castext("{@ta@}");</text>'))
+        self.assertNotIn("prt.castext-in-maxima", keys(q))       # castext in a string is right
+
+    def test_unused(self):
+        q = question("ta: x;\nu: 3; w: ta+1;\nr: rand(5);", algebraic_input(hint="x"), prt_ab("prt1", "ans1"))
+        k = keys(q)
+        self.assertIn("qv.unused[u]", k)
+        self.assertIn("qv.unused[w]", k)
+        self.assertIn("qv.unused[r]", k)
+        self.assertNotIn("qv.unused[ta]", k)
+        fs = {f["key"]: f for f in rules.findings(block(q))}
+        self.assertIsNone(fs["qv.unused[r]"]["fix"])          # rand(): deleting changes the variants
+        new = fs["qv.unused[u]"]["fix"](block(q))
+        self.assertIn("ta: x;\nw: ta+1;\nr: rand(5);", new)
 
 
 class UnitName(unittest.TestCase):

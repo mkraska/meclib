@@ -20,6 +20,7 @@ The review of the [[Meclib Workbench]] (Questions page, **Review** at the top of
 | [`lang.declaration`](#langdeclaration) | recommended | yes | Language declaration for meclib feedback |
 | [`text.math-delimiters`](#textmath-delimiters) | recommended | yes | Math delimiters |
 | [`text.raw-in-math`](#textraw-in-math) | required | yes | `{#...#}` in a formula |
+| [`text.html-comment`](#texthtml-comment) | recommended | yes | Castext inside an HTML comment |
 | **Inputs** | | | |
 | [`inputs.graphic`](#inputsgraphic) | recommended | yes | Settings of the graphic's input |
 | [`inputs.graphic-visible`](#inputsgraphic-visible) | hint | no | Graphic input visible |
@@ -39,6 +40,9 @@ The review of the [[Meclib Workbench]] (Questions page, **Review** at the top of
 | [`prt.fb-floats`](#prtfb-floats) | recommended | yes | meclib feedback fb_floats() / fb_unit() |
 | [`prt.fb-vars-label`](#prtfb-vars-label) | hint | no | fb_vars() with a label |
 | [`prt.no-input`](#prtno-input) | recommended | no | PRT reads no input |
+| [`prt.unreachable`](#prtunreachable) | hint | no | PRT node never reached |
+| [`prt.castext-in-maxima`](#prtcastext-in-maxima) | required | yes | `{@...@}` in Maxima code of a PRT |
+| [`prt.fb-floats-tol`](#prtfb-floats-tol) | recommended / hint | partly | Tolerance of fb_floats() differs from the grading / Tolerance of fb_floats() not from the grading |
 | **Maxima code and includes** | | | |
 | [`include.lang-specific`](#includelang-specific) | recommended | yes | Language-specific library |
 | [`maxima.multsgn`](#maximamultsgn) | required | yes | Unknown option of make_multsgn() |
@@ -50,6 +54,7 @@ The review of the [[Meclib Workbench]] (Questions page, **Review** at the top of
 | [`include.unused`](#includeunused) | recommended | yes | Unused include |
 | [`include.missing`](#includemissing) | required | yes | Missing include |
 | [`functions.legacy`](#functionslegacy) | recommended | yes | Local copy of a meclib function |
+| [`qv.unused`](#qvunused) | hint | yes | Question variable … is not used |
 | **Graphics (meclib)** | | | |
 | [`state.locked`](#statelocked) | recommended / hint | partly | Legacy state "locked" |
 | [`graphic.missing-input`](#graphicmissing-input) | required | yes | Graphic bound to a missing input |
@@ -57,12 +62,16 @@ The review of the [[Meclib Workbench]] (Questions page, **Review** at the top of
 | [`graphic.feedback-interactive`](#graphicfeedback-interactive) | required | yes | Interactive graphic in the feedback |
 | [`index.literal`](#indexliteral) | hint | no | Object index as a number |
 | [`tans.copy`](#tanscopy) | hint | no | Model answer of the graphic |
+| [`graphic.input-in-jsxgraph`](#graphicinput-in-jsxgraph) | required | no | Input inside a `[[jsxgraph]]` block |
+| [`graphic.castext-in-jsxgraph`](#graphiccastext-in-jsxgraph) | required | yes | `{@...@}` inside a `[[jsxgraph]]` block |
 | **Files, variants and question tests** | | | |
 | [`variants.none`](#variantsnone) | required | no | Randomised question without deployed variants |
 | [`variants.note`](#variantsnote) | required | no | Randomised question without question note |
 | [`variants.rand-name`](#variantsrand-name) | recommended | no | Variable named rand... |
 | [`files.unused`](#filesunused) | recommended | yes | Unused embedded file |
 | [`tests.value-length`](#testsvalue-length) | required | yes | Test input too long for Moodle |
+| [`tests.graphic-input-empty`](#testsgraphic-input-empty) | required | no | Graphic input of a test is empty |
+| [`tests.missing-var`](#testsmissing-var) | required | no | Test input refers to a missing variable |
 | [`tests.none`](#testsnone) | recommended | yes | No question tests |
 
 ## Security
@@ -122,6 +131,15 @@ Level: **required** · automatic fix: **yes** · function `r_raw_in_math()`
 
 Message:
 > …: …× `{#...#}` inside `\(` `\)` or `\[` `\]` → `{@...@}`. Unevaluated (question bank, import), MathJax fails on "#" and Moodle does not save the question; `{@...@}` gives the LaTeX of the value and adds no delimiters inside a formula.
+
+### `text.html-comment`
+
+Level: **recommended** · automatic fix: **yes** · function `r_html_comment()`
+
+An HTML comment is no comment for castext: a block, `{@...@}` or `{#...#}` inside <!-- ... --> is still evaluated (an `[[include]]` is still fetched when the question is compiled, and fails if the file is gone). The fix turns such a comment into `[[comment]] ... [[/comment]]`, which castext skips. (From the rules of Cairn for Stack.)
+
+Message:
+> <!-- ... --> hides text in the browser, but castext still evaluates what is inside: …. An `[[include]]` there is still fetched when the question is compiled (and fails if the file is gone), a `{@...@}` still computed. The fix turns these comments into `[[comment]] ... [[/comment]]`, which castext skips.
 
 ## Inputs
 
@@ -300,10 +318,10 @@ Level: **recommended** · automatic fix: **yes** · function `r_fb_floats()`
 
 meclib feedback on the answers to algebraic and numerical inputs.
 
-(1) `{@fb_vars(sans, tans, ...)@}` in the feedback of a PRT node becomes [txt, ok]: fb_floats(sans, tans, 0.005); in the PRT's feedback variables and `{@txt@}` in the feedback; the list of variables (3rd argument) and the tolerance (5th) of fb_vars are dropped, fb_floats marks the deviating terms itself. (2) A node with AlgEquiv that compares an algebraic input with its model answer and has no meclib feedback gets the same, `{@txt@}` at the start of its false branch (also if the false branch goes on to nodes for typical errors: the feedback of fb_floats is generic). (3) A node that compares a numerical input with its model answer gets `{@fb_unit(sans, tans, tol)@}` at the start of its false branch (tol: the tolerance of NumRelative, else 0.005). Names txt1, ok1, ... for several calls in one PRT or where txt/ok are taken. All nodes of the PRT get the format html (one format per PRT; in Markdown, STACK escapes the inserted text, e.g. the `[[lang]]` blocks). The nodes become quiet; the answer tests stay (ok is not used, the grading does not change). If fb_floats comes in and the question variables lack fb_dims, the fix adds fb_dims: []; to fill in (see qv.fb-dims).
+(1) `{@fb_vars(sans, tans, ...)@}` in the feedback of a PRT node becomes [txt, ok]: fb_floats(sans, tans, tol); in the PRT's feedback variables and `{@txt@}` in the feedback; the list of variables (3rd argument) and the tolerance (5th) of fb_vars are dropped, fb_floats marks the deviating terms itself. One call per SAns/TAns pair in a PRT; fb_vars in a true branch is dropped (the answer is right there, its feedback empty). (2) A node with AlgEquiv that compares an algebraic input with its model answer and has no meclib feedback gets the same, `{@txt@}` at the start of its false branch (also if the false branch goes on to nodes for typical errors: the feedback of fb_floats is generic). (3) A node that compares a numerical input with its model answer gets `{@fb_unit(sans, tans, tol)@}` at the start of its false branch (tol: the tolerance of NumRelative, else 0.005). Names txt1, ok1, ... for several calls in one PRT or where txt/ok are taken. All nodes of the PRT get the format html (one format per PRT; in Markdown, STACK escapes the inserted text, e.g. the `[[lang]]` blocks). The nodes become quiet; the answer tests stay (ok is not used, the grading does not change). If fb_floats comes in and the question variables lack fb_dims, the fix adds fb_dims: []; to fill in (see qv.fb-dims).
 
 Message:
-> PRT …: …. fb_floats(sans, tans, 0.005) goes into the feedback variables as [txt, ok], `{@txt@}` into the feedback (at the start of the false branch); fb_unit() directly into the false branch; the nodes become quiet; the answer tests stay (the grading does not change).…
+> PRT …: …. fb_floats(sans, tans, tol) goes into the feedback variables as [txt, ok], with the tolerance of the grading (0 for AlgEquiv: every deviating number is named, blurred), `{@txt@}` into the feedback (at the start of the false branch); fb_unit() directly into the false branch; the nodes become quiet; the answer tests stay (the grading does not change).…
 
 See also: https://github.com/mkraska/meclib/wiki/fb_floats()
 
@@ -328,6 +346,36 @@ Inputs and PRTs that do not meet: an input that no PRT reads is never graded (of
 
 Message:
 > PRT … reads no input (feedback variables, SAns, TAns, test options), so it does not depend on the student's answer. Probably a node compares question variables only, or an input was renamed.
+
+### `prt.unreachable`
+
+Level: **hint** · automatic fix: **no** · function `r_prt_unreachable()`
+
+PRT nodes that no path from the first node reaches: never evaluated (a leftover, or a wrong next node somewhere). No fix: which one is meant is the author's decision.
+
+Message:
+> PRT …: node… … cannot be reached from the first node, so … never evaluated. A leftover, or a next node that should lead there.
+
+### `prt.castext-in-maxima`
+
+Level: **required** · automatic fix: **yes** · function `r_castext_in_maxima()`
+
+`{@...@}` or `{#...#}` in a PRT field that is Maxima code (feedback variables, SAns, TAns, options, scores, penalties): castext is not evaluated there, the braces are a syntax error or give a wrong value. The fix keeps the expression inside. (From the rules of Cairn for Stack.)
+
+Message:
+> … in the feedback variables or a node's SAns, TAns, options, score or penalty: these fields are Maxima code, not castext, so the braces are a syntax error or give a wrong value. Write the expression itself; the fix removes the braces.
+
+### `prt.fb-floats-tol`
+
+Level: **recommended / hint** · automatic fix: **partly** · function `r_fb_floats_tol()`
+
+The tolerance of fb_floats(sans, tans, tol) in the feedback variables should be that of the grading: the feedback names only the deviations that lower the grade. A node that grades sans against tans with an exact test (AlgEquiv, AlgEquivNouns, ...) wants tol 0 (every deviating number named, with blurred messages); with NumRelative its option. The fix sets it. Calls whose ok is the grading (a node with SAns ok) are right as they are; calls that no node's grading matches get a hint (e.g. fb_floats against another variable than the node compares).
+
+Messages:
+> PRT …: fb_floats(…, …, …), but the node grades … against … …. The feedback should name only deviations that lower the grade: with tolerance … a deviation … is graded wrong but not named. The fix sets the tolerance to … (with 0 the messages stay blurred: "too small by at least ...").
+> PRT …: fb_floats(…, …, …) - no node grades … against … (an exact test or NumRelative), so the tolerance of the feedback cannot be checked against the grading. The feedback should name only deviations that lower the grade.
+
+See also: https://github.com/mkraska/meclib/wiki/fb_floats()
 
 ## Maxima code and includes
 
@@ -440,6 +488,15 @@ Message:
 
 See also: https://github.com/mkraska/meclib/wiki/Home
 
+### `qv.unused`
+
+Level: **hint** · automatic fix: **yes** · function `r_qv_unused()`
+
+Question variables that nothing reads: not the other question variables, the texts (Maxima parts), the PRTs, the inputs (model answers, syntax hints) or the question tests - left over after changes, they make a question hard to read. Names the included meclib files read (e.g. fb_dims) count as read. The fix deletes the statement (one written on a single line); a statement with rand() is kept (deleting it changes every variant): the hint says so.
+
+Message:
+> Question variable … (line …) is read nowhere: not by other question variables, the texts, the PRTs, the inputs or the tests. …
+
 ## Graphics (meclib)
 
 ### `state.locked`
@@ -501,6 +558,24 @@ The model answer of a graphic's input is its initial state (tans equal to init):
 Message:
 > The model answer of … is the initial state (init). Usually it is derived from it: tansdata: copy(initdata) with changes, tans: stackjson_stringify(tansdata).
 
+### `graphic.input-in-jsxgraph`
+
+Level: **required** · automatic fix: **no** · function `r_jsxgraph_blocks()`
+
+Hard errors with JSXGraph: `[[input:]]` or `[[validation:]]` inside a `[[jsxgraph]]` block (the block is JavaScript, the input's HTML breaks it), and `{@...@}` inside it (TeX in the JavaScript; values go in with `{#...#}`). The fix of the second writes `{#...#}`. (From the rules of Cairn for Stack.)
+
+Message:
+> `[[input:..]]` or `[[validation:..]]` of … inside a `[[jsxgraph]]` block: the block is JavaScript, and the HTML of the input breaks it (SyntaxError). Put the placeholders outside the block and bind the input with input-ref-NAME.
+
+### `graphic.castext-in-jsxgraph`
+
+Level: **required** · automatic fix: **yes** · function `r_jsxgraph_blocks()`
+
+Hard errors with JSXGraph: `[[input:]]` or `[[validation:]]` inside a `[[jsxgraph]]` block (the block is JavaScript, the input's HTML breaks it), and `{@...@}` inside it (TeX in the JavaScript; values go in with `{#...#}`). The fix of the second writes `{#...#}`. (From the rules of Cairn for Stack.)
+
+Message:
+> … inside a `[[jsxgraph]]` block: `{@...@}` gives TeX for display, which is no JavaScript. Values go into the script with `{#...#}` (Maxima syntax). The fix writes `{#...#}`.
+
 ## Files, variants and question tests
 
 ### `variants.none`
@@ -554,11 +629,29 @@ Test input values longer than STACK's database column (255 characters): the impo
 Message:
 > Test …: the value of … is longer than the 255 characters STACK can store for a test input; importing the question into Moodle fails ("error writing to the database"). The fix moves it into a question variable (…), the test input then holds its name.
 
+### `tests.graphic-input-empty`
+
+Level: **required** · automatic fix: **no** · function `r_qtest_length()`
+
+Test input values longer than STACK's database column (255 characters): the import into Moodle fails with "error writing to the database". The fix moves them into question variables.
+
+Message:
+> Test …: … = …. This input is filled by the graphic (input-ref-…); its model answer is no answer, and PRTs that read it (e.g. names[i]) fail with "invalid index". Open the test in test mode, press TAns, wait until the graphic shows the model answer and replace the test.
+
+### `tests.missing-var`
+
+Level: **required** · automatic fix: **no** · function `r_qtest_length()`
+
+Test input values longer than STACK's database column (255 characters): the import into Moodle fails with "error writing to the database". The fix moves them into question variables.
+
+Message:
+> Test …: … … not in the question variables, so the test input is a bare symbol (a graphic stays empty, the PRTs get no proper answer). Open the test in the Tests column (test mode), let the inputs be filled again and replace the test.
+
 ### `tests.none`
 
 Level: **recommended** · automatic fix: **yes** · function `r_tests_none()`
 
-A question with inputs needs question tests (agents/stack_essentials.md). The fix adds test case "TAns" with the model answers as written (e.g. the name of a question variable, so it holds for every variant; a choice input gets its correct entries). Expected: full marks along the true branches of each PRT, a guess - run the test in the Tests column and approve its actual route.
+A question with inputs needs question tests (agents/stack_essentials.md). The fix adds test case "TAns" with the model answers as written (e.g. the name of a question variable, so it holds for every variant; a choice input gets its correct entries; an input bound to a graphic is left to the page, which takes what the graphic writes when it shows the model answer). The model answers are the model solution and the PRTs' actual behaviour with them is taken as correct, whichever branches it takes: the fix leaves the expected results empty, and the Questions page then runs the test on the variant in the preview and writes its result (score, penalty, full route) as the expected one. The test is not approved: autogenerated tests are approved by hand.
 
 Message:
-> The question has inputs but no question tests; STACK's guidelines want a test per branch of every PRT. The fix adds test "TAns" with the model answers (…), expecting full marks along the true branches of each PRT: run it in the Tests column and approve the actual result.
+> The question has inputs but no question tests; STACK's guidelines want a test per branch of every PRT. The fix adds test "TAns" with the model answers (…). They are the model solution, so what the PRTs do with them is taken as correct: the test is run on the variant in the preview and its result (score, penalty, full route) becomes the expected one. Check it in the Tests column and approve the test.
