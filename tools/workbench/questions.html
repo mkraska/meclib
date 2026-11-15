@@ -154,6 +154,10 @@
   .apbadge.ok { background: #dcefdc; color: var(--ok); } .apbadge.stale { background: #fbf1dc; color: #a35a00; }
   .apbadge.no { background: #fbf1dc; color: #a35a00; }
   table.vtab th button.tc.ap { box-shadow: inset 0 3px 0 #3a9a3a; } table.vtab th button.tc.apstale { box-shadow: inset 0 3px 0 #e0a030; }
+  table.vtab th button.tc.apfail { box-shadow: inset 0 3px 0 #c03030; }
+  .apbadge.failed { background: #f6dcdc; color: #a02020; }
+  table.vtab tr.aprow th { padding-top: 0; } table.vtab button.tc.apok { background: #dcefdc; color: var(--ok); opacity: 1; }
+  table.vtab button.tc.apbtn:not(:disabled) { background: #fbf1dc; color: #a35a00; font-weight: bold; }
   #testsToggle.need { background: #f8dcda; color: var(--err); border-color: #e3a19b; font-weight: 600; }
   #testView .tvbox { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 0 0 10px; }
   #testView .tvrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; }
@@ -495,7 +499,7 @@
           <p class="hint">A test button runs that test on that variant in the preview (green passed, red failed, a bar below:
             result in STACK itself); a test number in the head runs the test on every deployed variant.</p>
         </div>
-        <div class="tvbox" id="tvDetail"><span class="hint">Run a test (a button in the matrix): its route through the PRTs and its approval show here.</span></div>
+        <div class="tvbox" id="tvDetail"><span class="hint">Run a test (a button in the matrix): its route through the PRTs shows here. Approve a test with ✓ under its number in the matrix header.</span></div>
         <div class="tvbox" id="tvInputs">
           <div class="tvrow"><b>Inputs and PRTs</b><span id="ipInfo" class="hint"></span></div>
           <div id="ipView"></div>
@@ -2424,7 +2428,7 @@ function testsNeeds() {
   if (result.random && !deployedSeeds().length) needs.push("randomised, no deployed variants");
   const notApproved = tests.filter((q) => approvalState(q.testcase) !== "ok");
   if (notApproved.length) needs.push(`test${notApproved.length > 1 ? "s" : ""} ${notApproved.map((q) => q.testcase).join(", ")} not approved` +
-    (notApproved.some((q) => approvalState(q.testcase) === "stale") ? " (or out of date)" : ""));
+    (notApproved.some((q) => ["stale", "failed"].includes(approvalState(q.testcase))) ? " (or not valid)" : ""));
   if (variantsData) {
     const dep = new Set(deployedSeeds()), seen = new Map();
     for (const v of variantsData.variants) if (dep.has(v.seed)) {
@@ -2467,7 +2471,12 @@ function renderVariants() {
   const tip = (qt) => (qt.description || "(no description)") + "\n" + Object.entries(qt.inputs).map(([n, v]) => `${n} = ${v}`).join("\n") +
     "\nexpected: " + Object.entries(qt.expected).map(([p, e]) => `${p}: ${e.note} (score ${e.score === "" ? "-" : fmtScore(e.score)})`).join(", ");
   let h = `<tr><th>deploy</th><th>seed</th><th>question note</th><th>${tests.map((q) =>
-    `<button class="small tc${approvalState(q.testcase) === "ok" ? " ap" : approvalState(q.testcase) === "stale" ? " apstale" : ""}" data-col="${q.testcase}" title="${esc(tip(q))}&#10;${esc(approvalText(q.testcase))}&#10;click: run on every deployed variant">${q.testcase}</button>`).join("") || "tests"}</th></tr>`;
+    `<button class="small tc${approvalState(q.testcase) === "ok" ? " ap" : approvalState(q.testcase) === "stale" ? " apstale" : approvalState(q.testcase) === "failed" ? " apfail" : ""}" data-col="${q.testcase}" title="${esc(tip(q))}&#10;${esc(approvalText(q.testcase))}&#10;click: run on every deployed variant">${q.testcase}</button>`).join("") || "tests"}</th></tr>`;
+  if (tests.length) h += `<tr class="aprow"><th></th><th></th><th class="hint">approve</th><th>${tests.map((q) => {
+    const st = approvalState(q.testcase), why = approveBlock(q.testcase);
+    if (st === "ok" && !why) return `<button class="small tc apok" disabled title="${esc(approvalText(q.testcase))}">✓</button>`;
+    return `<button class="small tc apbtn" data-approve="${q.testcase}"${why ? " disabled" : ""} title="${esc(approvalText(q.testcase))}&#10;${esc(why || "approve test " + q.testcase + ": it passed on " + (deployedSeeds().length ? "every deployed variant" : "the preview variant"))}">✓</button>`;
+  }).join("")}</th></tr>`;
   for (const v of rows) {
     const n = v.note[lang] || v.note.de || v.note.en, isDep = dep.includes(v.seed);
     let dup = "";
@@ -2504,6 +2513,7 @@ function renderVariants() {
     runCell(sd, tc);
   });
   for (const b of t.querySelectorAll("button[data-col]")) b.addEventListener("click", () => runColumn(parseInt(b.dataset.col, 10)));
+  for (const b of t.querySelectorAll("button[data-approve]")) b.addEventListener("click", () => approveTest(parseInt(b.dataset.approve, 10)));
   renderTestDetail();
   const cov = coverage();
   renderInputPrts();
@@ -2528,15 +2538,36 @@ function routeHTML(trace) {
     `SAns <span class="rval">${boolTex(t.sans) || "?"}</span> &nbsp; TAns <span class="rval">${boolTex(t.tans) || "?"}</span><br>` +
     `<span class="rnote">score ${esc(fmtScore(t.score))} · <code>${esc(t.note || "-")}</code>${t.atnote ? " · " + esc(t.atnote) : ""}</span></div>`).join("") + "</div>";
 }
+// the variants on which test tc failed in this session (the matrix and the preview runs)
+function failedSeeds(tc) {
+  return Object.keys(seedResults).filter((s) => seedResults[s][tc] === false).map((s) => parseInt(s, 10)).sort((a, b) => a - b);
+}
+function testFailed(tc) { return failedSeeds(tc).length > 0 || !!(testResults[tc] && !testResults[tc].pass); }
+// "ok", "stale" (question changed since), "failed" (a run in this session failed: the approval is
+// not valid) or "no"
 function approvalState(tc) {
   const a = ((result && result.approvals) || {})[String(tc)];
   if (!a) return "no";
+  if (testFailed(tc)) return "failed";
   return a.current || !$("optApprovalFp").checked ? "ok" : "stale";
 }
 function approvalText(tc) {
-  const a = ((result && result.approvals) || {})[String(tc)], st = approvalState(tc);
+  const a = ((result && result.approvals) || {})[String(tc)], st = approvalState(tc), f = failedSeeds(tc);
   return st === "ok" ? `approved ${a.date}` + (a.current ? "" : " (question changed since)") :
-    st === "stale" ? `approved ${a.date}, but the question changed since: approve again` : "not approved";
+    st === "stale" ? `approved ${a.date}, but the question changed since: approve again` :
+    st === "failed" ? `approved ${a.date}, not valid: the test failed` + (f.length ? ` on variant${f.length > 1 ? "s" : ""} ${f.join(", ")}` : "") :
+    "not approved";
+}
+// the approval needs a pass on every deployed variant (on the preview variant without deployed
+// ones) in this session; returns "" or the reason why not
+function approveBlock(tc) {
+  const dep = deployedSeeds(), cur = parseInt($("seed").value, 10) || 1;
+  const seeds = dep.length ? dep : [cur];
+  const f = seeds.filter((s) => (seedResults[s] || {})[tc] === false);
+  if (f.length) return `fails on variant${f.length > 1 ? "s" : ""} ${f.join(", ")}`;
+  const open = seeds.filter((s) => (seedResults[s] || {})[tc] !== true);
+  if (open.length) return dep.length ? "run the test on every deployed variant first (click the test number)" : "run the test first (click the test number)";
+  return "";
 }
 // what the run of test qt gave: per PRT score, penalty and the route (answer notes of the branches)
 function actualExpected(chk) {
@@ -2555,7 +2586,7 @@ function renderTestDetail() {
   const qt = ((result && result.qtests) || []).find((q) => q.testcase === activeTest);
   const sd = parseInt($("seed").value, 10) || 1;
   if (!qt || !lastCheck || !lastTestRun || lastTestRun.tc !== qt.testcase || lastTestRun.seed !== sd) {
-    box.innerHTML = '<span class="hint">Run a test (a button in the matrix): its route through the PRTs and its approval show here.</span>';
+    box.innerHTML = '<span class="hint">Run a test (a button in the matrix): its route through the PRTs shows here. Approve a test with ✓ under its number in the matrix header.</span>';
     return;
   }
   const st = approvalState(qt.testcase), r = testResults[qt.testcase], act = actualExpected(lastCheck);
@@ -2578,23 +2609,23 @@ function renderTestDetail() {
     if (tr && tr.length) h += routeHTML(tr);
     h += "</details>";
   }
-  h += '<div class="tvrow"><button id="approveBtn" class="small primary" title="record this run (score, penalty, full route) as the expected result and approve the test">' +
-    (st === "ok" ? "Approve again" : "Approve") + '</button><span class="hint">The expected results become those of this run: score, penalty and the full route.</span></div></details>';
+  h += "</details>";
   box.innerHTML = h;
   box.querySelectorAll("details[data-k]").forEach((d) => d.addEventListener("toggle", () => { detailOpen[d.dataset.k] = d.open; }));
-  $("approveBtn").addEventListener("click", () => approveTest(qt.testcase, act));
   typeset(box);
 }
-async function approveTest(tc, expected) {
+// records the approval only (date and fingerprint in the question description); the expected
+// results stay as they are: the test passed with them on every deployed variant
+async function approveTest(tc) {
+  if (approveBlock(tc)) return;
   if (!(await flush())) return;
   const backup = !backedUp.has(file.path);
   try {
-    const r = await postJSON("/api/q/approve", { path: file.path, index: qindex, rev: file.rev, testcase: tc, expected, backup });
+    const r = await postJSON("/api/q/approve", { path: file.path, index: qindex, rev: file.rev, testcase: tc, backup });
     if (backup) backedUp.add(file.path);
     file.rev = r.rev; showHistory(r.history);
     showMessages([{ cls: "info", text: r.label + "." }]);
-    // no Maxima: the approval only writes the expected results (those of the run on screen) and a
-    // line of the question description; the reply has the tests and approvals as they are now
+    // no Maxima: the approval only writes a line of the question description
     if (result) {
       const byTc = Object.fromEntries((r.qtests || []).map((q) => [String(q.testcase), q]));
       for (const q of result.qtests || []) if (byTc[String(q.testcase)]) q.expected = byTc[String(q.testcase)].expected;

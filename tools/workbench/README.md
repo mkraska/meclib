@@ -649,15 +649,19 @@ question with inputs needs question tests.
   TAns and options, the compared values typeset, the result, the score after
   the branch, the branch's answer note and the answer test's own note. The
   same boxes appear below each PRT graph after a Check.
-- **Approval:** "Approve" makes this run the expected result (score, penalty,
-  full route of answer notes, without the answer tests' own notes) and records
+- **Approval:** the row "approve" in the head of the matrix has a ✓ under
+  each test number. It is active only when the test has passed in this
+  session on every deployed variant (on the variant in the preview if none is
+  deployed); otherwise it is grey and its tooltip says why. A click records
   the approval in the question description ("Tests approved: 2 [2026-11-11
-  c7db0766]", POST `/api/q/approve`). The fingerprint covers question
-  variables and options, inputs, the PRTs without their feedback texts, and
-  the test itself; when it changes, the approval is out of date (setting in
-  `⋯`: "approval lapses when the question changes", on by default). A test
-  number in the head of the matrix has a green bar when approved, an amber
-  one when out of date.
+  c7db0766]", POST `/api/q/approve`); the expected result of the test is not
+  changed. The fingerprint covers question variables and options, inputs, the
+  PRTs without their feedback texts, and the test itself; when it changes,
+  the approval is out of date (setting in `⋯`: "approval lapses when the
+  question changes", on by default). A test number in the head of the matrix
+  has a green bar when approved, an amber one when out of date and a red one
+  when its last run failed on a variant (badge "not valid: the test failed on
+  variant …"); such a test counts as not approved.
 - **Inputs and PRTs:** which PRT reads which input (feedback variables,
   SAns, TAns, options), both in the order of the question text; red: an
   input no PRT grades (not one bound to a graphic), a PRT that reads no
