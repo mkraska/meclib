@@ -387,7 +387,7 @@ fb_dims_q(%_x) := block([%_d],
   %_x);
 fb_dims_bad(%_d) := member(%_d, ['%_dunk, '%_dsum, '%_dfun]);
 /* the dimension of an expression with the table %_tab */
-fb_dims_of(%_x, %_tab) := block([simp: true, inflag: true, radexpand: all, %_o, %_a, %_d, %_e],
+fb_dims_of(%_x, %_tab) := block([simp: true, inflag: true, radexpand: all, %_o, %_a, %_d, %_e, %_y, %_z, %_i],
   if numberp(%_x) or constantp(%_x) then return(1),
   if symbolp(%_x) or subvarp(%_x) then
     (%_a: assoc(string(%_x), %_tab), return(if %_a = false then '%_dunk else %_a)),
@@ -403,6 +403,10 @@ fb_dims_of(%_x, %_tab) := block([simp: true, inflag: true, radexpand: all, %_o, 
     if %_d[2] # 1 then return('%_dfun),
     if %_d[1] = 1 then return(1),
     return(if numberp(%_a[2]) then %_d[1]^fb_dims_q(%_a[2]) else '%_dfun)),
+  /* a derivative 'diff(f, x1, n1, x2, n2, ...) (also diff(f, x) with depends(f, x)): the unit of f
+     over x1^n1*x2^n2*... */
+  if %_o = op('diff(%_y, %_z)) then
+    return(first(%_d)/product(%_d[2*%_i]^%_a[2*%_i + 1], %_i, 1, (length(%_a) - 1)/2)),
   if %_o = abs then return(%_d[1]),
   if every(lambda([%_y], is(%_y = 1)), %_d) then 1 else '%_dfun);
 /* the dimension of the model answer for the unit check; a model answer that is zero has no unit

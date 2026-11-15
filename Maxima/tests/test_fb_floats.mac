@@ -231,6 +231,26 @@ fb_dims: ["m" = "kg", a = 1]$
 fb_check_val(if fb_dims_table() = ["m" = %_dM, "a" = 1] then 0 else 1, 0, "fb_dims: names as strings, dimensionless");
 kill(fb_dims)$
 
+/* ---- time derivatives: with depends(omega, t), diff(omega, t) stays as a derivative
+   (STACK questions declare depends() in the question variables, so students write diff(omega, t)
+   without the noun form); its unit is that of the function over the variable(s) (2026-11-15,
+   TM3 08 04) ---- */
+depends(omega, t)$ depends(x, t)$ depends(u, [x, t])$ depends(w, t)$
+fb_dims: [L = "m", m = "kg", omega = "1/s", t = "s", x = "m", u = "m"]$
+fb_check_val(fb_dims_of(diff(omega, t), fb_dims_table()) - fb_dims_unit("1/s^2"), 0, "fb_dims: diff(omega, t)");
+fb_check_val(fb_dims_of(diff(x, t, 2), fb_dims_table()) - fb_dims_unit("m/s^2"), 0, "fb_dims: second derivative");
+fb_check_val(fb_dims_of(diff(u, x, 1, t, 1), fb_dims_table()) - fb_dims_unit("1/s"), 0, "fb_dims: mixed derivative");
+fb_check_val(if fb_dims_of(diff(w, t), fb_dims_table()) = '%_dunk then 0 else 1, 0, "fb_dims: derivative of an undeclared variable, no check");
+fb_check_str(fb_dimension(L*diff(omega, t)^2, L/2*'diff(omega, t)),
+  "&nbsp;Ihr Ergebnis hat die Einheit \\({\\frac{\\mathrm{m}}{\\mathrm{s}^4}}\\) statt \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).",
+  "&nbsp;Your result has the unit \\({\\frac{\\mathrm{m}}{\\mathrm{s}^4}}\\) instead of \\({\\frac{\\mathrm{m}}{\\mathrm{s}^2}}\\).",
+  "fb_dimension: derivative with a wrong unit");
+fb_check_str(fb_dimension(L*omega + L*diff(omega, t), L/2*'diff(omega, t)),
+  "&nbsp;In Ihrem Ergebnis werden Gr&ouml;&szlig;en verschiedener Einheiten addiert.",
+  "&nbsp;Your result adds quantities of different units.", "fb_dimension: derivative in a sum of different units");
+fb_check(fb_floats(L/2*diff(omega, t), L/2*'diff(omega, t), 0), true, "", "", "fb_floats+fb_dims: derivative, right answer");
+kill(fb_dims)$ remove([omega, x, u, w], dependency)$
+
 /* ---- very small or large numbers: shown in scientific notation, as the question option says
    (here "*10", STACK's default) - a plain float would show as 1.5E-14 ---- */
 texput_scientificnotation("*10")$

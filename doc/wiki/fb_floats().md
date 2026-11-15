@@ -56,6 +56,8 @@ The units are strings, read by a small parser of the library and not by Maxima, 
 - "In the marked term, a function (e.g. sin, exp, ln) or an exponent has an argument with a unit." (e.g. `sin(a)`)
 - for the whole answer: "Your result has the unit kg·m/s² instead of m/s²." and the like
 
+Derivatives have the unit of the function over that of the variable: with `depends(omega, t)` in the question variables, students write `diff(omega, t)` (no noun form needed) and with `omega = "1/s"`, `t = "s"` it has the unit 1/s²; higher and mixed derivatives (`diff(x, t, 2)`, `diff(u, x, 1, t, 1)`) as well. The model answer may use `'diff(omega, t)`.
+
 If a summand has a wrong unit, the numbers are not judged (neither marked nor named): with a wrong unit, a number cannot be right or wrong. A variable that is not declared, or a unit that the parser does not know, switches the check off for that summand (for the model answer: altogether), so that a typo is reported by [[fb_vars]] and not as a wrong unit. Without `fb_dims` there is no unit check. If the model answer is zero, there is no unit check either: 0 has no unit to compare with (0 is 0 m as well as 0 N), so an answer such as `F*a` for a model answer `0` gets no "wrong unit" message.
 
 `fb_dimension(sans, tans)` does the unit check of the whole answer alone, e.g. together with [[fb_vars]]; it returns the text, `""` if the unit is right or cannot be checked.

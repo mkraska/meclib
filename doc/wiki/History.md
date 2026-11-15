@@ -1,5 +1,8 @@
 ### Dev Branch
 
+2026 11 15
+- [[fb_floats()]], [[fb_dimension]]: the unit check knows derivatives - `diff(omega, t)` (with `depends(omega, t)`) has the unit of `omega` over that of `t`, e.g. 1/s² for `omega = "1/s"`, `t = "s"`; before, a derivative counted as a function with an argument with a unit, which switched the check off for a model answer with a derivative (TM3 08 04); tests in `Maxima/tests/test_fb_floats.mac`
+
 2026 11 13
 - [[Meclib Workbench]], Tests column: approval moved into the head of the matrix - a row "approve" has a ✓ under every test number; the Approve button in the test details is gone. The ✓ is active only when the test has passed in this session on all deployed variants (without deployed variants: on the variant in the preview), otherwise grey with the reason as tooltip. Approving only records the approval (date and fingerprint in the question description) and no longer changes the expected result. A failed run makes the approval invalid: red bar at the test number, badge "not valid: the test failed on variant …", and the test counts as not approved
 - [[Meclib Workbench]], Tests column: "Approve" runs no Maxima any more (before: evaluation of the whole question, the last Check again and the test again) - the reply of the server has the tests and approvals, the page redraws test details, matrix and coverage from it
