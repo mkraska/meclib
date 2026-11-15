@@ -1,6 +1,7 @@
 ### Dev Branch
 
 2026 11 15
+- [[Meclib Workbench]], Tests column: question tests and the survey of variants load the `stack_include` files again - the check for functions STACK forbids looked at the `load()` that replaces `stack_include` (itself forbidden) and dropped the include, while the session counted it as loaded; a test run as the first job after the start of the workbench therefore ran without the meclib functions (`fb_floats` unevaluated, every test failed), later runs reused the session of a Check (TM3 08 06); test in `tools/workbench/tests/test_stack_question.py`
 - [[Meclib Workbench]], Tests column: "Tests on deployed" and a test number in the head of the matrix colour each cell as soon as its test is done, not only at the end; the cells still to run have a dashed border, the one running pulses (the progress reply of the server carries the results so far)
 - [[fb_floats()]], [[fb_dimension]]: the unit check knows derivatives - `diff(omega, t)` (with `depends(omega, t)`) has the unit of `omega` over that of `t`, e.g. 1/s² for `omega = "1/s"`, `t = "s"`; before, a derivative counted as a function with an argument with a unit, which switched the check off for a model answer with a derivative (TM3 08 04); tests in `Maxima/tests/test_fb_floats.mac`
 

@@ -1285,11 +1285,13 @@ def variant(session, data, seed, resolver, previous_names=(), load_includes=True
         clean = strip_comments(stmt)
         if INCLUDE.search(clean) and not load_includes:
             continue
+        # forbidden functions: checked in the statement as written - the load() that replaces
+        # stack_include is itself forbidden in questions and would drop the include
+        if forbidden_identifiers(clean):
+            continue
         try:
             clean = INCLUDE.sub(lambda m: "load(%s)" % mpath(resolver.local_file(m.group(1))), clean)
         except ValueError:
-            continue
-        if forbidden_identifiers(clean):
             continue
         m = ASSIGN.match(clean) or FUNDEF.match(clean)
         ml = LISTASSIGN.match(clean)

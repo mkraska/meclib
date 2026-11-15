@@ -88,3 +88,47 @@ class IncludePlan(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VariantLoadsIncludes(unittest.TestCase):
+    """variant() (survey, question tests on deployed variants) loads stack_include files: the
+    check for forbidden functions looks at the question's statement, not at the load() that
+    replaces stack_include - load is forbidden in questions, so the include was dropped while
+    the session recorded it as loaded; a test run as the first job of a session then ran without
+    the meclib functions (2026-11-15, TM3 08 06)."""
+
+    class Session:
+        def __init__(self):
+            self.code = ""
+
+        def run_with_results(self, code):
+            self.code = code
+            return "", {}
+
+    class Resolver:
+        def __init__(self, path):
+            self.path = path
+
+        def local_file(self, url):
+            return self.path
+
+    def setUp(self):
+        d = tempfile.mkdtemp()
+        self.inc = Path(d) / "fb_value.mac"
+        self.inc.write_text("f(x) := x;\n", encoding="utf-8")
+        demo = Path(__file__).resolve().parents[3] / "demo_questions" / "contact_demo_01.xml"
+        self.data = sq.question_data(sq.question_element(demo.read_text(encoding="utf-8"), 0))
+        self.data["questionvariables"] = 'a: 1;\nstack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_value.mac");'
+        self.data["questionnote"] = ""
+
+    def test_include_loaded(self):
+        s = self.Session()
+        sq.variant(s, dict(self.data), 1, self.Resolver(self.inc), (), None)
+        self.assertIn("load(", s.code)
+        self.assertIn("fb_value.mac", s.code)
+
+    def test_forbidden_statement_still_dropped(self):
+        s = self.Session()
+        data = dict(self.data, questionvariables="a: 1;\nb: concat(x, y);")
+        sq.variant(s, data, 1, self.Resolver(self.inc), (), None)
+        self.assertNotIn("concat(x", s.code)
