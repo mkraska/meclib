@@ -1318,11 +1318,13 @@ def variant(session, data, seed, resolver, previous_names=(), load_includes=True
                       "slow": sorted(tm, key=lambda x: -x[1])[:3]}}, names)
 
 
-def run_tests(session, data, seed, resolver, previous_names=(), testcases=None):
+def run_tests(session, data, seed, resolver, previous_names=(), testcases=None, on_test=None):
     """The question tests on one variant, in one session: the question variables once (Maxima
     run 1), then per test one short run - its inputs (CAS expressions, evaluated with the question
     variables as STACK does; a choice input given its list of choices means its correct entries)
-    and the PRTs, as a Check in test mode. testcases: the tests to run (default all).
+    and the PRTs, as a Check in test mode. testcases: the tests to run (default all). on_test:
+    called after each test with (testcase, check result, error of the question variables), for
+    the progress of a test run.
     Returns ({seed, error, tests: {testcase: check result as in evaluate()}}, names to kill)."""
     v, names = variant(session, dict(data, questionnote=""), seed, resolver, previous_names, None)
     langs = languages_used(data["questiontext"])
@@ -1357,6 +1359,8 @@ def run_tests(session, data, seed, resolver, previous_names=(), testcases=None):
         t0 = time.time()
         stdout, results = session.run_with_results("\n".join(code))
         out[qt["testcase"]] = check_results(checked, results, stdout, data)
+        if on_test:
+            on_test(qt["testcase"], out[qt["testcase"]], v["error"])
         tm = timing(results)
         times[qt["testcase"]] = {"wall": round(time.time() - t0, 3), "maxima": round(sum(x for _l, x in tm), 3),
                                  "slow": sorted(tm, key=lambda x: -x[1])[:3]}

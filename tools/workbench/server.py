@@ -62,8 +62,9 @@ Endpoints
   POST /api/q/rename        {path, index, rev, old, new, kind?, backup} -> a variable, input or PRT
                             renamed everywhere (qfile.rename_op); {ambiguous: kinds} if old names a
                             PRT and also an input or variable
-  POST /api/q/testrun       {path, index, src, seeds, testcases} -> the question tests on these
-                            variants, one run of the question variables per variant
+  POST /api/q/testrun       {path, index, src, seeds, testcases, progress} -> the question tests on
+                            these variants, one run of the question variables per variant;
+                            GET /api/q/progress?token=<progress>&after=n gives the tests done so far
   POST /api/q/check         like eval, plus {answers: {input: raw text}} -> "check": validation of the
                             answers and the PRT results (score, penalty, answer notes, feedback)
                             optional test_exprs {input: CAS expression}: test mode, these inputs get
@@ -225,8 +226,36 @@ class SessionPool:
 POOL = SessionPool()
 
 # what the last evaluation or check is doing, for the page's sign of life while it waits
-# (GET /api/q/progress): {"busy": bool, "phase": text, "since": time of the start}
-PROGRESS = {"busy": False, "phase": "", "since": 0.0}
+# (GET /api/q/progress): {"busy": bool, "phase": text, "since": time of the start}; a test run
+# (POST /api/q/testrun with a progress token) adds the result of each test as it is done, so that
+# the page colours the matrix while the run goes on
+PROGRESS = {"busy": False, "phase": "", "since": 0.0, "token": None, "results": []}
+
+
+def progress_start_tests(token):
+    """A test run begins: its results so far are none; token: the page's id of the run."""
+    PROGRESS.update(token=token, results=[])
+
+
+def progress_add_test(seed, testcase, check, error):
+    """One test of a test run is done."""
+    PROGRESS["results"].append({"seed": seed, "testcase": testcase, "check": check, "error": error})
+
+
+def progress_reply(query):
+    """GET /api/q/progress[?token=..&after=n]: busy, phase, seconds; with the token of the running
+    test run also the results of its tests from number n on (results) and their count (count)."""
+    out = {"busy": PROGRESS["busy"], "phase": PROGRESS["phase"],
+           "seconds": round(time.time() - PROGRESS["since"], 1) if PROGRESS["busy"] else 0}
+    token = (query.get("token") or [None])[0]
+    if token and token == PROGRESS["token"]:
+        try:
+            after = max(0, int((query.get("after") or ["0"])[0]))
+        except ValueError:
+            after = 0
+        res = list(PROGRESS["results"])
+        out.update(results=res[after:], count=len(res))
+    return out
 
 
 def set_phase(phase):
@@ -705,8 +734,7 @@ class Handler(SimpleHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         query = urllib.parse.parse_qs(parsed.query)
         if parsed.path == "/api/q/progress":
-            return self.send_json({"busy": PROGRESS["busy"], "phase": PROGRESS["phase"],
-                                   "seconds": round(time.time() - PROGRESS["since"], 1) if PROGRESS["busy"] else 0})
+            return self.send_json(progress_reply(query))
         if parsed.path == "/api/config":
             cfg = load_config()
             cfg["local_branch"] = git_branch()
@@ -849,10 +877,11 @@ class Handler(SimpleHTTPRequestHandler):
                 "has_note": bool((data.get("questionnote") or "").strip())}
 
     def test_run(self, cfg, req):
-        """POST /api/q/testrun {path, index, src, seeds, testcases}: the question tests (default
+        """POST /api/q/testrun {path, index, src, seeds, testcases, progress}: the question tests (default
         all) on the variants with these seeds, in the question's session: per variant one run of
         the question variables, then one short run per test (stack_question.run_tests). The
-        includes are loaded once per session (stack_question.include_plan).
+        includes are loaded once per session (stack_question.include_plan). progress: a token of
+        the page; GET /api/q/progress with it gives the results of the tests done so far.
         -> {runs: [{seed, error, tests: {testcase: check}}], seconds}"""
         target = allowed_path(cfg, req["path"])
         text, _ = qfile.read_file(target)
@@ -862,13 +891,15 @@ class Handler(SimpleHTTPRequestHandler):
         testcases = req.get("testcases")
         t0 = time.time()
         PROGRESS.update(busy=True, since=t0, phase="Maxima session: starting Maxima and loading STACK's library")
+        progress_start_tests(req.get("progress"))
         out = []
         try:
             entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg), current_stack())
             resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
             for k, seed in enumerate(seeds):
                 set_phase("tests on variant %d (%d of %d)" % (seed, k + 1, len(seeds)))
-                r, names = stack_question.run_tests(entry[0], data, seed, resolver, entry[2], testcases)
+                r, names = stack_question.run_tests(entry[0], data, seed, resolver, entry[2], testcases,
+                                                    lambda tc, chk, err, s=seed: progress_add_test(s, tc, chk, err))
                 entry[2] = names
                 out.append(r)
         finally:

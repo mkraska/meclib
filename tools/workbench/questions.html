@@ -119,6 +119,10 @@
   table.vtab button.tc.f { background: #f8dcda; color: var(--err); border-color: #e3a19b; }
   table.vtab button.tc.sp { box-shadow: inset 0 -3px 0 #3a9a3a; } table.vtab button.tc.sf { box-shadow: inset 0 -3px 0 #c0392b; }
   table.vtab button.tc.cur { outline: 2px solid var(--accent); outline-offset: 1px; }
+  /* a test run in progress: cells still to run (w) dashed and neutral, the one running (run) pulses */
+  table.vtab button.tc.w { background: transparent; color: var(--muted); border-style: dashed; box-shadow: none; }
+  table.vtab button.tc.w.run { animation: tcrun 1s ease-in-out infinite; border-color: var(--accent); color: var(--accent); }
+  @keyframes tcrun { 50% { background: #e4ecfb; } }
   table.vtab tr.rest td { opacity: .75; }
   table.vtab td.tres, table.vtab th:last-child { white-space: nowrap; width: 1%; }
   /* coverage: the branches of the PRTs (rows) reached by the tests (columns) */
@@ -654,7 +658,9 @@ function loadScript(src) {
 // Sign of life for a long request (Update, Check): after 2 s a box shows the elapsed time and what
 // the server is doing (GET /api/q/progress, once a second); after 60 s a note that the first run
 // after a start may take up to 3 minutes (MaximaSession.FIRST_RUN_TIMEOUT), then it fails.
-async function withProgress(what, promise) {
+// poll (optional): {query: () => "&token=..", onProgress: (reply) => ...} for requests whose
+// progress reply carries partial results (a test run)
+async function withProgress(what, promise, poll) {
   const t0 = Date.now();
   let box = null, phase = "", stop = false;
   const draw = () => {
@@ -668,7 +674,11 @@ async function withProgress(what, promise) {
   };
   const tick = setInterval(async () => {
     draw();
-    try { const p = await (await fetch("/api/q/progress")).json(); if (p.busy) phase = p.phase; } catch (e) { /* server busy */ }
+    try {
+      const p = await (await fetch("/api/q/progress" + (poll ? "?" + poll.query() : ""))).json();
+      if (p.busy) phase = p.phase;
+      if (poll && !stop) poll.onProgress(p);
+    } catch (e) { /* server busy */ }
   }, 1000);
   try { return await promise; }
   finally { stop = true; clearInterval(tick); if (box) box.remove(); }
@@ -2449,6 +2459,39 @@ function testsToggleState(needs) {
   b.title = inTests ? "back to the editor" :
     "question tests and deployed variants (instead of the editor)" + (needs.length ? "\nto do: " + needs.join("; ") : "");
 }
+// tooltip of a question test (head and cells of the matrix)
+function testTip(qt) {
+  return (qt.description || "(no description)") + "\n" + Object.entries(qt.inputs).map(([n, v]) => `${n} = ${v}`).join("\n") +
+    "\nexpected: " + Object.entries(qt.expected).map(([p, e]) => `${p}: ${e.note} (score ${e.score === "" ? "-" : fmtScore(e.score)})`).join(", ");
+}
+// class and tooltip of the matrix cell of test q on variant seed (cur: the variant in the preview)
+function cellLook(seed, q, cur) {
+  const r = (seedResults[seed] || {})[q.testcase], here = seed === cur;
+  const sr = here ? stackResults[q.testcase] : null, fr = here ? testResults[q.testcase] : null;
+  const bs = batchCellState(seed, q.testcase);
+  const cls = "small tc" + (r === true ? " p" : r === false ? " f" : "") + (sr ? (sr.pass ? " sp" : " sf") : "") +
+    (here && activeTest === q.testcase ? " cur" : "") + (bs === "run" ? " w run" : bs ? " w" : "");
+  const title = testTip(q) + (bs ? (bs === "run" ? "\nrunning ..." : "\nwaiting to run") : "") + (r === undefined ? "\nnot run on this variant" : r ? "\npassed" : "\nFAILED" + (fr && !fr.pass ? ": " + fr.reasons.join("; ") : "")) +
+    (sr ? "\nSTACK: " + (sr.pass ? "passed" : "FAILED: " + sr.reasons.join("; ")) : "") + "\nclick: this test on this variant, in the preview";
+  return { cls, title };
+}
+// during a test run: only the cells of the matrix change (class and tooltip), not the table, so
+// that the question notes are not typeset again; the whole table only if a cell of the run is missing
+function refreshBatchCells() {
+  const t = $("varTable");
+  if (!t || !batchPending) return;
+  const tests = (result && result.qtests) || [], cur = parseInt($("seed").value, 10);
+  const btns = new Map([...t.querySelectorAll("button[data-cell]")].map((b) => [b.dataset.cell, b]));
+  if (batchPending.order.some((k) => !btns.has(k))) { renderVariants(); return; }
+  for (const [key, b] of btns) {
+    const [sd, tc] = key.split(":").map((x) => parseInt(x, 10));
+    const q = tests.find((x) => x.testcase === tc);
+    if (!q) continue;
+    const { cls, title } = cellLook(sd, q, cur);
+    if (b.className !== cls) b.className = cls;
+    if (b.title !== title) b.title = title;
+  }
+}
 function renderVariants() {
   const needs = testsNeeds();
   testsToggleState(needs);
@@ -2468,8 +2511,7 @@ function renderVariants() {
   const tests = (result && result.qtests) || [];
   const firstOf = new Map();          // note -> first seed with it
   for (const v of [...rows].sort((a, b) => a.seed - b.seed)) { const n = v.note[lang] || v.note.de || v.note.en; if (n && !firstOf.has(n)) firstOf.set(n, v.seed); }
-  const tip = (qt) => (qt.description || "(no description)") + "\n" + Object.entries(qt.inputs).map(([n, v]) => `${n} = ${v}`).join("\n") +
-    "\nexpected: " + Object.entries(qt.expected).map(([p, e]) => `${p}: ${e.note} (score ${e.score === "" ? "-" : fmtScore(e.score)})`).join(", ");
+  const tip = testTip;
   let h = `<tr><th>deploy</th><th>seed</th><th>question note</th><th>${tests.map((q) =>
     `<button class="small tc${approvalState(q.testcase) === "ok" ? " ap" : approvalState(q.testcase) === "stale" ? " apstale" : approvalState(q.testcase) === "failed" ? " apfail" : ""}" data-col="${q.testcase}" title="${esc(tip(q))}&#10;${esc(approvalText(q.testcase))}&#10;click: run on every deployed variant">${q.testcase}</button>`).join("") || "tests"}</th></tr>`;
   if (tests.length) h += `<tr class="aprow"><th></th><th></th><th class="hint">approve</th><th>${tests.map((q) => {
@@ -2484,15 +2526,9 @@ function renderVariants() {
       const clash = isDep && dep.includes(firstOf.get(n));
       dup = ` <span class="dup${clash ? " bad" : ""}">same as ${firstOf.get(n)}</span>`;
     }
-    const res = seedResults[v.seed] || {};
     const cells = tests.map((q) => {
-      const r = res[q.testcase], here = v.seed === cur;
-      const sr = here ? stackResults[q.testcase] : null, fr = here ? testResults[q.testcase] : null;
-      const cls = "small tc" + (r === true ? " p" : r === false ? " f" : "") + (sr ? (sr.pass ? " sp" : " sf") : "") +
-        (here && activeTest === q.testcase ? " cur" : "");
-      const t = tip(q) + (r === undefined ? "\nnot run on this variant" : r ? "\npassed" : "\nFAILED" + (fr && !fr.pass ? ": " + fr.reasons.join("; ") : "")) +
-        (sr ? "\nSTACK: " + (sr.pass ? "passed" : "FAILED: " + sr.reasons.join("; ")) : "") + "\nclick: this test on this variant, in the preview";
-      return `<button class="${cls}" data-cell="${v.seed}:${q.testcase}" title="${esc(t)}">${q.testcase}</button>`;
+      const { cls, title } = cellLook(v.seed, q, cur);
+      return `<button class="${cls}" data-cell="${v.seed}:${q.testcase}" title="${esc(title)}">${q.testcase}</button>`;
     }).join("");
     h += `<tr class="${isDep ? "dep" : "rest"}${v.seed === cur ? " cur" : ""}"><td><input type="checkbox" data-seed="${v.seed}"${isDep ? " checked" : ""}></td>` +
       `<td><button class="small" data-show="${v.seed}" title="show this variant in the preview">${v.seed}</button></td>` +
@@ -2513,7 +2549,7 @@ function renderVariants() {
     runCell(sd, tc);
   });
   for (const b of t.querySelectorAll("button[data-col]")) b.addEventListener("click", () => runColumn(parseInt(b.dataset.col, 10)));
-  for (const b of t.querySelectorAll("button[data-approve]")) b.addEventListener("click", () => approveTest(parseInt(b.dataset.approve, 10)));
+  for (const b of t.querySelectorAll("button[data-approve]")) b.addEventListener("click", () => { if (!batchPending) approveTest(parseInt(b.dataset.approve, 10)); });
   renderTestDetail();
   const cov = coverage();
   renderInputPrts();
@@ -2747,30 +2783,65 @@ function batchTimingHTML(t) {
     <span class="hint">seconds: wall time / time computing in Maxima; the tooltip names the slowest parts</span></details>`;
 }
 // tests on variants in one request (/api/q/testrun): per variant the question variables once, the
-// includes once per session; the preview is not touched (a cell button shows a run in it)
+// includes once per session; the preview is not touched (a cell button shows a run in it). While
+// it runs, the progress replies bring the tests done so far: their cells are coloured at once, the
+// cells still to run are marked as waiting (batchPending), the first of them as running.
+let batchPending = null;   // {order: ["seed:testcase", ...], left: Set of those not done yet}
+function batchCellState(seed, tc) {
+  if (!batchPending) return "";
+  const key = seed + ":" + tc;
+  if (!batchPending.left.has(key)) return "";
+  return batchPending.order.find((k) => batchPending.left.has(k)) === key ? "run" : "w";
+}
+// one test on one variant: its result in seedResults (and the route for the coverage);
+// agg (optional) collects pass and reasons per test
+function applyTestRun(seed, qt, chk, error, agg) {
+  const r = compareTest(qt, chk);
+  if (error) { r.pass = false; r.reasons.unshift("question variables: " + error); }
+  (seedResults[seed] = seedResults[seed] || {})[qt.testcase] = r.pass;
+  for (const [P, x] of Object.entries(chk.prts || {}))      // the actual route, for the coverage
+    if (!x.skipped) (actualRoutes[qt.testcase] = actualRoutes[qt.testcase] || {})[P] = String(x.notes || "").split(" | ").filter(Boolean);
+  if (!agg) return;
+  const a = agg[qt.testcase] = agg[qt.testcase] || { pass: true, reasons: [] };
+  if (!r.pass) { a.pass = false; a.reasons.push(...r.reasons.map((x) => `variant ${seed}: ${x}`)); }
+}
 async function runBatch(seeds, tcs) {
   if (!file || qindex === null || testMode) return;
   if (!(await flush())) return;
+  const tests = (result && result.qtests) || [], agg = {};
+  const run = tests.filter((q) => !tcs || tcs.includes(q.testcase));
+  const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const order = seeds.flatMap((sd) => run.map((q) => sd + ":" + q.testcase));
+  batchPending = { order, left: new Set(order) };
+  let seen = 0;
+  const poll = {
+    query: () => `token=${token}&after=${seen}`,
+    onProgress: (p) => {
+      if (!p.results || !batchPending) return;
+      seen += p.results.length;
+      for (const x of p.results) {
+        const qt = tests.find((q) => q.testcase === x.testcase);
+        if (qt) applyTestRun(x.seed, qt, x.check, x.error);
+        batchPending.left.delete(x.seed + ":" + x.testcase);
+      }
+      if (p.results.length) refreshBatchCells();
+    },
+  };
+  refreshBatchCells();
   let data;
   try {
     data = await withProgress("Question tests", postJSON("/api/q/testrun",
-      { path: file.path, index: qindex, src: $("src").value, seeds, testcases: tcs || null }));
-  } catch (e) { showMessages([{ cls: "err", text: "Test run failed: " + e.message }], true); return; }
-  const tests = (result && result.qtests) || [], agg = {};
-  for (const run of data.runs) {
-    seedResults[run.seed] = seedResults[run.seed] || {};
-    for (const qt of tests) {
-      const chk = run.tests[String(qt.testcase)];
-      if (!chk) continue;
-      const r = compareTest(qt, chk);
-      if (run.error) { r.pass = false; r.reasons.unshift("question variables: " + run.error); }
-      seedResults[run.seed][qt.testcase] = r.pass;
-      for (const [P, x] of Object.entries(chk.prts || {}))      // the actual route, for the coverage
-        if (!x.skipped) (actualRoutes[qt.testcase] = actualRoutes[qt.testcase] || {})[P] = String(x.notes || "").split(" | ").filter(Boolean);
-      const a = agg[qt.testcase] = agg[qt.testcase] || { pass: true, reasons: [] };
-      if (!r.pass) { a.pass = false; a.reasons.push(...r.reasons.map((x) => `variant ${run.seed}: ${x}`)); }
-    }
+      { path: file.path, index: qindex, src: $("src").value, seeds, testcases: tcs || null, progress: token }), poll);
+  } catch (e) {
+    batchPending = null; renderVariants();    // the cells as before the run
+    showMessages([{ cls: "err", text: "Test run failed: " + e.message }], true); return;
   }
+  batchPending = null;
+  for (const r of data.runs)
+    for (const qt of tests) {
+      const chk = r.tests[String(qt.testcase)];
+      if (chk) applyTestRun(r.seed, qt, chk, r.error, agg);
+    }
   Object.assign(testResults, agg);
   lastBatchTiming = { seconds: data.seconds, runs: data.runs.map((r) => ({ seed: r.seed, time: r.time })) };
   const bad = Object.entries(agg).filter(([, a]) => !a.pass).map(([tc]) => tc);

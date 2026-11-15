@@ -643,6 +643,9 @@ question with inputs needs question tests.
   every deployed variant; "Tests on deployed" runs all tests on all of them. These two run in
   one request (POST `/api/q/testrun`): per variant the question variables once, then each test
   (its inputs and the PRTs) as a short run of its own; the preview is not touched.
+  While they run, each cell is coloured as soon as its test is done (GET
+  `/api/q/progress` with the token of the run); the cells still to run have a
+  dashed border, the one running pulses. The result at the end decides.
 - **Test details:** after a test has run on a variant: its inputs (expression
   and value), per PRT the expected and the actual score, penalty and route
   (differences in red), and the route node by node: answer test with SAns,
