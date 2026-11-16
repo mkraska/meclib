@@ -42,3 +42,5 @@ Changes of the drafts (the table below lists them as they came):
 | Feedback for Free Body Diagrams.md | `Feedback for Free Body Diagrams` | link to `fb_fbd()` at the top of the list; section Duplicate Names: the unfinished `fb_duplicates()` draft replaced by a link to `fb_unique_names()` |
 | History.md | `History` | entries 2026 10 08 to 10 11; sections rearranged after the merges |
 | (none) | `"fix"` | delete the page: it is an orphaned overview from 2022 (no object "fix" exists, nothing links to it); the overview is the page "List of Objects" |
+| Labels and names.md | `Labels and names` (new page) | how `toTEX()` typesets object names (Greek letters, accents, subscripts) and why names stay Maxima (input `names`); linked from Home, List of Objects, Maxima Naming Restrictions |
+| angle.md ... springt.md (26 object pages with labels) | `"angle"`, `"force"`, ... | the `"name"` item links to [[Labels and names]] |

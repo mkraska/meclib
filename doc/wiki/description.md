@@ -2,7 +2,7 @@
 
 Label with a leader line, e.g. a friction coefficient pointing at a rough surface.
 
-- `"label"` text, typeset in MathJax math mode (e.g. `"\\mu_0=0.3"`; spaces become small math spaces, as in all meclib labels)
+- `"label"` text, typeset in MathJax math mode (e.g. `"\\mu_0=0.3"`; see [[Labels and names]])
 - `[x1, y1]` start point of the line, e.g. on the surface
 - `[x2, y2]` center of the label
 - `gap` (optional, default `4`) space in pixels between the end of the line and the label's bounding box

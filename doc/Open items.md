@@ -63,6 +63,21 @@ Environment facts:
 
 - Review rule for verbatim copies of `meclib.js` in question texts (found in TM1 06 01 Aufgabe 2c, fixed by hand). Add the rule only if more such questions turn up.
 
+- `toTEX()` in `meclib.js` (Martin, 2026-11-16, TM3 08 07): names that stand for Greek letters (`alpha`, `Delta`,
+  also with subscript or factor such as `Delta_p`, `Delta*p`) get a backslash in labels (`\\alpha`, `\\Delta\\;p`).
+  Reason: object names go into the `names` input, which must hold valid Maxima (no backslash, and `NONAME` is not
+  allowed either), so a TeX name such as `"\\Delta p"` on a force or angle makes the input invalid in Moodle.
+  Questions load `meclib.js` from `main`, so this takes effect only after the merge.
+  Done in `dev2026` (2026-11-16, test `tests/js/test_toTEX.js`; `phi`/`epsilon` as \\varphi/\\varepsilon like STACK,
+  `alpha1` → `\\alpha_{1}`; no gap after Delta/delta; accents `hat`, `dot`, `ddot`, `bar` as suffix, e.g. `Fhat`,
+  `x_ddot`, `phi_ddot`); open: Martin's test, merge to `main` (TM3 08 07 already uses `Fhat` and `alpha`).
+  Documented on the new wiki page "Labels and names" (draft in `doc/wiki`, linked from all object pages with labels).
+- Done in `dev2026` (2026-11-16): `cleanupName()` (forceGen, momentGen) keeps Greek names and accents (base, accent,
+  subscript: `x_ddot m` → `xddot m`, `F_hat_A` → `Fhat_A`), name field grows with the name; test `tests/js/test_cleanupName.js`.
+- Idea (Martin and Claude, 2026-11-16, to be tested): Maxima function that writes the `texput` entries for a list of names
+  by the rules of `toTEX()`, e.g. `meclib_texput([Fhat, Ahat, xddot, phiddot])`, so sketch and STACK show the same.
+  Maybe also an issue/pull request for STACK (accent suffixes in the display of names, like Greek names).
+
 ### Performance and refactoring ideas (no decision yet)
 
 - `meclib.js`: check whether a minified version helps the load time. Check first that the minifier does not break castext markers (`{@...@}`, `[[...]]`) or the version string at the top.
@@ -86,6 +101,12 @@ See "Planned" in `tools/workbench/README.md`: folder tree, review of a whole fol
   - Single changes in between: browser automation of "Import as new version".
   - Export and import of a category only if "import as new version" works for a whole category (otherwise the
     quizzes keep pointing to the old questions).
+- Review rule `prt.simp` (2026-11-16, TM3 08 07): no hint when no unit can be lost, i.e. when the first argument of
+  `fb_unit()` is a feedback variable (e.g. an angle shifted by 360° in the feedback variables) or the input is of type
+  `numerical`. Martin: unnecessary hints reduce the attention for hints in general. Discuss before implementing
+  (test case in `test_rules.py` first).
+- Check button of the preview: choice between the workbench evaluation and the STACK API (Docker) (Martin,
+  2026-11-16). Not discussed yet.
 
 ### Feedback functions (from earlier sessions, still open)
 

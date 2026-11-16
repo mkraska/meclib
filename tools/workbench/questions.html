@@ -3391,6 +3391,8 @@ async function runGraphics(container, blocks) {
   let src;
   try { src = await F.loadMeclib($("src").value); }
   catch (e) { showMessages([{ cls: "err", text: e.message }], true); return; }
+  // version details of the loaded meclib.js as tooltip of the source selector
+  $("src").title = "Meclib " + src.version + (src.info ? ", " + src.info : "");
   for (const slot of slots) {
     // the graphic starts from the current value of its objects input (e.g. after "Model answers")
     const ref = /input-ref-([A-Za-z0-9_]+)\s*=\s*["']stateRef["']/.exec(blocks[+slot.dataset.jsx]);

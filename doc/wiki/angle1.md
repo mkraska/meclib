@@ -2,7 +2,7 @@
 
 angular dimension consisting of two radial lines, arc with a single arrow and label. 
 
-- `"name"` label text, typeset in MathJax math mode
+- `"name"` label text, typeset in MathJax math mode (see [[Labels and names]])
 - `[xc, yc]` center point
 - `[xs,ys]` end point of radial baseline 
 - `radius` radius of the arc
