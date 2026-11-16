@@ -30,8 +30,8 @@ not) and are saved continuously while you work.
   port, `--no-browser` to skip opening the browser).
 
 Requirements: Python 3 (standard library only), an internet connection for
-GitHub sources, JSXGraph and MathJax, and Maxima for the Questions page (see
-below).
+GitHub sources, JSXGraph and MathJax (or local copies, see "Working offline"
+under Configuration), and Maxima for the Questions page (see below).
 
 ## Graphic
 
@@ -69,7 +69,34 @@ meclib.js, and width, height and `input-ref-...` attributes are taken from
 the opening tag.
 
 The page keeps its fields in the browser, so the last graphic is there again
-after a restart. To keep a graphic for later, save it as a question.
+after a restart. To keep a graphic for later, save it as a graphic file (or as
+a question).
+
+**Graphic file** (top of the left column): a graphic can be kept as a file of
+its own, without making a question or a test case of it.
+- **New** starts an empty graphic (a grid only), with an empty start state,
+  the decimal point and the interactive [[jsxgraph]] preset.
+- The list opens a graphic file. It shows the files `*.graphic.json` of all
+  question folders (and their subfolders), grouped by folder; ↻ lists them
+  again.
+- **Save** (Ctrl+S) writes `<Name>.graphic.json` into the chosen folder ("..."
+  chooses another one, which is then added to the question folders). The file
+  that is open is saved again without asking; another existing file is
+  overwritten only after asking.
+- **PNG** writes the graphic as it is shown now (with the changes made in the
+  graphic, else the start state) as `<Name>.png` into the chosen folder, at
+  twice the resolution, without the border of the board and without the
+  version text; an existing PNG of that name is replaced. The server draws it
+  in a headless browser, so it needs Playwright (`pip install playwright`,
+  `python -m playwright install chromium`), as `build_shelf_icons.py`.
+- The badge in the heading shows the name of the open file and "changed" if
+  the fields differ from the file. New and opening a file ask before
+  discarding such changes. A graphic taken over from a question or a test
+  case is not connected to a file.
+
+A graphic file has the format of a test scene without cases (`title`,
+`initdata`, and if they differ from the defaults `decsep` and `block`), plus
+the start state as `state`.
 
 ## Questions
 
@@ -79,7 +106,17 @@ after a restart. To keep a graphic for later, save it as a question.
   system's folder dialog; it may open behind the browser window) or by
   pasting a path into the field below (kept until removed), and the
   workbench inbox (`.cache/questions/`).
-  Each folder lists its `.xml` files, including subfolders.
+  Each folder lists its `.xml` files, including subfolders. The file names are
+  coloured by the review state of their STACK questions (the worst one in a
+  file): red a required finding, orange recommended findings or tests to do
+  (PRT branches without a test, tests not approved or out of date - from the
+  saved tests, without Maxima), green nothing to do (with a dot: hints only),
+  uncoloured not checked yet. The server reviews the files in the background
+  (POST `/api/q/states`, a few files per request) and caches the result in
+  `.cache/review_states.json` by file time and version of `rules.py`; the tooltip
+  lists the counts and titles. The open file is checked again after each change;
+  "Check" at a folder checks its files again (changed files only, the rest comes
+  from the cache).
 - Dropping a Moodle XML file onto the page (or clicking the drop area) copies
   it into the folder last chosen in the list (the browser does not tell the
   page where a dropped file came from, so the copy is what you edit).
@@ -98,8 +135,11 @@ file: the category path below "top" (`$module$/top/06 Kinematik` ->
 entry ("import as new version" accepts exactly one `<question>` element, and a
 category entry counts as one); for a plain import choose the category in
 Moodle's import form. The original file is renamed to
-`<name>.xml.orig` (kept as a backup, no longer listed), and the question that
-was open is opened from its new file. The files column shows folders by
+`<name>.xml.orig` (kept as a backup, no longer listed, and a sign that the
+category has been split), and the question that was open is opened from its
+new file. A question that already has its file (split before, maybe edited
+since) is never written again: the split then lists those files and offers to
+write only the new questions (or writes nothing if there are none). The files column shows folders by
 their last name (full path as tooltip) and files in subfolders under the
 subfolder name.
 
@@ -112,7 +152,7 @@ hides the files column.
 **Side bars**: each column has a narrow bar beside it with its buttons and
 its sections, always in reach while the column scrolls.
 
-- Editor bar: ↶ / ↷ (undo, redo), Snippet, Graphic ↗, then the sections Review,
+- Editor bar: ↶ / ↷ (undo, redo), Rename, Snippet, Graphic ↗, then the sections Review,
   Variables, Text, Inputs, Options, General FB, Specific FB, Note, PRTs and
   each PRT by name.
 - Preview bar: Restart, Update (save and evaluate, Ctrl+Enter), TAns (model answers), Check, the question tests, de / en, `0.5` / `0,5`,
@@ -134,7 +174,14 @@ specific feedback, question note, each text with its format, and the PRTs.
 simplification, feedback style and feedback variables; per node description,
 answer test, SAns, TAns, test options, quiet, and per branch (true/false)
 score mode and score, penalty, next node, answer note and feedback with its
-format. Changes are saved like the other fields. "+ node" in a branch adds a
+format. The answer tests are STACK's (names as stored in the file, e.g.
+`Units` for the units test with significant figures): each entry of the list,
+the list itself and the options field have a tooltip with what the test does
+and what its option is (the options field also as grey placeholder; Firefox
+shows the tooltips of the entries in the open list, Chrome and Edge only that
+of the list); "?" opens the page of the STACK documentation for the chosen
+test, "examples" STACK's own test cases of it (Answer_Tests/Results).
+Changes are saved like the other fields. "+ node" in a branch adds a
 node that this branch leads to, "+ Node" below the nodes an unlinked one; ✕
 deletes a node (branches leading to it then end the PRT; the first node - the
 one no branch leads to, as in STACK - cannot be deleted) or the whole PRT
@@ -231,7 +278,10 @@ line Alt+G) and syntax highlighting:
   between `\(`/`\)`, `\[`/`\]` with one to three backslashes
 
 Tab inserts two spaces. Messages about a line of the question variables
-(errors, assumed semicolons) jump to that line when clicked. Without the
+(errors, assumed semicolons) jump to that line when clicked. Errors are listed
+first, then warnings, then the rest (also a failed Check, added later); what
+the question variables print (e.g. with `debug:true`) and the slow lines under
+the Maxima times are collapsed groups. Without the
 editor library (no network, see Configuration) the fields are plain text
 fields.
 
@@ -316,12 +366,32 @@ when the score is 1) and the answer note - the expected note is the last one
 of the PRT, or a pattern as in STACK (`[` anchors the first note, `)` frees
 the last one, `a | b` lists notes in order; `NULL`: the PRT does not run).
 The answer notes of the fast check are those of the nodes (STACK also lists
-the notes of the answer tests, which a pattern rarely names). "+" stores the
-current answers and the result of their check as a new test case (with a
-description); an input with the model answer is stored as its expression
-(e.g. `NN`), which holds for every variant, as STACK's default test. "✎"
-replaces the inputs and expected results of the selected test by the current
-ones or changes its description, "✕" (click twice) deletes it, "▶" runs all.
+the notes of the answer tests, which a pattern rarely names).
+"+" (new test) and "✎" (edit the selected test) put the preview into **test
+mode** (red instead of blue, with a bar above the question): the inputs take
+CAS expressions in Maxima syntax that may use question variables, e.g. a
+typical error prepared as `J_err1`, which holds for every variant of a
+randomised question. Check evaluates the expressions for the current variant
+(as STACK evaluates test inputs) and grades their values; the validation shows
+the value ("→ ..."). Another seed keeps the expressions, so other variants can
+be checked before saving. For a new test the inputs keep their current
+answers, an input with the model answer becomes the name of its variable
+(e.g. `NN`, as STACK's default test); "✎" fills in the stored expressions.
+Choice, matrix and string inputs are entered as usual and stored with their
+value. "Add test" / "Replace test" store the expressions (not their values)
+and the result of their check as expected result, "Save description only"
+changes just the description; saving or "Cancel" ends the test mode and brings
+back the answers from before. "✕" (click twice) deletes the selected test,
+"▶" runs all.
+STACK stores a test input value in a database column of 255 characters; a
+longer value (typically the `objects` state of a graphic) would make the import
+into Moodle fail ("error writing to the database"). Such a value goes into a
+question variable `qt<test>_<input>` at the end of the question variables
+(under a comment line), and the test input holds its name - STACK evaluates
+test input values with the question variables, so the test is the same.
+Replacing or deleting the test updates or removes the variable. The review
+reports older test cases with too long values (`tests.value-length`,
+required) and moves them the same way.
 The check is the workbench's fast one in Maxima. **STACK ▶** runs all tests in
 STACK itself (below): the buttons get a green or red line for that result,
 failures are listed under them.
@@ -332,7 +402,8 @@ with STACK's input validation, compilation and PRTs - for the question tests
 once on this machine for the STACK version of the Moodle server
 (`config/stack/<version>/`) and its Maxima version, plus a small web server
 that offers the Maxima files of the working copy to `stack_include` (meclib
-source "local working copy"; with dev or main the includes come from GitHub):
+source "local working copy"; with dev or main the includes come from GitHub).
+Set-up: see "STACK API (optional)" under Configuration.
 
     cd tools\workbench
     python stackapi.py build --maxima 5.45.1      (once: 10-20 minutes)
@@ -362,7 +433,7 @@ answers, so a PRT edit shows its effect at once. A new variant (seed) or
 another question starts empty; **Restart** clears the answers and the
 feedback by hand (as "Start again" in Moodle's preview).
 
-Approximations: STACK's input validation is not reproduced. The workbench
+Approximations: STACK's input validation is only approximated. The workbench
 converts a decimal comma to a point (and `;` to `,`), inserts `*` for spaces
 and implied products according to "insert stars", and accepts whatever then
 parses in Maxima (no forbidden words, no syntax checks). One rule of STACK's
@@ -401,69 +472,24 @@ greyed and stay unchecked. The record is kept in the question description
 `Revised by Meclib Workbench <date>`, `Review rejected: <rule[target]>, ...`;
 other text in that field is kept.
 
-Current rules: forbidden identifiers; broken `style=style="..."` attributes;
-margin of right/left floating blocks (graphic); empty `[[lang]]` declaration when meclib feedback is used;
-obsolete `fb_*_EN.mac`; settings of the graphic's inputs (objects, names);
-input settings (insert stars: spaces only, none for numbers; placeholder hint;
-validation compact; students must verify); multilingual syntax hints (the fix
-adds `stack_include` of `fb_value.mac` if the question lacks it); PRT
-feedback style compact, feedback format html (Markdown suppresses the yellow
-feedback background), quiet answer test with meclib
-feedback, simplification off with `fb_unit`; relative tolerance other than
-0.005 (hint); default mark 0 with PRTs; object indices written as numbers
-(hint: use variables like `i_A`); model answer of the graphic equal to its
-initial state (hint); legacy state `"locked"`, replaced by `"SHOW"` (`fb_system()` counts only
-SHOW/show as shown) for object types with a regression test, i.e. types that
-appear with `"SHOW"` in a scene of `tests/scenes/` (`state_show.json`: beam,
-q, fix1, fix12, fix123, bar, force, moment); other types get a hint.
+The rules - key, level, automatic fix, what they check and why - are listed on
+the wiki page [Meclib Workbench Review Rules](https://github.com/mkraska/meclib/wiki/Meclib-Workbench-Review-Rules)
+(`doc/wiki/Meclib Workbench Review Rules.md`). The page is generated from
+`rules.py` (docstrings of the rule functions and the messages of their
+findings): after a change of the rules run `python build_rules_doc.py`, which
+also names rule functions without an explanation.
 
-Math delimiters (`text.math-delimiters`): in HTML texts `\( ... \)`; in
-Markdown texts the strict form `\\\( ... \\\)` (backslash and bracket both
-escaped, so Markdown never takes the bracket for part of a link), except
-inside block-level HTML (a line starting with `<p>`, `<table>`, `<div>` ...
-up to its closing tag), which Markdown passes through unchanged: there
-`\( ... \)` as in HTML. Checked: question text, general and specific
-feedback, question note, PRT node feedback, each by its own format; only
-complete pairs, not in `[[jsxgraph]]` blocks or `{@...@}`/`{#...#}`.
-
-Matrix inputs (`matrix.layout`, `matrix.feedback`, wiki "Matrix input" and
-"Matrix Feedback"): a paragraph `<p>label [[input:S_X]] [[validation:S_X]]
-[[feedback:X]]</p>` becomes a table row label | input | validation with the
-feedback below; PRT `X` gets the feedback variable
-`[txt, isOK]: fb_unit_matrix(S_X, T, tol)` (numeric: a numeric answer test,
-`fb_unit` or the old `toList` pattern; the answer test becomes AlgEquiv
-`isOK` = `true`, `toList` is removed) or `txt: fb_vars_matrix(S_X, T, vars)`
-(otherwise; AlgEquiv on the matrix stays), feedback `{@txt@}` in both
-branches, quiet. `T` is the input's model answer; tolerance and `vars` are
-taken from the old PRT, simple symbol labels of the old per-component
-feedback (`<br>\(N\): {@fb_unit(...)@}`) become the label list. PRTs with
-several nodes or other feedback text get a hint only.
-
-Unused embedded files (`files.unused`): files stored in the question (`<file>`
-elements of its texts) that no text shows as `@@PLUGINFILE@@/name` - usually
-leftovers of earlier versions edited in Moodle (an image replaced in the editor
-keeps the old file). The message names where the file is stored and which
-text shows another file of the same type instead (probably its newer
-version). The review shows the image;
-the fix removes all copies of that file from the question.
-
-meclib from a branch other than main (`include.branch`, a hint): a
-`stack_include` of `mkraska/meclib/<branch>/...` with a branch other than
-`main` (e.g. while a feature exists only on the dev branch). The fix switches
-the URL to main - only after the branch is merged, as main may lack the
-functions the question uses.
-
-Local copies of meclib functions (`functions.legacy`): a function defined in
-the question variables that a meclib Maxima file defines too (older questions
-carried their own copies of the feedback functions). Reported when that file
-is included (the local copy hides the current version) or the name starts
-with `fb_`. The fix deletes the definition and adds the include if missing.
-
-Missing `;` in Maxima code (`maxima.semicolon`): where a line ends a complete
-statement and the next line starts an assignment or call, STACK assumes a
-missing `;` (the preview reports it in the messages). The fix writes the `;`
-into the question variables or the PRT's feedback variables, right after the
-statement (before a trailing comment).
+**Rename** renames a question or feedback variable, an input or a PRT
+everywhere in the question (select the name first to take it): in Maxima code
+(question and feedback variables, model answers, SAns/TAns/options and scores
+of the nodes, values of test inputs) as an identifier outside strings and
+comments, in the Maxima parts of the texts (`{@..@}`, `{#..#}`, `[[if]]`,
+`[[define]]`, `[[foreach]]`, not their plain text), for an input also
+`[[input:]]`, `[[validation:]]`, `input-ref-` and the test inputs, for a PRT
+`[[feedback:]]` and the expected test results. Answer notes stay as they are.
+The new name must be free and, for a variable or input, not a STACK unit. A
+name that is a PRT and also a variable is asked for (POST `/api/q/rename`).
+The fix of `qv.unit-name` uses it (`g` → `g0`).
 
 **Snippet ...** inserts a text snippet at the cursor of the field last
 edited: the interactive and the fixed [[jsxgraph]] block, the empty
@@ -475,6 +501,18 @@ there (see its README).
 graphics and the images embedded in the file (`@@PLUGINFILE@@/...`); the inputs follow the graphic live. **Graphic ↗** opens the
 question's graphic (first [[jsxgraph]] block, initdata as evaluated) on the
 Graphic page.
+
+**Conditional text** (`[[if]]` / `[[elif]]` / `[[else]]` in the question text):
+every branch is shown, with a label giving its test and the test's value
+(`if F1>F2 → true`); the branch STACK shows in this variant has a green
+background, the others a grey one and greyed text (paragraphs and other blocks
+also a line on the left, so the extent of a branch is visible). A branch that cannot be rendered in this variant (e.g.
+an expression the `[[if]]` guards) or that contains `[[define]]` (rendering it
+could change variables used later) is shown greyed as its source. The button
+"⇄" at a label switches to what Moodle shows (only the active branches, the
+small button stays) and back; the choice is kept. Not marked: `[[if]]`
+inside `[[jsxgraph]]` blocks, HTML tags and math, and in other texts than the
+question text.
 
 The right column shows messages (Maxima errors with the line of the question
 variables, assumed missing semicolons, where `stack_include` files came
@@ -499,9 +537,12 @@ functions:
   the page in a small separate window (always the same one). For a function
   with offline Maxima tests, "tests (n)" opens the Tests page at its first
   case (`tests.html#mtest=<file>&case=<n>`): examples of what it returns.
-  Esc closes the box.
+  Esc closes the box. Settings variables of meclib (entries of kind
+  `variable` in `syntax_help_extra.json`, so far `fb_dims`) have the box
+  anywhere in their assignment, e.g. `fb_dims: [a = "m", ...]`.
 - **Autocomplete**: after two characters of a name, a list of matching
   functions with their signatures (meclib first, then STACK and Maxima);
+  a settings variable is inserted as an assignment (`fb_dims: [ ]`);
   after `["` the meclib object types. **Ctrl+Space** opens the list at any time.
 - **Castext snippets** (outside `{@ @}` and `[[jsxgraph]]`): `\` offers
   `\( \)` and `\[ \]` with the delimiters the format needs (Markdown:
@@ -576,7 +617,103 @@ answer is modified on the Maxima level), `stack_include` of `fb_fbd.mac` and
 empty `[[lang]]` declaration (so that the feedback functions' texts get a
 language), Markdown format. It has no PRT yet and therefore default mark 0.
 
+### Tests column
+
+"Tests" in the editor bar replaces the editor by the Tests column; there the same button reads
+"Editor" and goes back. The choice is kept. It follows STACK's guidelines for question
+authoring (`agents/stack_essentials.md` in moodle-qtype_stack): a randomised
+question needs deployed variants with distinct question notes, and every
+question with inputs needs question tests.
+
+- **Variants:** the question notes of the deployed variants are loaded by
+  themselves when the column shows a question (and after a change of the
+  deployed seeds; POST `/api/q/variants` with `seeds`). "Survey" evaluates the question variables and the question
+  note for the seeds 1..N (N on the page, default 10, kept) and the deployed
+  seeds, one Maxima run per seed (POST `/api/q/variants`; the progress box
+  shows the seed). Errors and repeated notes are marked ("same as 3"; red
+  when two deployed variants share a note). A tick deploys a variant or takes
+  it out: `<deployedseed>` is written to the file at once, after the PRTs
+  (POST `/api/q/seeds`, undo as other edits). The seed button shows the
+  variant in the preview.
+- **Matrix of variants and tests:** each row (deployed variants first, then
+  the other surveyed ones) has a button per question test. A click shows that
+  variant in the preview, fills in the test and checks it; green passed, red
+  failed, grey not run on that variant, a bar below: the result in STACK
+  itself (variant in the preview). A test number in the head runs the test on
+  every deployed variant; "Tests on deployed" runs all tests on all of them. These two run in
+  one request (POST `/api/q/testrun`): per variant the question variables once, then each test
+  (its inputs and the PRTs) as a short run of its own; the preview is not touched.
+  While they run, each cell is coloured as soon as its test is done (GET
+  `/api/q/progress` with the token of the run); the cells still to run have a
+  dashed border, the one running pulses. The result at the end decides.
+- **Test details:** after a test has run on a variant: its inputs (expression
+  and value), per PRT the expected and the actual score, penalty and route
+  (differences in red), and the route node by node: answer test with SAns,
+  TAns and options, the compared values typeset, the result, the score after
+  the branch, the branch's answer note and the answer test's own note. The
+  same boxes appear below each PRT graph after a Check.
+- **Approval:** the row "approve" in the head of the matrix has a ✓ under
+  each test number. It is active only when the test has passed in this
+  session on every deployed variant (on the variant in the preview if none is
+  deployed); otherwise it is grey and its tooltip says why. A click records
+  the approval in the question description ("Tests approved: 2 [2026-11-11
+  c7db0766]", POST `/api/q/approve`); the expected result of the test is not
+  changed. The fingerprint covers question variables and options, inputs, the
+  PRTs without their feedback texts, and the test itself; when it changes,
+  the approval is out of date (setting in `⋯`: "approval lapses when the
+  question changes", on by default). A test number in the head of the matrix
+  has a green bar when approved, an amber one when out of date and a red one
+  when its last run failed on a variant (badge "not valid: the test failed on
+  variant …"); such a test counts as not approved.
+- **Inputs and PRTs:** which PRT reads which input (feedback variables,
+  SAns, TAns, options), both in the order of the question text; red: an
+  input no PRT grades (not one bound to a graphic), a PRT that reads no
+  input. The review rules `inputs.no-prt` and `prt.no-input` say the same.
+- **Coverage:** every branch (node true/false) of every PRT with its answer
+  note, against the tests: ● the expected route of the test names the
+  branch's note; ○ a test that names only the last note of a PRT with several
+  nodes (STACK before 4.13 compared only that one): the branch is from the
+  route of its last run - write the full route. A branch no test reaches is
+  red; then "+" and "Tests" are red, and the matrix shows as a callout on
+  "+". Aim: every node once true and once false.
+- **Editor bar** in this view: Editor (the switch, back to the editor), Survey, Tests on deployed, new test (+, red
+  while there is none), run all tests on the variant in the preview (▶),
+  STACK ▶, edit (✎) and delete (✕) the test last run, and jumps to the
+  sections; the editor's buttons (snippets, graphic, sections) are hidden.
+- "Tests" in the editor bar is red when something is to do: no question tests,
+  a branch without a test, tests not approved (or out of date), failing tests, a randomised question without deployed variants, deployed
+  variants with the same note or with an error (the reasons are in its tooltip
+  and at the top of the column).
+
+A question is randomised as STACK decides it (`has_random_variants()`): a word
+of the question variables that begins with `rand`, `multiselqn` or
+`stack_seed`. The review reports a randomised question without deployed
+variants or without question note, and a variable named `rand...`.
+
 ### Evaluation
+
+Each question is evaluated in its own Maxima session (Maxima with STACK's
+library loaded, kept for further updates and checks; at most three, the least
+recently used is closed). Starting a session takes several seconds, so the
+server keeps one more session started in the background: a question evaluated
+for the first time takes it at once (status line: "Maxima session started in
+advance"), and the next one starts. A change of the Maxima or STACK version
+closes all sessions and starts the spare one with the new version.
+
+A `stack_include` file is loaded once per session: later runs leave it out while its content is
+unchanged (a checksum: a file fetched again from GitHub with the same content counts as unchanged)
+and the question variables (now and in the run before) assign no name the file defines; otherwise
+it is loaded again. A change in the working copy (meclib source "local working copy") is picked up
+by the next Update or Check. The messages say what happened ("includes reused: ..." or "includes
+loaded again: fb_value.mac changed").
+
+A run of Maxima (Update, Check) is stopped after 60 s; the first run in a new
+session may take 180 s (on Windows it can take much longer than the next
+ones). While it runs, a box at the lower right shows after 2 s the elapsed
+time and what the server is doing (starting Maxima, loading an include from
+GitHub, evaluating; GET `/api/q/progress`), after 60 s with a note on the
+limit. A run that is stopped is reported at the top of the messages and in
+the status line.
 
 Maxima is found on the PATH or in the usual Windows install locations
 (every `C:\maxima-*`, `Program Files`, `LOCALAPPDATA`); otherwise set
@@ -614,7 +751,10 @@ Rendering follows STACK where it matters for checking a question: the
 question options (decimal separator, multiplication sign, ...), castext
 (`{@...@}`, `{#...#}`, `[[if]]`, `[[foreach]]`, `[[define]]`, `[[comment]]`,
 `[[lang]]`), math mode detection for `{@...@}`, and Markdown texts including
-Markdown's backslash escapes. In Markdown, write math as `\\\( ... \\\)`:
+Markdown's backslash escapes. `plot()` in castext (also `{@plot(...)@}` in
+the feedback) writes its SVG to `.cache/plots/` (emptied at server start),
+served under `/plots/`; gnuplot is taken from the Maxima installation
+(`<maxima>/gnuplot/bin/gnuplot.exe`), else from the PATH. In Markdown, write math as `\\\( ... \\\)`:
 STACK detects math mode for `{@...@}` only after three backslashes (with
 `\\( {@x@} \\)` it puts extra delimiters around `x`, which breaks the
 formula). HTML blocks inside Markdown (lines starting with `<p>`, `<div>`,
@@ -717,6 +857,14 @@ of the file that calls `fb_check` (e.g. `cr_check`). "used by" links of a
 scene case open the Maxima test file. The tree (`tree.js`) is a component of
 its own, meant for the question folders of the Questions page, too.
 
+**Tests of the workbench itself** (`tools/workbench/tests/`): Python `unittest`
+cases for the workbench code, so far for the review rules (`test_rules.py`:
+small STACK questions with the findings expected, and the result of applying
+the fixes). No Maxima and no running workbench needed. Run
+`tests/run_tests.bat`, or in `tools/workbench`:
+`python -m unittest discover -s tests -v`. A changed or new rule should get a
+case here.
+
 ## How closely the graphic matches STACK
 
 The pages build the graphic the way STACK 4.13.1 does for a `[[jsxgraph]]`
@@ -750,27 +898,115 @@ its entries are merged over the defaults, e.g.
 ```
 {
   "question_dirs": ["C:/Users/me/Documents/STACK-Fragen"],
-  "maxima": "C:/maxima-5.47.0/bin/maxima.bat",
-  "mathjax": { "MathJax 2.7.9 (local)": "/vendor/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML" },
-  "codemirror": "/vendor/codemirror/"
+  "maxima": "C:/maxima-5.47.0/bin/maxima.bat"
 }
 ```
 
-(the last two entries: local copies of MathJax and CodeMirror for working
-offline, unpacked into `vendor/`, also not committed; for CodeMirror the
-content of the npm package `codemirror@5.65.16`).
+### Working offline
+
+Once prepared, the workbench runs without internet. While online, run once
+
+    cd tools\workbench
+    python fetch_vendor.py
+
+It downloads the configured versions of JSXGraph, MathJax 2.7.9 and 3.2.2,
+CodeMirror and the Markdown renderer (marked) from the npm registry into
+`vendor/npm/<package>@<version>/` (about 90 MB, mostly MathJax; not committed)
+and the JSXGraph files bundled with the STACK versions in `config/stack/` into
+`.cache/`. From then on the server hands the pages these local copies instead of
+the CDN URLs - the same entries in the selectors, nothing to configure. Run it
+again after adding a version to `workbench_config.json` (`--force` downloads
+everything again). Entries without an exact version ("CDN latest") stay online
+only.
+
+Further without internet:
+
+- meclib.js and the `stack_include` files: with the meclib source "local
+  working copy" they come from the repository. With dev or main the workbench
+  fetches them from GitHub; without a connection it uses the copy of the last
+  successful fetch and says so (message on the Questions page, source info of
+  the graphic); without any earlier copy it reports the error.
+- Maxima evaluation, the Tests page, the offline Maxima tests and STACK ▶ in
+  Docker (with the meclib source "local working copy") need no internet.
+- The syntax help uses STACK's documentation from `.cache/` once
+  `build_help.py` has downloaded it.
+
+Older local copies configured by hand (`"mathjax": {"... (local)":
+"/vendor/mathjax/..."}`, `"codemirror": "/vendor/codemirror/"` in
+`workbench_config.local.json`) keep working.
+
+### STACK API (optional)
+
+Only needed for **STACK ▶** on the Questions page (question tests run by STACK
+itself, with STACK's input validation); everything else works without it.
+Set up once per computer:
+
+1. **Docker Desktop**: install it from <https://www.docker.com/products/docker-desktop/>
+   (Windows: accept the WSL 2 backend it proposes, restart if asked), start
+   it and wait until it reports "Engine running". Check in a console:
+
+       docker run hello-world
+
+   It prints "Hello from Docker!". Docker Desktop must be running whenever
+   STACK ▶ is used (it can start with Windows: Settings → General).
+2. **Versions of the Moodle server**: put this line into the text of any
+   question (a test question in your course is enough) and preview it:
+
+       Maxima: {#MAXIMA_VERSION_STR#}, STACK library: {#stackmaximaversion#}
+
+   It shows e.g. `Maxima: "5.45.1", STACK library: 2026080600`. The
+   STACK library number must exist as `config/stack/<number>/` with a
+   `profile.json` naming the release tag (see `config/README.md`; for a new
+   version: wiki page "Testing a new STACK version").
+3. **Build the images** (internet needed - GitHub and Docker Hub; git is not
+   needed; takes 10-20 minutes, mainly compiling Maxima, and some GB of disk):
+
+       cd tools\workbench
+       python stackapi.py build --maxima 5.45.1
+
+   `--stack <number>` chooses the STACK version (default: the newest folder in
+   `config/stack/`), `--maxima` the Maxima version of the server (default: the
+   one goemaxima names for that STACK version). The images are
+   `meclib-stackapi:<number>` and `meclib-goemaxima:<number>-<maxima>`.
+4. **Check**:
+
+       python stackapi.py up
+
+   starts the containers and ends with `"running": true`. Then open a
+   question with test cases and press STACK ▶. The workbench also starts the
+   containers itself on the first STACK ▶. `python stackapi.py down` stops
+   them (they use memory while running), `python stackapi.py status` reports.
+
+When the Moodle server gets a new STACK or Maxima version, add the
+`config/stack/<number>/` folder if needed and run `build` again with the new
+versions; the compose file then uses the new images. Old images stay until
+deleted in Docker Desktop (Images) or with `docker image rm <name>`.
+
+The build writes the path of the working copy's `Maxima` folder into
+`.cache/stackapi/docker-compose.yml` (for `stack_include` with the meclib
+source "local working copy"): after moving the repository, run `build` again
+(fast, the images are reused from Docker's cache) or edit that path.
+
+If STACK ▶ reports that the STACK API does not answer: is Docker Desktop
+running? `python stackapi.py up` shows Docker's messages;
+`docker compose -f .cache/stackapi/docker-compose.yml logs stack` shows those
+of the API. Port 3080 must be free. `MECLIB_STACKAPI_URL` (environment
+variable of the workbench server) points the workbench to another STACK API
+instead.
 
 ## Files
 
 - `index.html`, `questions.html`, `tests.html` - the three pages
 - `editor.js` - code editor of the Questions page: loads CodeMirror, Maxima
   and castext highlighting, syntax help, autocomplete, closing brackets
+- `fetch_vendor.py` - downloads local copies of the CDN libraries for working
+  offline (see Configuration)
 - `build_help.py` - builds `syntax_help.json` (syntax help) from the code,
   the wiki, STACK's library and documentation and `syntax_help_extra.json`
 - `frame.js` - builds and runs a graphic in a STACK-like frame (shared by the
   pages)
 - `style.css` - shared styles
-- `tree.js` - collapsible tree of the side column (Tests page)
+- `tree.js` - collapsible tree of the side column (Tests page, folders of the Questions page)
 - `mtests.py` - reads the Maxima test files for the Tests page
 - `server.py` - local server (listens on this computer only; writing
   requests need the header `X-Workbench: 1`, which other web sites cannot
@@ -795,7 +1031,12 @@ content of the npm package `codemirror@5.65.16`).
 
 ## Planned
 
-- a tree of folders, files and questions with context menus for their actions
+- the questions of a file in the folder tree, context menus for their actions
+- a lean mode for batch test runs (no TeX of SAns/TAns, no feedback castext);
+  Maxima in WSL or goemaxima in Docker (Maxima on Windows is several times slower)
+- the way back to Moodle without gitsync: bulk edits on a whole course backup
+  (.mbz) between two courses, browser automation of "Import as new version"
+  for single changes
 - review of all questions in a folder at once
 - templates for inputs and PRTs from the wiki
 - editor assistants, e.g. `tansdata: copy(initdata)` with index variables,
@@ -803,8 +1044,8 @@ content of the npm package `codemirror@5.65.16`).
 - bulk edits across questions (e.g. unifying the crosshair setup)
 - keeping review rules, syntax help and wiki pages in step (`build_help.py`
   already lists differences)
-- choosing the STACK version on the pages instead of always the newest one
-- split files compatible with STACK's gitsync (category files, YAML)
+- split files compatible with STACK's gitsync (category files, YAML); testing
+  gitsync on the Moodle server is planned for February 2027
 - automatic multilingual castext: de/en versions of the texts kept together
   in `[[lang]]` blocks (not urgent)
 - expected feedback per test case

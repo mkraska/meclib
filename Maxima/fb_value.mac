@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-Overview */ 
-fb_value_version: "2026 10 11";
+fb_value_version: "2026 11 01";
 
 /* https://github.com/mkraska/meclib/wiki/deg2rad */
 /* Substitutes any use of the "deg" marker in expr with its numeric value (pi/180), for use right
@@ -387,7 +387,7 @@ fb_dims_q(%_x) := block([%_d],
   %_x);
 fb_dims_bad(%_d) := member(%_d, ['%_dunk, '%_dsum, '%_dfun]);
 /* the dimension of an expression with the table %_tab */
-fb_dims_of(%_x, %_tab) := block([simp: true, inflag: true, radexpand: all, %_o, %_a, %_d, %_e],
+fb_dims_of(%_x, %_tab) := block([simp: true, inflag: true, radexpand: all, %_o, %_a, %_d, %_e, %_y, %_z, %_i],
   if numberp(%_x) or constantp(%_x) then return(1),
   if symbolp(%_x) or subvarp(%_x) then
     (%_a: assoc(string(%_x), %_tab), return(if %_a = false then '%_dunk else %_a)),
@@ -403,8 +403,17 @@ fb_dims_of(%_x, %_tab) := block([simp: true, inflag: true, radexpand: all, %_o, 
     if %_d[2] # 1 then return('%_dfun),
     if %_d[1] = 1 then return(1),
     return(if numberp(%_a[2]) then %_d[1]^fb_dims_q(%_a[2]) else '%_dfun)),
+  /* a derivative 'diff(f, x1, n1, x2, n2, ...) (also diff(f, x) with depends(f, x)): the unit of f
+     over x1^n1*x2^n2*... */
+  if %_o = op('diff(%_y, %_z)) then
+    return(first(%_d)/product(%_d[2*%_i]^%_a[2*%_i + 1], %_i, 1, (length(%_a) - 1)/2)),
   if %_o = abs then return(%_d[1]),
   if every(lambda([%_y], is(%_y = 1)), %_d) then 1 else '%_dfun);
+/* the dimension of the model answer for the unit check; a model answer that is zero has no unit
+   to compare with (0 is 0 m as well as 0 N), so the check is off ('%_dunk) */
+fb_dims_target(%_t, %_tab) := block([simp: true, %_f],
+  %_f: errcatch(float(ev(%_t, simp))),
+  if %_f # [] and numberp(%_f[1]) and (%_f[1] = 0 or %_f[1] = 0.0) then '%_dunk else fb_dims_of(%_t, %_tab));
 /* a dimension written in SI base units, for the feedback */
 texput(%_um, "\\mathrm{m}")$ texput(%_ukg, "\\mathrm{kg}")$ texput(%_us, "\\mathrm{s}")$
 texput(%_uA, "\\mathrm{A}")$ texput(%_uK, "\\mathrm{K}")$ texput(%_umol, "\\mathrm{mol}")$
@@ -412,7 +421,7 @@ fb_dims_show(%_d) := subst(['%_dL = '%_um, '%_dM = '%_ukg, '%_dT = '%_us, '%_dI 
 /* feedback on the dimension of a whole answer, "" if it is right or cannot be checked */
 fb_dimension(%_sans, %_tans) := block([simp: true, %_tab: fb_dims_table(), %_ds, %_dt, %_du, %_tu],
   if %_tab = [] then return(""),
-  %_dt: fb_dims_of(float(%_tans), %_tab), %_ds: fb_dims_of(float(%_sans), %_tab),
+  %_dt: fb_dims_target(float(%_tans), %_tab), %_ds: fb_dims_of(float(%_sans), %_tab),
   if fb_dims_bad(%_dt) or %_ds = '%_dunk or is(%_ds = %_dt) then return(""),
   if %_ds = '%_dsum then return(fb_lang("&nbsp;In Ihrem Ergebnis werden Gr&ouml;&szlig;en verschiedener Einheiten addiert.", "&nbsp;Your result adds quantities of different units.")),
   if %_ds = '%_dfun then return(fb_lang("&nbsp;In Ihrem Ergebnis hat eine Funktion (z.&nbsp;B. sin, exp, ln) oder ein Exponent ein Argument mit Einheit.", "&nbsp;In your result, a function (e.g. sin, exp, ln) or an exponent has an argument with a unit.")),
@@ -456,12 +465,16 @@ fb_floats_repl(%_x) := if fb_floats_call(%_x) # false then block([%_r],
   else if atom(%_x) then %_x
   else block([inflag: true], apply(op(%_x), map(fb_floats_repl, args(%_x))));
 
-fb_floats(%_sans, %_tans, %_tol) := fb_floats_main(%_sans, %_tans, %_tol, false);
+/* tolerance 0: every deviating number is reported (for a node that grades exactly, e.g. AlgEquiv),
+   but with fb_unit's blurred messages ("too large by at least 0.3%") - fb_unit(..., 0) would give
+   the exact deviation, which students could use to correct their result by proportion. A relative
+   tolerance of 1e-9 stands for 0: it also ignores rounding noise of float(). */
+fb_floats(%_sans, %_tans, %_tol) := fb_floats_main(%_sans, %_tans, if %_tol = 0 or %_tol = 0.0 then 1e-9 else %_tol, false);
 /* %_inner: the arguments of a call (recursion); their evaluated form is shown for deviating
    numbers if it has more than one summand, since the student typed the argument in another form */
 fb_floats_main(%_sans, %_tans, %_tol, %_inner) := block([simp: true, %_s, %_t, %_sT, %_tT, %_used, %_pairs: [], %_us, %_ut: [],
     %_bad: [], %_txt: "", %_r, %_i, %_j, %_p, %_disp, %_tab, %_dt, %_ds, %_du, %_tu, %_v, %_dimtxt: "", %_vt: "", %_nd: [],
-    %_s0, %_sc, %_tc, %_tu2, %_argtxt: "", %_back: [], %_lone: [], %_fcalls: [], %_fraw: [], %_others, fb_floats_nums, fb_floats_rnew, fb_floats_rk,
+    %_s0, %_sc, %_tc, %_tu2, %_argtxt: "", %_nnum, %_back: [], %_lone: [], %_fcalls: [], %_fraw: [], %_others, fb_floats_nums, fb_floats_rnew, fb_floats_rk,
     str_value: fb_lang("&nbsp;Zahlenwert ", "&nbsp;Number "),
     str_marked: fb_lang("&nbsp;Markierter Zahlenwert ", "&nbsp;Marked number "),
     str_structure: fb_lang("&nbsp;Tut mir leid, leider habe ich keine konkreteren Hinweise.", "&nbsp;Sorry, I have no more specific hints."),
@@ -543,7 +556,7 @@ fb_floats_main(%_sans, %_tans, %_tol, %_inner) := block([simp: true, %_s, %_t, %
      the numbers meaningless: then they are neither marked nor named */
   if %_us # [] then (
     %_tab: fb_dims_table(),
-    %_dt: if %_tab = [] then '%_dunk else fb_dims_of(%_t, %_tab),
+    %_dt: if %_tab = [] then '%_dunk else fb_dims_target(%_t, %_tab),
     if not fb_dims_bad(%_dt) then for %_i in %_us do (
       %_ds: fb_dims_of(%_sT[%_i][3]*%_sT[%_i][4], %_tab),
       if %_ds = '%_dsum then %_dimtxt: castext_concat(%_dimtxt, str_dsum)
@@ -577,10 +590,13 @@ fb_floats_main(%_sans, %_tans, %_tol, %_inner) := block([simp: true, %_s, %_t, %
     if %_dimtxt = "" and %_vt = "" then %_txt: castext_concat(%_txt, castext_concat(
       if %_fcalls # [] then str_fun else "",
       if %_others = [] then "" else if length(%_others) = 1 then str_term else str_terms))),
+  /* an answer with a single number: the deviation needs no "Number x:" - it can only be that one */
+  %_nnum: apply("+", map(lambda([%_e], length(%_e[2])), %_sT)),
   for %_b in %_bad do (
     %_r: fb_unit(%_b[3], %_b[4], %_tol),
     /* the number with 4 significant figures (an exact answer gives long decimals) */
-    %_txt: castext_concat(%_txt, castext_concat(castext_concat(str_value, castext("{@fb_sigfig(%_b[3], 4)@}:")), %_r))
+    %_txt: castext_concat(%_txt, if %_nnum = 1 then %_r
+      else castext_concat(castext_concat(str_value, castext("{@fb_sigfig(%_b[3], 4)@}:")), %_r))
   ),
   /* summands of the model answer without a partner, beyond those that the extra summands may stand for */
   if length(%_ut) > length(%_us) then

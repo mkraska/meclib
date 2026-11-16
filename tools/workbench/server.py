@@ -18,8 +18,8 @@ Maxima evaluation (question and feedback variables) to the same server.
 Endpoints
   GET /                     index.html
   GET /<file>               static files from this folder
-  GET /vendor/<path>        static files from ./vendor/ (optional local copies,
-                            e.g. MathJax for offline use; not in the repo)
+  GET /vendor/<path>        static files from ./vendor/ (local copies of the CDN libraries for
+                            offline use, written by fetch_vendor.py; not in the repo)
   GET /api/config           merged configuration (see workbench_config.json)
   POST /api/stack           {id} the STACK version (config/stack/<id>/: Maxima library, security
                             map; kept in .cache/workbench_state.json); closes the sessions
@@ -59,8 +59,16 @@ Endpoints
                             the file changed on disk since rev
   POST /api/q/eval          {path, index, seed, src} -> question variables, model answers and
                             rendered texts, evaluated with STACK's Maxima library
+  POST /api/q/rename        {path, index, rev, old, new, kind?, backup} -> a variable, input or PRT
+                            renamed everywhere (qfile.rename_op); {ambiguous: kinds} if old names a
+                            PRT and also an input or variable
+  POST /api/q/testrun       {path, index, src, seeds, testcases, progress} -> the question tests on
+                            these variants, one run of the question variables per variant;
+                            GET /api/q/progress?token=<progress>&after=n gives the tests done so far
   POST /api/q/check         like eval, plus {answers: {input: raw text}} -> "check": validation of the
                             answers and the PRT results (score, penalty, answer notes, feedback)
+                            optional test_exprs {input: CAS expression}: test mode, these inputs get
+                            the value of the expression (evaluated with the question variables)
   POST /api/q/new           {folder, filename, name} new file with a question from the template,
                             or {path, rev, name} appended to an existing file; optional
                             questionvariables, questiontext
@@ -77,13 +85,16 @@ Endpoints
   POST /api/q/scene         {path, index, rev, block, to: "static" | "interactive", dry?} [[jsxgraph]] block
                             number block of the question text made static (bound inputs deleted) or
                             interactive (hidden inputs objects, names added) -> {plan} (dry) or {rev, plan, fields}
+  POST /api/q/states        {paths} -> {states: {path: review state}}: per file the worst review state of
+                            its STACK questions and the tests left to do (folder tree colours; cached)
   POST /api/q/review        {path, index} -> {rev, findings}: the review rules (rules.py) for a question
   POST /api/q/review-apply  {path, index, rev, apply: [keys], reject: [keys]} -> fixes applied, rejected
                             findings recorded in the question description -> {rev, applied, fields, findings}
   POST /api/q/saveas        {path, index, folder, filename} one question into a new file
   POST /api/q/upload        a dropped XML file (body; headers X-File-Name, X-Folder) -> copied
                             into that folder
-  POST /api/q/split         {path} -> one file per STACK question, in <folder>/<file name>/
+  POST /api/q/split         {path, only_new} -> one file per STACK question, in <folder>/<file name>/;
+                            existing files are never overwritten ({existing, new} without only_new)
   POST /api/pick-folder     {title, initial} -> {path} chosen in the system's folder dialog
                             ("" if cancelled), shown by a separate Python process (tkinter)
   POST /api/shutdown        stops this server (used by the next start to replace it)
@@ -100,6 +111,7 @@ import hashlib
 import json
 import mimetypes
 import re
+import shutil
 import sys
 import threading
 import time
@@ -114,6 +126,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
 CACHE = HERE / ".cache"
+VENDOR = HERE / "vendor"        # local copies of the CDN libraries (fetch_vendor.py), not committed
 CASES = REPO / "tests" / "scenes"
 MAXIMA_TESTS = REPO / "Maxima" / "tests"
 SCENE_NAME = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -128,7 +141,7 @@ import stack_question  # noqa: E402
 import qfile  # noqa: E402
 import rules  # noqa: E402
 import history  # noqa: E402
-from maxima_session import MaximaSession, MaximaError, list_maxima, stack_versions, maxima_version  # noqa: E402
+from maxima_session import MaximaSession, MaximaError, list_maxima, stack_versions, maxima_version, PLOT_DIR  # noqa: E402
 
 INBOX = CACHE / "questions"      # copies of files dropped onto the page
 STATE = qfile.State(CACHE / "workbench_state.json")
@@ -138,14 +151,22 @@ LOGOS = REPO / "vendor" / "logos"
 class SessionPool:
     """One Maxima session per (question, source); at most MAX sessions, least recently used
     ones are closed. A session keeps its state, so re-evaluating a question only needs the
-    names it assigned before to be killed."""
+    names it assigned before to be killed.
+
+    One more session is kept started in the background (the spare, for the chosen Maxima and
+    STACK version): a question evaluated for the first time takes it instead of waiting for
+    Maxima to start and load STACK's library (several seconds), and the next spare starts."""
     MAX = 3
 
     def __init__(self):
         self.lock = threading.Lock()
         self.sessions = {}   # key -> [session, last_used, names, kinds of runs done ("eval", "check")]
+        self.spare = None    # [session, (maxima, stack)], ready to use
+        self.spare_starting = None   # (maxima, stack) of the spare being started
 
     def get(self, key, maxima, stack=None):
+        sig = (maxima or None, stack)
+        session = None
         with self.lock:
             entry = self.sessions.get(key)
             if entry and entry[0].alive():
@@ -156,20 +177,89 @@ class SessionPool:
             while len(self.sessions) >= self.MAX:
                 oldest = min(self.sessions, key=lambda k: self.sessions[k][1])
                 self.sessions.pop(oldest)[0].close()
-        session = MaximaSession(maxima or None, stack=stack)
+            if self.spare and self.spare[1] == sig and self.spare[0].alive():
+                session, self.spare = self.spare[0], None
+                session.from_spare = True
+        if session is None:
+            session = MaximaSession(maxima or None, stack=stack)
         entry = [session, time.time(), [], set()]
         with self.lock:
             self.sessions[key] = entry
+        self.prepare(maxima, stack)
         return entry
+
+    def prepare(self, maxima, stack=None):
+        """Starts the spare in the background, unless there is one for these versions."""
+        sig = (maxima or None, stack)
+        with self.lock:
+            if (self.spare and self.spare[1] == sig and self.spare[0].alive()) or self.spare_starting == sig:
+                return
+            old, self.spare = self.spare, None
+            self.spare_starting = sig
+        if old:
+            old[0].close()
+
+        def run():
+            try:
+                session = MaximaSession(maxima or None, stack=stack)
+            except Exception:          # (Maxima missing etc.: reported when a question is evaluated)
+                session = None
+            with self.lock:
+                if self.spare_starting == sig:
+                    self.spare_starting = None
+                    if session:
+                        self.spare, session = [session, sig], None
+            if session:                # versions changed meanwhile
+                session.close()
+        threading.Thread(target=run, daemon=True).start()
 
     def close_all(self):
         with self.lock:
             for entry in self.sessions.values():
                 entry[0].close()
             self.sessions.clear()
+            spare, self.spare, self.spare_starting = self.spare, None, None
+        if spare:
+            spare[0].close()
 
 
 POOL = SessionPool()
+
+# what the last evaluation or check is doing, for the page's sign of life while it waits
+# (GET /api/q/progress): {"busy": bool, "phase": text, "since": time of the start}; a test run
+# (POST /api/q/testrun with a progress token) adds the result of each test as it is done, so that
+# the page colours the matrix while the run goes on
+PROGRESS = {"busy": False, "phase": "", "since": 0.0, "token": None, "results": []}
+
+
+def progress_start_tests(token):
+    """A test run begins: its results so far are none; token: the page's id of the run."""
+    PROGRESS.update(token=token, results=[])
+
+
+def progress_add_test(seed, testcase, check, error):
+    """One test of a test run is done."""
+    PROGRESS["results"].append({"seed": seed, "testcase": testcase, "check": check, "error": error})
+
+
+def progress_reply(query):
+    """GET /api/q/progress[?token=..&after=n]: busy, phase, seconds; with the token of the running
+    test run also the results of its tests from number n on (results) and their count (count)."""
+    out = {"busy": PROGRESS["busy"], "phase": PROGRESS["phase"],
+           "seconds": round(time.time() - PROGRESS["since"], 1) if PROGRESS["busy"] else 0}
+    token = (query.get("token") or [None])[0]
+    if token and token == PROGRESS["token"]:
+        try:
+            after = max(0, int((query.get("after") or ["0"])[0]))
+        except ValueError:
+            after = 0
+        res = list(PROGRESS["results"])
+        out.update(results=res[after:], count=len(res))
+    return out
+
+
+def set_phase(phase):
+    PROGRESS["phase"] = phase
 
 
 def current_maxima(cfg=None):
@@ -272,6 +362,115 @@ def unique_path(folder, filename):
     return target
 
 
+GRAPHIC_EXT = ".graphic.json"
+
+
+def graphic_path(cfg, path, must_exist=True, ext=GRAPHIC_EXT):
+    """The resolved path of a graphic file (*.graphic.json, or with ext=".png" its image) in one
+    of the question folders, else ValueError."""
+    target = Path(path).expanduser().resolve()
+    if not target.name.lower().endswith(ext):
+        raise ValueError("only %s files" % ext)
+    for folder, _ in question_folders(cfg):
+        if folder.exists() and folder.resolve() in target.parents:
+            if must_exist and not target.is_file():
+                raise ValueError("file not found: %s" % target)
+            return target
+    raise ValueError("not in a question folder: %s" % target)
+
+
+def graphic_listing(cfg):
+    """[{folder, files: [{path, name}]}]: the graphic files in the question folders."""
+    out = []
+    for folder, _source in question_folders(cfg):
+        if not folder.is_dir():
+            continue
+        files = []
+        for p in sorted(folder.rglob("*" + GRAPHIC_EXT)):
+            rel = p.relative_to(folder)
+            if any(part.startswith(".") for part in rel.parts):
+                continue
+            files.append({"path": str(p.resolve()), "name": str(rel).replace("\\", "/")[:-len(GRAPHIC_EXT)]})
+        if files:
+            out.append({"folder": str(folder.resolve()), "files": files})
+    return out
+
+
+def check_graphic(g):
+    """Error text if g is not a graphic (a scene without cases, plus an optional start state)."""
+    if not isinstance(g, dict):
+        return "a graphic is a JSON object"
+    if not isinstance(g.get("initdata"), list):
+        return "initdata must be a list"
+    if "state" in g and not isinstance(g["state"], list):
+        return "state must be a list"
+    if g.get("decsep", ".") not in (".", ","):
+        return "decsep must be '.' or ','"
+    for key in ("title", "notes", "block"):
+        if key in g and not isinstance(g[key], str):
+            return key + " must be a string"
+    return ""
+
+
+# runs in the Graphic page of a headless browser: draws a graphic as the page shows it, without
+# the version text of meclib and without the border of the board; returns the size of the frame
+PNG_DRAW = """async ([init, state, block, decsep, src, jsx, mathjax]) => {
+  const box = document.createElement("div");
+  Object.assign(box.style, {position: "fixed", left: "0px", top: "0px", zIndex: 9999, background: "#fff"});
+  document.body.appendChild(box);
+  const blk = block.replace("[[/jsxgraph]]", `document.getElementById(divid).style.border = "none";
+for (const o of [...board.objectsList]) if (o.elType === "text" && /Meclib|JXG/.test(String(o.plaintext || o.htmlStr || ""))) board.removeObject(o);
+[[/jsxgraph]]`);
+  const meclib = await F.loadMeclib(src, true);
+  const jsxKey = config.jsxgraph[jsx] ? jsx : Object.keys(config.jsxgraph)[0];
+  const mathjaxKey = config.mathjax[mathjax] ? mathjax : Object.keys(config.mathjax)[0];
+  const handle = F.run({ container: box, config, jsxKey, mathjaxKey, meclibSource: meclib.text,
+    initText: init, blockText: blk, decsep, startState: state });
+  const res = await handle.done;
+  const fr = box.querySelector("iframe");
+  fr.style.border = "none";
+  const r = fr.getBoundingClientRect();
+  return { errors: res.errors, finished: res.finished, x: r.left, y: r.top,
+           w: parseFloat(fr.style.width), h: parseFloat(fr.style.height) };
+}"""
+PNG_LOCK = threading.Lock()
+
+
+def render_png(port, req):
+    """PNG (bytes) of a graphic, drawn by the workbench page in headless Chromium (Playwright),
+    at twice the resolution; the 3 px meclib adds to the frame are cut off."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        raise ValueError("PNG export needs Playwright: pip install playwright; python -m playwright install chromium")
+    args = [req.get("init", ""), req.get("state", ""), req.get("block", ""), req.get("decsep", "."),
+            req.get("src", "local"), req.get("jsx", ""), req.get("mathjax", "")]
+    with PNG_LOCK, sync_playwright() as p:
+        try:
+            browser = p.chromium.launch()
+        except Exception as err:
+            raise ValueError("PNG export: Chromium for Playwright not available (python -m playwright install chromium): %s"
+                             % str(err).splitlines()[0])
+        try:
+            page = browser.new_context(viewport={"width": 2400, "height": 1800}, device_scale_factor=2).new_page()
+            page.goto("http://127.0.0.1:%d/index.html" % port)
+            page.wait_for_function("typeof F !== 'undefined' && config !== null", timeout=30000)
+            res = page.evaluate(PNG_DRAW, args)
+            if res["errors"]:
+                raise ValueError("rendering failed: " + "; ".join(res["errors"]))
+            if not res["finished"]:
+                raise ValueError("meclib did not finish its initialisation")
+            page.wait_for_timeout(500)          # MathJax of the labels
+            return page.screenshot(clip={"x": res["x"], "y": res["y"],
+                                         "width": max(res["w"] - 3, 1), "height": max(res["h"] - 3, 1)})
+        except ValueError:
+            raise
+        except Exception as err:   # Playwright's own errors (timeouts, browser not installed)
+            raise ValueError("PNG export: %s" % str(err).splitlines()[0])
+        finally:
+            browser.close()
+
+
 def load_config():
     """workbench_config.json, overridden key by key by workbench_config.local.json if present
     (the local file is meant for per-machine settings and is not committed)."""
@@ -284,6 +483,50 @@ def load_config():
             else:
                 cfg[key] = value
     return cfg
+
+
+CDN_NPM = re.compile(r"^https://cdn\.jsdelivr\.net/npm/((?:@[\w.-]+/)?[\w.-]+@\d+\.\d+\.\d+)/([^?#]*)(.*)$")
+
+
+def vendorize(url):
+    """The local copy of a CDN URL (vendor/npm/<package>@<version>/..., see fetch_vendor.py) if it
+    exists, otherwise the URL itself."""
+    m = CDN_NPM.match(url) if isinstance(url, str) else None
+    if not m:
+        return url
+    pkg, path, rest = m.groups()
+    local = VENDOR / "npm" / pkg / path
+    if (local.is_dir() if path.endswith("/") or not path else local.is_file()):
+        return "/vendor/npm/%s/%s%s" % (pkg, path, rest)
+    return url
+
+
+def local_libraries(cfg):
+    """For /api/config: CDN URLs replaced by their local copies where present (same entries)."""
+    for key in ("jsxgraph", "mathjax"):
+        for name, entry in list((cfg.get(key) or {}).items()):
+            cfg[key][name] = ({k: vendorize(v) for k, v in entry.items()} if isinstance(entry, dict)
+                              else vendorize(entry))
+    for key in ("markdown", "codemirror"):
+        if cfg.get(key):
+            cfg[key] = vendorize(cfg[key])
+    return cfg
+
+
+def offline_copy(cache, fetch_it, what):
+    """Fetches (fetch_it() -> bytes), keeps a copy in cache; without a connection the copy of the
+    last successful fetch. Returns (data, None) or (data, note about the old copy); raises if
+    there is neither."""
+    try:
+        data = fetch_it()
+    except (OSError, urllib.error.URLError) as err:
+        if not cache.exists():
+            raise
+        when = time.strftime("%Y-%m-%d %H:%M", time.localtime(cache.stat().st_mtime))
+        return cache.read_bytes(), "%s: GitHub not reachable (%s) - using the copy from %s" % (what, err, when)
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_bytes(data)
+    return data, None
 
 
 def git_branch():
@@ -390,6 +633,76 @@ def regenerate_fixtures():
     return problems
 
 
+# ---------------------------------------------------------------------- review states (folder tree)
+# Per file the worst review state of its STACK questions (rules.review_state: findings per level
+# without fix previews, and what the saved tests leave to do), for colouring the folder tree.
+# Cached in .cache/review_states.json by file time and size and by the version of rules.py.
+STATES_FILE = CACHE / "review_states.json"
+STATES_LOCK = threading.Lock()
+_states = None
+LEVEL_RANK = {"ok": 0, "hint": 1, "recommended": 2, "required": 3}
+
+
+def rules_version():
+    return hashlib.sha1((HERE / "rules.py").read_bytes()).hexdigest()[:12]
+
+
+def file_state(target):
+    text, _rev = qfile.read_file(target)
+    st = {"level": "ok", "counts": {"required": 0, "recommended": 0, "hint": 0}, "tests": [], "titles": [], "questions": 0}
+    k = 0
+    while True:
+        try:
+            a, b, qtype = qfile.question_span(text, k)
+        except (ValueError, IndexError):
+            break
+        k += 1
+        if qtype != "stack":
+            continue
+        q = rules.review_state(text[a:b])
+        st["questions"] += 1
+        if LEVEL_RANK[q["level"]] > LEVEL_RANK[st["level"]]:
+            st["level"] = q["level"]
+        for lv in st["counts"]:
+            st["counts"][lv] += q["counts"][lv]
+        st["tests"] += q["tests"]
+        st["titles"] = list(dict.fromkeys(st["titles"] + q["titles"]))[:6]
+    if not st["questions"]:
+        st["level"] = None
+    return st
+
+
+def review_states(cfg, paths):
+    global _states
+    with STATES_LOCK:
+        if _states is None:
+            try:
+                _states = json.loads(STATES_FILE.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                _states = {}
+        ver, out, changed = rules_version(), {}, False
+        for p in paths:
+            try:
+                target = allowed_path(cfg, p)
+                stat = target.stat()
+                sig = [stat.st_mtime_ns, stat.st_size, ver]
+                c = _states.get(str(target))
+                if not c or c.get("sig") != sig:
+                    c = {"sig": sig, "state": file_state(target)}
+                    _states[str(target)] = c
+                    changed = True
+                out[p] = c["state"]
+            except Exception as err:          # unreadable file: no colour
+                out[p] = {"level": None, "error": str(err)}
+        if changed:
+            try:
+                STATES_FILE.parent.mkdir(parents=True, exist_ok=True)
+                STATES_FILE.write_text(json.dumps(_states), encoding="utf-8")
+            except OSError:
+                pass
+        return out
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(HERE), **kwargs)
@@ -420,13 +733,21 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         query = urllib.parse.parse_qs(parsed.query)
+        if parsed.path == "/api/q/progress":
+            return self.send_json(progress_reply(query))
         if parsed.path == "/api/config":
             cfg = load_config()
             cfg["local_branch"] = git_branch()
             cfg["repo_path"] = str(REPO)
             cfg["maxima_list"] = maxima_list(cfg)
             cfg["maxima_current"] = current_maxima(cfg)
-            return self.send_json(stack_info(cfg))
+            return self.send_json(local_libraries(stack_info(cfg)))
+        if parsed.path.startswith("/plots/"):      # plot() in castext (maxima_session.PLOT_DIR)
+            name = urllib.parse.unquote(parsed.path[len("/plots/"):])
+            p = PLOT_DIR / name
+            if "/" in name or "\\" in name or not p.is_file() or p.suffix.lower() not in (".svg", ".png"):
+                return self.send_error(404)
+            return self.send_bytes(p.read_bytes(), "image/svg+xml" if p.suffix.lower() == ".svg" else "image/png")
         if parsed.path.startswith("/logos/"):
             name = urllib.parse.unquote(parsed.path[len("/logos/"):])
             p = LOGOS / name
@@ -465,6 +786,8 @@ class Handler(SimpleHTTPRequestHandler):
                     _t, n, k = key.split(":")
                     out.setdefault(n, ["", ""])[int(k)] = vals[0]
             return self.send_json(out)
+        if parsed.path == "/api/graphics":
+            return self.send_json(graphic_listing(load_config()))
         if parsed.path == "/api/q/folders":
             return self.send_json(self.folder_listing())
         if parsed.path == "/api/snippets":
@@ -523,6 +846,65 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json(res)
         except (ValueError, OSError, MaximaError) as err:
             return self.send_json({"error": str(err)}, 500)
+
+    def variants(self, cfg, req):
+        """POST /api/q/variants {path, index, src, count[, seeds]}: the question note (and errors) of
+        the variants with seeds 1 .. count and of the deployed seeds (or only those in seeds), one Maxima run per seed in the
+        question's session (the page shows the progress)."""
+        target = allowed_path(cfg, req["path"])
+        text, _ = qfile.read_file(target)
+        index, src = int(req["index"]), req.get("src", "local")
+        qel = stack_question.question_element(text, index)
+        data = stack_question.question_data(qel)
+        deployed = [int(s) for s in data["seeds"] if re.match(r"^-?\d+$", s.strip())]
+        count = max(1, min(int(req.get("count") or 10), 500))
+        seeds = list(range(1, count + 1)) + [s for s in deployed if not 1 <= s <= count]
+        if req.get("seeds") is not None:      # only these (e.g. the deployed ones)
+            seeds = [int(x) for x in req["seeds"]]
+        PROGRESS.update(busy=True, since=time.time(), phase="Maxima session: starting Maxima and loading STACK's library")
+        out = []
+        try:
+            entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg), current_stack())
+            resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
+            for k, seed in enumerate(seeds):
+                set_phase("variant %d of %d (seed %d)" % (k + 1, len(seeds), seed))
+                v, names = stack_question.variant(entry[0], data, seed, resolver, entry[2], load_includes=None)
+                entry[2] = names
+                out.append(v)
+        finally:
+            PROGRESS["busy"] = False
+        return {"variants": out, "deployed": deployed, "random": stack_question.is_random(data),
+                "has_note": bool((data.get("questionnote") or "").strip())}
+
+    def test_run(self, cfg, req):
+        """POST /api/q/testrun {path, index, src, seeds, testcases, progress}: the question tests (default
+        all) on the variants with these seeds, in the question's session: per variant one run of
+        the question variables, then one short run per test (stack_question.run_tests). The
+        includes are loaded once per session (stack_question.include_plan). progress: a token of
+        the page; GET /api/q/progress with it gives the results of the tests done so far.
+        -> {runs: [{seed, error, tests: {testcase: check}}], seconds}"""
+        target = allowed_path(cfg, req["path"])
+        text, _ = qfile.read_file(target)
+        index, src = int(req["index"]), req.get("src", "local")
+        data = stack_question.question_data(stack_question.question_element(text, index))
+        seeds = [int(x) for x in req.get("seeds") or [1]]
+        testcases = req.get("testcases")
+        t0 = time.time()
+        PROGRESS.update(busy=True, since=t0, phase="Maxima session: starting Maxima and loading STACK's library")
+        progress_start_tests(req.get("progress"))
+        out = []
+        try:
+            entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg), current_stack())
+            resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
+            for k, seed in enumerate(seeds):
+                set_phase("tests on variant %d (%d of %d)" % (seed, k + 1, len(seeds)))
+                r, names = stack_question.run_tests(entry[0], data, seed, resolver, entry[2], testcases,
+                                                    lambda tc, chk, err, s=seed: progress_add_test(s, tc, chk, err))
+                entry[2] = names
+                out.append(r)
+        finally:
+            PROGRESS["busy"] = False
+        return {"runs": out, "seconds": round(time.time() - t0, 2)}
 
     def stack_grade(self, cfg, req):
         """POST /api/q/stackgrade {path, index, seed, src, lang, runs: [{testcase, answers}]}: the
@@ -628,10 +1010,26 @@ class Handler(SimpleHTTPRequestHandler):
                 index, src = int(req["index"]), req.get("src", "local")
                 qel = stack_question.question_element(text, index)
                 data = stack_question.question_data(qel)
-                entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg), current_stack())
-                resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
-                answers = req.get("answers") if path == "/api/q/check" else None
-                result = stack_question.evaluate(entry[0], data, int(req.get("seed", 1)), resolver, entry[2], answers)
+                PROGRESS.update(busy=True, since=time.time(), phase="Maxima session: starting Maxima and loading STACK's library")
+                try:
+                    entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg), current_stack())
+                    first = not entry[0].used
+                    evaluating = "evaluating with Maxima" + (" (first run in this session, may take longer)" if first else "")
+
+                    def fetch_shown(url, *a, **k):
+                        set_phase("loading %s from GitHub" % url.rsplit("/", 1)[-1])
+                        try:
+                            return fetch(url, *a, **k)
+                        finally:
+                            set_phase(evaluating)
+                    resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch_shown)
+                    answers = req.get("answers") if path == "/api/q/check" else None
+                    set_phase(evaluating)
+                    result = stack_question.evaluate(entry[0], data, int(req.get("seed", 1)), resolver, entry[2], answers,
+                                                     req.get("test_exprs") if answers is not None else None)
+                finally:
+                    PROGRESS["busy"] = False
+                result["offline"] = resolver.offline
                 entry[2] = result["kill"]
                 # the first run of its kind in a session includes Maxima's warm-up (about 0.2 s,
                 # mostly in the first PRT), so its times are not comparable with later runs
@@ -641,7 +1039,10 @@ class Handler(SimpleHTTPRequestHandler):
                 result.update({"name": data["name"], "format": data["formats"]["questiontext"],
                                "formats": data["formats"], "prts": data["prts"],
                                "seeds": data["seeds"], "decimals": data["decimals"], "penalty": data["penalty"],
+                               "random": stack_question.is_random(data),
+                               "approvals": rules.approvals(text[slice(*qfile.question_span(text, index)[:2])]),
                                "simplify": data["questionsimplify"], "maxima_start": round(entry[0].started, 1),
+                               "maxima_spare": getattr(entry[0], "from_spare", False),
                                "files": stack_question.embedded_files(qel)})
                 return self.send_json(result)
             if path == "/api/q/new":
@@ -660,6 +1061,8 @@ class Handler(SimpleHTTPRequestHandler):
                 questions = qfile.list_questions(new)
                 return self.send_json({"path": str(target), "rev": rev, "questions": questions,
                                        "index": questions[-1]["index"]})
+            if path == "/api/q/states":       # {paths} -> {path: review state of the file} (folder tree)
+                return self.send_json({"states": review_states(cfg, req.get("paths") or [])})
             if path == "/api/q/review":
                 target = allowed_path(cfg, req["path"])
                 text, rev = qfile.read_file(target)
@@ -726,6 +1129,20 @@ class Handler(SimpleHTTPRequestHandler):
                 history.record(target, text, new, index, label)
                 return self.send_json({"rev": rev, "label": label, "fields": qfile.question_fields(new, index),
                                        "history": history.status(target, index)})
+            if path == "/api/q/rename":      # {path, index, rev, old, new, kind?, backup}
+                target = allowed_path(cfg, req["path"])
+                text, rev = qfile.read_file(target)
+                if req.get("rev") and req["rev"] != rev:
+                    raise qfile.ConflictError("the file was changed outside the workbench")
+                index = int(req["index"])
+                try:
+                    new, label = qfile.rename_op(text, index, req.get("old"), req.get("new"), req.get("kind") or None)
+                except qfile.AmbiguousName as e:
+                    return self.send_json({"ambiguous": e.kinds, "question": str(e)})
+                rev = qfile.write_file(target, new, rev, bool(req.get("backup")))
+                history.record(target, text, new, index, label)
+                return self.send_json({"rev": rev, "label": label, "fields": qfile.question_fields(new, index),
+                                       "history": history.status(target, index)})
             if path == "/api/q/qtest":
                 target = allowed_path(cfg, req["path"])
                 text, rev = qfile.read_file(target)
@@ -736,8 +1153,38 @@ class Handler(SimpleHTTPRequestHandler):
                 rev = qfile.write_file(target, new, rev, bool(req.get("backup")))
                 history.record(target, text, new, index, label)
                 a, b, _ = qfile.question_span(new, index)
+                # fields: a long test input goes into a question variable qt<n>_<input> (and out
+                # again): the editor must show the new question variables, or its next save drops it
                 return self.send_json({"rev": rev, "label": label, "qtests": qfile.qtests(new[a:b]),
+                                       "fields": qfile.question_fields(new, index), "history": history.status(target, index)})
+            if path == "/api/q/seeds":
+                target = allowed_path(cfg, req["path"])
+                text, rev = qfile.read_file(target)
+                if req.get("rev") and req["rev"] != rev:
+                    raise qfile.ConflictError("the file was changed outside the workbench")
+                index = int(req["index"])
+                new, label = qfile.seeds_op(text, index, req.get("seeds") or [])
+                rev = qfile.write_file(target, new, rev, bool(req.get("backup")))
+                history.record(target, text, new, index, label)
+                a, b, _ = qfile.question_span(new, index)
+                return self.send_json({"rev": rev, "label": label, "seeds": qfile.deployed_seeds(new[a:b]),
                                        "history": history.status(target, index)})
+            if path == "/api/q/approve":
+                target = allowed_path(cfg, req["path"])
+                text, rev = qfile.read_file(target)
+                if req.get("rev") and req["rev"] != rev:
+                    raise qfile.ConflictError("the file was changed outside the workbench")
+                index = int(req["index"])
+                new, label = rules.approve(text, index, req["testcase"], req.get("expected"))
+                rev = qfile.write_file(target, new, rev, bool(req.get("backup")))
+                history.record(target, text, new, index, label)
+                a, b, _ = qfile.question_span(new, index)
+                return self.send_json({"rev": rev, "label": label, "qtests": qfile.qtests(new[a:b]),
+                                       "approvals": rules.approvals(new[a:b]), "history": history.status(target, index)})
+            if path == "/api/q/variants":
+                return self.send_json(self.variants(cfg, req))
+            if path == "/api/q/testrun":
+                return self.send_json(self.test_run(cfg, req))
             if path == "/api/q/stackgrade":
                 return self.send_json(self.stack_grade(cfg, req))
             if path == "/api/q/duplicate":
@@ -758,23 +1205,67 @@ class Handler(SimpleHTTPRequestHandler):
                 rev = qfile.write_file(target, new, None)
                 return self.send_json({"path": str(target), "rev": rev, "questions": qfile.list_questions(new)})
             if path == "/api/q/split":
-                return self.send_json(self.split_file(allowed_path(cfg, req["path"])))
+                return self.send_json(self.split_file(allowed_path(cfg, req["path"]), bool(req.get("only_new"))))
         except qfile.ConflictError as err:
             return self.send_json({"error": str(err), "conflict": True}, 409)
         except (MaximaError, ValueError, KeyError, IndexError, OSError, ET.ParseError) as err:
             return self.send_json({"error": "%s: %s" % (type(err).__name__, err)}, 400)
         return self.send_error(404)
 
-    def split_file(self, source):
+    def graphic_post(self, path):
+        """Graphic files of the Graphic page: open {path} -> {path, graphic};
+        save {folder, name, graphic, overwrite} -> {path}, or 409 {exists, path} if the file
+        exists and overwrite is not set."""
+        cfg = load_config()
+        try:
+            req = json.loads(self.read_body() or "{}")
+            if path == "/api/graphics/open":
+                target = graphic_path(cfg, req.get("path", ""))
+                graphic = json.loads(target.read_text(encoding="utf-8"))
+                error = check_graphic(graphic)
+                if error:
+                    raise ValueError("%s: %s" % (target.name, error))
+                return self.send_json({"path": str(target), "graphic": graphic})
+            if path == "/api/graphics/png":
+                name = re.sub(r"(?i)(\.graphic\.json|\.png)$", "", (req.get("name") or "").strip())
+                if not name or not req.get("folder"):
+                    raise ValueError("no file name or folder")
+                folder = target_folder(cfg, req["folder"])
+                target = graphic_path(cfg, folder / qfile.safe_filename(name, ".png"), must_exist=False, ext=".png")
+                target.write_bytes(render_png(self.server.server_address[1], req))
+                return self.send_json({"path": str(target)})
+            graphic = req.get("graphic")
+            error = check_graphic(graphic)
+            if error:
+                raise ValueError(error)
+            name = re.sub(r"(?i)(\.graphic)?\.json$", "", (req.get("name") or "").strip())
+            filename = qfile.safe_filename(name, GRAPHIC_EXT) if name else ""
+            if not filename:
+                raise ValueError("no file name")
+            if not req.get("folder"):
+                raise ValueError("no folder")
+            folder = target_folder(cfg, req["folder"])
+            target = graphic_path(cfg, folder / filename, must_exist=False)
+            if target.exists() and not req.get("overwrite"):
+                return self.send_json({"exists": True, "path": str(target)}, 409)
+            target.write_text(dump_scene(graphic), encoding="utf-8", newline="\n")
+            return self.send_json({"path": str(target)})
+        except (OSError, ValueError) as err:
+            return self.send_json({"error": str(err)}, 400)
+
+    def split_file(self, source, only_new=False):
         """Writes each STACK question of a file as its own file (one question per file, as
         qbank_gitsync keeps them), named after the question, into a folder per category next to
         the file: the category path below "top" ("$module$/top/06 Kinematik/Teil A" ->
         06 Kinematik/Teil A/). The files contain no category entry: Moodle's "import as new
         version" refuses a file with more than one <question> element, and a category entry is
         one. The questions are cut out of the original text, so CDATA sections and formatting stay as exported. The
-        original is renamed to <name>.xml.orig (no longer listed, kept as a backup)."""
+        original is renamed to <name>.xml.orig (no longer listed, kept as a backup, and a sign that the category
+        is split). A question whose file already exists (split before, maybe edited since) is never written
+        again: without only_new nothing is written and {"existing": [...], "new": [...]} returned; with only_new
+        only the questions without a file are written."""
         text, _ = qfile.read_file(source)
-        written, category = [], ""
+        plan, category = [], ""
         for a, b, qtype in qfile.spans(text):
             if qtype == "category":
                 category = stack_question.text_of(ET.fromstring(text[a:b]), "category/text") or ""
@@ -786,13 +1277,25 @@ class Handler(SimpleHTTPRequestHandler):
                 parts = parts[1:]
             folder = source.parent.joinpath(*[qfile.safe_filename(p, "") for p in parts]) if parts \
                 else source.parent / source.stem
-            folder.mkdir(parents=True, exist_ok=True)
             qname = stack_question.text_of(ET.fromstring(text[a:b]), "name/text") or "question"
-            target = unique_path(folder, qfile.safe_filename(qname))
-            target.write_text(qfile.new_file_text([text[a:b]]), encoding="utf-8", newline="")
+            plan.append((folder, folder / qfile.safe_filename(qname), text[a:b]))
+        if not plan:
+            raise ValueError("the file has no STACK questions")
+        existing = [str(t) for _f, t, _q in plan if t.exists()]
+        if existing and not only_new:
+            return {"existing": existing, "new": [str(t) for _f, t, _q in plan if not t.exists()],
+                    "orig": sorted(str(p) for p in source.parent.glob("*.orig"))}
+        written, before = [], set(existing)
+        for folder, target, q in plan:
+            if str(target) in before:
+                continue                    # split before: the file (maybe edited since) stays
+            folder.mkdir(parents=True, exist_ok=True)
+            target = unique_path(folder, target.name)   # two questions of the same name in this file
+            target.write_text(qfile.new_file_text([q]), encoding="utf-8", newline="")
             written.append(str(target))
         if not written:
-            raise ValueError("the file has no STACK questions")
+            raise ValueError("all %d questions of the file already have their files (split before); nothing written"
+                             % len(plan))
         orig = unique_path(source.parent, source.name + ".orig")
         os.replace(source, orig)
         folders = sorted({str(Path(w).parent) for w in written})
@@ -810,7 +1313,7 @@ class Handler(SimpleHTTPRequestHandler):
             req = json.loads(self.read_body() or "{}")
             try:
                 return self.send_json({"path": pick_folder(req.get("title") or "Choose a folder", req.get("initial") or "")})
-            except (OSError, subprocess.SubprocessError, RuntimeError) as err:
+            except (OSError, subprocess.SubprocessError, RuntimeError, ValueError) as err:
                 return self.send_json({"error": "no folder dialog available (%s) - type or paste the path instead" % err}, 400)
         if parsed.path == "/api/mtests/run":
             return self.mtests_run()
@@ -822,6 +1325,7 @@ class Handler(SimpleHTTPRequestHandler):
             STATE.data["maxima"] = path
             STATE.save()
             POOL.close_all()          # the next run starts a session with the chosen version
+            POOL.prepare(path, current_stack())
             return self.send_json({"maxima_current": path})
         if parsed.path == "/api/stack":
             req = json.loads(self.read_body() or "{}")
@@ -832,7 +1336,10 @@ class Handler(SimpleHTTPRequestHandler):
             STATE.save()
             stack_question.STACK_VERSION = version
             POOL.close_all()          # the next run loads the chosen STACK library
+            POOL.prepare(current_maxima(), version)
             return self.send_json({"stack_current": version})
+        if parsed.path in ("/api/graphics/open", "/api/graphics/save", "/api/graphics/png"):
+            return self.graphic_post(parsed.path)
         if parsed.path.startswith("/api/q/"):
             return self.question_post(parsed.path)
         if not parsed.path.startswith("/api/cases/"):
@@ -865,8 +1372,9 @@ class Handler(SimpleHTTPRequestHandler):
                 branch = cfg["branches"][src]
                 url = "https://raw.githubusercontent.com/%s/%s/meclib.js?t=%d" % (
                     cfg["github_repo"], branch, int(time.time()))
-                data = fetch(url)
-                info = "GitHub %s (%s), fetched %s" % (src, branch, time.strftime("%H:%M:%S"))
+                data, note = offline_copy(CACHE / "meclib" / branch / "meclib.js", lambda: fetch(url),
+                                          "meclib.js %s" % branch)
+                info = note or "GitHub %s (%s), fetched %s" % (src, branch, time.strftime("%H:%M:%S"))
             else:
                 return self.send_json({"error": "unknown source " + src}, 400)
         except (OSError, urllib.error.URLError) as err:
@@ -881,15 +1389,14 @@ class Handler(SimpleHTTPRequestHandler):
         cached = CACHE / hashlib.sha1(url.encode("utf-8")).hexdigest()
         # Branch files can change at any time; only tagged/versioned files are cached.
         cacheable = "/v" in url or "@" in url
+        # (branch files are refetched each time, the last copy is used without a connection)
         if cacheable and cached.exists():
             data = cached.read_bytes()
         else:
             try:
-                data = fetch(url)
+                data, _note = offline_copy(cached, lambda: fetch(url), url)
             except (OSError, urllib.error.URLError) as err:
                 return self.send_error(502, "proxy fetch failed: %s" % err)
-            if cacheable:
-                cached.write_bytes(data)
         ctype = mimetypes.guess_type(urllib.parse.urlparse(url).path)[0] or "application/octet-stream"
         if ctype.startswith("text/") or ctype.endswith("javascript"):
             ctype += "; charset=utf-8"
@@ -913,9 +1420,12 @@ PICK_LOCK = threading.Lock()
 def pick_folder(title, initial):
     """The system's folder dialog, in a separate Python process (tkinter wants its own main
     thread). Returns the chosen folder or "" if cancelled."""
+    # the dialog process writes UTF-8 (on Windows its stdout would otherwise use the ANSI code
+    # page, and a folder name with an umlaut could not be read here)
+    env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1")
     with PICK_LOCK:
         proc = subprocess.run([sys.executable, "-c", PICK_FOLDER_SCRIPT, title, initial if Path(initial).is_dir() else ""],
-                              capture_output=True, text=True, encoding="utf-8", timeout=600)
+                              capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600, env=env)
     if proc.returncode != 0:
         raise RuntimeError((proc.stderr.strip().splitlines() or ["tkinter failed"])[-1])
     return str(Path(proc.stdout.strip())) if proc.stdout.strip() else ""
@@ -953,6 +1463,7 @@ def main():
     stack_question.STACK_VERSION = current_stack()     # the security map of the chosen STACK version
     port = args.port or load_config().get("port", 8765)
     stop_previous_server(port)
+    shutil.rmtree(PLOT_DIR, ignore_errors=True)        # plots of the previous run
     server = None
     for _ in range(10):
         try:
@@ -969,6 +1480,7 @@ def main():
     print("meclib workbench running at %s  (repository: %s)" % (url, REPO))
     regenerate_fixtures()
     print("Stop with Ctrl+C or by closing this window.")
+    POOL.prepare(current_maxima(), current_stack())     # a Maxima session ready for the first question
     if not args.no_browser:     # ?start: the page continues on the page used last (Graphic, Questions, Tests)
         threading.Timer(0.5, lambda: webbrowser.open(url + "?start")).start()
     try:

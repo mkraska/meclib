@@ -6,10 +6,7 @@ Use this to include functions into the question variables:
 
     stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/fb_fbd.mac");
 
-The folder `dist/` holds compact copies of the libraries (no comments, no indentation; about 30 % smaller),
-which STACK fetches and parses faster when it compiles a question:
-
-    stack_include("https://raw.githubusercontent.com/mkraska/meclib/main/Maxima/dist/fb_fbd.mac");
-
-They are generated from the files here by `python tools/build_dist.py` (run it after every change of a
-library; `--check` reports out-of-date copies). Edit only the files in this folder, never those in `dist/`.
+Each file sets a version variable, the date of its last change: `fb_fbd_version`, `fb_value_version`,
+`fb_spline_version` (e.g. `"2026 10 23"`). It shows which version STACK compiled into a question, e.g. in a
+`[[debug/]]` block or in the demo question `demo_questions/meclib_diagnostics.xml`. Update it with every
+change of the file.

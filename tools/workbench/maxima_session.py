@@ -23,6 +23,8 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+# plots of plot() in castext (STACK's IMAGE_DIR): the server serves them under /plots/ (URL_BASE)
+PLOT_DIR = HERE / ".cache" / "plots"
 REPO = HERE.parent.parent
 
 
@@ -138,9 +140,30 @@ def mpath(path):
     return '"' + str(path).replace("\\", "/").replace('"', '\\"') + '"'
 
 
+def mtempdir(path):
+    """maxima_tempdir as a Maxima string literal. On Windows with backslashes: STACK's plot()
+    deletes its .plt file with `del <maxima_tempdir>...`, and del takes "/Users" for a switch;
+    its German message (cp850 "ü") then breaks Maxima's UTF-8 reading of the output."""
+    if os.name == "nt":
+        return '"' + str(path).replace("/", "\\").rstrip("\\").replace("\\", "\\\\") + '\\\\"'
+    return mpath(str(path) + "/")
+
+
 def mstring(text):
     """Python text as a Maxima string literal."""
     return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def gnuplot_for(maxima):
+    """gnuplot of a Maxima installation (Windows: <maxima>\\gnuplot\\bin\\gnuplot.exe next to
+    bin\\maxima.bat), else the one on the PATH; None if there is none."""
+    if maxima:
+        root = Path(maxima).resolve().parent.parent
+        for p in (root / "gnuplot" / "bin" / "gnuplot.exe", root / "gnuplot" / "bin" / "wgnuplot.exe"):
+            if p.is_file():
+                return p
+    found = shutil.which("gnuplot")
+    return Path(found) if found else None
 
 
 class MaximaError(RuntimeError):
@@ -148,6 +171,10 @@ class MaximaError(RuntimeError):
 
 
 class MaximaSession:
+    # the first evaluation in a new session may take much longer (Windows: Maxima's first loads,
+    # virus scanner); the page shows the elapsed time meanwhile
+    FIRST_RUN_TIMEOUT = 180
+
     def __init__(self, maxima=None, timeout=60, stack=None):
         self.maxima = find_maxima(maxima)
         if not self.maxima:
@@ -156,6 +183,7 @@ class MaximaSession:
         if not self.libdir:
             raise MaximaError("STACK's Maxima library not found under config/stack/<version>/maxima/")
         self.timeout = timeout
+        self.used = False           # has run_with_results() run yet (see FIRST_RUN_TIMEOUT)
         self.tmp = Path(tempfile.mkdtemp(prefix="meclib-maxima-"))
         self.counter = 0
         self.lock = threading.Lock()
@@ -210,6 +238,16 @@ class MaximaSession:
         b = text.find("true)$", a)
         return text[a:b + len("true)$")] if a >= 0 and b > a else ""
 
+    def _plot_setup(self):
+        PLOT_DIR.mkdir(parents=True, exist_ok=True)
+        lines = ["IMAGE_DIR: %s$" % mpath(str(PLOT_DIR).replace("\\", "/") + "/"),
+                 "maxima_tempdir: %s$" % mtempdir(self.tmp),
+                 'URL_BASE: "/plots/"$']
+        gp = gnuplot_for(self.maxima)
+        if gp:
+            lines.append("GNUPLOT_CMD: %s$" % mpath(str(gp).replace("\\", "/")))
+        return "\n".join(lines)
+
     def _prelude(self):
         lib = self.libdir
         harness = REPO / "Maxima" / "tests" / "harness.mac"
@@ -220,6 +258,11 @@ class MaximaSession:
             "file_search_lisp: cons(%s, file_search_lisp)$" % mpath(str(lib) + "/###.{lisp}"),
             self._stack_setup(),
             "load(%s)$" % mpath(lib / "stackmaxima.mac"),
+            # plot(): STACK_SETUP() of the local template writes to <maxima_userdir>/plots/ and links
+            # the files as file:/// - a page served by the workbench cannot load those. The plots go
+            # to the workbench's cache and are served under /plots/; gnuplot is the one next to the
+            # chosen Maxima (Windows), not c:/maxima-<version>/ as the template guesses.
+            self._plot_setup(),
             # as STACK's maximalocal.mac
             'load("stats")$', 'load("distrib")$', 'load("descriptive")$',
             # castext() renderer and resolve_lang() shared with the offline Maxima tests
@@ -270,6 +313,9 @@ class MaximaSession:
         """Like run(), but the code may call meclib_out(key, text); returns (stdout, {key: [texts]})."""
         outfile = self.tmp / ("out%d.txt" % (self.counter + 1))
         outfile.write_text("", encoding="utf-8")
+        if timeout is None and not self.used:
+            timeout = max(self.timeout, self.FIRST_RUN_TIMEOUT)
+        self.used = True
         text = self.run("meclib_out_file: %s$\n%s\nmeclib_out_file: false$" % (mpath(outfile), code), timeout)
         results = {}
         raw = outfile.read_text(encoding="utf-8")

@@ -1,7 +1,7 @@
 `[ "springt", "name", [x1, y1], [x2,y2], r, lf, n, off ]` 
 
 symbol for a tensile spring
-- `"name"` label, typeset in MathJax math mode
+- `"name"` label, typeset in MathJax math mode (see [[Labels and names]])
 - `[x1, y1], [x2,y2]` start and end point
 - `r` (optional, default: 6 pixel) radius of the turns in pixel
 - `lf` (optional, default 20) length of the terminal lines in % of the total length

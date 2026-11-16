@@ -5,7 +5,7 @@
 
 
 Circle with centerpoint, point on perimeter or radius, angle for dimension. The annotation for the radius is only drawn if name is not empty. If the angle is negative, the dimension is inside the circle, otherwise it is outside.
-- `"name"` label text for the radial dimension
+- `"name"` label text for the radial dimension (see [[Labels and names]])
 - `[xc, yc]` center point
 - `[xp,yp]` point on perimeter (alternative to specification of radius)
 - `radius` radius

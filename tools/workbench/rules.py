@@ -20,6 +20,8 @@ internal, not shown to students) as readable lines:
 """
 
 import difflib
+import hashlib
+import json
 import re
 import time
 import xml.etree.ElementTree as ET
@@ -95,6 +97,13 @@ def _set_node_format(q, prt, node_index, branch, fmt):
     return q[:m.start()] + p + q[m.end():]
 
 
+def _prt_html(q, prt):
+    """All feedback branches of the PRT in format html (STACK wants one format for all nodes of a PRT)."""
+    m = _named(q, "prt", prt)
+    block = re.sub(r'<(true|false)feedback(\s+format="[^"]*")?\s*>', r'<\1feedback format="html">', m.group(0))
+    return q[:m.start()] + block + q[m.end():]
+
+
 def _set_node_text(q, prt, node_index, tag, value):
     m = _named(q, "prt", prt)
     nodes = _blocks(m.group(0), "node")
@@ -102,6 +111,13 @@ def _set_node_text(q, prt, node_index, tag, value):
     block = qfile._replace_text_child(n.group(0), tag, value, qfile._newline(q))[0]
     p = m.group(0)[:n.start()] + block + m.group(0)[n.end():]
     return q[:m.start()] + p + q[m.end():]
+
+
+def _set_prt_text(q, prt, tag, value):
+    """<tag><text>value</text></tag> of the PRT named prt (e.g. its feedback variables)."""
+    m = _named(q, "prt", prt)
+    block = qfile._replace_text_child(m.group(0), tag, value, qfile._newline(q))[0]
+    return q[:m.start()] + block + q[m.end():]
 
 
 def _set_text(q, tag, value):
@@ -173,6 +189,10 @@ def F(rule, target, level, title, message, fix=None, wiki=None, default=None):
 
 # ---------------------------------------------------------------------- rules
 def r_security(Q_):
+    """Identifiers STACK refuses in a question (its security list: functions like system(),
+    eval_string(), concat() of names ...): STACK does not save such a question. Checked: the model
+    answers and texts (as the preview's check), the question variables and the feedback variables
+    of the PRTs, statement by statement. Rename or replace the identifier."""
     out = []
     for place, msg in sq.security_findings(Q_.data).items():
         out.append(F("security", place, "required", "Identifier forbidden by STACK", place + ": " + msg))
@@ -195,6 +215,9 @@ STYLE_TYPO = re.compile(r"\bstyle\s*=\s*style\s*=\s*", re.I)
 
 
 def r_style_typo(Q_):
+    """A doubled style attribute style=style="..." in the question text or the general/specific
+    feedback (a slip of older templates): browsers ignore the style, so e.g. the graphic no longer
+    floats beside the text. The fix removes the duplicate."""
     out = []
     for field in ("questiontext", "generalfeedback", "specificfeedback"):
         text = Q_.data.get(field) or ""
@@ -213,6 +236,10 @@ FLOAT_DIV = re.compile(r"""(<div\b[^>]*?\bstyle\s*=\s*)(["'])([^"']*)\2""", re.I
 
 
 def r_float_margin(Q_):
+    """A block floating right or left (usually the graphic, <div style="float:right">) without a
+    margin: the text runs into it. The fix adds the margin of the workbench template (right: 0 0
+    0.5em 1.5em, left: 0 1.5em 0.5em 0). One finding per text; after the fix a new review finds
+    the next block."""
     out = []
     for field in ("questiontext", "generalfeedback", "specificfeedback"):
         text = Q_.data.get(field) or ""
@@ -243,6 +270,10 @@ def uses_meclib_feedback(Q_):
 
 
 def r_lang(Q_):
+    """A question that uses meclib feedback functions (an fb_*.mac include) but declares no languages
+    in the question text: STACK then shows the English texts of the feedback functions. The fix
+    inserts the empty declaration [[lang code="de"]] [[/lang]][[lang code="other"]] [[/lang]]
+    after the graphic (wiki "Multilingual questions")."""
     if not uses_meclib_feedback(Q_) or "[[lang" in Q_.qtext:
         return []
 
@@ -261,6 +292,8 @@ def r_lang(Q_):
 
 
 def r_lang_includes(Q_):
+    """Includes of the obsolete language-specific libraries fb_*_EN.mac / fb_*_DE.mac: the feedback
+    functions are multilingual. The fix includes fb_*.mac instead."""
     out = []
     for url in Q_.includes:
         m = re.search(r"/(fb_\w+?)_(EN|DE)\.mac$", url)
@@ -297,6 +330,239 @@ def r_include_branch(Q_):
     return out
 
 
+# Includes of the compact copies in Maxima/dist/ (removed 2026-10-23: STACK drops comments when it
+# reads the code, so they did not make its compilation faster): STACK refuses the question as soon
+# as it compiles it again ("could not retrieve").
+def r_include_dist(Q_):
+    out = []
+    for url in Q_.includes:
+        m = re.match(r"(https://raw\.githubusercontent\.com/mkraska/meclib/[^/]+/Maxima/)dist/([^/]+)$", url)
+        if not m:
+            continue
+        new_url = m.group(1) + m.group(2)
+
+        def fix(q, url=url, new_url=new_url):
+            return _set_text(q, "questionvariables", Q(q).qvars.replace(url, new_url))
+        out.append(F("include.dist", m.group(2), "required", "Include of a removed compact copy",
+                     "%s is included from Maxima/dist/, which no longer exists (the compact copies did not make "
+                     "STACK faster). STACK refuses the question as soon as it compiles it again (\"could not "
+                     "retrieve\"). Include Maxima/%s instead." % (m.group(2), m.group(2)), fix))
+    return out
+
+
+# Includes of meclib's Maxima files: one whose names the question never uses only costs compile
+# time (CAS timeouts in Moodle); a meclib function or variable used without its file stays
+# unevaluated. Names: the functions and top-level variables a file defines; uses: identifiers in
+# all Maxima code of the question (strings and comments removed), and the files a needed file
+# itself relies on. Files *_EN.mac (outdated) are never proposed.
+MECLIB_INCLUDE = re.compile(r"https://raw\.githubusercontent\.com/mkraska/meclib/[^/]+/Maxima/([A-Za-z0-9_]+\.mac)$")
+IDENT = re.compile(r"[A-Za-z_%][A-Za-z0-9_%]*")
+_MECLIB_NAMES = {}
+
+
+def _code_idents(code):
+    """Uses in Maxima code: identifiers, and "name(" for the calls (a function counts as used only
+    when called: a variable may share the name of a meclib function, e.g. angle)."""
+    code = re.sub(r'"(?:\\.|[^"\\])*"', '""', sq.strip_comments(code or ""))
+    return set(IDENT.findall(code)) | {n + "(" for n in re.findall(r"([A-Za-z_%][A-Za-z0-9_%]*)\s*\(", code)}
+
+
+def meclib_names():
+    """file -> (names it defines, identifiers its own code uses)."""
+    if not _MECLIB_NAMES:
+        for f in sorted((sq.REPO / "Maxima").glob("*.mac")):
+            text = f.read_text(encoding="utf-8", errors="replace")
+            code = sq.strip_comments(text)
+            defs = {n + "(" for n in re.findall(r"(?m)^([A-Za-z_][A-Za-z0-9_]*)\s*\([^()]*\)\s*:=", code)}
+            defs |= set(re.findall(r"(?m)^([A-Za-z_][A-Za-z0-9_]*)\s*:(?!=)", code))
+            _MECLIB_NAMES[f.name] = (defs, _code_idents(text))
+    return _MECLIB_NAMES
+
+
+def _question_idents(Q_):
+    """Identifiers of all Maxima code of the question, and the names it defines itself."""
+    used = set()
+    for _place, code in _cas_sources(Q_):
+        used |= _code_idents(code)
+    for inp in Q_.inputs:
+        used |= _code_idents(inp.get("tans") or "")
+        for part in sq.castext_cas_parts(inp.get("syntaxhint") or ""):
+            used |= _code_idents(part)
+    for prt in Q_.prts:
+        for node in prt["nodes"]:
+            used |= _code_idents(node.get("testoptions") or "")
+    qv = sq.strip_comments(Q_.qvars)
+    own = set(re.findall(r"(?m)^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:(?!=)", qv))
+    own |= {n + "(" for n in re.findall(r"(?m)^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\([^()]*\)\s*:=", qv)}
+    return used, own
+
+
+def _remove_include(qvars, url):
+    return re.sub(r'[ \t]*stack_include\(\s*"%s"\s*\)\s*[;$][ \t]*\r?\n?' % re.escape(url), "", qvars)
+
+
+def r_includes(Q_):
+    """Includes of meclib's Maxima files.
+
+    include.unused: an included file of which the question uses no function and no variable; the
+    fix removes its stack_include (loading it only costs compile time, which shows as CAS timeouts
+    in Moodle).
+
+    include.missing: a meclib function or variable used without its file (it would stay
+    unevaluated); the fix adds the include, from the same branch as the question's other meclib
+    includes.
+
+    Uses are searched in all Maxima code: question variables, feedback variables, CAS parts of the
+    texts and of the syntax hints, model answers, PRT nodes (SAns, TAns, test options); a function
+    counts only when called ("angle("), so that a variable of the same name does not count. Files
+    needed by a needed file count as needed; *_EN.mac files are never proposed.
+
+    What other findings of the review will need counts as used, so that their fixes and this one
+    do not contradict: a local copy of a function of an included file (functions.legacy deletes
+    it), and the syntax hints {@meclib_h_...@} that inputs.syntaxhint puts in (fb_value.mac)."""
+    names = meclib_names()
+    included = {}                       # file -> url
+    for url in Q_.includes:
+        m = MECLIB_INCLUDE.match(url)
+        if m and m.group(1) in names:
+            included[m.group(1)] = url
+    used, own = _question_idents(Q_)
+    own -= {n for n in own if n.endswith("(") and any(n in names[f][0] for f in included)}
+    used -= own
+    for hint in _hint_proposals(Q_).values():
+        used |= _code_idents(hint.strip("{@}"))
+    out = []
+    # needed files: a used name defined in an included file (the first one, if several define it),
+    # then what the code of a needed file uses from the other included files
+    needed, todo = set(), [used]
+    while todo:
+        idents = todo.pop()
+        for n in idents:
+            homes = [f for f in included if n in names[f][0]]
+            if homes and not any(h in needed for h in homes):
+                needed.add(homes[0])
+                todo.append(names[homes[0]][1])
+    for f, url in included.items():
+        if f in needed:
+            continue
+
+        def fix(q, url=url):
+            return _set_text(q, "questionvariables", _remove_include(Q(q).qvars, url))
+        out.append(F("include.unused", f, "recommended", "Unused include",
+                     "%s is included, but the question uses none of its functions or variables. Loading it "
+                     "costs compile time (CAS timeouts in Moodle). The fix removes the stack_include." % f, fix))
+    # missing files: a used meclib name that no included file defines
+    missing = {}
+    for n in sorted(used):
+        if any(n in names[f][0] for f in included):
+            continue
+        homes = [f for f in names if n in names[f][0] and not f.endswith("_EN.mac")]
+        if homes:
+            missing.setdefault(homes[0], []).append(n)
+    for f, ns in missing.items():
+        shown = [n.rstrip("(") + ("()" if n.endswith("(") else "") for n in ns]
+        out.append(F("include.missing", f, "required", "Missing include",
+                     "%s is used, but %s is not included; without it the call stays unevaluated. The fix adds "
+                     "stack_include(\"%s\")." % (", ".join(shown[:6]) + (" ..." if len(shown) > 6 else ""), f,
+                                                 include_url(Q_, f)),
+                     _include_fix(include_url(Q_, f))))
+    return out
+
+
+# Inputs and PRTs that do not meet: an input that no PRT reads is never graded (often left over
+# after a change), a PRT that reads no input does not depend on the student's answer. A PRT reads an
+# input when its name occurs in the feedback variables, SAns, TAns or the options of a node.
+# Inputs bound to a graphic are left to the graphic rules (graphic.unused-input).
+def r_input_prt(Q_):
+    names = [i["name"] for i in Q_.inputs]
+    used = qfile._prts_using(Q_.block, names)
+    read = {n for v in used.values() for n in v}
+    out = []
+    for n in names:
+        if n in read or n in Q_.graphic or re.match(r"^(objects|names)\d*$", n):
+            continue
+        out.append(F("inputs.no-prt", n, "hint", "Input not graded by any PRT",
+                     "Input %s is read by no PRT (feedback variables, SAns, TAns, test options), so its answer is never "
+                     "graded. Add a PRT for it, or delete the input if it is left over (the fix deletes it with its "
+                     "placeholders)." % n, lambda q, n=n: qfile._delete_input_q(q, n)))
+    for p in Q_.prts:
+        if p["name"] not in used:
+            out.append(F("prt.no-input", "PRT " + p["name"], "recommended", "PRT reads no input",
+                         "PRT %s reads no input (feedback variables, SAns, TAns, test options), so it does not depend on "
+                         "the student's answer. Probably a node compares question variables only, or an input was renamed."
+                         % p["name"]))
+    return out
+
+
+# A question with inputs needs question tests (agents/stack_essentials.md). The fix adds test case
+# "TAns" with the model answers as written (e.g. the name of a question variable, so it holds for
+# every variant; a choice input gets its correct entries; an input bound to a graphic is left to
+# the page, which takes what the graphic writes when it shows the model answer). The model answers are the model solution
+# and the PRTs' actual behaviour with them is taken as correct, whichever branches it takes: the
+# fix leaves the expected results empty, and the Questions page then runs the test on the variant
+# in the preview and writes its result (score, penalty, full route) as the expected one. The test
+# is not approved: autogenerated tests are approved by hand.
+def r_tests_none(Q_):
+    if not Q_.inputs or qfile.qtests(Q_.block):
+        return []
+    inputs = {}
+    for i in Q_.inputs:
+        ta = (i.get("tans") or "").strip()
+        if not ta or i["name"] in Q_.graphic:      # a graphic's input: the page fills it from the graphic
+            continue
+        inputs[i["name"]] = ("mcq_correct(%s)" % ta if i.get("type") == "checkbox" else
+                             "first(mcq_correct(%s))" % ta if i.get("type") in sq.MCQ_TYPES else ta)
+    if not inputs:
+        return []
+
+    def fix(q):
+        return qfile.qtest_op(q, 0, {"op": "add", "description": "TAns", "inputs": inputs, "expected": {}})[0]
+    return [F("tests.none", "", "recommended", "No question tests",
+              "The question has inputs but no question tests; STACK's guidelines want a test per branch of every PRT. "
+              "The fix adds test \"TAns\" with the model answers (%s). They are the model solution, so what the PRTs "
+              "do with them is taken as correct: the test is run on the variant in the preview and its result "
+              "(score, penalty, full route) becomes the expected one. Check it in the Tests column and approve the test."
+              % ", ".join("%s = %s" % kv for kv in inputs.items()), fix)]
+
+
+# Test input values longer than STACK's database column (255 characters): the import into Moodle
+# fails with "error writing to the database". The fix moves them into question variables.
+def r_qtest_length(Q_):
+    out = []
+    defined = sq.question_names(Q_.qvars)
+    for t in qfile.qtests(Q_.block):
+        # an input bound to a graphic with an empty value ([] or ""): the graphic did not fill it
+        # (e.g. names, whose model answer is []), so PRTs that index it fail
+        empty = [n for n, v in t["inputs"].items() if n in Q_.graphic and v.strip() in ("[]", "", '""')]
+        if empty:
+            out.append(F("tests.graphic-input-empty", "test %s" % t["testcase"], "required", "Graphic input of a test is empty",
+                         "Test %s: %s = %s. This input is filled by the graphic (input-ref-%s); its model answer is no "
+                         "answer, and PRTs that read it (e.g. names[i]) fail with \"invalid index\". Open the test in test "
+                         "mode, press TAns, wait until the graphic shows the model answer and replace the test."
+                         % (t["testcase"], ", ".join(empty), t["inputs"][empty[0]].strip(), empty[0])))
+        # a long value moved into a question variable qt<n>_<input> that is no longer there (e.g.
+        # removed by an edit of the question variables): the test input is then a bare symbol
+        lost = [v for v in t["inputs"].values() if re.match(r"^qt\d+_\w+$", v.strip()) and v.strip() not in defined]
+        if lost:
+            out.append(F("tests.missing-var", "test %s" % t["testcase"], "required", "Test input refers to a missing variable",
+                         "Test %s: %s %s not in the question variables, so the test input is a bare symbol (a graphic "
+                         "stays empty, the PRTs get no proper answer). Open the test in the Tests column (test mode), "
+                         "let the inputs be filled again and replace the test." % (
+                             t["testcase"], ", ".join(lost), "is" if len(lost) == 1 else "are")))
+        long = [n for n, v in t["inputs"].items() if len(v) > qfile.QTEST_VALUE_MAX]
+        if not long:
+            continue
+
+        def fix(q, tc=t["testcase"]):
+            return qfile.qtest_externalize(q, tc, qfile._newline(q))[0]
+        out.append(F("tests.value-length", "test %s" % t["testcase"], "required", "Test input too long for Moodle",
+                     "Test %s: the value of %s is longer than the 255 characters STACK can store for a test input; "
+                     "importing the question into Moodle fails (\"error writing to the database\"). The fix moves it "
+                     "into a question variable (%s), the test input then holds its name."
+                     % (t["testcase"], ", ".join(long), ", ".join("qt%s_%s" % (t["testcase"], n) for n in long)), fix))
+    return out
+
+
 _MECLIB_FUNS = {}
 
 
@@ -326,6 +592,8 @@ def _remove_definition(qvars, name):
 
 # Old copies of meclib functions in the question variables (from the time before stack_include):
 # the include provides the current version; the local definition hides it or duplicates it.
+# Reported when a meclib Maxima file defines the function too and that file is included, or the
+# name starts with fb_. The fix deletes the definition and adds the include if missing.
 def r_legacy_functions(Q_):
     funs = meclib_functions()
     out = []
@@ -359,6 +627,14 @@ def _input_fix(name, changes):
 
 
 def r_graphic_inputs(Q_):
+    """The hidden inputs bound to a meclib graphic ([[jsxgraph input-ref-...]]).
+
+    inputs.graphic: the input of the objects (stateRef) is a string input, the input of the names
+    (fbd_names) an algebraic input with floats allowed; neither shows validation or asks students
+    to verify (wiki "MecLib Question Setup"). The fix sets these options.
+
+    inputs.graphic-visible: an input of the graphic that is not inside <p hidden> ... </p>:
+    students see the raw data (fine while debugging)."""
     out = []
     for inp in Q_.inputs:
         ref = Q_.graphic.get(inp["name"])
@@ -378,6 +654,15 @@ def r_graphic_inputs(Q_):
 
 
 def r_input_settings(Q_):
+    """The answer inputs (algebraic, units, numerical; not the inputs of a graphic).
+
+    inputs.settings: as the style guide and the maintainer decided - insert stars for spaces only
+    (none for numerical inputs), the syntax hint as placeholder, validation "compact", students
+    must verify. The fix sets these options.
+
+    inputs.syntaxhint: syntax hints that are empty or plain words ("expression", "Zahl", ...)
+    become the multilingual hints of fb_value.mac ({@meclib_h_alg@}, {@meclib_h_number@},
+    {@meclib_h_unit@}); the fix adds the include of fb_value.mac if the question lacks it."""
     out = []
     has_fb_value = any("fb_value" in u for u in Q_.includes)
     for inp in Q_.inputs:
@@ -391,7 +676,7 @@ def r_input_settings(Q_):
                          _input_fix(inp["name"], changes), WIKI + "Style-Guide-for-Questions-in-Engineering-Mechanics"))
         hint = (inp.get("syntaxhint") or "").strip()
         want = SYNTAX_HINTS[inp["type"]]
-        if hint != want and (not hint or hint.lower() in PLAIN_HINTS):
+        if inp["name"] in _hint_proposals(Q_):
             if has_fb_value:
                 out.append(F("inputs.syntaxhint", inp["name"], "recommended", "Multilingual syntax hint",
                              "Input %s: syntax hint %s → %s (German/English, from fb_value.mac)."
@@ -405,6 +690,18 @@ def r_input_settings(Q_):
                              % (inp["name"], '"%s"' % hint if hint else "empty", want, url),
                              _include_fix(url, _input_fix(inp["name"], {"syntaxhint": want})),
                              WIKI + "Multilingual-questions"))
+    return out
+
+
+def _hint_proposals(Q_):
+    """Inputs whose syntax hint inputs.syntaxhint replaces: name -> new hint ({@meclib_h_...@})."""
+    out = {}
+    for inp in Q_.inputs:
+        if inp["name"] in Q_.graphic or inp["type"] not in INPUT_TARGETS:
+            continue
+        hint, want = (inp.get("syntaxhint") or "").strip(), SYNTAX_HINTS[inp["type"]]
+        if hint != want and (not hint or hint.lower() in PLAIN_HINTS):
+            out[inp["name"]] = want
     return out
 
 
@@ -435,6 +732,23 @@ def _feedback(node):
 
 
 def r_prts(Q_):
+    """Settings of the PRTs:
+
+    prt.simp: a PRT that uses fb_unit() should have simplification off, so that answers like 0*kg
+    keep their unit for the feedback.
+
+    prt.feedbackstyle: feedback style compact (2); a hint only where the feedback contains HTML
+    blocks (<p>, <div>, lists), which need the standard style.
+
+    prt.quiet: where the feedback comes from a meclib function, the answer test's own feedback is
+    switched off (quiet).
+
+    prt.feedbackformat: every branch of every PRT in format html. Markdown is only the default of
+    question generators; in Moodle it suppresses the yellow feedback background (the workbench
+    preview shows it anyway), and STACK escapes texts inserted with {@...@}, e.g. the [[lang]]
+    blocks of meclib feedback. STACK wants one format per PRT, so the fix sets all branches.
+
+    prt.tolerance: a relative tolerance other than 0.005 (the maintainer's standard) is a hint."""
     out = []
     for prt in Q_.prts:
         P = prt["name"]
@@ -457,21 +771,22 @@ def r_prts(Q_):
                                                             " (check the feedback variables afterwards)"),
                          lambda q, P=P: _set_in(q, "prt", P, "autosimplify", "0"), WIKI + "fb_unit",
                          default=not prt["feedbackvariables"].strip()))
+        # format: html for every branch of every PRT (STACK wants one format per PRT; Markdown is
+        # only the default of question generators and loses the yellow feedback background)
+        branches = [("%s node %d %s" % (P, k + 1, br), node.get(br + "feedback") or "", node.get(br + "format"))
+                    for k, node in enumerate(prt["nodes"]) for br in ("true", "false")]
+        if any(f != "html" for _w, _fb, f in branches):
+            unsafe = [w for w, fb, f in branches if f != "html" and
+                      re.search(r"[\\*_#`\n]", re.sub(r"\{@.*?@\}", "", fb, flags=re.S).strip())]
+            fmts = sorted({f for _w, _fb, f in branches if f != "html"})
+            out.append(F("prt.feedbackformat", P, "recommended", "Format of PRT feedback",
+                         "PRT %s: feedback format %s → html for all nodes. In Markdown, Moodle shows the feedback "
+                         "without the yellow background, and STACK escapes texts inserted with {@...@} (e.g. "
+                         "[[lang]] blocks of meclib feedback)%s." % (P, ", ".join(fmts), "" if not unsafe else
+                         "; %s contain Markdown-like characters, check them after the change" % ", ".join(unsafe)),
+                         lambda q, P=P: _prt_html(q, P), WIKI + "Meclib-tutorial:-Add-Meclib-feedback-functions"))
         for k, node in enumerate(prt["nodes"]):
             where = "%s node %d" % (P, k + 1)
-            for br in ("true", "false"):
-                fb = node.get(br + "feedback") or ""
-                if fb.strip() and node.get(br + "format") != "html":
-                    plain = re.sub(r"\{@.*?@\}", "", fb, flags=re.S).strip()
-                    safe = not plain or not re.search(r"[\\*_#`\n]", plain)
-                    out.append(F("prt.feedbackformat", "%s %s" % (where, br), "recommended",
-                                 "Format of PRT feedback",
-                                 "PRT %s, %s feedback: format %s → html; Markdown suppresses the yellow feedback "
-                                 "background (reject only if the feedback is meant as a dynamic part of the question "
-                                 "text)%s." % (where, br, node.get(br + "format"), "" if safe else
-                                               "; the text contains Markdown-like characters, check it after the change"),
-                                 lambda q, P=P, k=k, br=br: _set_node_format(q, P, k, br, "html"),
-                                 WIKI + "Meclib-tutorial:-Add-Meclib-feedback-functions"))
             if re.search(r"\{@\s*fb_", _feedback(node)) and node.get("quiet") != "1":
                 out.append(F("prt.quiet", where, "recommended", "Quiet answer test",
                              "PRT %s: the feedback comes from a meclib function; switch the answer test's own "
@@ -489,6 +804,7 @@ def r_prts(Q_):
 
 
 def r_grade(Q_):
+    """A question with PRTs but default mark 0 gives no points. The fix sets the default mark to 1."""
     grade = _t(Q_.el, "defaultgrade") or "0"
     try:
         zero = float(grade) == 0
@@ -538,6 +854,9 @@ def r_feedback_inputs(Q_):
 
 
 def r_literal_index(Q_):
+    """Object indices written as numbers in calls of meclib feedback functions (fb_fix12(obj, n, 7,
+    ...)): the numbers change when objects are inserted into the graphic. Define a variable for
+    each object index (i_A: 7; /* fix12 A */) and use it."""
     lists = OBJECT_LISTS + list(Q_.graphic)
     sub = re.compile(r"\b(%s)\s*\[\s*(\d+)\s*[\],]" % "|".join(map(re.escape, lists)))
     call = re.compile(r"\b(%s)\s*\(" % "|".join(INDEX_ARG))
@@ -560,6 +879,9 @@ def r_literal_index(Q_):
 
 
 def r_tans_copy(Q_):
+    """The model answer of a graphic's input is its initial state (tans equal to init): usually it is
+    derived from it, tansdata: copy(initdata) with the changes a student makes, tans:
+    stackjson_stringify(tansdata)."""
     out = []
     for inp in Q_.inputs:
         if Q_.graphic.get(inp["name"]) == "stateRef" and (inp.get("tans") or "").strip() == "init":
@@ -588,8 +910,19 @@ def show_tested():
 OBJ_STATE = re.compile(r'\[\s*"(\w+)"(?:[^\[\]]|\[[^\[\]]*\])*?,\s*"locked"\s*\]')
 
 
+# object types for which "locked" is one of their own states, not the legacy one: a spline
+# (active, inactive, locked, pure) has no "SHOW" state
+LOCKED_NATIVE = {"spline"}
+
+
 def r_locked(Q_):
-    found = [m for m in OBJ_STATE.finditer(sq.strip_comments(Q_.qvars))]
+    """The legacy object state "locked" in the objects of a meclib graphic (initdata etc.):
+    fb_system() counts only "SHOW"/"show" as shown. Replacing it by "SHOW" is offered
+    (recommended, with fix) for the object types with a regression test for this - types that
+    appear with "SHOW" in a scene of tests/scenes/ (state_show.json: beam, q, fix1, fix12, fix123,
+    bar, force, moment); other types get a hint only. Not reported: types for which "locked" is
+    a state of their own (spline: active, inactive, locked, pure; no "SHOW")."""
+    found = [m for m in OBJ_STATE.finditer(sq.strip_comments(Q_.qvars)) if m.group(1) not in LOCKED_NATIVE]
     if not found:
         return []
     out = []
@@ -691,6 +1024,13 @@ def fix_math_delimiters(text, fmt):
 
 
 def r_math_delimiters(Q_):
+    r"""Math delimiters by the format of each text: in HTML texts \( ... \); in Markdown texts the
+    strict form \\\( ... \\\) (backslash and bracket both escaped, so Markdown never takes the
+    bracket for part of a link), except inside block-level HTML (a line starting with <p>,
+    <table>, <div> ... up to its closing tag), which Markdown passes through unchanged: there \(
+    ... \) as in HTML. Checked: question text, general and specific feedback, question note, PRT
+    node feedback, each by its own format; only complete pairs, not in [[jsxgraph]] blocks or
+    {@...@}/{#...#}. The fix rewrites the delimiters."""
     out = []
     places = [(f, Q_.data.get(f) or "", Q_.data["formats"].get(f, "html"), None)
               for f in ("questiontext", "generalfeedback", "specificfeedback", "questionnote")]
@@ -718,6 +1058,477 @@ def r_math_delimiters(Q_):
                      "%s (%s): %s. %s." % (where, fmt, ", ".join("%d× %s" % (c, k) for k, c in changes.items()), rule),
                      fix))
     return out
+
+
+RAW_INSERT = re.compile(r"\{#(.*?)#\}", re.S)
+
+
+def _math_spans(text):
+    """Spans of the formulas of a castext (between \\( \\) or \\[ \\], whatever the number of
+    backslashes), outside [[jsxgraph]] and [[comment]] blocks."""
+    protected = [m.span() for m in PROTECTED.finditer(text)]
+    spans, opener = [], None
+    for m in MATH_DELIM.finditer(text):
+        if any(a <= m.start() < b for a, b in protected):
+            continue
+        if opener is None:
+            if m.group(2) in "([":
+                opener = m
+        elif m.group(2) == {"(": ")", "[": "]"}[opener.group(2)]:
+            spans.append((opener.end(), m.start()))
+            opener = None
+    return spans
+
+
+def fix_raw_in_math(text):
+    """Returns (new text, count): {#...#} inside formulas replaced by {@...@}."""
+    spans = _math_spans(text)
+    n = [0]
+
+    def sub(m):
+        if any(a <= m.start() < b for a, b in spans):
+            n[0] += 1
+            return "{@" + m.group(1) + "@}"
+        return m.group(0)
+    return RAW_INSERT.sub(sub, text), n[0]
+
+
+def r_raw_in_math(Q_):
+    """{#...#} inside a formula: Moodle shows the castext unevaluated in some places (question
+    bank, import), MathJax then fails on "#" ("macro parameter character"), and Moodle refuses
+    to save it; {@...@} gives the LaTeX of the value, without delimiters inside a formula."""
+    out = []
+    places = [(f, Q_.data.get(f) or "", None) for f in ("questiontext", "generalfeedback", "specificfeedback", "questionnote")]
+    for prt in Q_.prts:
+        for k, node in enumerate(prt["nodes"]):
+            for br in ("true", "false"):
+                places.append(("PRT %s node %d %s" % (prt["name"], k + 1, br), node.get(br + "feedback") or "", (prt["name"], k, br)))
+    for where, text, node in places:
+        n = fix_raw_in_math(text)[1]
+        if not n:
+            continue
+
+        def fix(q, where=where, node=node):
+            if node is None:
+                return _set_text(q, where, fix_raw_in_math(Q(q).data.get(where) or "")[0])
+            P, k, br = node
+            prt = next(p for p in Q(q).prts if p["name"] == P)
+            return _set_node_text(q, P, k, br + "feedback", fix_raw_in_math(prt["nodes"][k].get(br + "feedback") or "")[0])
+        out.append(F("text.raw-in-math", where, "required", "{#...#} in a formula",
+                     "%s: %d× {#...#} inside \\( \\) or \\[ \\] → {@...@}. Unevaluated (question bank, import), "
+                     "MathJax fails on \"#\" and Moodle does not save the question; {@...@} gives the LaTeX of the "
+                     "value and adds no delimiters inside a formula." % (where, n), fix))
+    return out
+
+
+MULTSGN = re.compile(r'make_multsgn\(\s*"([^"]*)"\s*\)')
+MULTSGN_XML = re.compile(r'make_multsgn\(\s*(?:"|&quot;)blank(?:"|&quot;)\s*\)')
+MULTSGN_OPTIONS = ("cross", "dot", "onum", "none", "space")
+
+
+def r_multsgn(Q_):
+    """make_multsgn() with an option STACK does not know: STACK refuses the question
+    ("make_multsgn received un-supported option"). "blank" was an option until STACK 2025033100
+    (a thin space); the fix replaces it by "onum" (a cross between numbers only, no space between
+    numbers), everywhere in the question. Other options are reported without a fix."""
+    codes = [code for _place, code in _cas_sources(Q_)]
+    for inp in Q_.inputs:
+        codes.append(inp.get("tans") or "")
+        codes += sq.castext_cas_parts(inp.get("syntaxhint") or "")
+    for prt in Q_.prts:
+        codes += [node.get("testoptions") or "" for node in prt["nodes"]]
+    found = {}
+    for code in codes:
+        for opt in MULTSGN.findall(sq.strip_comments(code or "")):
+            if opt not in MULTSGN_OPTIONS:
+                found[opt] = found.get(opt, 0) + 1
+    out = []
+    for opt, n in found.items():
+        fix = None
+        if opt == "blank":
+            def fix(q):
+                return MULTSGN_XML.sub('make_multsgn("onum")', q)
+        out.append(F("maxima.multsgn", opt, "required", "Unknown option of make_multsgn()",
+                     '%d× make_multsgn("%s"): STACK knows only %s and refuses the question ("make_multsgn '
+                     'received un-supported option").%s' % (n, opt, ", ".join('"%s"' % o for o in MULTSGN_OPTIONS),
+                     ' "blank" (a thin space until STACK 2025033100) becomes "onum": a cross between numbers only.'
+                     if opt == "blank" else " Choose one of these."), fix))
+    return out
+
+
+FB_VARS_CALL = re.compile(r"\{@\s*fb_vars\(")
+FB_DIMS = re.compile(r"(?m)^\s*fb_dims\s*:(?!=)\s*(.*)")
+
+
+def _close_paren(src, i):
+    """Index after the ")" that closes the bracket opened just before src[i] (strings skipped), or -1."""
+    depth = 0
+    while i < len(src):
+        c = src[i]
+        if c == '"':
+            i += 1
+            while i < len(src) and src[i] != '"':
+                i += 2 if src[i] == "\\" else 1
+        elif c in "([{":
+            depth += 1
+        elif c in ")]}":
+            if depth == 0:
+                return i + 1
+            depth -= 1
+        i += 1
+    return -1
+
+
+def _fb_vars_calls(text):
+    """The calls {@fb_vars(...)@} of a castext: [(whole call, arguments)]."""
+    out = []
+    for m in FB_VARS_CALL.finditer(text):
+        end = _close_paren(text, m.end())
+        tail = re.match(r"\s*@\}", text[end:]) if end > 0 else None
+        if tail:
+            out.append((text[m.start():end + tail.end()], split_args(text[m.end():])))
+    return out
+
+
+def _fb_vars_label(args):
+    """The label (4th argument) of a call of fb_vars, if it is a non-empty string."""
+    return len(args) > 3 and args[3] not in ('""', "")
+
+
+def _grading_tol(prt, sans, tans):
+    """The tolerance with which a node of the PRT grades sans against tans, as fb_floats needs it:
+    "0" for an exact test (AlgEquiv, AlgEquivNouns, ...), the option of NumRelative; None if no node compares the two (then
+    the feedback tolerance cannot be told from the grading). The feedback should name only the
+    deviations that lower the grade."""
+    flat = lambda e: re.sub(r"\s+", "", e or "")
+    for n in prt["nodes"]:
+        if flat(n["sans"]) == flat(sans) and flat(n["tans"]) == flat(tans):
+            if n["answertest"] in ("AlgEquiv", "AlgEquivNouns", "EqualComAss", "EqualComAssRules", "CasEqual"):
+                return "0"                  # exact tests
+            tol = (n.get("testoptions") or "").strip()
+            if n["answertest"] == "NumRelative" and re.fullmatch(r"\d*\.?\d+(?:[eE]-?\d+)?", tol):
+                return tol
+    return None
+
+
+def _fb_floats_plan(Q_):
+    """What prt.fb-floats changes, by PRT: {prt: {"vars": [(node index, branch, call, sans, tans)],
+    "add": [(node index, sans, tans)], "unit": [(node index, sans, tans, tolerance)], "names": [suffix,
+    ...]}} - fb_vars calls to replace, nodes that get fb_floats (algebraic inputs) or fb_unit
+    (numerical inputs); "names" are the suffixes of txt/ok, one per vars and add entry (in this
+    order). Also [(where, call)] of the fb_vars calls with a label (not converted)."""
+    plan, labelled = {}, []
+    inputs = {i["name"]: i for i in Q_.inputs if i["name"] not in Q_.graphic}
+    flat = lambda e: re.sub(r"\s+", "", e or "")
+    for prt in Q_.prts:
+        vs, add, unit = [], [], []
+        # fb_floats calls already in the feedback variables (any names, e.g. [text, ok]): their
+        # pairs get no second call, and a node whose feedback shows one of their texts has its feedback
+        fvc = sq.strip_comments(prt["feedbackvariables"] or "")
+        have, shown = {}, set()      # (sans, tans) -> name of its text variable
+        for m in re.finditer(r"\[\s*(\w+)\s*,\s*\w+\s*\]\s*:\s*fb_floats\s*\(", fvc):
+            a = split_args(fvc[m.end():])
+            if len(a) >= 2:
+                have[(flat(a[0]), flat(a[1]))] = m.group(1)
+                shown.add(m.group(1))
+        for k, node in enumerate(prt["nodes"]):
+            for br in ("true", "false"):
+                for call, args in _fb_vars_calls(node.get(br + "feedback") or ""):
+                    if len(args) < 2:
+                        continue
+                    if _fb_vars_label(args):
+                        labelled.append(("%s node %d" % (prt["name"], k + 1), call))
+                    else:
+                        vs.append((k, br, call, args[0], args[1]))
+            if re.search(r"\{@\s*(fb_|txt)", _feedback(node)) or any(
+                    re.search(r"\{@\s*%s\s*@\}" % re.escape(x), _feedback(node)) for x in shown):
+                continue                    # meclib feedback already there (or fb_vars, handled above)
+            sans, inp = node["sans"].strip(), inputs.get(node["sans"].strip())
+            # the node that compares with the model answer (later nodes check typical errors)
+            if not inp or flat(node["tans"]) != flat(inp.get("tans")):
+                continue
+            if inp["type"] == "algebraic" and node["answertest"] == "AlgEquiv":
+                add.append((k, sans, node["tans"].strip()))
+            elif inp["type"] == "numerical":
+                tol = (node.get("testoptions") or "").strip()
+                if node["answertest"] != "NumRelative" or not re.fullmatch(r"\d*\.?\d+(?:[eE]-?\d+)?", tol):
+                    tol = "0.005"
+                unit.append((k, sans, node["tans"].strip(), tol))
+        if not (vs or add or unit):
+            continue
+        # one call per pair (sans, tans) in the PRT; fb_vars in a true branch is dropped, not
+        # replaced (the answer is right there, its feedback empty)
+        keyof = lambda sa, ta: (flat(sa), flat(ta))
+        # a pair that already has fb_floats, or whose fb_vars is converted in another node of the
+        # route, gets no added call (its feedback would show twice on the way through the PRT)
+        converted = {keyof(c[3], c[4]) for c in vs if c[1] == "false"}
+        add = [a for a in add if keyof(a[1], a[2]) not in set(have) | converted]
+        if not (vs or add or unit):
+            continue
+        calls = []
+        for c in vs:
+            if c[1] == "false" and keyof(c[3], c[4]) not in [keyof(*x) for x in calls] and keyof(c[3], c[4]) not in have:
+                calls.append((c[3], c[4]))
+        for a in add:
+            if keyof(a[1], a[2]) not in [keyof(*x) for x in calls]:
+                calls.append((a[1], a[2]))
+        taken = set(IDENT.findall(sq.strip_comments(prt["feedbackvariables"] or "")))
+        names, n, count = [], 0, len(calls)
+        for _ in range(count):
+            suffix = ""
+            if count > 1 or "txt" in taken or "ok" in taken:
+                n += 1
+                while "txt%d" % n in taken or "ok%d" % n in taken:
+                    n += 1
+                suffix = str(n)
+            names.append(suffix)
+        name_of = {keyof(*c): x for c, x in zip(calls, names)}
+        # the text variable of a pair: an existing call's (e.g. text), else txt<suffix> of the new one
+        var_of = lambda sa, ta, d=name_of, h=dict(have): h.get(keyof(sa, ta)) or "txt%s" % d.get(keyof(sa, ta))
+        plan[prt["name"]] = {"vars": vs, "add": add, "unit": unit, "names": names, "calls": calls, "var_of": var_of}
+    return plan, labelled
+
+
+def r_fb_floats(Q_):
+    """meclib feedback on the answers to algebraic and numerical inputs.
+
+    prt.fb-floats: (1) {@fb_vars(sans, tans, ...)@} in the feedback of a PRT node becomes
+    [txt, ok]: fb_floats(sans, tans, tol); in the PRT's feedback variables and {@txt@} in the
+    feedback; the list of variables (3rd argument) and the tolerance (5th) of fb_vars are dropped,
+    fb_floats marks the deviating terms itself. One call per SAns/TAns pair in a PRT; fb_vars in a
+    true branch is dropped (the answer is right there, its feedback empty). (2) A node with AlgEquiv that compares an algebraic
+    input with its model answer and has no meclib feedback gets the same, {@txt@} at the start of
+    its false branch (also if the false branch goes on to nodes for typical errors: the feedback of
+    fb_floats is generic). (3) A node that compares a numerical input with its model answer gets
+    {@fb_unit(sans, tans, tol)@} at the start of its false branch (tol: the tolerance of
+    NumRelative, else 0.005). Names txt1, ok1, ... for several calls in one PRT or where txt/ok are
+    taken. All nodes of the PRT get the format html (one format per PRT; in Markdown, STACK
+    escapes the inserted text, e.g. the [[lang]] blocks). The nodes become quiet; the answer
+    tests stay (ok is not used, the grading does not change). If fb_floats comes in and the
+    question variables lack fb_dims, the fix adds fb_dims: []; to fill in (see qv.fb-dims).
+
+    prt.fb-vars-label: calls of fb_vars with a label (4th argument, e.g. for vector components):
+    fb_vars shows the label only when it has something to say, fb_floats has none; no automatic fix."""
+    plan, labelled = _fb_floats_plan(Q_)
+    out = []
+    if plan:
+        nv = sum(len(v["vars"]) for v in plan.values())
+        na = sum(len(v["add"]) for v in plan.values())
+        nu = sum(len(v["unit"]) for v in plan.values())
+        floats = nv + na > 0
+
+        def fix(q):
+            Q2 = Q(q)
+            plan2, _ = _fb_floats_plan(Q2)
+            for prt in Q2.prts:
+                pl = plan2.get(prt["name"])
+                if not pl:
+                    continue
+                P = prt["name"]
+                calls = pl["calls"]
+                if calls:
+                    fv = (prt["feedbackvariables"] or "").rstrip()
+                    if sq.strip_comments(fv).strip() and not sq.strip_comments(fv).rstrip().endswith((";", "$")):
+                        fv += ";"
+                    # the tolerance of the grading (AlgEquiv: 0, every deviating number named)
+                    lines = ["[txt%s, ok%s]: fb_floats(%s, %s, %s);" % (x, x, sa, ta, _grading_tol(prt, sa, ta) or "0.005")
+                             for x, (sa, ta) in zip(pl["names"], calls)]
+                    q = _set_prt_text(q, P, "feedbackvariables", "\n".join(([fv] if fv else []) + lines))
+                texts = {}                  # (node, branch) -> new text
+                get = lambda k, br: texts.get((k, br), prt["nodes"][k].get(br + "feedback") or "")
+                for c in pl["vars"]:
+                    new = "" if c[1] == "true" else "{@%s@}" % pl["var_of"](c[3], c[4])
+                    texts[(c[0], c[1])] = get(c[0], c[1]).replace(c[2], new, 1)
+                for a in pl["add"]:
+                    texts[(a[0], "false")] = "{@%s@}" % pl["var_of"](a[1], a[2]) + get(a[0], "false")
+                for u in pl["unit"]:
+                    texts[(u[0], "false")] = "{@fb_unit(%s, %s, %s)@}" % (u[1], u[2], u[3]) + get(u[0], "false")
+                for (k, br), text in texts.items():
+                    q = _set_node_text(q, P, k, br + "feedback", text)
+                # HTML for all nodes of the PRT (one format per PRT): in Markdown, STACK escapes the
+                # inserted text ([[lang]] blocks, &nbsp;)
+                if texts:
+                    q = _prt_html(q, P)
+                for k in sorted({k for k, _br in texts}):
+                    q = _set_node(q, P, k, "quiet", "1")
+            if any(v["calls"] for v in plan2.values()) and not FB_DIMS.search(sq.strip_comments(Q(q).qvars)):
+                q = _set_text(q, "questionvariables", "fb_dims: [];\n" + Q(q).qvars)
+            return q
+        parts = []
+        if nv:
+            parts.append("%d× {@fb_vars(...)@} → fb_floats()" % nv)
+        if na:
+            parts.append("%d node(s) of algebraic inputs get fb_floats()" % na)
+        if nu:
+            parts.append("%d node(s) of numerical inputs get fb_unit()" % nu)
+        out.append(F("prt.fb-floats", "prt", "recommended", "meclib feedback fb_floats() / fb_unit()",
+                     "PRT %s: %s. fb_floats(sans, tans, tol) goes into the feedback variables as [txt, ok], with the "
+                     "tolerance of the grading (0 for AlgEquiv: every deviating number is named, blurred), "
+                     "{@txt@} into the feedback (at the start of the false branch); fb_unit() directly into the false "
+                     "branch; the nodes become quiet; the answer tests stay (the grading does not change).%s"
+                     % (", ".join(sorted(plan)), "; ".join(parts),
+                        " The question variables get fb_dims: []; - fill in the units of the variables."
+                        if floats and not FB_DIMS.search(sq.strip_comments(Q_.qvars)) else ""),
+                     fix, WIKI + "fb_floats()"))
+    if labelled:
+        out.append(F("prt.fb-vars-label", "fb_vars", "hint", "fb_vars() with a label",
+                     "%s: fb_vars() with a label (%s); fb_floats() has none, convert by hand (e.g. vector "
+                     "components)." % (", ".join(dict.fromkeys(w for w, _c in labelled)),
+                                       "; ".join(c for _w, c in labelled[:2]) + (" ..." if len(labelled) > 2 else "")),
+                     None, WIKI + "fb_floats()"))
+    return out
+
+
+# The tolerance of fb_floats(sans, tans, tol) in the feedback variables should be that of the
+# grading: the feedback names only the deviations that lower the grade. A node that grades sans
+# against tans with AlgEquiv (exactly) wants tol 0 (every deviating number named, blurred); with
+# NumRelative its option. The fix sets it. Calls whose ok is the grading (a node with SAns ok)
+# are right as they are; calls that no node's grading matches get a hint.
+FB_FLOATS_CALL = re.compile(r"\[\s*(\w+)\s*,\s*(\w+)\s*\]\s*:\s*fb_floats\s*\(")
+
+
+def r_fb_floats_tol(Q_):
+    """The tolerance of fb_floats(sans, tans, tol) in the feedback variables should be that of the
+    grading: the feedback names only the deviations that lower the grade. A node that grades sans
+    against tans with an exact test (AlgEquiv, AlgEquivNouns, ...) wants tol 0 (every deviating
+    number named, with blurred messages); with NumRelative its option. The fix sets it. Calls whose
+    ok is the grading (a node with SAns ok) are right as they are; calls that no node's grading
+    matches get a hint (e.g. fb_floats against another variable than the node compares)."""
+    out = []
+    for prt in Q_.prts:
+        fv = prt["feedbackvariables"] or ""
+        code = sq.strip_comments(fv)
+        for m in FB_FLOATS_CALL.finditer(code):
+            args = split_args(code[m.end():])
+            if len(args) != 3:
+                continue
+            okname, txtname = m.group(2), m.group(1)
+            if any(re.sub(r"\s+", "", n["sans"]) == okname for n in prt["nodes"]):
+                continue                    # graded by ok: the call's own tolerance
+            want = _grading_tol(prt, args[0], args[1])
+            have = args[2].strip()
+            if want is None:
+                out.append(F("prt.fb-floats-tol", "PRT %s %s" % (prt["name"], txtname), "hint",
+                             "Tolerance of fb_floats() not from the grading",
+                             "PRT %s: fb_floats(%s, %s, %s) - no node grades %s against %s (an exact test or NumRelative), so the "
+                             "tolerance of the feedback cannot be checked against the grading. The feedback should name only "
+                             "deviations that lower the grade." % (prt["name"], args[0], args[1], have, args[0], args[1])))
+                continue
+            try:
+                same = float(want) == float(have)
+            except ValueError:
+                same = False
+            if same:
+                continue
+
+            def fix(q, P=prt["name"], txtname=txtname, want=want):
+                pr = next(p for p in Q(q).prts if p["name"] == P)
+                fv2 = pr["feedbackvariables"] or ""
+                for m2 in FB_FLOATS_CALL.finditer(fv2):
+                    a2 = split_args(fv2[m2.end():])
+                    if m2.group(1) == txtname and len(a2) == 3:
+                        # the third argument: after the second top-level comma, up to the closing parenthesis
+                        rest = fv2[m2.end():]
+                        i3 = rest.index(a2[2], len(a2[0]) + len(a2[1]))
+                        fv2 = fv2[:m2.end() + i3] + want + fv2[m2.end() + i3 + len(a2[2]):]
+                        return _set_prt_text(q, P, "feedbackvariables", fv2)
+                return q
+            out.append(F("prt.fb-floats-tol", "PRT %s %s" % (prt["name"], txtname), "recommended",
+                         "Tolerance of fb_floats() differs from the grading",
+                         "PRT %s: fb_floats(%s, %s, %s), but the node grades %s against %s %s. The feedback should name only "
+                         "deviations that lower the grade: with tolerance %s a deviation %s is graded wrong but not named. "
+                         "The fix sets the tolerance to %s (with 0 the messages stay blurred: \"too small by at least ...\")."
+                         % (prt["name"], args[0].strip(), args[1].strip(), have, args[0].strip(), args[1].strip(),
+                            "exactly (AlgEquiv)" if want == "0" else "with tolerance %s (NumRelative)" % want,
+                            have, "below it" if float(have) > float(want) else "above it", want), fix, WIKI + "fb_floats()"))
+    return out
+
+
+def r_fb_dims(Q_):
+    """qv.fb-dims: the question uses fb_floats() without the units of the variables (fb_dims
+    missing or empty), so its unit check is off. Declare fb_dims: [a = "m", q_0 = "N/m", ...] in the question
+    variables (wiki fb_floats(), Units)."""
+    uses = any("fb_floats(" in _code_idents(code) for _place, code in _cas_sources(Q_))
+    if not uses:
+        return []
+    m = FB_DIMS.search(sq.strip_comments(Q_.qvars))
+    if m and not re.match(r"\[\s*\]", m.group(1)):
+        return []
+    return [F("qv.fb-dims", "fb_dims", "hint", "fb_floats() without fb_dims",
+              "The question uses fb_floats(), but fb_dims %s: without the units of the variables there is no unit "
+              "check. Declare e.g. fb_dims: [a = \"m\", q_0 = \"N/m\"]; in the question variables."
+              % ("is empty" if m else "is missing"), None, WIKI + "fb_floats()#units")]
+
+
+def r_variants(Q_):
+    """Randomised questions (STACK's rule: a word of the question variables beginning with rand,
+    multiselqn or stack_seed; agents/stack_essentials.md, "Deploy variants").
+
+    variants.none: no deployed variant. Students may get any variant, including one nobody has
+    tested, and the API runs no tests. Deploy variants in the Tests column (survey of seeds).
+
+    variants.note: the question note is empty. STACK tells variants apart by their notes only;
+    show every value that distinguishes the variants, and the answer.
+
+    variants.rand-name: a question variable whose name begins with rand makes STACK treat the
+    question as randomised; rename it."""
+    out = []
+    own = re.findall(r"(?m)^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:(?!=)", sq.strip_comments(Q_.qvars))
+    for n in dict.fromkeys(own):
+        if n.startswith("rand"):
+            out.append(F("variants.rand-name", n, "recommended", "Variable named rand...",
+                         "The question variable %s begins with \"rand\": STACK then treats the question as randomised "
+                         "(deployed variants, tests per variant). Rename it." % n))
+    if not sq.is_random(Q_.data):
+        return out
+    if not re.search(r"<deployedseed>", Q_.block):
+        out.append(F("variants.none", "", "required", "Randomised question without deployed variants",
+                     "The question is randomised but has no deployed variants: students may get any variant, also one "
+                     "nobody has tested, and STACK runs no tests. Deploy variants in the Tests column (survey of seeds, "
+                     "distinct question notes)."))
+    if not (Q_.data.get("questionnote") or "").strip():
+        out.append(F("variants.note", "", "required", "Randomised question without question note",
+                     "The question note is empty: STACK tells variants apart by their notes only. Show every value "
+                     "that distinguishes the variants, and the answer, e.g. \\(F = {@F@}\\), answer {@ta1@}."))
+    return out
+
+
+def r_unit_names(Q_):
+    """A question variable named like a STACK unit (g, m, mm, s, N, t, h, ...) in a question in
+    units mode: the value hides the unit inside the question, and in a student's answer the name
+    counts as the unit (STACK allows unit names before it forbids the teacher's variable names) -
+    e.g. "m g" of a meclib force in the names input only works because g is also gram. Without
+    units mode the same answer would be invalid. Rename the variable (g -> g0)."""
+    units = sq.uses_units(Q_.data) or "stack_unit_si_declare" in Q_.qvars
+    if not units:
+        return []
+    found = []
+    for stmt, _line, _ins in sq.split_statements(Q_.qvars):
+        clean = sq.strip_comments(stmt)
+        names = []
+        m = sq.ASSIGN.match(clean)
+        if m:
+            names.append(m.group(1))
+        m = sq.LISTASSIGN.match(clean)
+        if m:
+            names += [n.strip() for n in m.group(1).split(",") if n.strip()]
+        found += [n for n in names if n in sq.STACK_UNITS and n not in found]
+    if not found:
+        return []
+
+    def fix(q, n):
+        used = qfile._identifiers(q)
+        new = next(c for c in [n + "0", n + "_0"] + ["%s%d" % (n, k) for k in range(1, 100)] if c not in used)
+        return qfile.rename_op(q, 0, n, new, "variable")[0]
+    return [F("qv.unit-name", n, "required", "question variable %s is a unit" % n,
+              "The question is in units mode, where %s is a STACK unit. The question variable %s hides the "
+              "unit in the question, and in answers %s still counts as the unit: e.g. a meclib force "
+              "\"m g\" in the names input is accepted only because %s is also a unit - in a question "
+              "without units it would be rejected as a question variable. In grading the unit is replaced "
+              "by the variable's value: an answer using the unit %s is accepted as valid and marked wrong "
+              "(STACK 4.13.1: 300000 g m/s^2 for 300 N with g: 10*m/s^2 gives ATUnits_incompatible_units). "
+              "The fix renames the variable to %s0 everywhere (Maxima code, castext, tests)."
+              % (n, n, n, n, n, n), lambda q, n=n: fix(q, n)) for n in found]
 
 
 # Matrix inputs (wiki "Matrix input", "Matrix Feedback"): a table row label | input | validation
@@ -778,6 +1589,20 @@ def _call_args(text, fname):
 
 
 def r_matrix_inputs(Q_):
+    """Matrix inputs (wiki "Matrix input", "Matrix Feedback").
+
+    matrix.layout: STACK shows a matrix input as a block of its own, so label, matrix and
+    validation do not stand side by side in a paragraph. A paragraph <p>label [[input:S_X]]
+    [[validation:S_X]] [[feedback:X]]</p> becomes a table row label | input | validation with the
+    feedback below; other layouts get a hint only.
+
+    matrix.feedback: element-wise feedback. PRT X gets the feedback variable [txt, isOK]:
+    fb_unit_matrix(S_X, T, tol) (numeric: a numeric answer test, fb_unit or the old toList
+    pattern; the answer test becomes AlgEquiv isOK = true, toList is removed) or txt:
+    fb_vars_matrix(S_X, T, vars) (otherwise; AlgEquiv on the matrix stays), feedback {@txt@} in
+    both branches, quiet. T is the input's model answer; tolerance and vars are taken from the old
+    PRT, simple symbol labels of the old per-component feedback become the label list. PRTs with
+    several nodes or other feedback text get a hint only."""
     out = []
     for inp in Q_.inputs:
         if inp["type"] != "matrix":
@@ -884,7 +1709,8 @@ def r_unused_files(Q_):
         return "the question"
     used = {}
     for t in Q_.el.iter("text"):
-        for m in re.finditer(r"@@PLUGINFILE@@/([^\"'()\s<>]+)", t.text or ""):
+        # (the name ends before a query such as ?time=..., which Moodle's editor appends)
+        for m in re.finditer(r"@@PLUGINFILE@@/([^\"'()\s<>?#]+)", t.text or ""):
             used.setdefault(urllib.parse.unquote(m.group(1)), set()).add(field(t))
     files = {}
     for f in Q_.el.iter("file"):
@@ -1006,18 +1832,229 @@ def r_scenes(Q_):
 
 
 
+# ---------------------------------------------------------------------- checks from Cairn for Stack
+# (ideas from the rule collection of Cairn for Stack, github.com/BenoitJOLY/cairn-for-stack, 2026-11-13)
+
+# An HTML comment is no comment for castext: a block, {@...@} or {#...#} inside <!-- ... --> is
+# still evaluated (an [[include]] still fetched when the question is compiled). The fix turns such
+# a comment into [[comment]] ... [[/comment]], which castext skips.
+HTML_COMMENT = re.compile(r"<!--(.*?)-->", re.S)
+
+
+def _castext_comment_fix(text):
+    return HTML_COMMENT.sub(lambda m: "[[comment]]%s[[/comment]]" % m.group(1)
+                            if re.search(r"\[\[|\{@|\{#", m.group(1)) else m.group(0), text)
+
+
+def r_html_comment(Q_):
+    """An HTML comment is no comment for castext: a block, {@...@} or {#...#} inside <!-- ... --> is
+    still evaluated (an [[include]] is still fetched when the question is compiled, and fails if the
+    file is gone). The fix turns such a comment into [[comment]] ... [[/comment]], which castext
+    skips. (From the rules of Cairn for Stack.)"""
+    found = []
+
+    def collect(t):
+        found.extend(m.group(1).strip()[:60] for m in HTML_COMMENT.finditer(t) if re.search(r"\[\[|\{@|\{#", m.group(1)))
+        return t
+    qfile._map_content(Q_.block, qfile.CASTEXT_TAGS, collect)
+    if not found:
+        return []
+    return [F("text.html-comment", "", "recommended", "Castext inside an HTML comment",
+              "<!-- ... --> hides text in the browser, but castext still evaluates what is inside: %s. An [[include]] there "
+              "is still fetched when the question is compiled (and fails if the file is gone), a {@...@} still computed. "
+              "The fix turns these comments into [[comment]] ... [[/comment]], which castext skips."
+              % "; ".join(found[:3]),
+              lambda q: qfile._map_content(q, qfile.CASTEXT_TAGS, _castext_comment_fix))]
+
+
+# PRT nodes that no path from the first node reaches: never evaluated (a leftover, or a wrong
+# next node somewhere). No fix: which one is meant is the author's decision.
+def r_prt_unreachable(Q_):
+    out = []
+    for p in Q_.prts:
+        nodes = {n["name"]: n for n in p["nodes"]}
+        targets = {(n.get(b + "nextnode") or "-1").strip() for n in p["nodes"] for b in ("true", "false")}
+        roots = [n for n in nodes if n not in targets]
+        if not nodes:
+            continue
+        seen, stack = set(), [roots[0] if roots else p["nodes"][0]["name"]]
+        while stack:
+            x = stack.pop()
+            if x in seen or x not in nodes:
+                continue
+            seen.add(x)
+            stack += [(nodes[x].get(b + "nextnode") or "-1").strip() for b in ("true", "false")]
+        lost = [k + 1 for k, n in enumerate(p["nodes"]) if n["name"] not in seen]
+        if lost:
+            out.append(F("prt.unreachable", "PRT " + p["name"], "hint", "PRT node never reached",
+                         "PRT %s: node%s %s cannot be reached from the first node, so %s never evaluated. A leftover, or a "
+                         "next node that should lead there." % (p["name"], "s" if len(lost) > 1 else "",
+                                                               ", ".join(map(str, lost)), "they are" if len(lost) > 1 else "it is")))
+    return out
+
+
+# Hard errors with JSXGraph: [[input:]]/[[validation:]] inside a [[jsxgraph]] block (the block is
+# JavaScript, the input's HTML breaks it), {@...@} inside it (puts TeX into the JavaScript; values
+# go in with {#...#}). The fix of the second writes {#...#}.
+JSX_BLOCK = re.compile(r"(\[\[\s*jsxgraph\b[^\]]*\]\])(.*?)(\[\[\s*/jsxgraph\s*\]\])", re.S)
+
+
+def _jsx_tex_fix(text):
+    return JSX_BLOCK.sub(lambda m: m.group(1) + re.sub(r"\{@(.*?)@\}", r"{#\1#}", m.group(2), flags=re.S) + m.group(3), text)
+
+
+def r_jsxgraph_blocks(Q_):
+    """Hard errors with JSXGraph: [[input:]] or [[validation:]] inside a [[jsxgraph]] block (the block
+    is JavaScript, the input's HTML breaks it), and {@...@} inside it (TeX in the JavaScript; values
+    go in with {#...#}). The fix of the second writes {#...#}. (From the rules of Cairn for Stack.)"""
+    inputs, tex = [], []
+
+    def collect(t):
+        for m in JSX_BLOCK.finditer(t):
+            inputs.extend(re.findall(r"\[\[\s*(?:input|validation):(\w+)", m.group(2)))
+            tex.extend(re.findall(r"\{@(.*?)@\}", m.group(2), flags=re.S))
+        return t
+    qfile._map_content(Q_.block, qfile.CASTEXT_TAGS, collect)
+    out = []
+    if inputs:
+        out.append(F("graphic.input-in-jsxgraph", "", "required", "Input inside a [[jsxgraph]] block",
+                     "[[input:..]] or [[validation:..]] of %s inside a [[jsxgraph]] block: the block is JavaScript, and the "
+                     "HTML of the input breaks it (SyntaxError). Put the placeholders outside the block and bind the input "
+                     "with input-ref-NAME." % ", ".join(dict.fromkeys(inputs))))
+    if tex:
+        out.append(F("graphic.castext-in-jsxgraph", "", "required", "{@...@} inside a [[jsxgraph]] block",
+                     "%s inside a [[jsxgraph]] block: {@...@} gives TeX for display, which is no JavaScript. Values go into "
+                     "the script with {#...#} (Maxima syntax). The fix writes {#...#}." % ", ".join(
+                         "{@%s@}" % x.strip() for x in tex[:3]),
+                     lambda q: qfile._map_content(q, qfile.CASTEXT_TAGS, _jsx_tex_fix)))
+    return out
+
+
+# {@...@} or {#...#} in a field that is Maxima code (feedback variables, SAns, TAns, options,
+# scores, penalties): castext is not evaluated there, the braces make a syntax error or a wrong
+# value. The fix keeps the expression inside.
+CT_IN_MAXIMA = re.compile(r"\{([@#])(.*?)\1\}", re.S)
+NODE_MAXIMA_TAGS = ("feedbackvariables", "sans", "tans", "testoptions", "truescore", "falsescore", "truepenalty", "falsepenalty")
+
+
+def _outside_strings(code, fn):
+    """code with fn applied to its parts outside Maxima string literals ("..." with \\ escapes):
+    castext("... {@x@} ...") in feedback variables is right."""
+    parts = re.split(r'("(?:\\.|[^"\\])*")', code)
+    return "".join(p if k % 2 else fn(p) for k, p in enumerate(parts))
+
+
+def r_castext_in_maxima(Q_):
+    """{@...@} or {#...#} in a PRT field that is Maxima code (feedback variables, SAns, TAns,
+    options, scores, penalties): castext is not evaluated there, the braces are a syntax error or
+    give a wrong value. The fix keeps the expression inside. (From the rules of Cairn for Stack.)"""
+    found = []
+
+    def collect(c):
+        _outside_strings(c, lambda p: (found.extend(m.group(0) for m in CT_IN_MAXIMA.finditer(p)), p)[1])
+        return c
+    qfile._map_content(Q_.block, NODE_MAXIMA_TAGS, collect)
+    if not found:
+        return []
+    return [F("prt.castext-in-maxima", "", "required", "{@...@} in Maxima code of a PRT",
+              "%s in the feedback variables or a node's SAns, TAns, options, score or penalty: these fields are Maxima "
+              "code, not castext, so the braces are a syntax error or give a wrong value. Write the expression itself; "
+              "the fix removes the braces." % ", ".join(found[:3]),
+              lambda q: qfile._map_content(q, NODE_MAXIMA_TAGS, lambda c: _outside_strings(
+                  c, lambda p: CT_IN_MAXIMA.sub(lambda m: m.group(2).strip(), p))))]
+
+
+def _qv_reads(Q_):
+    """Identifiers read outside the question variables, and per statement of the question
+    variables the identifiers it reads (its own assigned names left out)."""
+    reads = set()
+    collect = lambda c: (reads.update(sq.IDENT.findall(re.sub(r'"(?:\\.|[^"\\])*"', '""', sq.strip_comments(c)))), c)[1]
+    qfile._map_content(Q_.block, NODE_MAXIMA_TAGS + ("tans", "value"), collect)
+    qfile._map_content(Q_.block, qfile.CASTEXT_TAGS, lambda t: ([collect(p) for p in sq.castext_cas_parts(t)], t)[1])
+    def jsx(t):                     # {#...#} in [[jsxgraph]] (castext_cas_parts leaves the blocks out)
+        for m in JSX_BLOCK.finditer(t):
+            for c in re.findall(r"\{[@#](.*?)[@#]\}", m.group(2), flags=re.S):
+                collect(c)
+        return t
+    qfile._map_content(Q_.block, qfile.CASTEXT_TAGS, jsx)
+    for url in sq.INCLUDE.findall(sq.strip_comments(Q_.qvars)):
+        f = sq.REPO / "Maxima" / url.rstrip("/").rsplit("/", 1)[-1]
+        if f.exists():
+            reads.update(sq.IDENT.findall(sq.strip_comments(f.read_text(encoding="utf-8", errors="replace"))))
+    return reads
+
+
+# Question variables that nothing reads: not the other question variables, the texts (Maxima
+# parts), the PRTs, the inputs (model answers, syntax hints) or the question tests - left over
+# after changes, they make a question hard to read. Names the included meclib files read (e.g.
+# fb_dims) count as read. The fix deletes the statement (one written on a single line); a
+# statement with rand() is kept (deleting it changes every variant): the hint says so.
+def r_qv_unused(Q_):
+    stmts = sq.split_statements(Q_.qvars)
+    defs = []
+    for k, (st, line, _ins) in enumerate(stmts):
+        c = sq.strip_comments(st)
+        m = sq.ASSIGN.match(c) or sq.FUNDEF.match(c)
+        if m:
+            defs.append((m.group(1), k, line, c))
+    if not defs:
+        return []
+    reads = _qv_reads(Q_)
+    for k, (st, _l, _i) in enumerate(stmts):
+        c = sq.strip_comments(st)
+        m = sq.ASSIGN.match(c) or sq.FUNDEF.match(c)
+        body = c[m.end():] if m else c
+        if m and sq.FUNDEF.match(c):
+            body = c[c.find(":=") + 2:]
+        reads.update(sq.IDENT.findall(re.sub(r'"(?:\\.|[^"\\])*"', '""', body)))
+    out = []
+    for name, k, line, c in defs:
+        if name in reads or name.startswith("%") or name in ("fb_dims",):
+            continue
+        has_rand = bool(re.search(r"\brand\w*\s*\(", c))
+        multiline = "\n" in stmts[k][0].strip()
+
+        def fix(q, name=name):
+            qv = Q(q).qvars
+            for st, line, _ins in sq.split_statements(qv):
+                cc = sq.strip_comments(st)
+                mm = sq.ASSIGN.match(cc) or sq.FUNDEF.match(cc)
+                if mm and mm.group(1) == name and not re.search(r"\brand\w*\s*\(", cc):
+                    lines = qv.split("\n")
+                    src = st.strip().rstrip(";$").strip()
+                    rx = re.compile(re.escape(src) + r"\s*[;$]?[ \t]*")
+                    if "\n" not in src and rx.search(lines[line - 1]):
+                        rest = rx.sub("", lines[line - 1], count=1)
+                        if rest.strip():
+                            lines[line - 1] = rest.rstrip()
+                        else:
+                            del lines[line - 1]
+                        return _set_text(q, "questionvariables", "\n".join(lines))
+            return q
+        out.append(F("qv.unused", name, "hint", "Question variable %s is not used" % name,
+                     "Question variable %s (line %d) is read nowhere: not by other question variables, the texts, the PRTs, "
+                     "the inputs or the tests. %s" % (name, line,
+                         "It calls rand(): deleting it changes the random numbers of the following lines and so every "
+                         "variant - keep it, or delete it together with a new deployment of the variants."
+                         if has_rand else "The fix deletes the statement." if not multiline else
+                         "Delete it by hand (it spans several lines)."),
+                     None if has_rand or multiline else fix))
+    return out
+
+
 RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_scenes, r_graphic_inputs, r_input_settings, r_prts,
-         r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_matrix_inputs, r_unused_files, r_semicolons,
-         r_include_branch, r_legacy_functions]
+         r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_raw_in_math, r_multsgn, r_fb_floats, r_fb_dims, r_variants, r_unit_names, r_matrix_inputs, r_unused_files, r_semicolons,
+         r_include_branch, r_include_dist, r_includes, r_legacy_functions, r_qtest_length, r_input_prt, r_tests_none,
+         r_html_comment, r_prt_unreachable, r_jsxgraph_blocks, r_castext_in_maxima, r_qv_unused, r_fb_floats_tol]
 
 
 # ---------------------------------------------------------------------- metadata in the description
-META_LINE = re.compile(r"^\s*(?:<p>)?\s*(Generated by Meclib Workbench|Revised by Meclib Workbench|Review rejected:)"
+META_LINE = re.compile(r"^\s*(?:<p>)?\s*(Generated by Meclib Workbench|Revised by Meclib Workbench|Review rejected:|Tests approved:)"
                        r"\s*(.*?)\s*(?:</p>)?\s*$")
 
 
 def read_meta(desc):
-    meta = {"generated": None, "revised": None, "rejected": [], "rest": []}
+    meta = {"generated": None, "revised": None, "rejected": [], "approved": {}, "rest": []}
     for line in (desc or "").splitlines():
         m = META_LINE.match(line)
         if not m:
@@ -1026,6 +2063,9 @@ def read_meta(desc):
             meta["generated"] = m.group(2)
         elif m.group(1).startswith("Revised"):
             meta["revised"] = m.group(2)
+        elif m.group(1).startswith("Tests approved"):
+            for tc, date, fp in re.findall(r"(\w+)\s*\[([^\]]*?)\s+([0-9a-f]+)\]", m.group(2)):
+                meta["approved"][tc] = (date, fp)
         else:
             meta["rejected"] += [k.strip() for k in re.split(r",\s*(?![^\[]*\])", m.group(2)) if k.strip()]
     while meta["rest"] and not meta["rest"][0].strip():
@@ -1041,6 +2081,9 @@ def write_meta(meta):
         lines.append("<p>Revised by Meclib Workbench %s</p>" % meta["revised"])
     if meta["rejected"]:
         lines.append("<p>Review rejected: %s</p>" % ", ".join(dict.fromkeys(meta["rejected"])))
+    if meta.get("approved"):
+        lines.append("<p>Tests approved: %s</p>" % ", ".join(
+            "%s [%s %s]" % (tc, d, fp) for tc, (d, fp) in sorted(meta["approved"].items(), key=lambda x: (len(x[0]), x[0]))))
     rest = "\n".join(meta["rest"]).strip()
     return "\n".join(lines) + ("\n\n" + rest if rest and lines else rest)
 
@@ -1050,7 +2093,7 @@ def now():
 
 
 def generated_description():
-    return write_meta({"generated": now(), "revised": None, "rejected": [], "rest": []})
+    return write_meta({"generated": now(), "revised": None, "rejected": [], "approved": {}, "rest": []})
 
 
 # ---------------------------------------------------------------------- review and apply
@@ -1096,6 +2139,9 @@ def apply(text, index, apply_keys, reject_keys):
         raise ValueError("question %d is not a STACK question" % index)
     q = text[a:b]
     applied = []
+    # the include fixes last: they depend on what the other fixes put in or take out (each finding
+    # is recomputed on the current state, so an include that became needed is no longer "unused")
+    apply_keys = sorted(apply_keys, key=lambda k: k.startswith(("include.unused[", "include.missing[")))
     for key in apply_keys:
         f = next((f for f in findings(q) if f["key"] == key and f["fix"]), None)
         if f:
@@ -1104,13 +2150,130 @@ def apply(text, index, apply_keys, reject_keys):
     meta = read_meta(_t(ET.fromstring(q), "questiondescription/text"))
     meta["rejected"] = [k for k in meta["rejected"] if k not in applied] + [k for k in reject_keys if k not in applied]
     meta["revised"] = now()
-    desc = write_meta(meta)
-    if re.search(r"<questiondescription\b", q):
-        q = _set_text(q, "questiondescription", desc)
-    else:   # older exports: add the element after the question note
-        nl = qfile._newline(text)
-        m = re.search(r"</questionnote>", q)
-        pos = m.end() if m else q.find("<questionvariables>")
-        q = q[:pos] + nl + '    <questiondescription format="html">' + nl + "      <text>" + \
-            qfile.encode_text(desc, True) + "</text>" + nl + "    </questiondescription>" + q[pos:]
+    q = _set_description(q, write_meta(meta), qfile._newline(text))
     return text[:a] + q + text[b:], applied
+
+
+def _set_description(q, desc, nl):
+    """The question block with this question description (internal field)."""
+    if re.search(r"<questiondescription\b", q):
+        return _set_text(q, "questiondescription", desc)
+    # older exports: add the element after the question note
+    m = re.search(r"</questionnote>", q)
+    pos = m.end() if m else q.find("<questionvariables>")
+    return q[:pos] + nl + '    <questiondescription format="html">' + nl + "      <text>" + \
+        qfile.encode_text(desc, True) + "</text>" + nl + "    </questiondescription>" + q[pos:]
+
+
+# ---------------------------------------------------------------------- approval of question tests
+# A test approved in the Tests column is recorded in the question description ("Tests approved:
+# 1 [2026-11-11 a1b2c3d4], ..."), with a fingerprint of what decides its outcome: question
+# variables and options, inputs, PRTs without their feedback texts, and the test itself. When
+# the fingerprint changes, the approval is stale (the page can be set to ignore that).
+def test_fingerprint(block, tc):
+    Q_ = Q(block)
+    d = Q_.data
+    test = next((t for t in qfile.qtests(block) if str(t["testcase"]) == str(tc)), None)
+    if test is None:
+        return None
+    prts = [dict(p, nodes=[{k: v for k, v in n.items() if not k.endswith("feedback") and not k.endswith("format")}
+                           for n in p["nodes"]]) for p in d["prts"]]
+    core = {"qv": d["questionvariables"], "simp": d["questionsimplify"], "dec": d["decimals"], "opt": d["options"],
+            "inputs": Q_.inputs, "prts": prts, "test": {"inputs": test["inputs"], "expected": test["expected"]}}
+    return hashlib.sha1(json.dumps(core, sort_keys=True).encode("utf-8")).hexdigest()[:8]
+
+
+def approvals(block):
+    """{testcase: {date, current}} of the approved tests that still exist."""
+    meta = read_meta(_t(ET.fromstring(block), "questiondescription/text"))
+    out = {}
+    for tc, (date, fp) in meta["approved"].items():
+        cur = test_fingerprint(block, tc)
+        if cur is not None:
+            out[tc] = {"date": date, "current": cur == fp}
+    return out
+
+
+def approve(text, index, tc, expected=None):
+    """Approves test tc of question index; with expected ({prt: {score, penalty, note}}) its
+    expected results are replaced first (inputs and description kept). Returns (text, label)."""
+    a, b, qtype = qfile.question_span(text, index)
+    if qtype != "stack":
+        raise ValueError("question %d is not a STACK question" % index)
+    label = "test %s approved" % tc
+    if expected is not None:
+        old = next((t for t in qfile.qtests(text[a:b]) if str(t["testcase"]) == str(tc)), None)
+        if old is None:
+            raise ValueError("no test case %s" % tc)
+        def norm(exp):      # numbers as numbers: the file holds 1.0000000, the page sends 1
+            num = lambda x: round(float(x), 6) if re.match(r"^\s*-?\d*\.?\d+\s*$", str(x or "")) else str(x or "").strip()
+            return {p: (num(e.get("score")), num(e.get("penalty")), str(e.get("note") or "").strip()) for p, e in exp.items()}
+        if norm(old["expected"]) != norm(expected):
+            text, _ = qfile.qtest_op(text, index, {"op": "replace", "testcase": tc, "inputs": old["inputs"], "expected": expected})
+            label = "test %s: expected results replaced and approved" % tc
+            a, b, _ = qfile.question_span(text, index)
+    q = text[a:b]
+    fp = test_fingerprint(q, tc)
+    if fp is None:
+        raise ValueError("no test case %s" % tc)
+    meta = read_meta(_t(ET.fromstring(q), "questiondescription/text"))
+    meta["approved"] = {k: v for k, v in meta["approved"].items() if test_fingerprint(q, k) is not None}
+    meta["approved"][str(tc)] = (time.strftime("%Y-%m-%d"), fp)
+    q = _set_description(q, write_meta(meta), qfile._newline(text))
+    return text[:a] + q + text[b:], label
+
+
+# ---------------------------------------------------------------------- review state (folder tree)
+def test_state(block):
+    """What the question tests leave to do, without Maxima, from the saved tests: branches of the
+    PRTs that no test's expected route names (coverage), tests not approved or approved for an
+    older version of the question. (No tests at all is the finding tests.none.)"""
+    tests = qfile.qtests(block)
+    if not tests:
+        return []
+    out = []
+    Q_ = Q(block)
+    missing = 0
+    for p in Q_.prts:
+        notes = set()
+        for t in tests:
+            e = t["expected"].get(p["name"])
+            if e:
+                notes.update(x.strip() for x in str(e.get("note") or "").strip("[]").split("|"))
+        for n in p["nodes"]:
+            for br in ("true", "false"):
+                note = (n.get(br + "answernote") or "").strip()
+                if note and note not in notes:
+                    missing += 1
+    if missing:
+        out.append("%d PRT branch%s without a test" % (missing, "es" if missing > 1 else ""))
+    ap = approvals(block)
+    todo = [str(t["testcase"]) for t in tests if not ap.get(str(t["testcase"]), {}).get("current")]
+    if todo:
+        out.append("test%s %s not approved (or out of date)" % ("s" if len(todo) > 1 else "", ", ".join(todo)))
+    return out
+
+
+def review_state(block):
+    """The review state of a question for the folder tree: the number of findings per level (the
+    rejected ones left out; no fix previews, so it is fast) and the test state (test_state)."""
+    Q_ = Q(block)
+    rejected = set(read_meta(Q_.data.get("questiondescription") or _t(Q_.el, "questiondescription/text"))["rejected"])
+    counts = {"required": 0, "recommended": 0, "hint": 0}
+    titles = []
+    for rule in RULES:
+        try:
+            for f in rule(Q_):
+                if f["key"] not in rejected and f["level"] in counts:
+                    counts[f["level"]] += 1
+                    if f["level"] != "hint":
+                        titles.append(f["title"])
+        except Exception:               # a broken rule shows on the review of the question
+            pass
+    try:
+        tests = test_state(block)
+    except Exception:
+        tests = []
+    level = ("required" if counts["required"] else "recommended" if counts["recommended"] or tests
+             else "hint" if counts["hint"] else "ok")
+    return {"level": level, "counts": counts, "tests": tests, "titles": list(dict.fromkeys(titles))[:6]}

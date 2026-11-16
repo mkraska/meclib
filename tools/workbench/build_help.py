@@ -400,6 +400,11 @@ def stack_docs(tag):
     target = HERE / ".cache" / "stack-docs" / tag
     if (target / "doc" / "en").is_dir():
         return target / "doc" / "en"
+    # the STACK source of the STACK API (stackapi.py) of the same release has the documentation too
+    for version, t in STACK_TAGS.items():
+        api_docs = HERE / ".cache" / "stackapi" / ("stack-" + version) / "doc" / "en"
+        if t == tag and api_docs.is_dir():
+            return api_docs
     target.parent.mkdir(parents=True, exist_ok=True)
     print("fetching STACK documentation %s ..." % tag)
     subprocess.run(["git", "-c", "advice.detachedHead=false", "clone", "-q", "--depth", "1", "--branch", tag, "--filter=blob:none", "--sparse",
@@ -417,7 +422,7 @@ def stack_functions(version, tag, report):
         for name, (args, comment, _) in maxima_defs(f.read_text(encoding="utf-8", errors="replace")).items():
             defs.setdefault(name, (args, comment))
     docs = stack_docs(tag)
-    pages = {p: p.read_text(encoding="utf-8", errors="replace") for p in docs.rglob("*.md")}
+    pages = {p: p.read_text(encoding="utf-8", errors="replace") for p in sorted(docs.rglob("*.md"))}   # sorted: same choice on every system
     entries = []
     for name in sorted(defs):
         if name.startswith("%") or re.search(r"(_aux|_helper|_internal)$", name):
@@ -449,6 +454,58 @@ def stack_functions(version, tag, report):
         args = defs[name][0]
         entries.append({"name": name, "kind": "stack", "sig": "%s(%s)" % (name, ", ".join(args)), "args": args,
                         "text": shorten(plain(t)), "url": STACK_DOCS_URL + rel, "source": "STACK %s" % tag})
+    names = {e["name"] for e in entries}
+    entries += [e for e in stack_library(docs, tag) if e["name"] not in names]
+    return entries
+
+
+def stack_library(docs, tag):
+    """STACK's function library documentation (doc/en/CAS/Library, generated from stack/maximasrc):
+    a section per function "## name(args)<a id='name'></a>", a description, a table of the
+    arguments and one of the return value. Covers functions that are not defined with ":=" in
+    the Maxima files, e.g. the inert stackunits(number, unit)."""
+    entries = []
+    lib = docs / "CAS" / "Library"
+    if not lib.is_dir():
+        return entries
+    head = re.compile(r"^##\s+([A-Za-z_][A-Za-z0-9_]*)\(([^)]*)\)\s*(?:<a id=[^>]*></a>)?\s*$", re.M)
+    for page in sorted(lib.rglob("*.md")):
+        text = page.read_text(encoding="utf-8", errors="replace")
+        rel = re.sub(r"(^|/)index\.md$", r"\1", page.relative_to(docs).as_posix())
+        rel = re.sub(r"\.md$", "/", rel)
+        for sec in re.split(r"\n-{3,}\n", text):
+            m = head.search(sec)
+            if not m:
+                continue
+            name = m.group(1)
+            args = [x.strip() for x in m.group(2).split(",") if x.strip()]
+            body = sec[m.end():]
+            desc, tables = [], []
+            for block in re.split(r"\n\s*\n", body.strip()):
+                if block.lstrip().startswith("|"):
+                    tables.append(block)
+                elif not tables and block.strip():
+                    desc.append(" ".join(block.split()))
+            argdocs, returns = {}, ""
+            for tab in tables:
+                rows = [[c.strip() for c in r.strip().strip("|").split("|")] for r in tab.strip().splitlines()]
+                if len(rows) < 3:
+                    continue
+                if rows[0][0].lower().startswith("argument"):
+                    for r in rows[2:]:
+                        if len(r) >= 3 and r[0] in args:
+                            argdocs[r[0]] = shorten(plain(r[2]), 160)
+                elif rows[0][0].lower().startswith("return"):
+                    returns = shorten(plain(" ".join(r[1] for r in rows[2:] if len(r) > 1)), 160)
+            # links inside the library pages point to anchors: keep only their text
+            t = re.sub(r"\[`?([^\]`]+)`?\]\(#[^)]*\)", r"`\1`", " ".join(desc))
+            e = {"name": name, "kind": "stack", "sig": "%s(%s)" % (name, ", ".join(args)), "args": args,
+                 "text": shorten(plain(t)), "url": STACK_DOCS_URL + rel + "#" + name, "source": "STACK %s" % tag}
+            if argdocs:
+                e["argdocs"] = argdocs
+            if returns:
+                e["returns"] = returns
+            entries.append(e)
     return entries
 
 

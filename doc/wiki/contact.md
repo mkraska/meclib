@@ -2,7 +2,7 @@
 
 Point-type support representing a contact between the sketched body and an environment object that gets cut away. Whether the contact is smooth or rough (static or kinetic friction) is decided in the feedback, see [[Feedback for "contact"]]. Appears as a gray cross (normal + tangent line) once the referenced object is deactivated.
 
-- `"name"` label, typeset in MathJax math mode (may be empty)
+- `"name"` label, typeset in MathJax math mode (may be empty) (see [[Labels and names]])
 - `[x, y]` contact point
 - `[dx, dy]` normal direction vector (**outward**, need not be normalized); the tangent is perpendicular to it
 - `targetRef` name (string) or 1-based index (integer) of the object that this contact replaces once cut away

@@ -1,6 +1,6 @@
 // https://github.com/mkraska/meclib/wiki
 // version info
-const versionText= "JXG "+JXG.version+" Meclib 2026 10 12";
+const versionText= "JXG "+JXG.version+" Meclib 2026 11 16";
 const highlightColor = "orange";
 const movableLineColor = "blue";
 const loadColor = "blue";
@@ -1039,6 +1039,9 @@ class forceGen {
     const fid = divid+"_fname"; // unique ID for html object even if multiple widgets on a page
     let t = board.create('text', [ data[2][0], data[2][1], 
       '<input type="text" id='+fid+' value="'+data[1]+'" size="3">'], {fixed: true});
+    // the name field grows with the name
+    fitNameField(fid);
+    document.getElementById(fid).addEventListener('input', function() { fitNameField(fid) });
     // ref point for checking drag distance
     const ref1 = board.create('point', plus(data[2], [0,dy]), {visible:false});
     const ref2 = board.create('point', plus(data[2], [dx,dy]), {visible:false});
@@ -1055,6 +1058,7 @@ class forceGen {
     vec.parent = this;
     t.on('out', function(e) {
       document.getElementById(fid).value = cleanupName(document.getElementById(fid).value)
+      fitNameField(fid);
       p2.setAttribute({name:toTEX(document.getElementById(fid).value) })});
     vec.on('up', function(e) {
       //only generate force if distance is sufficient to not create overlapping objects
@@ -1071,6 +1075,7 @@ class forceGen {
         let i = 1, n = '', found = true;
         while (found ) { n = 'F_'+i.toString();  found = f.includes(n);i ++;} 
         document.getElementById(fid).value = n;
+        fitNameField(fid);
         vec.parent.d[1] = n;
         update();
       }
@@ -1466,6 +1471,9 @@ class momentGen {
     const mid = divid+'m_name';
     let t = board.create('text', [ data[2][0], data[2][1], 
       '<input type="text" id='+mid+' value="'+data[1]+'" size="3">'], {fixed: true});
+    // the name field grows with the name
+    fitNameField(mid);
+    document.getElementById(mid).addEventListener('input', function() { fitNameField(mid) });
     // ref point for checking drag distance and for position reset
     const ref1 = board.create('point', plus(data[2], [dx,dy]), {visible:false});
     const ref2 = board.create('point', plus(data[2], [0,dy1]), {visible:false});
@@ -1486,6 +1494,7 @@ class momentGen {
     arc.parent = this;
     t.on('out', function(e) {
     document.getElementById(mid).value = cleanupName(document.getElementById(mid).value)
+      fitNameField(mid);
       p3.setAttribute({name:toTEX(document.getElementById(mid).value )})});
     arc.on('up', function(e) {
       //only generate moment if distance is sufficient to not create overlapping objects
@@ -1502,6 +1511,7 @@ class momentGen {
         let i = 1, n = '', found = true;
         while (found ) { n = 'M_'+i.toString();  found = f.includes(n);i ++;} 
         document.getElementById(mid).value = n;
+        fitNameField(mid);
         arc.parent.d[1] = n;
         update();
       }
@@ -2170,10 +2180,33 @@ function toSTACK(str) {
 }
 
 function toTEX(str) {
-  if (str.search("_") != -1) { 
-    str = str.replaceAll(/_([0-9a-z]+)/ig, '_{\$1}'); // subscript brackets
-  }
-  str = '\\('+str.replace(/[\*\s]/g, "\\;")+'\\)'; // converts stars to small math spaces and adds math mode brackets
+  // Greek letter names as whole words get a backslash, as in STACK: phi and epsilon in the variant form,
+  // trailing digits become a subscript (alpha1 -> \alpha_{1}); alphax, Alpha, \alpha stay unchanged
+  const greek = 'alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega';
+  const greekVar = {phi: 'varphi', epsilon: 'varepsilon'};
+  const greekRE = new RegExp('(^|[^A-Za-z\\\\])(' + greek + ')(?:(\\d+)(?![A-Za-z\\d_])|(?![A-Za-z\\d]))', 'g');
+  // accents as suffix of a single letter or a Greek name, with or without underscore:
+  // Fhat, F_hat -> \hat{F}, x_ddot -> \ddot{x}, phidot -> \dot{\varphi}, Fhat_A -> \hat{F}_{A}
+  const accentRE = new RegExp('^(' + greek + '|[A-Za-z])_?(ddot|dot|hat|bar)(?=_|$)(.*)$');
+  function factor(t) {
+    let acc = "";
+    const m = t.match(accentRE);
+    if (m) { acc = m[2]; t = m[1] + m[3] }
+    if (t.search("_") != -1) { 
+      t = t.replaceAll(/_([0-9a-z]+)/ig, '_{\$1}'); // subscript brackets
+    }
+    t = t.replace(greekRE, function(m, pre, g, d) { return pre + '\\' + (greekVar[g] || g) + (d ? '_{' + d + '}' : ''); });
+    if (acc) { // accent on the base, before the subscript
+      const k = t.search("_");
+      t = k == -1 ? '\\' + acc + '{' + t + '}' : '\\' + acc + '{' + t.substring(0, k) + '}' + t.substring(k);
+    }
+    return t }
+  // factors separated by stars or blanks get small math spaces, but no space after Delta or delta (Delta*p -> \Delta p)
+  const f = str.split(/[\*\s]/);
+  str = factor(f[0]);
+  for (let i = 1; i < f.length; i++) {
+    str += (/^\\?[Dd]elta$/.test(f[i-1]) ? ' ' : '\\;') + factor(f[i]) }
+  str = '\\('+str+'\\)'; // adds math mode brackets
   return  str}
 // makes sure that a name consists of a single character with or without subscript. 
 // If there is more than one character before the end or before the first subscript, then the name is modified.
@@ -2189,11 +2222,26 @@ function genNameOK(id) {
   setTimeout(function() { el.style.outline = ""; }, 1500);
   return false;
 }
+// width of the name field of forceGen and momentGen: at least 3 characters, otherwise the name plus one
+function fitNameField(id) {
+  const el = document.getElementById(id);
+  if (el) el.size = Math.max(3, el.value.length + 1);
+}
 function cleanupName(str) {
+  // a factor starting with a letter keeps its base (a Greek letter name or one letter) and an accent
+  // (hat, bar, dot, ddot) directly after it; the rest becomes a subscript:
+  // F1 -> F_1, omegaS -> omega_S, F_hat_A -> Fhat_A, x_ddot -> xddot, phi -> phi (see toTEX)
+  const greek = 'alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega';
+  const nameRE = new RegExp('^(' + greek + '|[A-Za-z])(?:_?(ddot|dot|hat|bar))?_?(.*)$');
   let strList = str.split(/\s+|\*/);
   let out =""
 
   strList.forEach(function(st) {
+    const m = st.match(nameRE);
+    if (m) {
+      const rest = m[3].replace(/_/g, ''); // remove underscores at wrong places
+      st = m[1] + (m[2] || '') + (rest ? '_' + rest : '');
+    } else {
     let pos = st.search("_")
     if (st.length>1 && pos>1) {
     // remove underscores at wrong places
@@ -2202,6 +2250,7 @@ function cleanupName(str) {
       st = st.substring(0, 1) + "_" + st.substring(1);} // insert an underscore if string is longer than one character
     else if (isNaN(st[0]) == false && st.length>1 && pos===-1) {
       st = st.substring(0, 1) + " " + st.substring(1);}
+    }
   // should output have * or just empty space? since toTEX() replaces * with empty spaces
   out = out + st + " "
   });

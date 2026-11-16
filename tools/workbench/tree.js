@@ -27,6 +27,7 @@ const MeclibTree = (() => {
       li.className = "tleaf" + (node.cls ? " " + node.cls : "");
       li.innerHTML = esc(node.label) + (node.hint ? ` <span class="thint">${esc(node.hint)}</span>` : "");
       if (node.title) li.title = node.title;
+      if (node.key) li.dataset.key = node.key;          // for updates from outside (e.g. a state colour)
       if (node.onClick) li.addEventListener("click", (ev) => { ev.stopPropagation(); api.select(node.id); node.onClick(node); });
       else li.classList.add("tinert");
       byId.set(node.id, { node, el: li });

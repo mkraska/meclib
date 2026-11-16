@@ -170,12 +170,13 @@
 
   // ------------------------------------------------------------------ syntax help
   const settings = { autocomplete: true, closeBrackets: true, semicolon: true, helpBox: true };
-  let help = { functions: new Map(), objects: new Map(), list: [] };
+  let help = { functions: new Map(), objects: new Map(), variables: new Map(), list: [] };
 
   function setHelp(data) {
-    help = { functions: new Map(), objects: new Map(), list: [] };
+    help = { functions: new Map(), objects: new Map(), variables: new Map(), list: [] };
     for (const e of (data && data.entries) || []) {
       if (e.kind === "object") help.objects.set(e.name, e);
+      else if (e.kind === "variable") help.variables.set(e.name, e);   // set by an assignment, e.g. fb_dims: [...]
       else if (!help.functions.has(e.name)) help.functions.set(e.name, e);
       help.list.push(e);
     }
@@ -238,7 +239,7 @@
       if (ch === '"') inStr = true;
       masked += ch;
     }
-    let depth = 0, commas = 0;
+    let depth = 0, commas = 0, stmtStart = 0;
     const stack = [];
     // walk backwards
     for (let i = masked.length - 1; i >= 0; i--) {
@@ -264,12 +265,17 @@
         continue;
       }
       if (ch === "," && depth === 0) commas++;
-      if ((ch === ";" || ch === "$") && depth === 0) break;
+      if ((ch === ";" || ch === "$") && depth === 0) { stmtStart = i + 1; break; }
     }
+    // a statement assigning a variable with help (e.g. fb_dims: [...]): its box anywhere in it
+    const mv = /^\s*([A-Za-z_%][A-Za-z0-9_%]*)\s*:(?!=)/.exec(masked.slice(stmtStart));
+    const ev = mv && help.variables.get(mv[1]);
+    if (ev) return { entry: ev, arg: -1, kind: "variable", pos: cur };
     return null;
   }
   // The commas counted for the level that was found: recount from the bracket to the cursor.
   function argIndex(cm, ctx) {
+    if (ctx.kind === "variable") return -1;
     const text = cm.getRange(ctx.pos, cm.getCursor()).slice(1);
     let depth = 0, n = 0, inStr = false;
     for (let i = 0; i < text.length; i++) {
@@ -288,6 +294,30 @@
   // until a double click on it lets it follow the cursor again
   let boxPin = null;
   function hideBox() { if (box) box.style.display = "none"; boxCtx = null; boxCm = null; }
+  // Math in the help texts (\( ... \)) is typeset with the page's MathJax (2 or 3). A page
+  // without MathJax can name one with setMathJax(url); it is then loaded on first use.
+  let mathUrl = null, mathLoading = null;
+  function setMathJax(url) { mathUrl = url || null; }
+  function haveMathJax() { return !!(window.MathJax && (MathJax.Hub || MathJax.typesetPromise)); }
+  function loadMathJax() {
+    if (haveMathJax()) return Promise.resolve(true);
+    if (!mathUrl) return Promise.resolve(false);
+    if (!mathLoading) {
+      const mj = document.createElement("script"); mj.type = "text/x-mathjax-config";
+      mj.text = 'MathJax.Hub.Config({messageStyle: "none", skipStartupTypeset: true, tex2jax: {inlineMath: [["\\\\(","\\\\)"]], displayMath: [["\\\\[","\\\\]"]], processEscapes: true}});';
+      document.head.appendChild(mj);
+      mathLoading = loadScript(mathUrl).then(() => true, () => false);
+    }
+    return mathLoading;
+  }
+  function typesetBox(done) {
+    if (!/\\[(\[]/.test(box.textContent)) return;          // no math in the box
+    loadMathJax().then((ok) => {
+      if (!ok || !haveMathJax()) return;
+      if (MathJax.Hub) MathJax.Hub.Queue(["Typeset", MathJax.Hub, box], done);
+      else MathJax.typesetPromise([box]).then(done, () => {});
+    });
+  }
   function escHTML(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
   function codeSpans(s) { return escHTML(s).replace(/`([^`]+)`/g, "<code>$1</code>"); }
   function sigHTML(e, arg) {
@@ -298,12 +328,13 @@
       return i === arg ? `<b>${h}</b>` : h;
     });
     if (e.kind === "object") return `[ "${escHTML(e.name)}", ${parts.join(", ")} ]`;
+    if (e.kind === "variable") return escHTML(e.sig);
     return `${escHTML(e.name)}(${parts.join(", ")})`;
   }
   function boxHTML(e, arg) {
     const a = (e.args || [])[arg];
     const ad = a != null && e.argdocs ? e.argdocs[a] : null;
-    const src = e.kind === "meclib" || e.kind === "object" ? "meclib wiki" : e.kind === "stack" ? "STACK docs" : "Maxima manual";
+    const src = e.kind === "meclib" || e.kind === "object" || e.kind === "variable" ? "meclib wiki" : e.kind === "stack" ? "STACK docs" : "Maxima manual";
     return `<div class="hb-sig">${e.returns ? `<span class="hb-ret">${escHTML(e.returns)}:</span> ` : ""}${sigHTML(e, arg)}</div>` +
       (ad ? `<div class="hb-arg"><b>${escHTML(a)}</b>: ${codeSpans(ad)}</div>` : "") +
       (e.text ? `<div class="hb-text">${codeSpans(e.text)}</div>` : "") +
@@ -344,10 +375,16 @@
       box.addEventListener("dblclick", () => { boxPin = null; if (boxCm) updateBox(boxCm); });
       document.body.appendChild(box);
     }
-    box.innerHTML = boxHTML(ctx.entry, arg);
+    const html = boxHTML(ctx.entry, arg);
+    const fresh = html !== box.dataset.src;              // typeset only when the content changes
+    if (fresh) { box.innerHTML = html; box.dataset.src = html; }
     boxCtx = ctx;
     boxCm = cm;
     box.style.display = "block";
+    placeBox(cm);
+    if (fresh) typesetBox(() => { if (boxCm === cm && box.dataset.src === html) placeBox(cm); });
+  }
+  function placeBox(cm) {
     if (boxPin) { box.style.left = boxPin.left + "px"; box.style.top = boxPin.top + "px"; return; }
     const c = cm.cursorCoords(null, "page");
     const h = box.offsetHeight;
@@ -361,7 +398,7 @@
     if (ctx) return openHelp(ctx.entry.url);
     const w = cm.findWordAt(cm.getCursor());
     const name = cm.getRange(w.anchor, w.head);
-    const e = help.functions.get(name) || help.objects.get(name);
+    const e = help.functions.get(name) || help.objects.get(name) || help.variables.get(name);
     if (e) openHelp(e.url);
   }
 
@@ -426,13 +463,18 @@
       return list.length ? { from: { line: cur.line, ch: s }, to: cur, list } : null;
     }
     if (word.length < 1) return null;
-    const rank = { meclib: 0, object: 3, stack: 1, extra: 1, maxima: 2 };
+    const rank = { meclib: 0, variable: 0, object: 3, stack: 1, extra: 1, maxima: 2 };
     const list = help.list.filter((e) => e.kind !== "object" && e.name.startsWith(word) && e.name !== word)
       .sort((a, b) => (rank[a.kind] - rank[b.kind]) || a.name.localeCompare(b.name)).slice(0, 60)
       .map((e) => ({
         text: e.name + "(", displayText: e.name, entry: e,
         render: (el) => { el.innerHTML = `<span class="hn">${escHTML(e.name)}</span> <span class="hs">${escHTML(e.sig.slice(e.name.length))}</span> <span class="hk">${e.kind}</span>`; },
         hint: (c, data) => {
+          if (e.kind === "variable") {     // an assignment: name: [ ... ]
+            c.replaceRange(e.name + ": [", data.from, data.to, "complete");
+            autoClose(c, "]");
+            return;
+          }
           c.replaceRange(e.name + "(", data.from, data.to, "complete");
           autoClose(c, ")");
         },
@@ -447,7 +489,8 @@
         if (kind === "castext" && !inCas(c) && !inJsx(c)) {
           if (line[cur.ch - 1] === "\\") return snippetHint(c, { line: cur.line, ch: cur.ch - 1 - (/\\\\\\$/.test(line.slice(0, cur.ch)) ? 2 : 0) }, mathSnippets(c, opts));
           if (line[cur.ch - 1] === "{") return snippetHint(c, { line: cur.line, ch: cur.ch - 1 },
-            [{ text: "{@", tail: "@}", display: "{@ ... @}  value of a CAS expression" }, { text: "{#", tail: "#}", display: "{# ... #}  raw value (e.g. for JavaScript)" }]);
+            (opts.braceSnippets ? opts.braceSnippets() : []).concat(
+            [{ text: "{@", tail: "@}", display: "{@ ... @}  value of a CAS expression" }, { text: "{#", tail: "#}", display: "{# ... #}  raw value (e.g. for JavaScript)" }]));
           if (line.slice(cur.ch - 2, cur.ch) === "[[") return snippetHint(c, { line: cur.line, ch: cur.ch - 2 }, blockSnippets(opts));
           if (!explicit) return null;
         }
@@ -501,7 +544,8 @@
   function addClosing(cm, close) {
     const cur = cm.getCursor();
     const next = cm.getRange(cur, { line: cur.line, ch: cur.ch + 1 });
-    if (!(next === "" || /[\s)\]};,]/.test(next))) return;
+    const casEnd = /^[@#]\}$/.test(cm.getRange(cur, { line: cur.line, ch: cur.ch + 2 }));   // castext: before @} or #}
+    if (!(next === "" || casEnd || /[\s)\]};,]/.test(next))) return;
     cm.replaceRange(close, cur, cur, "*autoclose");
     const m = cm.markText(cur, { line: cur.line, ch: cur.ch + close.length }, { className: "cm-autoclosed", inclusiveLeft: false, inclusiveRight: false });
     (cm.state.autoClosed = cm.state.autoClosed || []).push(m);
@@ -638,6 +682,9 @@
   // A field wraps a textarea: a CodeMirror editor when available, the textarea otherwise.
   // opts.height: initial height in px (the user can drag the lower right corner; then
   // opts.onResize(height) is called, e.g. to remember it)
+  // opts.singleLine: one line without line numbers (a model answer, a syntax hint): Enter adds no
+  // line break, pasted line breaks become blanks
+  // opts.braceSnippets(): castext, snippets offered first after "{" ({text, tail, display})
   function field(textarea, kind, onChange, opts) {
     opts = opts || {};
     if (!ready) {
@@ -653,21 +700,27 @@
         plain: true,
       };
     }
+    const single = !!opts.singleLine;
     const cm = window.CodeMirror.fromTextArea(textarea, {
-      mode: kind, lineNumbers: true, lineWrapping: true, matchBrackets: true, indentUnit: 2, tabSize: 2,
+      mode: kind, lineNumbers: !single, lineWrapping: true, matchBrackets: true, indentUnit: 2, tabSize: 2,
       viewportMargin: 50,
       extraKeys: Object.assign({ Tab: (c) => c.replaceSelection("  "), "Shift-Tab": "indentLess",
         "Ctrl-Space": (c) => complete(c, kind, opts, true), F1: (c) => openHelpAtCursor(c), F2: (c) => toggleHelpBox(c),
         Esc: (c) => hideBox() },
+        single ? { Enter: () => {}, Tab: false, "Shift-Tab": false } : {},
         bracketKeys(kind, opts)),
     });
     cm.meclibKind = kind;
+    if (single) {
+      cm.on("beforeChange", (c, ch) => { if (ch.update && ch.text.length > 1) ch.update(ch.from, ch.to, [ch.text.join(" ")]); });
+      cm.getWrapperElement().classList.add("cm-single");
+    }
     cm.on("cursorActivity", (c) => updateBox(c));
     // only the box of this editor: a click into another field shows that field's box at once
     cm.on("blur", () => setTimeout(() => { if (!boxHover && boxCm === cm) hideBox(); }, 150));
     cm.on("inputRead", (c, change) => onInputRead(c, change, kind, opts));
     const wrap = cm.getWrapperElement();
-    wrap.classList.add("cm-resizable");
+    if (!single) wrap.classList.add("cm-resizable");
     if (opts.height) wrap.style.height = opts.height + "px";
     let lastH = wrap.offsetHeight;
     new ResizeObserver(() => {
@@ -691,5 +744,5 @@
     };
   }
 
-  window.MeclibEditor = { load, field, setHelp, configure, available: () => ready };
+  window.MeclibEditor = { load, field, setHelp, configure, setMathJax, available: () => ready };
 })();

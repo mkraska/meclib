@@ -45,6 +45,7 @@ details > summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 iframe { border: 1px solid var(--line); background: #fff; display: block; box-sizing: content-box; }
 .badge { font-size: 11px; padding: 1px 6px; border-radius: 8px; background: #eee; color: var(--muted); white-space: nowrap; }
 .badge.err, .badge.fail { background: #f8dcda; color: var(--err); }
+.badge.warn { background: #fbeed5; color: var(--warn); }
 .badge.pass { background: #dcefdc; color: var(--ok); }
 .badge.run { background: #e3ecf6; color: var(--accent); }
 .banner { background: #e3ecf6; border: 1px solid #c4d6ea; border-radius: 6px; padding: 6px 10px; margin: 16px 16px 0; font-size: 13px; }

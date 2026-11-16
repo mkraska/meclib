@@ -4,7 +4,7 @@
 
 axial and angular support, floats in vertical direction for angle = 0°
 
-- `"name"` label, typeset in MathJax math mode.
+- `"name"` label, typeset in MathJax math mode (see [[Labels and names]]).
 - `[x, y]` pivot point
 - `angle` angle counter-clockwise from horizontal direction, in °
 - `state` (optional, default: `"SHOW"`) `"show"` or `"hide"` (can be switched by double click), or `"SHOW"` or `"HIDE"` (locked in that state). The legacy value `"locked"` is still accepted and looks like `"SHOW"`, but feedback functions such as `fb_system()` only count `"SHOW"`/`"show"` as shown; use `"SHOW"` instead.

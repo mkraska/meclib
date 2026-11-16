@@ -1,5 +1,5 @@
 /* https://github.com/mkraska/meclib/wiki/Feedback-for-Free-Body-Diagrams */
-/* 2026 10 12 */
+fb_fbd_version: "2026 10 23";
 
 /* https://github.com/mkraska/meclib/wiki/fb_objects() */
 /* fb_objects(objects): the content of the objects input (JSON of meclib's object list) as a

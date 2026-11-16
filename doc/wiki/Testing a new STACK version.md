@@ -39,10 +39,19 @@ What to do when meclib is to be tested with a new STACK release (e.g. before the
 
 8. **Questions.** Open a few typical questions on the Questions page, check them with the model answers and look at the review messages (e.g. functions newly forbidden by the security map).
 
-9. **Syntax help.** Add the version and tag to `STACK_TAGS` at the top of `tools/workbench/build_help.py` (or give `--stack-tag`) and run
+9. **STACK API** (if set up for STACK ▶): build it for the new version, with the Maxima version the server will run:
+
+   ```
+   cd tools/workbench
+   python stackapi.py build --stack 2026xxxxxx --maxima 5.45.1
+   ```
+
+   and run the question tests of a few questions with STACK ▶.
+
+10. **Syntax help.** Add the version and tag to `STACK_TAGS` at the top of `tools/workbench/build_help.py` (or give `--stack-tag`) and run
 
    ```
    python build_help.py --wiki <path of the meclib wiki clone>
    ```
 
-10. **Record it.** Mention the version in `config/README.md`, `Maxima/tests/README.md` (the "currently ..." line) and the [[History]]. Keep the old version folder as long as the Moodle server still runs it; to test the old one again, move the newer folder out temporarily (the tools always take the newest).
+11. **Record it.** Mention the version in `config/README.md`, `Maxima/tests/README.md` (the "currently ..." line) and the [[History]]. Keep the old version folder as long as the Moodle server still runs it; to test the old one again, move the newer folder out temporarily (the tools always take the newest).

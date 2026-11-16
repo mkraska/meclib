@@ -16,6 +16,8 @@ Not reproduced: STACK's input validation (insert stars, syntax hints, forbidden 
 syntax) - except the rejection of question variable names in answers (question_variable_words) and castext blocks other than the ones listed above (they are left as text).
 """
 
+import hashlib
+import os
 import re
 import time
 import urllib.parse
@@ -124,7 +126,7 @@ def embedded_files(q):
     import urllib.parse
     used = set()
     for t in q.iter("text"):
-        for m in re.finditer(r"@@PLUGINFILE@@/([^\"'()\s<>]+)", t.text or ""):
+        for m in re.finditer(r"@@PLUGINFILE@@/([^\"'()\s<>?#]+)", t.text or ""):   # (without ?time=...)
             used.add(urllib.parse.unquote(m.group(1)))
     mime = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "gif": "image/gif",
             "svg": "image/svg+xml", "webp": "image/webp"}
@@ -187,7 +189,10 @@ def question_tests(q):
 
 
 # ---------------------------------------------------------------------- Maxima source handling
-NEW_STATEMENT = re.compile(r"\s*[A-Za-z_%][A-Za-z0-9_%]*\s*(:|\()")
+NEW_STATEMENT = re.compile(r"\s*(?!(?:else|elseif|then|do|and|or|not|thru|step|while|unless|in|for|if)\b)"
+                           r"[A-Za-z_%][A-Za-z0-9_%]*\s*(:|\()")
+# a statement is not complete after an operator or a keyword that needs a continuation
+OPEN_END = re.compile(r"(?:[-+*/^=<>#,:]|\b(?:then|else|do|and|or|not|thru|step|while|unless|in|if))\s*$")
 
 
 def missing_semicolons(src):
@@ -195,7 +200,7 @@ def missing_semicolons(src):
     column)] of the place for the ; - right after the last code character of the statement,
     before a trailing comment (line 1-based, column 0-based as in the editor)."""
     out, i, n = [], 0, len(src)
-    in_str, depth, last_code, has_code = False, 0, None, False
+    in_str, depth, last_code, has_code, begin = False, 0, None, False, 0
     while i < n:
         c = src[i]
         if in_str:
@@ -208,11 +213,12 @@ def missing_semicolons(src):
             end = src.find("*/", i + 2)
             i = n if end < 0 else end + 2; continue
         if c in ";$":
-            depth, has_code, last_code = 0, False, None; i += 1; continue
-        if c == "\n" and depth == 0 and has_code and NEW_STATEMENT.match(src, i + 1):
+            depth, has_code, last_code, begin = 0, False, None, i + 1; i += 1; continue
+        if c == "\n" and depth == 0 and has_code and NEW_STATEMENT.match(src, i + 1) \
+                and not OPEN_END.search(strip_comments(src[begin:last_code + 1])):
             out.append((last_code + 1, src.count("\n", 0, last_code) + 1,
                         last_code + 1 - (src.rfind("\n", 0, last_code) + 1)))
-            has_code, last_code = False, None; i += 1; continue
+            has_code, last_code, begin = False, None, i + 1; i += 1; continue
         if not c.isspace():
             has_code, last_code = True, i
         if c == '"':
@@ -266,7 +272,8 @@ def split_statements(src):
             cur.append(src[i:end]); i = end; continue
         if c in ";$":
             flush(); depth = 0; i += 1; continue
-        if c == "\n" and depth == 0 and strip_comments("".join(cur)) and NEW_STATEMENT.match(src, i + 1):
+        if c == "\n" and depth == 0 and strip_comments("".join(cur)) and NEW_STATEMENT.match(src, i + 1) \
+                and not OPEN_END.search(strip_comments("".join(cur))):
             flush(True); i += 1; continue
         if start is None and not c.isspace():
             start = i
@@ -291,6 +298,7 @@ class IncludeResolver:
 
     def __init__(self, src, branches, fetch):
         self.src, self.branches, self.fetch = src, branches, fetch
+        self.offline = []       # notes: an older copy used because GitHub was not reachable
 
     def local_file(self, url):
         m = MECLIB_RAW.match(url)
@@ -305,7 +313,16 @@ class IncludeResolver:
         branch = self.branches[self.src]
         cache = CACHE / "includes" / branch / path
         if not cache.exists() or time.time() - cache.stat().st_mtime > 60:
-            data = self.fetch("https://raw.githubusercontent.com/mkraska/meclib/%s/%s?t=%d" % (branch, path, int(time.time())))
+            try:
+                data = self.fetch("https://raw.githubusercontent.com/mkraska/meclib/%s/%s?t=%d" % (branch, path, int(time.time())))
+            except OSError as err:          # (URLError is an OSError) offline: the last copy
+                if not cache.exists():
+                    raise
+                note = "stack_include %s (%s): GitHub not reachable (%s) - using the copy from %s" % (
+                    path, branch, err, time.strftime("%Y-%m-%d %H:%M", time.localtime(cache.stat().st_mtime)))
+                if note not in self.offline:
+                    self.offline.append(note)
+                return cache
             cache.parent.mkdir(parents=True, exist_ok=True)
             cache.write_bytes(data)
         return cache
@@ -456,6 +473,37 @@ def forbidden_message(found, consequence="the statement was not evaluated"):
         ", ".join("%s %s" % (kind, name) for name, kind in dict.fromkeys(found)), consequence)
 
 
+BLOCK_TAG_OPEN = re.compile(r"\[\[\s*(if|elif|foreach|define)(?=\s)")
+BLOCK_TAG_BARE = re.compile(r"\[\[\s*(/\s*(?:if|foreach)|else|comment|/\s*comment)\s*\]\]")
+
+
+def normalize_block_tags(text):
+    """Castext block tags in STACK's lenient spelling ("[[ if test=...]]", "[[ /if ]]",
+    "[[ else ]]") in the strict one the renderer of the harness looks for ("[[if ...]]",
+    "[[/if]]", "[[else]]")."""
+    text = BLOCK_TAG_OPEN.sub(lambda m: "[[" + m.group(1), text)
+    return BLOCK_TAG_BARE.sub(lambda m: "[[" + re.sub(r"\s+", "", m.group(1)) + "]]", text)
+
+
+IF_EXCLUDED = re.compile(r"\[\[\s*jsxgraph\b.*?\[\[/jsxgraph\]\]|<[^<>]*>|\\\\?\(.*?\\\\?\)|\\\\?\[.*?\\\\?\]|\$\$.*?\$\$", re.S)
+
+
+def mark_if_blocks(text):
+    """The question text with its [[if ...]] blocks as [[wbif ...]] for the preview, which
+    shows them with all their branches (the renderer of the harness, fb_tmpl_render_ifmarks);
+    not inside [[jsxgraph]] blocks, HTML tags or math, where the markers would break the
+    content. Returns (text, number of blocks marked)."""
+    excluded = [m.span() for m in IF_EXCLUDED.finditer(text)]
+    out, n, pos = [], 0, 0
+    for m in re.finditer(r"\[\[if(?=\s)", text):
+        if any(a <= m.start() < b for a, b in excluded):
+            continue
+        out.append(text[pos:m.start()] + "[[wbif")
+        pos, n = m.end(), n + 1
+    out.append(text[pos:])
+    return "".join(out), n
+
+
 CAS_BLOCKS = ("if", "elif", "define", "foreach")   # castext blocks whose attribute values are Maxima
 CT_CAS = re.compile(r"\{([@#])(.*?)\1\}", re.S)
 CT_BLOCK = re.compile(r"\[\[\s*([A-Za-z_]+)((?:[^\]]|\](?!\]))*)\]\]")
@@ -470,6 +518,66 @@ def castext_cas_parts(text):
         if m.group(1).lower() in CAS_BLOCKS:
             parts += [a.group(1) if a.group(1) is not None else a.group(2) for a in CT_ATTR.finditer(m.group(2))]
     return parts
+
+
+_CLOSE = {"(": ")", "[": "]", "{": "}"}
+
+
+def incomplete_code(code):
+    """Why a piece of Maxima code is incomplete or unbalanced, or None: an unclosed string or
+    bracket, a closing bracket without its opening one, a trailing operator. Maxima itself only
+    says "Premature termination of input at $" (the $ is the end the workbench adds)."""
+    stack, i, n = [], 0, len(code)
+    while i < n:
+        c = code[i]
+        if c == '"':
+            j = i + 1
+            while j < n and code[j] != '"':
+                j += 2 if code[j] == "\\" else 1
+            if j >= n:
+                return "unclosed string"
+            i = j + 1
+            continue
+        if code.startswith("/*", i):
+            j = code.find("*/", i + 2)
+            if j < 0:
+                return "unclosed comment /*"
+            i = j + 2
+            continue
+        if c in _CLOSE:
+            stack.append(c)
+        elif c in ")]}":
+            if not stack:
+                return "'%s' without an opening bracket" % c
+            o = stack.pop()
+            if _CLOSE[o] != c:
+                return "'%s' closed by '%s'" % (o, c)
+        i += 1
+    if stack:
+        return "missing " + " ".join("'%s'" % _CLOSE[o] for o in reversed(stack))
+    t = code.rstrip()
+    if t and t[-1] in "+-*/^=:,<>#" and not t.endswith(("'", ":=")):
+        return "ends with an operator"
+    if not t:
+        return "empty"
+    return None
+
+
+def castext_syntax_details(text):
+    """The CAS parts of a castext that are incomplete: ["{@...@}: missing ')'", ...]."""
+    out = []
+    for m in CT_CAS.finditer(text or ""):
+        why = incomplete_code(m.group(2))
+        if why:
+            out.append("%s: incomplete expression - %s" % (m.group(0), why))
+    for m in CT_BLOCK.finditer(text or ""):
+        if m.group(1).lower() in CAS_BLOCKS:
+            for a in CT_ATTR.finditer(m.group(2)):
+                code = a.group(1) if a.group(1) is not None else a.group(2)
+                why = incomplete_code(code)
+                if why:
+                    out.append("[[%s ...]] %s: incomplete expression - %s" % (m.group(1), code, why))
+    return out
 
 
 def castext_forbidden(text):
@@ -594,13 +702,28 @@ def student_value(inp, raw, decimals):
     return v
 
 
-def question_variable_words(inp, value, qv_names):
+# STACK's unit names (stack/cas/casstring.units.class.php, STACK 4.13.1): units without
+# prefixes, units with prefixes, the prefixes. In units mode they are allowed in answers even
+# where a question variable has the same name (cassecurity is_allowed_to_read checks the units
+# before the teacher's variable names) - e.g. g (gram) for a question variable g.
+_NONPREFIX_UNITS = ("min amu u mmHg bar ha cc gal mbar atm torr rev deg rpm au Da Np B dB day year hp in ft "
+                    "yd mi lb dpt").split()
+_PREFIX_UNITS = ("m l L g t s h Hz Bq cd N Pa cal Cal Btu eV J W Wh A ohm Omega C V F S Wb T H Gy rem Sv lx "
+                 "lm mol M kat rad sr K VA eV Ci").split()
+_PREFIXES = "y z a f p n u m c d da h k M G T P E Z Y".split()
+STACK_UNITS = set(_NONPREFIX_UNITS) | set(_PREFIX_UNITS) | {p + u for u in _PREFIX_UNITS for p in _PREFIXES}
+
+
+def question_variable_words(inp, value, qv_names, units=False):
     """Names of question variables used as variables in a student's answer: STACK rejects such
     an answer as invalid ("Forbidden variable or constant"), unless the name is among the
-    input's allowed words (Authoring/Variables, Notes). Function calls are not counted."""
+    input's allowed words (Authoring/Variables, Notes) or - in units mode (a units input or a
+    units answer test in the question) - is a unit name. Function calls are not counted."""
     if not qv_names:
         return []
     allowed = {w.strip() for w in (inp.get("allowwords") or "").split(",") if w.strip()}
+    if units:
+        allowed |= STACK_UNITS
     code = re.sub(r'"(?:[^"\\]|\\.)*"', '""', value)
     found = []
     for m in re.finditer(r"(?<![A-Za-z0-9_%])([A-Za-z%_][A-Za-z0-9_%]*)(?!\s*\()", code):
@@ -750,8 +873,19 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
         if raw_req:
             args.append(mstring(raw_by_input.get(n["sans"].strip(), "")) if n["sans"].strip() in raw_by_input else "false")
         at = "AT%s(%s)" % (n["answertest"], ", ".join(args))
-        body = ['print("@@PRTST@@")', "simp: %s" % ("true" if at_simp else "false"),
-                "%%_t: errcatch(%s)" % at, "simp: true"]
+        # the route for the page (node values in the PRT graph and the test details): per node
+        # visited its name, SAns and TAns (LaTeX and Maxima form), the result, the answer test's
+        # own note and the score after the branch
+        key = lambda k: mstring("prt:%s:trace:%s" % (P, k))
+        show = lambda ex, k: ("block([%%_x: errcatch(%s)], if %%_x = [] then (meclib_out(%s, \"?\"), meclib_out(%s, \"?\"))"
+                              " else (meclib_out(%s, fb_tmpl_tostring(%%_x[1])), meclib_out(%s, string(%%_x[1]))))"
+                              % (ex, key(k), key(k + "raw"), key(k), key(k + "raw")))
+        body = ['print("@@PRTST@@")', "meclib_out(%s, %s)" % (key("node"), mstring(n["name"])),
+                show(args[0], "sans"), show(args[1], "tans"),
+                "simp: %s" % ("true" if at_simp else "false"),
+                "%%_t: errcatch(%s)" % at, "simp: true",
+                "meclib_out(%s, if %%_t = [] then \"error\" else string(%%_t[1][2]))" % key("result"),
+                "meclib_out(%s, if %%_t = [] or length(%%_t[1]) < 3 then \"\" else if stringp(%%_t[1][3]) then %%_t[1][3] else string(%%_t[1][3]))" % key("atnote")]
 
         def branch(b):
             score = (n[b + "score"] or "0").strip()
@@ -764,6 +898,7 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
             fb = n[b + "feedback"] or ""
             if fb.strip():
                 md = n[b + "format"] == "markdown"
+                fb = normalize_block_tags(fb)
                 src = mark_html_blocks(fb) if md else fb
                 parts.append("fb_tmpl_md: %s" % ("true" if md else "false"))
                 parts.append("%%_c: errcatch(castext(%s))" % mstring(src))
@@ -779,6 +914,7 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
                        v("node"),
                        "" if quiet else ", if length(%%_t) > 3 and stringp(%%_t[4]) and slength(%%_t[4]) > 0 then %s: append(%s, [%%_t[4]])" % (v("atfb"), v("atfb")),
                        branch("true"), branch("false")))
+        body.append("meclib_out(%s, string(%s))" % (key("score"), v("score")))
         branches.append("if %s = %s then (%s)" % (v("node"), mstring(n["name"]), ", ".join(body)))
     loop = " elseif ".join(b[3:] for b in branches) if branches else "true then 0"
     code.append("while %s # \"-1\" and %s < 100 do (%s: %s + 1, if %s else %s: \"-1\")$"
@@ -799,9 +935,29 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
     return code
 
 
-def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
+def unsafe_expr(expr):
+    """Why a test expression cannot go into the generated Maxima code, or None: a ; or $ outside
+    strings would end the statement and break the rest of the run (e.g. a graphic's answer
+    [0;0;...] in decimal-comma syntax), as would an unclosed string, bracket or comment."""
+    code = re.sub(r'"(?:\\.|[^"\\])*"', '""', expr)
+    if re.search(r"[;$]", code):
+        return "; or $ in the expression"
+    return incomplete_code(expr)
+
+
+def test_inputs(data, test_exprs):
+    """{input: expression} of the test mode of the page: the inputs whose answer is a CAS
+    expression with question variables (not choice, matrix, string and notes inputs; not blank)."""
+    itype = {i["name"]: i.get("type") for i in data["inputs"]}
+    return {n: e for n, e in (test_exprs or {}).items()
+            if n in itype and itype[n] not in MCQ_TYPES + ("matrix", "string", "notes") and str(e).strip()}
+
+
+def evaluate(session, data, seed, resolver, previous_names=(), answers=None, test_exprs=None):
     """Evaluates question variables, model answers and castext of a question in a Maxima
-    session. Returns a dict for the preview page."""
+    session. Returns a dict for the preview page. test_exprs ({input: expression}, with answers):
+    the test mode of the page - these inputs get the value of the expression, evaluated with the
+    question variables like the inputs of a question test, as answer."""
     t0 = time.time()
     statements = split_statements(data["questionvariables"])
     names, includes, code = [], [], []
@@ -814,6 +970,7 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
         code.append("stack_unit_si_declare(true)$")
     code.append("stack_randseed(%d)$" % seed)
     stmt_info = []
+    skip_includes, include_sig = include_plan(session, data, resolver, previous_names)
     places = iter(missing_semicolons(data["questionvariables"]))    # one per inserted statement
     code.append(tick("start"))
     for k, (stmt, line, inserted) in enumerate(statements):
@@ -823,7 +980,7 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
             stmt_info.append({"index": "s%d" % k, "line": sline, "ch": scol, "source": clean[:200],
                               "note": "no ; at the end of this line, STACK assumes one"})
         try:
-            clean = INCLUDE.sub(lambda m: "load(%s)" % mpath(resolver.local_file(m.group(1))), clean)
+            clean = INCLUDE.sub(lambda m: "true" if skip_includes else "load(%s)" % mpath(resolver.local_file(m.group(1))), clean)
             for m in INCLUDE.finditer(strip_comments(stmt)):
                 includes.append(m.group(1))
         except ValueError as err:
@@ -900,7 +1057,7 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
     itype = {i["name"]: i.get("type") for i in data["inputs"]}
     for qt in data.get("qtests", []):
         for name, expr in qt["inputs"].items():
-            if not expr.strip() or forbidden_identifiers(expr):
+            if not expr.strip() or forbidden_identifiers(expr) or unsafe_expr(expr):
                 continue
             pick = ""
             if itype.get(name) in MCQ_TYPES:
@@ -908,17 +1065,30 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
                         % ("mcq_correct(%_v[1])" if itype[name] == "checkbox" else "first(mcq_correct(%_v[1]))"))
             code.append('block([%%_v: errcatch(%s)]%s, if %%_v # [] then meclib_out(%s, string(%%_v[1])))$'
                         % (expr, pick, mstring("qt:%s:%s" % (qt["testcase"], name))))
+    # test mode: the expressions evaluated as the inputs of question tests above, kept as strings
+    # (%_tv_<input>, false if the expression fails) for answer_code()
+    texprs = test_inputs(data, test_exprs) if answers is not None else {}
+    for name, expr in texprs.items():
+        if forbidden_identifiers(expr) or unsafe_expr(expr):
+            code.append("%%_tv_%s: false$" % name)
+            continue
+        code.append('block([%%_v: errcatch(%s)], if %%_v # [] then (%%_tv_%s: string(%%_v[1]), meclib_out(%s, %%_tv_%s))'
+                    ' else %%_tv_%s: false)$' % (expr, name, mstring("tv:" + name), name, name))
     code.append(tick("model answers, syntax hints"))
     texts = {"questiontext": data["questiontext"], "generalfeedback": data["generalfeedback"],
              "questionnote": data["questionnote"], "prtcorrect": data["prtcorrect"],
              "prtpartiallycorrect": data["prtpartiallycorrect"], "prtincorrect": data["prtincorrect"]}
     langs = languages_used(data["questiontext"])
+    if_blocks = 0
     for key, txt in texts.items():
         if not txt.strip() or key in security:
             continue
         code.append('print("@@CT %s@@")$' % key)
         # Markdown texts: {@...@} escaped for Markdown, Markdown's math delimiters (as STACK)
         md = data["formats"].get(key) == "markdown"
+        txt = normalize_block_tags(txt)
+        if key == "questiontext":     # [[if]] blocks with all branches, marked for the preview
+            txt, if_blocks = mark_if_blocks(txt)
         code.append('fb_tmpl_md: %s$' % ("true" if md else "false"))
         code.append('%%_c: errcatch(castext(%s))$' % mstring(mark_html_blocks(txt) if md else txt))
         code.append('fb_tmpl_md: false$')
@@ -929,8 +1099,9 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
         code.append(tick(key))
     checked = {}
     if answers is not None:
-        code += answer_code(data, answers, langs, resolver, checked, names)
+        code += answer_code(data, answers, langs, resolver, checked, names, texprs)
     stdout, results = session.run_with_results("\n".join(code))
+    mark_includes(session, include_sig)
 
     # attribute Maxima's messages to the statement that produced them
     errors, messages = [], {}
@@ -959,6 +1130,13 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
             info["output"] = "\n".join(messages[key])
     castext_errors = dict(security)
     castext_errors.update({arg: "\n".join(messages.get(("CT", arg), [])) or "error" for kind, arg in errors if kind == "CT"})
+    # Maxima's syntax errors name no place ("Premature termination of input at $."): name the
+    # {@...@} that is incomplete, if one is
+    for key, msg in list(castext_errors.items()):
+        if key in texts and "syntax error" in msg.lower():
+            details = castext_syntax_details(texts[key])
+            if details:
+                castext_errors[key] = "\n".join(details) + "\n(Maxima: " + msg.strip() + ")"
 
     def first(key):
         text = results.get(key, [None])[0]
@@ -980,19 +1158,224 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None):
         "qtests": [dict(qt, values={n: plain_tans(first("qt:%s:%s" % (qt["testcase"], n))) for n in qt["inputs"]})
                    for qt in data.get("qtests", [])],
         "castext_errors": castext_errors,
+        "if_blocks": if_blocks,
         "languages": langs,
         "picked": {"de": pick_lang("de", langs), "en": pick_lang("en", langs)},
         "check": check_results(checked, results, stdout, data) if answers is not None else None,
         "timing": timing(results),
+        "includes_reused": bool(skip_includes),
+        "includes_note": getattr(session, "include_note", ""),
+        # which inputs each PRT reads (feedback variables, SAns, TAns, options): matrix in the Tests column
+        "prtinputs": {p["name"]: prt_required_inputs(p, [i["name"] for i in data["inputs"]]) for p in data["prts"]},
         # names to kill before the next evaluation in the same Maxima session
-        "kill": names + ([i["name"] for i in data["inputs"]] if answers is not None else []) + (
+        "kill": names + ([i["name"] for i in data["inputs"]] if answers is not None else []) +
+                ["%_tv_" + n for n in texprs] + (
             [n for p in data["prts"] for n in fv_names(p)] if answers is not None else []),
     }
 
 
-def answer_code(data, answers, langs, resolver, checked, qv_names=()):
+RANDOM_WORD = re.compile(r"(?<![A-Za-z0-9_%])(rand\w*|multiselqn\w*|stack_seed)")
+
+
+def is_random(data):
+    """Whether STACK treats the question as randomised (has_random_variants() in question.php):
+    a word of the question variables that begins with rand, multiselqn or stack_seed. STACK
+    4.14.0 and earlier do not look into included libraries."""
+    code = re.sub(r'"(?:\\.|[^"\\])*"', '""', strip_comments(data.get("questionvariables") or ""))
+    return bool(RANDOM_WORD.search(code))
+
+
+_INCLUDE_NAMES = {}     # (path, checksum) -> names an include file defines
+
+
+def file_sum(path):
+    """Checksum of a file's content: a file fetched again from GitHub with the same content is
+    the same include (its time changes with every fetch)."""
+    return hashlib.sha1(Path(path).read_bytes()).hexdigest()
+
+
+def include_names(path):
+    """Names that a Maxima file assigns or defines as functions at the top level."""
+    key = (str(path), file_sum(path))
+    if key not in _INCLUDE_NAMES:
+        names = set()
+        for st, _l, _i in split_statements(open(path, encoding="utf-8", errors="replace").read()):
+            c = strip_comments(st)
+            m = ASSIGN.match(c) or FUNDEF.match(c)
+            if m:
+                names.add(m.group(1))
+        _INCLUDE_NAMES[key] = names
+    return _INCLUDE_NAMES[key]
+
+
+def question_names(src):
+    """Names the question variables assign or define as functions."""
+    out = set()
+    for st, _l, _i in split_statements(src):
+        c = strip_comments(st)
+        m = ASSIGN.match(c) or FUNDEF.match(c)
+        ml = LISTASSIGN.match(c)
+        out.update([m.group(1)] if m else [x.strip() for x in ml.group(1).split(",")] if ml else [])
+    return out
+
+
+def include_plan(session, data, resolver, previous_names=()):
+    """Whether the stack_include files of the question variables are already loaded in this
+    session, unchanged: then a run can leave them out (kill() before a run only removes the
+    question's own names, the definitions of the includes stay). They are loaded again when a
+    file changed (or another one is included), and when the question - now or in the run before -
+    assigns a name an include defines (e.g. redefines one of its functions): kill() would have
+    removed it, or the question's definition would stay for the next run.
+    The file's content counts (a checksum), not its time. session.include_note says what was
+    decided and why, for the messages of the page.
+    Returns (skip, signature to record with mark_includes() after the run)."""
+    sig = {}
+    session.include_note = ""
+    for st, _l, _i in split_statements(data["questionvariables"]):
+        for m in INCLUDE.finditer(strip_comments(st)):
+            try:
+                path = resolver.local_file(m.group(1))
+            except (ValueError, OSError):
+                return False, None
+            sig[m.group(1)] = (str(path), file_sum(path))
+    if not sig:
+        return False, None
+    loaded = getattr(session, "includes_loaded", None) or {}
+    defined = set().union(*(include_names(p) for p, _t in sig.values()))
+    clash = defined & (question_names(data["questionvariables"]) | set(previous_names))
+    short = lambda u: u.rstrip("/").rsplit("/", 1)[-1]
+    new = [short(u) for u in sig if u not in loaded]
+    changed = [short(u) for u in sig if u in loaded and loaded[u] != sig[u]]
+    if clash:
+        session.include_note = "loaded again: the question variables assign %s, defined in the include" % ", ".join(sorted(clash))
+    elif changed:
+        session.include_note = "loaded again: %s changed" % ", ".join(changed)
+    elif new:
+        session.include_note = "loaded: %s (first time in this Maxima session)" % ", ".join(new)
+    else:
+        session.include_note = "reused: already loaded in this Maxima session, unchanged"
+    return not (clash or changed or new), sig
+
+
+def mark_includes(session, sig):
+    if sig:
+        session.includes_loaded = dict(getattr(session, "includes_loaded", None) or {}, **sig)
+
+
+def variant(session, data, seed, resolver, previous_names=(), load_includes=True):
+    """One variant for the survey of seeds: the question variables with this seed and the
+    question note. load_includes=False leaves out the stack_include statements (loaded by the
+    previous variant in the same session; kill() only removes the question's own names).
+    load_includes=None: as include_plan() says. Returns ({seed, note: {de, en}, error}, names assigned)."""
+    names, code = [], []
+    include_sig = None
+    if load_includes is None:
+        skip, include_sig = include_plan(session, data, resolver, previous_names)
+        load_includes = not skip
+    if previous_names:
+        code.append("kill(%s)$" % ",".join(previous_names))
+    code.append("simp: %s$" % ("true" if data["questionsimplify"] else "false"))
+    code.append("stackfltsep: %s$" % mstring(data["decimals"]))
+    code.extend(option_commands(data))
+    if uses_units(data):
+        code.append("stack_unit_si_declare(true)$")
+    code.append("stack_randseed(%d)$" % seed)
+    code.append(tick("start"))
+    for stmt, line, _ins in split_statements(data["questionvariables"]):
+        clean = strip_comments(stmt)
+        if INCLUDE.search(clean) and not load_includes:
+            continue
+        # forbidden functions: checked in the statement as written - the load() that replaces
+        # stack_include is itself forbidden in questions and would drop the include
+        if forbidden_identifiers(clean):
+            continue
+        try:
+            clean = INCLUDE.sub(lambda m: "load(%s)" % mpath(resolver.local_file(m.group(1))), clean)
+        except ValueError:
+            continue
+        m = ASSIGN.match(clean) or FUNDEF.match(clean)
+        ml = LISTASSIGN.match(clean)
+        for nm in [m.group(1)] if m else [x.strip() for x in ml.group(1).split(",")] if ml else []:
+            if re.match(r"^[A-Za-z_%][A-Za-z0-9_%]*$", nm) and nm not in names:
+                names.append(nm)
+        code.append("%%_r: errcatch(eval_string(%s))$" % mstring(clean + "$"))
+        code.append('if %%_r = [] then meclib_out("err", %s)$' % mstring("question variables, line %d" % line))
+        code.append(tick("question variables, line %d" % line))
+    langs = languages_used(data["questiontext"])
+    note = data.get("questionnote") or ""
+    if note.strip():
+        code.append('block([%%_c: errcatch(castext(%s))], if %%_c = [] then meclib_out("err", "question note") else ('
+                    'meclib_out("note:de", stack_resolve_lang(%%_c[1], %s)), meclib_out("note:en", stack_resolve_lang(%%_c[1], %s))))$'
+                    % (mstring(normalize_block_tags(note)), mstring(pick_lang("de", langs)), mstring(pick_lang("en", langs))))
+    t0 = time.time()
+    _stdout, results = session.run_with_results("\n".join(code))
+    if load_includes:
+        mark_includes(session, include_sig)
+    first = lambda k: (results.get(k) or [""])[0]
+    tm = timing(results)
+    return ({"seed": seed, "note": {"de": first("note:de"), "en": first("note:en")},
+             "error": "; ".join(results.get("err") or []),
+             "time": {"wall": round(time.time() - t0, 3), "maxima": round(sum(x for _l, x in tm), 3),
+                      "includes": bool(load_includes and include_sig),
+                      "slow": sorted(tm, key=lambda x: -x[1])[:3]}}, names)
+
+
+def run_tests(session, data, seed, resolver, previous_names=(), testcases=None, on_test=None):
+    """The question tests on one variant, in one session: the question variables once (Maxima
+    run 1), then per test one short run - its inputs (CAS expressions, evaluated with the question
+    variables as STACK does; a choice input given its list of choices means its correct entries)
+    and the PRTs, as a Check in test mode. testcases: the tests to run (default all). on_test:
+    called after each test with (testcase, check result, error of the question variables), for
+    the progress of a test run.
+    Returns ({seed, error, tests: {testcase: check result as in evaluate()}}, names to kill)."""
+    v, names = variant(session, dict(data, questionnote=""), seed, resolver, previous_names, None)
+    langs = languages_used(data["questiontext"])
+    inputs = [i["name"] for i in data["inputs"]]
+    itype = {i["name"]: i.get("type") for i in data["inputs"]}
+    fv_all = [n for p in data["prts"] for n in fv_names(p)]
+    simp = "simp: %s$" % ("true" if data["questionsimplify"] else "false")
+    out, used_tv, times = {}, set(), {}
+    for qt in data.get("qtests", []):
+        if testcases is not None and qt["testcase"] not in testcases:
+            continue
+        exprs = {n: e for n, e in qt["inputs"].items() if n in itype and str(e).strip()}
+        code = ["kill(%s)$" % ",".join(inputs + ["%_tv_" + n for n in sorted(used_tv)])] if inputs or used_tv else []
+        code.append(simp)
+        for n, e in exprs.items():
+            used_tv.add(n)
+            if forbidden_identifiers(e) or unsafe_expr(e):
+                code.append("%%_tv_%s: false$" % n)
+                continue
+            pick = ""
+            if itype[n] in MCQ_TYPES:
+                pick = (', if %%_v # [] and listp(%%_v[1]) and %%_v[1] # [] and every(listp, %%_v[1]) then %%_v: [%s]'
+                        % ("mcq_correct(%_v[1])" if itype[n] == "checkbox" else "first(mcq_correct(%_v[1]))"))
+            # string(): Maxima source of the value; a string keeps its quotes (string("a") is a)
+            code.append('block([%%_v: errcatch(%s)]%s, if %%_v # [] then (%%_tv_%s: if stringp(%%_v[1]) then '
+                        'sconcat("\\"", ssubst("\\\\\\"", "\\"", %%_v[1]), "\\"") else string(%%_v[1]), meclib_out(%s, %%_tv_%s))'
+                        ' else %%_tv_%s: false)$' % (e, pick, n, mstring("tv:" + n), n, n))
+        checked = {}
+        code.insert(0, tick("start"))
+        code += answer_code(dict(data, specificfeedback=""), {}, langs, resolver, checked, names, exprs)
+        code.append(tick("end"))
+        t0 = time.time()
+        stdout, results = session.run_with_results("\n".join(code))
+        out[qt["testcase"]] = check_results(checked, results, stdout, data)
+        if on_test:
+            on_test(qt["testcase"], out[qt["testcase"]], v["error"])
+        tm = timing(results)
+        times[qt["testcase"]] = {"wall": round(time.time() - t0, 3), "maxima": round(sum(x for _l, x in tm), 3),
+                                 "slow": sorted(tm, key=lambda x: -x[1])[:3]}
+    kill = names + inputs + ["%_tv_" + n for n in sorted(used_tv)] + [n for n in fv_all if n not in names]
+    return {"seed": seed, "error": v["error"], "tests": out,
+            "time": {"variables": v["time"], "tests": times}}, kill
+
+
+def answer_code(data, answers, langs, resolver, checked, qv_names=(), texprs=None):
     """Code for the student's answers (as STACK: simp:false, then name: value) and the PRTs
-    whose inputs are all answered. Fills checked with what is evaluated."""
+    whose inputs are all answered. Fills checked with what is evaluated. texprs: inputs of the
+    test mode, whose answer is the value of an expression (%_tv_<input>, see evaluate()), read
+    as a typed answer is read."""
     names = [i["name"] for i in data["inputs"]]
     raw_by_input = {n: answers.get(n, "") for n in names}
     code = ['print("@@ANSWERS@@")$', "simp: false$"]
@@ -1000,6 +1383,14 @@ def answer_code(data, answers, langs, resolver, checked, qv_names=()):
     for inp in data["inputs"]:
         n = inp["name"]
         raw = raw_by_input[n]
+        if texprs and n in texprs:
+            inputs[n] = {"state": "?", "test": True}
+            code.append('block([%%_p: []], if stringp(%%_tv_%s) then %%_p: errcatch(parse_string(%%_tv_%s)),'
+                        ' if %%_p = [] then meclib_out(%s, "invalid") else ('
+                        '%s: %%_p[1], meclib_out(%s, "valid"), meclib_out(%s, fb_tmpl_tostring(%s))))$'
+                        % (n, n, mstring("ans:%s:state" % n), n, mstring("ans:%s:state" % n),
+                           mstring("ans:%s:tex" % n), n))
+            continue
         if inp.get("type") == "matrix":
             mstate, value = matrix_answer(inp, raw, data["decimals"])
             if mstate != "ok":
@@ -1021,7 +1412,8 @@ def answer_code(data, answers, langs, resolver, checked, qv_names=()):
                 continue
         else:
             value = student_value(inp, raw, data["decimals"])
-            bad = question_variable_words(inp, value, qv_names) if inp.get("type") not in ("string", "notes") else []
+            bad = (question_variable_words(inp, value, qv_names, uses_units(data))
+                   if inp.get("type") not in ("string", "notes") else [])
             if bad:
                 inputs[n] = {"state": "invalid", "value": value,
                              "msg": "Forbidden variable or constant: %s." % ", ".join(bad),
@@ -1091,6 +1483,25 @@ def fv_names(prt):
     return out
 
 
+def prt_trace(results, name, prt):
+    """The nodes a PRT visited (see prt_code): [{node (number from 1), answertest, options, sans,
+    tans (LaTeX), sansraw, tansraw, result (true/false/error), atnote, score (after the
+    branch), note (the branch's answer note)}]."""
+    get = lambda k: results.get("prt:%s:trace:%s" % (name, k), [])
+    nodes = {n["name"]: (k, n) for k, n in enumerate(prt["nodes"])}
+    out = []
+    for i, nd in enumerate(get("node")):
+        k, n = nodes.get(nd, (None, {}))
+        pick = lambda k2: (get(k2)[i] if i < len(get(k2)) else "")
+        res = pick("result")
+        out.append({"node": (k + 1) if k is not None else nd, "answertest": n.get("answertest", ""),
+                    "options": n.get("testoptions", ""), "sansexpr": n.get("sans", ""), "tansexpr": n.get("tans", ""),
+                    "sans": pick("sans"), "tans": pick("tans"), "sansraw": pick("sansraw"), "tansraw": pick("tansraw"),
+                    "result": res, "atnote": pick("atnote"), "score": pick("score"),
+                    "note": n.get(("true" if res == "true" else "false") + "answernote", "") if res in ("true", "false") else ""})
+    return out
+
+
 def check_results(checked, results, stdout, data):
     def first(key, default=None):
         return results.get(key, [default])[0]
@@ -1098,6 +1509,10 @@ def check_results(checked, results, stdout, data):
     for n, info in checked["inputs"].items():
         state = first("ans:%s:state" % n, info["state"]) if info["state"] != "blank" else "blank"
         out["inputs"][n] = {"state": state, "tex": first("ans:%s:tex" % n), "value": info.get("value")}
+        if info.get("test"):      # test mode: the value of the expression
+            out["inputs"][n].update(test=True, value=first("tv:" + n))
+            if state == "invalid":
+                out["inputs"][n]["msg"] = "The expression cannot be evaluated with the question variables."
         if info.get("msg"):
             out["inputs"][n].update(msg=info["msg"], hint=info.get("hint"))
         if info.get("empty"):
@@ -1137,6 +1552,7 @@ def check_results(checked, results, stdout, data):
             "errors": errors.get(name, []),
             "variables": [{"name": n, "raw": first("prtvar:%s:%s" % (name, n)), "tex": first("prttex:%s:%s" % (name, n))}
                           for n in fv_names(prts[name])],
+            "trace": prt_trace(results, name, prts[name]),
         }
         if invalid:
             res = {"skipped": "invalid input: " + ", ".join(invalid)}
