@@ -73,6 +73,9 @@ Endpoints
                             or {path, rev, name} appended to an existing file; optional
                             questionvariables, questiontext
   POST /api/q/duplicate     {path, index, rev} copy of a question, right after it
+  POST /api/q/cancel        {token} stop the test run with this progress token before its next test
+  POST /api/q/stacktest     {path, index, seed, src, lang, testcases} question tests run by STACK
+                            itself (STACK API, /test) on this variant
   POST /api/q/stackgrade    {path, index, seed, src, lang, runs: [{testcase, answers}]} answers of
                             question tests graded by STACK itself (STACK API in Docker, stackapi.py)
   GET  /api/stackapi/status the STACK API: built, running, versions
@@ -230,11 +233,24 @@ POOL = SessionPool()
 # (POST /api/q/testrun with a progress token) adds the result of each test as it is done, so that
 # the page colours the matrix while the run goes on
 PROGRESS = {"busy": False, "phase": "", "since": 0.0, "token": None, "results": []}
+# tokens of test runs the page has stopped (button "Stop", POST /api/q/cancel)
+CANCELLED = set()
 
 
 def progress_start_tests(token):
     """A test run begins: its results so far are none; token: the page's id of the run."""
     PROGRESS.update(token=token, results=[])
+    CANCELLED.discard(token)
+
+
+def cancel_run(token):
+    """The page stops the test run with this token: it ends before its next test."""
+    if token:
+        CANCELLED.add(token)
+
+
+def run_cancelled(token):
+    return bool(token) and token in CANCELLED
 
 
 def progress_add_test(seed, testcase, check, error):
@@ -256,6 +272,50 @@ def progress_reply(query):
         res = list(PROGRESS["results"])
         out.update(results=res[after:], count=len(res))
     return out
+
+
+def api_includes(q, src, cfg):
+    """The meclib includes of a question for the STACK API, following the source selector (local
+    working copy: the includes container of the API)."""
+    def include(m):
+        path = m.group(2)
+        if src == "local" and path.startswith("Maxima/"):
+            return stackapi.INCLUDE_BASE + path[len("Maxima/"):]
+        if src in cfg["branches"]:
+            return "https://raw.githubusercontent.com/mkraska/meclib/%s/%s" % (cfg["branches"][src], path)
+        return m.group(0)
+    return re.sub(r"https://raw\.githubusercontent\.com/mkraska/meclib/([^/\s\"]+)/([^\s\"<]+)", include, q)
+
+
+def stack_test_question(q, seed, testcases, src, cfg):
+    """The question (XML of one <question>) for the STACK API's /test route: the seed as its only
+    deployed variant, only the question tests with these testcases (None: all), includes as in
+    api_includes()."""
+    q = re.sub(r"[ \t]*<deployedseed>\s*\d+\s*</deployedseed>\r?\n?", "", q)
+    q = q.replace("</question>", "<deployedseed>%d</deployedseed>\n</question>" % seed)
+    if testcases is not None:
+        keep = {str(t) for t in testcases}
+
+        def qtest(m):
+            tc = re.search(r"<testcase>\s*(\d+)\s*</testcase>", m.group(0))
+            return m.group(0) if tc and tc.group(1) in keep else ""
+        q = re.sub(r"[ \t]*<qtest>.*?</qtest>\r?\n?", qtest, q, flags=re.S)
+    return api_includes(q, src, cfg)
+
+
+def stack_test_outcomes(r, seed):
+    """The reply of the STACK API's /test route for one seed: {testcase: {pass, reason}}; raises
+    RuntimeError with STACK's message if the question or the variant could not be tested."""
+    if r.get("isupgradeerror") or ("results" not in r and (r.get("message") or r.get("error"))):
+        raise RuntimeError(r.get("messages") or r.get("message") or r.get("error") or "STACK could not test the question")
+    res = (r.get("results") or {})
+    one = res.get(str(seed)) if isinstance(res, dict) else None
+    if one is None and isinstance(res, dict):
+        one = res.get("noseed")
+    if not one or one.get("outcomes") is None:
+        raise RuntimeError((one or {}).get("messages") or r.get("messages") or "no results from STACK for variant %d" % seed)
+    return {str(tc): {"pass": bool(o.get("passed")), "reason": o.get("reason") or ""}
+            for tc, o in one["outcomes"].items()}
 
 
 def set_phase(phase):
@@ -882,7 +942,8 @@ class Handler(SimpleHTTPRequestHandler):
         the question variables, then one short run per test (stack_question.run_tests). The
         includes are loaded once per session (stack_question.include_plan). progress: a token of
         the page; GET /api/q/progress with it gives the results of the tests done so far.
-        -> {runs: [{seed, error, tests: {testcase: check}}], seconds}"""
+        A stopped run (POST /api/q/cancel with the token) ends before its next test.
+        -> {runs: [{seed, error, tests: {testcase: check}}], seconds, cancelled}"""
         target = allowed_path(cfg, req["path"])
         text, _ = qfile.read_file(target)
         index, src = int(req["index"]), req.get("src", "local")
@@ -891,20 +952,51 @@ class Handler(SimpleHTTPRequestHandler):
         testcases = req.get("testcases")
         t0 = time.time()
         PROGRESS.update(busy=True, since=t0, phase="Maxima session: starting Maxima and loading STACK's library")
-        progress_start_tests(req.get("progress"))
-        out = []
+        token = req.get("progress")
+        progress_start_tests(token)
+        out, cancelled = [], False
         try:
             entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg), current_stack())
             resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
             for k, seed in enumerate(seeds):
+                if run_cancelled(token):
+                    cancelled = True
+                    break
                 set_phase("tests on variant %d (%d of %d)" % (seed, k + 1, len(seeds)))
                 r, names = stack_question.run_tests(entry[0], data, seed, resolver, entry[2], testcases,
-                                                    lambda tc, chk, err, s=seed: progress_add_test(s, tc, chk, err))
+                                                    lambda tc, chk, err, s=seed: progress_add_test(s, tc, chk, err),
+                                                    lambda: run_cancelled(token))
                 entry[2] = names
                 out.append(r)
+                if r.get("cancelled"):
+                    cancelled = True
+                    break
         finally:
             PROGRESS["busy"] = False
-        return {"runs": out, "seconds": round(time.time() - t0, 2)}
+            CANCELLED.discard(token)
+        return {"runs": out, "seconds": round(time.time() - t0, 2), "cancelled": cancelled}
+
+    def stack_test(self, cfg, req):
+        """POST /api/q/stacktest {path, index, seed, src, lang, testcases}: the question tests (default
+        all) run by STACK itself on the variant with this seed (STACK API's /test route, as the
+        question tests in Moodle: test inputs evaluated with that variant's question variables).
+        -> {seed, tests: {testcase: {pass, reason}}, seconds, api} or {error}"""
+        target = allowed_path(cfg, req["path"])
+        text, _ = qfile.read_file(target)
+        a, b, _ = qfile.question_span(text, int(req["index"]))
+        seed = int(req.get("seed", 1))
+        q = stack_test_question(text[a:b], seed, req.get("testcases"), req.get("src", "local"), cfg)
+        xml = '<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n' + q + '\n</quiz>\n'
+        PROGRESS.update(busy=True, since=time.time(), phase="STACK API: starting the containers (Docker)")
+        try:
+            info = stackapi.up()
+            set_phase("STACK API: STACK compiles the question and runs the tests on variant %d" % seed)
+            secs, r = stackapi.call("test", {"questionDefinition": xml, "seed": seed, "lang": req.get("lang") or "de"})
+            return {"seed": seed, "tests": stack_test_outcomes(r, seed), "seconds": secs, "api": info.get("settings")}
+        except (RuntimeError, OSError, subprocess.SubprocessError) as err:
+            return {"error": str(err)}
+        finally:
+            PROGRESS["busy"] = False
 
     def stack_grade(self, cfg, req):
         """POST /api/q/stackgrade {path, index, seed, src, lang, runs: [{testcase, answers}]}: the
@@ -920,16 +1012,7 @@ class Handler(SimpleHTTPRequestHandler):
         seed = int(req.get("seed", 1))
         if not re.search(r"<deployedseed>\s*%d\s*</deployedseed>" % seed, q):
             q = q.replace("</question>", "<deployedseed>%d</deployedseed></question>" % seed)
-        src = req.get("src", "local")
-
-        def include(m):
-            branch, path = m.group(1), m.group(2)
-            if src == "local" and path.startswith("Maxima/"):
-                return stackapi.INCLUDE_BASE + path[len("Maxima/"):]
-            if src in cfg["branches"]:
-                return "https://raw.githubusercontent.com/mkraska/meclib/%s/%s" % (cfg["branches"][src], path)
-            return m.group(0)
-        q = re.sub(r"https://raw\.githubusercontent\.com/mkraska/meclib/([^/\s\"]+)/([^\s\"<]+)", include, q)
+        q = api_includes(q, req.get("src", "local"), cfg)
         xml = '<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n' + q + '\n</quiz>\n'
         try:
             info = stackapi.up()
@@ -1187,6 +1270,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_json(self.test_run(cfg, req))
             if path == "/api/q/stackgrade":
                 return self.send_json(self.stack_grade(cfg, req))
+            if path == "/api/q/stacktest":
+                return self.send_json(self.stack_test(cfg, req))
             if path == "/api/q/duplicate":
                 target = allowed_path(cfg, req["path"])
                 text, rev = qfile.read_file(target)
@@ -1317,6 +1402,10 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_json({"error": "no folder dialog available (%s) - type or paste the path instead" % err}, 400)
         if parsed.path == "/api/mtests/run":
             return self.mtests_run()
+        if parsed.path == "/api/q/cancel":
+            # not in question_post: answered at once, while the test run goes on in another thread
+            cancel_run(json.loads(self.read_body() or "{}").get("token"))
+            return self.send_json({"ok": True})
         if parsed.path == "/api/maxima":
             req = json.loads(self.read_body() or "{}")
             path = req.get("path", "")

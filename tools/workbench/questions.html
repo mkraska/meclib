@@ -163,6 +163,11 @@
   table.vtab tr.aprow th { padding-top: 0; } table.vtab button.tc.apok { background: #dcefdc; color: var(--ok); opacity: 1; }
   table.vtab button.tc.apbtn:not(:disabled) { background: #fbf1dc; color: #a35a00; font-weight: bold; }
   #testsToggle.need { background: #f8dcda; color: var(--err); border-color: #e3a19b; font-weight: 600; }
+  #varSurvey.need, table.vtab button.tc.plus.qfail { background: #f8dcda; color: var(--err); border-color: #e3a19b; font-weight: 600; }
+  #sideEdit .tvonly .pair.eng { gap: 0; } #sideEdit .tvonly .pair.eng button { padding: 2px 0; font-size: 10.5px; letter-spacing: -0.2px; }
+  #prevToggle.on { background: #55554f; color: #fff; border-color: #55554f; }
+  #stopRun:not(:disabled) { background: #c0392b; color: #fff; border-color: #a93226; font-weight: 600; }
+  table.vtab .rowrun { padding-left: 8px; }
   #testView .tvbox { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 0 0 10px; }
   #testView .tvrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; }
   #testView .tvrow input[type=number] { width: 4.5em; }
@@ -446,14 +451,16 @@
     <button id="toGraphic" class="edonly" title="open the question's graphic (first [[jsxgraph]] block, evaluated initdata) on the Graphic page">Graphic ↗</button>
     <button id="testsToggle" title="question tests and deployed variants (instead of the editor); red: something to do">Tests</button>
     <div class="tvonly">
-      <button id="varSurvey" title="evaluate the question variables and the question note for the seeds 1..N (N in the column)">Survey</button>
-      <button id="varRunTests" title="run all question tests (fast check) on every deployed variant">Tests on deployed</button>
+      <span class="pair eng" title="engine of the test runs started in the matrix and by &quot;Tests on deployed&quot;"><button id="engMaxima" title="fast check in the workbench's Maxima">Maxima</button><button id="engApi">API</button></span>
+      <button id="prevToggle" title="Maxima: a test cell or row runs in the preview (route in the test details); off: fast run without the preview">preview</button>
+      <button id="varRunTests" title="run all question tests on every deployed variant">Tests on deployed</button>
+      <button id="stopRun" disabled title="stop the test run before its next test (variant, with the API)">Stop</button>
       <div id="tvTools" class="tvonly"></div>
     </div>
     <hr>
     <nav id="railEdit" class="jump edonly" aria-label="editor sections"></nav>
     <nav id="railTests" class="jump tvonly" aria-label="test sections">
-      <a href="#" data-jump="tvVariants">Variants and tests</a><a href="#" data-jump="tvDetail">Test details</a><a href="#" data-jump="tvInputs">Inputs and PRTs</a><a href="#" data-jump="tvCoverage">Coverage</a><a href="#" data-jump="tvTestBox">Test messages</a></nav>
+      <button type="button" data-jump="tvVariants" title="Variants and tests">Variants and tests</button><button type="button" data-jump="tvTestBox" title="Test messages">Test messages</button><button type="button" data-jump="tvInputs" title="Inputs and PRTs">Inputs and PRTs</button><button type="button" data-jump="tvCoverage" title="Coverage">Coverage</button><button type="button" data-jump="tvDetail" title="Test details">Test details</button></nav>
   </aside>
   <div id="editCol">
     <section>
@@ -497,13 +504,17 @@
         <div class="tvrow"><span id="testsNeed" class="hint"></span></div>
         <div class="tvbox" id="tvVariants">
           <div class="tvrow"><b>Variants and tests</b><span class="hint">survey: seeds 1 to</span>
-            <input type="number" id="varCount" min="1" max="500" value="10" title="how many seeds the survey evaluates (question variables and note only)"></div>
+            <input type="number" id="varCount" min="1" max="500" value="10" title="how many seeds the survey evaluates (question variables and note only)">
+            <button id="varSurvey" class="small" title="evaluate the question variables and the question note for the seeds 1..N">Survey</button></div>
           <div id="varInfo" class="hint"></div>
           <table id="varTable" class="vtab"></table>
-          <p class="hint">A test button runs that test on that variant in the preview (green passed, red failed, a bar below:
-            result in STACK itself); a test number in the head runs the test on every deployed variant.</p>
+          <p class="hint">A test button runs that test on that variant (green passed, red failed, a bar below: result in STACK
+            itself, engine API); a test number in the head runs the test on every deployed variant, ▶ at the end of a row
+            every test on that variant, + adds a test.</p>
         </div>
-        <div class="tvbox" id="tvDetail"><span class="hint">Run a test (a button in the matrix): its route through the PRTs shows here. Approve a test with ✓ under its number in the matrix header.</span></div>
+        <div class="tvbox" id="tvTestBox">
+          <div id="qtestBar" class="qtests" title="question tests (STACK's &lt;qtest&gt;, exported to Moodle with the question)"></div>
+        </div>
         <div class="tvbox" id="tvInputs">
           <div class="tvrow"><b>Inputs and PRTs</b><span id="ipInfo" class="hint"></span></div>
           <div id="ipView"></div>
@@ -516,9 +527,7 @@
           <p class="hint">● the expected route of the test passes this branch; ○ a test that names only the last answer note:
             the branch is from the route of a run (write the full route). Red: no test reaches the branch.</p>
         </div>
-        <div class="tvbox" id="tvTestBox">
-          <div id="qtestBar" class="qtests" title="question tests (STACK's &lt;qtest&gt;, exported to Moodle with the question)"></div>
-        </div>
+        <div class="tvbox" id="tvDetail"><span class="hint">Run a test (a button in the matrix): its route through the PRTs shows here. Approve a test with ✓ under its number in the matrix header.</span></div>
       </div>
     </section>
   </div>
@@ -887,7 +896,7 @@ async function newFile(folder) {
 // ---------------------------------------------------------------- question selection and editor
 async function selectQuestion(index) {
   for (const k of Object.keys(testResults)) delete testResults[k];     // the tests of another question
-  for (const k of Object.keys(stackResults)) delete stackResults[k];
+  for (const k of Object.keys(stackSeedResults)) delete stackSeedResults[k];
   stackSummary = "";
   variantsData = null; for (const k of Object.keys(seedResults)) delete seedResults[k]; lastBatchTiming = null;
   for (const k of Object.keys(actualRoutes)) delete actualRoutes[k];
@@ -2194,7 +2203,23 @@ function jumpTo(col, el) {
     spyJump();
   });
 }
+// the section of the Tests view in sight (buttons of the rail below the actions)
+const TEST_SECTIONS = ["tvVariants", "tvTestBox", "tvInputs", "tvCoverage", "tvDetail"];
+function spyTests() {
+  const btns = [...$("railTests").querySelectorAll("button")];
+  if ($("testView").hidden) { btns.forEach((b) => b.classList.remove("on")); return; }
+  const colEl = $("editCol");
+  const top = (WIDE.matches ? colEl.getBoundingClientRect().top : document.querySelector("header").offsetHeight) + 48;
+  let cur = 0;
+  TEST_SECTIONS.forEach((id, i) => { const el = $(id); if (el && el.getBoundingClientRect().top <= top) cur = i; });
+  const scrolls = WIDE.matches ? colEl.scrollHeight > colEl.clientHeight + 2 : document.documentElement.scrollHeight > window.innerHeight + 2;
+  const atEnd = WIDE.matches ? colEl.scrollTop + colEl.clientHeight >= colEl.scrollHeight - 2
+    : window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+  if (scrolls && atEnd) cur = TEST_SECTIONS.length - 1;
+  btns.forEach((b, i) => b.classList.toggle("on", i === cur));
+}
 function spyJump() {
+  spyTests();
   for (const [col, colEl, ids] of [["edit", $("editCol"), ["railEdit"]], ["preview", $("previewCol"), ["railPreview"]]]) {
     if (colEl.offsetParent === null) { for (const id of ids) $(id).querySelectorAll("button").forEach((b) => b.classList.remove("on")); continue; }
     const top = (WIDE.matches ? colEl.getBoundingClientRect().top : document.querySelector("header").offsetHeight) + 48;
@@ -2294,8 +2319,8 @@ async function openSnippets() {
 // A test button fills the inputs with its values and checks (the fast check in Maxima); the
 // result is compared as STACK does (stack/questiontestresult.php).
 const testResults = {};       // testcase -> {pass, reasons}
-const stackResults = {};      // testcase -> {pass, reasons, seconds}: the same test graded by STACK itself
-let stackApi = null, stackRunning = false, stackSummary = "";   // GET /api/stackapi/status
+const stackSeedResults = {};  // seed -> testcase -> {pass, reasons}: the test run by STACK itself (engine API)
+let stackApi = null, stackSummary = "";   // GET /api/stackapi/status
 let activeTest = null, testDeleteArmed = null;
 // test mode (a new test or a test being edited): {tc: "new" or a test case, saved: the answers
 // before}; the inputs take CAS expressions with question variables (exprInput), Check evaluates
@@ -2384,29 +2409,17 @@ function renderTests() {
     else { pair = null; tools.appendChild(b); }
     last = b;
   };
-  if (result && (result.inputs || []).length && !testMode) {
-    tool("+", (tests.length ? "" : "no question tests yet - ") + "new test case: the preview goes into test mode, where the inputs take CAS expressions with question variables", () => { hideCoverageCallout(); enterTestMode(null); });
-    const cov = coverage();
-    if (!tests.length || cov.missing) last.classList.add("qfail");
-    last.addEventListener("mouseenter", () => showCoverageCallout(last));
-    last.addEventListener("mouseleave", hideCoverageCallout);
-  }
-  if (tests.length) tool("▶", "run all tests on the variant in the preview (fast check in Maxima)", runAllTests);
-  if (tests.length) tool(stackRunning ? "STACK …" : "STACK ▶", stackApi && stackApi.built
-    ? `run all tests in STACK itself (STACK API in Docker: STACK ${(stackApi.settings || {}).release || ""}, Maxima ${(stackApi.settings || {}).maxima || ""}); ` +
-      "STACK compiles the question for every test, which takes seconds to a minute with large includes; the result shows as a line under each button"
-    : "STACK API not built yet - in tools/workbench: python stackapi.py build --maxima <the server's Maxima, e.g. 5.45.1> (Docker Desktop running), see README",
-    runTestsInStack);
   if (activeTest !== null && !testMode && tests.some((t) => t.testcase === activeTest)) {
     tool("✎", `test ${activeTest}: edit it in test mode (its inputs as expressions), or change its description`, () => enterTestMode(activeTest));
     tool(testDeleteArmed === activeTest ? "✕?" : "✕", `delete test ${activeTest}` + (testDeleteArmed === activeTest ? " - click again to delete" : ""), () => deleteTest(activeTest));
   }
   const r = activeTest !== null && testResults[activeTest];
   if (r && !r.pass) { const m = document.createElement("div"); m.className = "qtmsg bad"; m.textContent = `test ${activeTest} failed: ` + r.reasons.join("\n"); bar.appendChild(m); }
-  const sf = Object.entries(stackResults).filter(([tc, x]) => !x.pass && tests.some((t) => String(t.testcase) === tc));
+  const sf = Object.entries(stackSeedResults).flatMap(([sd, m]) => Object.entries(m)
+    .filter(([tc, x]) => !x.pass && tests.some((t) => String(t.testcase) === tc)).map(([tc, x]) => [`variant ${sd}, test ${tc}`, x]));
   if (lastBatchTiming) bar.insertAdjacentHTML("beforeend", batchTimingHTML(lastBatchTiming));
   if (stackSummary) { const m = document.createElement("div"); m.className = "qtmsg " + (sf.length ? "bad" : "info"); m.textContent = stackSummary +
-    (sf.length ? "\n" + sf.map(([tc, x]) => `test ${tc}: ` + x.reasons.join("; ")).join("\n") : ""); bar.appendChild(m); }
+    (sf.length ? "\n" + sf.map(([k, x]) => `${k}: ` + x.reasons.join("; ")).join("\n") : ""); bar.appendChild(m); }
   renderVariants();
 }
 
@@ -2422,6 +2435,7 @@ function showTestsView(on) {
   $("sideEdit").classList.toggle("tests", on);
   store(QSTORE_KEY, { testsView: on });
   testsToggleState();
+  spyTests();
   if (on) loadDeployedNotes();
   if (!on) refreshEditors();
 }
@@ -2433,7 +2447,8 @@ function testsNeeds() {
   const tests = result.qtests || [];
   if ((result.inputs || []).length && !tests.length) needs.push("no question tests");
   else if (tests.length) { const c = coverage(); if (c.missing) needs.push(`${c.missing} branch${c.missing > 1 ? "es" : ""} without a test`); }
-  if (Object.values(testResults).some((r) => r && !r.pass) || Object.values(seedResults).some((m) => Object.values(m).some((p) => !p)))
+  if (Object.values(testResults).some((r) => r && !r.pass) || Object.values(seedResults).some((m) => Object.values(m).some((p) => !p)) ||
+      Object.values(stackSeedResults).some((m) => Object.values(m).some((x) => !x.pass)))
     needs.push("failing tests");
   if (result.random && !deployedSeeds().length) needs.push("randomised, no deployed variants");
   const notApproved = tests.filter((q) => approvalState(q.testcase) !== "ok");
@@ -2467,12 +2482,12 @@ function testTip(qt) {
 // class and tooltip of the matrix cell of test q on variant seed (cur: the variant in the preview)
 function cellLook(seed, q, cur) {
   const r = (seedResults[seed] || {})[q.testcase], here = seed === cur;
-  const sr = here ? stackResults[q.testcase] : null, fr = here ? testResults[q.testcase] : null;
+  const sr = (stackSeedResults[seed] || {})[q.testcase] || null, fr = here ? testResults[q.testcase] : null;
   const bs = batchCellState(seed, q.testcase);
   const cls = "small tc" + (r === true ? " p" : r === false ? " f" : "") + (sr ? (sr.pass ? " sp" : " sf") : "") +
     (here && activeTest === q.testcase ? " cur" : "") + (bs === "run" ? " w run" : bs ? " w" : "");
   const title = testTip(q) + (bs ? (bs === "run" ? "\nrunning ..." : "\nwaiting to run") : "") + (r === undefined ? "\nnot run on this variant" : r ? "\npassed" : "\nFAILED" + (fr && !fr.pass ? ": " + fr.reasons.join("; ") : "")) +
-    (sr ? "\nSTACK: " + (sr.pass ? "passed" : "FAILED: " + sr.reasons.join("; ")) : "") + "\nclick: this test on this variant, in the preview";
+    (sr ? "\nSTACK: " + (sr.pass ? "passed" : "FAILED: " + sr.reasons.join("; ")) : "") + "\nclick: this test on this variant, " + runHow();
   return { cls, title };
 }
 // during a test run: only the cells of the matrix change (class and tooltip), not the table, so
@@ -2512,13 +2527,15 @@ function renderVariants() {
   const firstOf = new Map();          // note -> first seed with it
   for (const v of [...rows].sort((a, b) => a.seed - b.seed)) { const n = v.note[lang] || v.note.de || v.note.en; if (n && !firstOf.has(n)) firstOf.set(n, v.seed); }
   const tip = testTip;
+  const canAdd = !!(result && (result.inputs || []).length && !testMode), cov0 = canAdd ? coverage() : null;
+  const plus = canAdd ? `<button class="small tc plus${!tests.length || cov0.missing ? " qfail" : ""}" id="tvPlus" title="${tests.length ? "" : "no question tests yet - "}new test case: the preview goes into test mode, where the inputs take CAS expressions with question variables">+</button>` : "";
   let h = `<tr><th>deploy</th><th>seed</th><th>question note</th><th>${tests.map((q) =>
-    `<button class="small tc${approvalState(q.testcase) === "ok" ? " ap" : approvalState(q.testcase) === "stale" ? " apstale" : approvalState(q.testcase) === "failed" ? " apfail" : ""}" data-col="${q.testcase}" title="${esc(tip(q))}&#10;${esc(approvalText(q.testcase))}&#10;click: run on every deployed variant">${q.testcase}</button>`).join("") || "tests"}</th></tr>`;
+    `<button class="small tc${approvalState(q.testcase) === "ok" ? " ap" : approvalState(q.testcase) === "stale" ? " apstale" : approvalState(q.testcase) === "failed" ? " apfail" : ""}" data-col="${q.testcase}" title="${esc(tip(q))}&#10;${esc(approvalText(q.testcase))}&#10;click: run on every deployed variant">${q.testcase}</button>`).join("") || "tests"}</th><th class="rowrun">${plus}</th></tr>`;
   if (tests.length) h += `<tr class="aprow"><th></th><th></th><th class="hint">approve</th><th>${tests.map((q) => {
     const st = approvalState(q.testcase), why = approveBlock(q.testcase);
     if (st === "ok" && !why) return `<button class="small tc apok" disabled title="${esc(approvalText(q.testcase))}">✓</button>`;
     return `<button class="small tc apbtn" data-approve="${q.testcase}"${why ? " disabled" : ""} title="${esc(approvalText(q.testcase))}&#10;${esc(why || "approve test " + q.testcase + ": it passed on " + (deployedSeeds().length ? "every deployed variant" : "the preview variant"))}">✓</button>`;
-  }).join("")}</th></tr>`;
+  }).join("")}</th><th></th></tr>`;
   for (const v of rows) {
     const n = v.note[lang] || v.note.de || v.note.en, isDep = dep.includes(v.seed);
     let dup = "";
@@ -2533,7 +2550,7 @@ function renderVariants() {
     h += `<tr class="${isDep ? "dep" : "rest"}${v.seed === cur ? " cur" : ""}"><td><input type="checkbox" data-seed="${v.seed}"${isDep ? " checked" : ""}></td>` +
       `<td><button class="small" data-show="${v.seed}" title="show this variant in the preview">${v.seed}</button></td>` +
       (v.error ? `<td class="note err">${esc(v.error)}</td>` : `<td class="note">${n ? toHTML(n, "html", []) : '<span class="hint">-</span>'}${dup}</td>`) +
-      `<td class="tres">${cells}</td></tr>`;
+      `<td class="tres">${cells}</td><td class="rowrun">${tests.length ? `<button class="small" data-row="${v.seed}" title="all tests on variant ${v.seed}, ${runHow()}">▶</button>` : ""}</td></tr>`;
   }
   t.innerHTML = h;
   for (const c of t.querySelectorAll("input[data-seed]")) c.addEventListener("change", () => {
@@ -2546,9 +2563,19 @@ function renderVariants() {
   });
   for (const b of t.querySelectorAll("button[data-cell]")) b.addEventListener("click", () => {
     const [sd, tc] = b.dataset.cell.split(":").map((x) => parseInt(x, 10));
-    runCell(sd, tc);
+    cellClick(sd, tc);
   });
-  for (const b of t.querySelectorAll("button[data-col]")) b.addEventListener("click", () => runColumn(parseInt(b.dataset.col, 10)));
+  for (const b of t.querySelectorAll("button[data-col]")) b.addEventListener("click", () => columnClick(parseInt(b.dataset.col, 10)));
+  for (const b of t.querySelectorAll("button[data-row]")) b.addEventListener("click", () => rowClick(parseInt(b.dataset.row, 10)));
+  const pb = $("tvPlus");
+  if (pb) {
+    pb.addEventListener("click", () => { hideCoverageCallout(); enterTestMode(null); });
+    pb.addEventListener("mouseenter", () => showCoverageCallout(pb));
+    pb.addEventListener("mouseleave", hideCoverageCallout);
+  }
+  $("varSurvey").classList.toggle("need", !!(result && result.random && !deployedSeeds().length));
+  $("varSurvey").title = "evaluate the question variables and the question note for the seeds 1..N" +
+    (result && result.random && !deployedSeeds().length ? "\nrandomised question without deployed variants: survey and deploy some" : "");
   for (const b of t.querySelectorAll("button[data-approve]")) b.addEventListener("click", () => { if (!batchPending) approveTest(parseInt(b.dataset.approve, 10)); });
   renderTestDetail();
   const cov = coverage();
@@ -2576,7 +2603,14 @@ function routeHTML(trace) {
 }
 // the variants on which test tc failed in this session (the matrix and the preview runs)
 function failedSeeds(tc) {
-  return Object.keys(seedResults).filter((s) => seedResults[s][tc] === false).map((s) => parseInt(s, 10)).sort((a, b) => a - b);
+  const f = new Set([...Object.keys(seedResults).filter((s) => seedResults[s][tc] === false),
+    ...Object.keys(stackSeedResults).filter((s) => stackSeedResults[s][tc] && !stackSeedResults[s][tc].pass)]);
+  return [...f].map((s) => parseInt(s, 10)).sort((a, b) => a - b);
+}
+// the test passed on this variant in this session (Maxima or STACK itself), and did not fail
+function seedPassed(s, tc) {
+  const m = (seedResults[s] || {})[tc], a = (stackSeedResults[s] || {})[tc];
+  return (m === true || !!(a && a.pass)) && m !== false && !(a && !a.pass);
 }
 function testFailed(tc) { return failedSeeds(tc).length > 0 || !!(testResults[tc] && !testResults[tc].pass); }
 // "ok", "stale" (question changed since), "failed" (a run in this session failed: the approval is
@@ -2599,9 +2633,9 @@ function approvalText(tc) {
 function approveBlock(tc) {
   const dep = deployedSeeds(), cur = parseInt($("seed").value, 10) || 1;
   const seeds = dep.length ? dep : [cur];
-  const f = seeds.filter((s) => (seedResults[s] || {})[tc] === false);
+  const f = seeds.filter((s) => failedSeeds(tc).includes(s));
   if (f.length) return `fails on variant${f.length > 1 ? "s" : ""} ${f.join(", ")}`;
-  const open = seeds.filter((s) => (seedResults[s] || {})[tc] !== true);
+  const open = seeds.filter((s) => !seedPassed(s, tc));
   if (open.length) return dep.length ? "run the test on every deployed variant first (click the test number)" : "run the test first (click the test number)";
   return "";
 }
@@ -2752,17 +2786,6 @@ async function runCell(sd, tc) {
   if (qt) await runTest(qt);
   renderVariants();
 }
-// one test on every deployed variant (or the variant in the preview); then the test is run once
-// more on the variant in the preview (the first deployed one if that is not deployed), so that it
-// is the active test with its details and approval. The summary over all variants is kept.
-async function runColumn(tc) {
-  const dep = deployedSeeds(), cur = parseInt($("seed").value, 10) || 1;
-  await runBatch(dep.length ? dep : [cur], [tc]);
-  const all = testResults[tc], status = $("status").textContent;
-  await runCell(!dep.length || dep.includes(cur) ? cur : dep[0], tc);
-  if (all && !all.pass) { testResults[tc] = all; renderTests(); }
-  $("status").textContent = status;
-}
 // the times of a batch run: per variant the run of the question variables and of each test, as
 // wall time (server and Maxima) / time in Maxima; the difference is the handover to Maxima
 function batchTimingHTML(t) {
@@ -2810,7 +2833,7 @@ async function runBatch(seeds, tcs) {
   if (!(await flush())) return;
   const tests = (result && result.qtests) || [], agg = {};
   const run = tests.filter((q) => !tcs || tcs.includes(q.testcase));
-  const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const token = runCtl ? runCtl.token : Math.random().toString(36).slice(2) + Date.now().toString(36);
   const order = seeds.flatMap((sd) => run.map((q) => sd + ":" + q.testcase));
   batchPending = { order, left: new Set(order) };
   let seen = 0;
@@ -2845,8 +2868,8 @@ async function runBatch(seeds, tcs) {
   Object.assign(testResults, agg);
   lastBatchTiming = { seconds: data.seconds, runs: data.runs.map((r) => ({ seed: r.seed, time: r.time })) };
   const bad = Object.entries(agg).filter(([, a]) => !a.pass).map(([tc]) => tc);
-  $("status").textContent = (bad.length ? `test(s) ${bad.join(", ")} failed` : `${Object.keys(agg).length} test(s) passed`) +
-    ` on ${seeds.length} variant(s) in ${data.seconds} s`;
+  $("status").textContent = (data.cancelled ? "stopped - " : "") + (bad.length ? `test(s) ${bad.join(", ")} failed` : `${Object.keys(agg).length} test(s) passed`) +
+    ` on ${data.runs.length} variant(s) in ${data.seconds} s`;
   renderTests();
 }
 // the question notes of the deployed variants, without a survey: when the Tests column shows a
@@ -2903,6 +2926,8 @@ async function runTestsOnDeployed() {
   const bad = Object.entries(seedResults).filter(([, m]) => Object.values(m).some((p) => !p)).map(([s]) => s);
   if (bad.length) $("status").textContent += ` - variant(s) ${bad.join(", ")}`;
 }
+// (for /api/q/stackgrade - not used by the matrix any more, which runs STACK's own question tests;
+// kept for a Check of the preview in STACK itself, planned)
 // a test's answers as the STACK API takes them: as typed (decimal separator of the question); a
 // choice input as the number of the chosen entry (checkbox: one key name_k per ticked entry), a
 // matrix input cell by cell (name_sub_r_c)
@@ -2923,38 +2948,124 @@ function stackAnswers(qt) {
   }
   return out;
 }
-async function runTestsInStack() {
-  const tests = (result && result.qtests) || [];
-  if (!tests.length || stackRunning) return;
-  if (!(await flush())) return;
-  stackRunning = true; stackSummary = "STACK: starting the STACK API and grading " + tests.length + " test(s) ..."; renderTests();
-  const t0 = performance.now();
-  try {
-    const seed = parseInt($("seed").value, 10) || 1;
-    const r = await postJSON("/api/q/stackgrade", { path: file.path, index: qindex, seed, src: $("src").value, lang,
-      runs: tests.map((qt) => ({ testcase: qt.testcase, answers: stackAnswers(qt) })) });
-    if (r.error) { stackSummary = "STACK: " + r.error; return; }
-    let pass = 0;
-    for (const run of r.runs) {
-      const qt = tests.find((t) => t.testcase === run.testcase);
-      if (!qt) continue;
-      if (run.error) { stackResults[qt.testcase] = { pass: false, reasons: [run.error], seconds: run.seconds }; continue; }
-      const prts = {};
-      for (const [name, p] of Object.entries(run.prts)) {
-        const notes = p.notes || [];
-        prts[name] = notes.length === 1 && notes[0] === name + "-bail" ? { skipped: "bail", bail: true }
-          : p.score === null && !notes.length ? { skipped: "not run" }
-          : { score: p.score, penalty: p.penalty, notes: notes.join(" | ") };
-      }
-      const c = compareTest(qt, { prts });
-      stackResults[qt.testcase] = Object.assign(c, { seconds: run.seconds });
-      if (c.pass) pass++;
+// ---------------------------------------------------------------- test runs of the Tests column
+// Engine Maxima (the workbench's fast check, with or without the preview) or API (STACK itself:
+// the STACK API's /test route, one request per variant with only the chosen tests - STACK
+// evaluates the test inputs with that variant's question variables, as in Moodle). One run at a
+// time; Stop ends it before its next test (Maxima) or variant (API).
+let runEngine = stored(QSTORE_KEY).runEngine === "api" ? "api" : "maxima";
+let runPreview = stored(QSTORE_KEY).runPreview !== false;
+let runCtl = null;                // the run going on: {token, stopped}
+function runHow() {
+  return runEngine === "api" ? "in STACK itself (API)" : runPreview ? "in the preview" : "fast, without the preview";
+}
+function showRunSettings() {
+  $("engMaxima").classList.toggle("on", runEngine === "maxima"); $("engApi").classList.toggle("on", runEngine === "api");
+  $("engApi").title = stackApi && stackApi.built
+    ? `STACK itself (STACK API in Docker: STACK ${(stackApi.settings || {}).release || ""}, Maxima ${(stackApi.settings || {}).maxima || ""}); ` +
+      "STACK compiles the question once per variant, which takes seconds to a minute with large includes"
+    : "STACK API not built yet - in tools/workbench: python stackapi.py build --maxima <the server's Maxima, e.g. 5.45.1> (Docker Desktop running), see README";
+  $("prevToggle").classList.toggle("on", runPreview); $("prevToggle").disabled = runEngine === "api";
+  $("stopRun").disabled = !runCtl || runCtl.stopped;
+}
+function setRunEngine(e) { runEngine = e; store(QSTORE_KEY, { runEngine: e }); showRunSettings(); renderVariants(); }
+function setRunPreview(on) { runPreview = on; store(QSTORE_KEY, { runPreview: on }); showRunSettings(); renderVariants(); }
+async function guardedRun(fn) {
+  if (runCtl) { $("status").textContent = "a test run is going on - wait or stop it"; return; }
+  if (testMode) return;
+  runCtl = { token: Math.random().toString(36).slice(2) + Date.now().toString(36), stopped: false };
+  showRunSettings();
+  try { await fn(runCtl); }
+  finally { runCtl = null; showRunSettings(); }
+}
+function stopRun() {
+  if (!runCtl || runCtl.stopped) return;
+  runCtl.stopped = true; showRunSettings();
+  postJSON("/api/q/cancel", { token: runCtl.token }).catch(() => {});
+  $("status").textContent = "stopping before the next test ...";
+}
+function allSeeds() { const dep = deployedSeeds(); return dep.length ? dep : [parseInt($("seed").value, 10) || 1]; }
+function cellClick(sd, tc) {
+  guardedRun(() => runEngine === "api" ? runApi([sd], [tc]) : runPreview ? runCell(sd, tc) : runBatch([sd], [tc]));
+}
+function rowClick(sd) {
+  guardedRun((ctl) => runEngine === "api" ? runApi([sd], null) : runPreview ? runInPreview([sd], null, ctl) : runBatch([sd], null));
+}
+function columnClick(tc) {
+  guardedRun((ctl) => runEngine === "api" ? runApi(allSeeds(), [tc]) : runPreview ? runInPreview(allSeeds(), [tc], ctl) : runBatch(allSeeds(), [tc]));
+}
+function deployedClick() {
+  guardedRun((ctl) => runEngine === "api" ? runApi(allSeeds(), null) : runPreview ? runInPreview(allSeeds(), null, ctl) : runTestsOnDeployed());
+}
+// tests (default all) on variants in the preview, one after the other: per variant the preview
+// shows it, then each test is filled in and checked (the last one stays active, with its route);
+// the cells are coloured as in a batch run (waiting, running, done)
+async function runInPreview(seeds, tcs, ctl) {
+  const tests = ((result && result.qtests) || []).filter((q) => !tcs || tcs.includes(q.testcase));
+  if (!tests.length) return;
+  const order = seeds.flatMap((sd) => tests.map((q) => sd + ":" + q.testcase));
+  batchPending = { order, left: new Set(order) };
+  refreshBatchCells();
+  let pass = 0, n = 0, nv = 0;
+  const failed = new Set();
+  for (const sd of seeds) {
+    if (ctl.stopped) break;
+    if ((parseInt($("seed").value, 10) || 1) !== sd) {
+      $("seed").value = sd; $("seed").dataset.userSet = "1";
+      await evaluate(false);
+      refreshBatchCells();
     }
-    const api = r.api || {};
-    stackSummary = `STACK ${api.release || ""} (Maxima ${api.maxima || "?"}): ${pass} of ${tests.length} passed, ` +
-      `${((performance.now() - t0) / 1000).toFixed(0)} s`;
-  } catch (e) { stackSummary = "STACK: " + e.message; }
-  finally { stackRunning = false; renderTests(); }
+    nv++;
+    // the tests as evaluated for this variant (their values depend on its question variables)
+    for (const qt0 of tests) {
+      if (ctl.stopped) break;
+      const qt = ((result && result.qtests) || []).find((q) => q.testcase === qt0.testcase) || qt0;
+      const r = await runTest(qt, true); n++;
+      if (r && r.pass) pass++; else failed.add(qt.testcase);
+      batchPending.left.delete(sd + ":" + qt.testcase);
+      refreshBatchCells();
+    }
+  }
+  batchPending = null;
+  renderTests();
+  $("status").textContent = `${pass} of ${n} test run(s) passed on ${nv} variant(s)` +
+    (failed.size ? ` - failed: test(s) ${[...failed].join(", ")}` : "") + (ctl.stopped ? " (stopped)" : "");
+}
+async function runApi(seeds, tcs) {
+  const tests = ((result && result.qtests) || []).filter((q) => !tcs || tcs.includes(q.testcase));
+  if (!tests.length || !file || qindex === null) return;
+  if (!(await flush())) return;
+  const ctl = runCtl, t0 = performance.now(), order = seeds.flatMap((sd) => tests.map((q) => sd + ":" + q.testcase));
+  batchPending = { order, left: new Set(order) };
+  refreshBatchCells();
+  $("status").textContent = `STACK API: ${tests.length} test(s) on ${seeds.length} variant(s) ...`;
+  let pass = 0, done = 0, nseeds = 0, api = null, err = "";
+  for (const sd of seeds) {
+    if (ctl && ctl.stopped) break;
+    let r;
+    try {
+      r = await withProgress(`STACK API: ${tests.length} test(s) on variant ${sd}`, postJSON("/api/q/stacktest",
+        { path: file.path, index: qindex, seed: sd, src: $("src").value, lang, testcases: tests.map((q) => q.testcase) }));
+    } catch (e) { r = { error: e.message }; }
+    if (r.error) { err = `variant ${sd}: ` + r.error; break; }
+    api = r.api || api; nseeds++;
+    const m = stackSeedResults[sd] = stackSeedResults[sd] || {};
+    for (const qt of tests) {
+      const o = r.tests[String(qt.testcase)];
+      m[qt.testcase] = o ? { pass: o.pass, reasons: o.reason ? [o.reason] : [] } : { pass: false, reasons: ["no result from STACK"] };
+      if (m[qt.testcase].pass) pass++;
+      done++;
+      batchPending.left.delete(sd + ":" + qt.testcase);
+    }
+    refreshBatchCells();
+  }
+  batchPending = null;
+  const a = api || {};
+  stackSummary = (err ? "STACK: " + err + (done ? " - before: " : "") : "") + (done || !err ? `STACK ${a.release || ""} (Maxima ${a.maxima || "?"}): ${pass} of ${done} passed` +
+    ` on ${nseeds} variant(s), ${((performance.now() - t0) / 1000).toFixed(0)} s` : "") + (ctl && ctl.stopped ? " (stopped)" : "");
+  $("status").textContent = stackSummary;
+  if (err) showMessages([{ cls: "err", text: "STACK API: " + err }], true);
+  renderTests();
 }
 async function runTest(qt, quiet) {
   if (testMode) return null;
@@ -2973,13 +3084,6 @@ async function runTest(qt, quiet) {
   }
   if (!quiet) renderTests();
   return testResults[qt.testcase];
-}
-async function runAllTests() {
-  const tests = (result && result.qtests) || [];
-  let pass = 0;
-  for (const qt of tests) { const r = await runTest(qt, true); if (r && r.pass) pass++; }
-  renderTests();
-  $("status").textContent = `tests: ${pass} of ${tests.length} passed`;
 }
 // inputs that take an expression in test mode: not choice, matrix, string and notes inputs,
 // and not inputs bound to a graphic (input-ref-...): the graphic writes its state into them in
@@ -3584,7 +3688,7 @@ async function start() {
   fillSelect($("src"), srcEntries, savedSel.src);
   fillSelect($("jsx"), Object.keys(config.jsxgraph).map((k) => [k, k]), savedSel.jsx);
   fillSelect($("mathjax"), Object.keys(config.mathjax).map((k) => [k, k]), savedSel.mathjax);
-  fetch("/api/stackapi/status").then((r) => r.json()).then((st) => { stackApi = st; renderTests(); }).catch(() => {});
+  fetch("/api/stackapi/status").then((r) => r.json()).then((st) => { stackApi = st; showRunSettings(); renderTests(); }).catch(() => {});
   F.initHeader(config, { onStack: () => { if (result) evaluate(false); }, onMaxima: () => { if (result) evaluate(false); } });
   const mj = document.createElement("script"); mj.type = "text/x-mathjax-config";
   mj.text = 'MathJax.Hub.Config({messageStyle: "none", tex2jax: {inlineMath: [["\\\\(","\\\\)"]], displayMath: [["\\\\[","\\\\]"]], processEscapes: true}});';
@@ -3743,10 +3847,13 @@ $("testsToggle").addEventListener("click", () => showTestsView($("testView").hid
 $("varSurvey").addEventListener("click", surveyVariants);
 $("optApprovalFp").checked = stored(QSTORE_KEY).approvalFp !== false;
 $("optApprovalFp").addEventListener("change", () => { store(QSTORE_KEY, { approvalFp: $("optApprovalFp").checked }); renderVariants(); });
-for (const a of document.querySelectorAll("#railTests a[data-jump]")) a.addEventListener("click", (e) => {
-  e.preventDefault(); $(a.dataset.jump).scrollIntoView({ behavior: "smooth", block: "start" });
-});
-$("varRunTests").addEventListener("click", runTestsOnDeployed);
+for (const b of document.querySelectorAll("#railTests button[data-jump]")) b.addEventListener("click", () => jumpTo("edit", $(b.dataset.jump)));
+$("varRunTests").addEventListener("click", deployedClick);
+$("engMaxima").addEventListener("click", () => setRunEngine("maxima"));
+$("engApi").addEventListener("click", () => setRunEngine("api"));
+$("prevToggle").addEventListener("click", () => setRunPreview(!runPreview));
+$("stopRun").addEventListener("click", stopRun);
+showRunSettings();
 { const st = stored(QSTORE_KEY); if (st.varCount) $("varCount").value = st.varCount; if (st.testsView) showTestsView(true); }
 $("toGraphic").addEventListener("click", async () => {
   if (!result || !saved) { showMessages([{ cls: "warn", text: "Evaluate the question first." }]); return; }

@@ -30,6 +30,7 @@ The review of the [[Meclib Workbench]] (Questions page, **Review** at the top of
 | [`matrix.feedback`](#matrixfeedback) | recommended / hint | partly | Element-wise feedback for a matrix input |
 | [`matrix.layout`](#matrixlayout) | recommended / hint | partly | Layout of a matrix input |
 | [`inputs.no-prt`](#inputsno-prt) | hint | yes | Input not graded by any PRT |
+| [`inputs.allowwords`](#inputsallowwords) | required | yes | Names students may not type |
 | **PRTs and grading** | | | |
 | [`prt.simp`](#prtsimp) | recommended | yes | PRT simplification with fb_unit |
 | [`prt.feedbackformat`](#prtfeedbackformat) | recommended | yes | Format of PRT feedback |
@@ -236,6 +237,17 @@ Inputs and PRTs that do not meet: an input that no PRT reads is never graded (of
 
 Message:
 > Input … is read by no PRT (feedback variables, SAns, TAns, test options), so its answer is never graded. Add a PRT for it, or delete the input if it is left over (the fix deletes it with its placeholders).
+
+### `inputs.allowwords`
+
+Level: **required** · automatic fix: **yes** · function `r_allowwords()`
+
+A name in the model answer (through the question variables) that students may not type: STACK accepts only names of at most two characters, names ending in a digit, names it knows (Delta, omega, ...) and the input's allowed words - any other answer with it is invalid ("Forbidden variable or constant: Fhat", TM3 08 07). Names with underscores are checked part by part (Delta_p, F_Ax are fine). For the names input of a meclib graphic: the names of its forces and moments. The fix adds the names to the input's allowed words.
+
+Message:
+> Input …: the model answer uses …, which STACK does not accept in a student's answer (only names of at most two characters, names ending in a digit, names STACK knows such as Delta or omega, and the allowed words of the input). Every answer with … would be invalid. The fix adds … to the allowed words of the input.
+
+See also: https://github.com/mkraska/meclib/wiki/Labels-and-names
 
 ## PRTs and grading
 

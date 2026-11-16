@@ -381,8 +381,8 @@ Choice, matrix and string inputs are entered as usual and stored with their
 value. "Add test" / "Replace test" store the expressions (not their values)
 and the result of their check as expected result, "Save description only"
 changes just the description; saving or "Cancel" ends the test mode and brings
-back the answers from before. "✕" (click twice) deletes the selected test,
-"▶" runs all.
+back the answers from before. "✕" (click twice) deletes the selected test;
+"▶" at the end of a row of the matrix runs all tests on that variant.
 STACK stores a test input value in a database column of 255 characters; a
 longer value (typically the `objects` state of a graphic) would make the import
 into Moodle fail ("error writing to the database"). Such a value goes into a
@@ -392,13 +392,13 @@ test input values with the question variables, so the test is the same.
 Replacing or deleting the test updates or removes the variable. The review
 reports older test cases with too long values (`tests.value-length`,
 required) and moves them the same way.
-The check is the workbench's fast one in Maxima. **STACK ▶** runs all tests in
-STACK itself (below): the buttons get a green or red line for that result,
-failures are listed under them.
+The check is the workbench's fast one in Maxima. With the engine switch of the
+Tests column on **API**, the tests run in STACK itself (below): the cells of the
+matrix get a green or red line for that result, failures are listed under them.
 
 **STACK itself (STACK API in Docker)**: STACK's own PHP code without Moodle,
 with STACK's input validation, compilation and PRTs - for the question tests
-("STACK ▶") and for timing. It runs in Docker Desktop, in two containers built
+(engine "API" of the Tests column) and for timing. It runs in Docker Desktop, in two containers built
 once on this machine for the STACK version of the Moodle server
 (`config/stack/<version>/`) and its Maxima version, plus a small web server
 that offers the Maxima files of the working copy to `stack_include` (meclib
@@ -413,11 +413,14 @@ Maxima server of STACK's own images) into `.cache/stackapi/`, builds the
 images `meclib-stackapi:<version>` (STACK's `api/docker/Dockerfile`, PHP 8.4)
 and `meclib-goemaxima:<version>-<maxima>` (Maxima compiled from source) and
 writes `.cache/stackapi/docker-compose.yml`. The workbench starts the
-containers on the first "STACK ▶" (Docker Desktop must be running); `python
+containers on the first test run with the engine "API" (Docker Desktop must be running); `python
 stackapi.py down` stops them, `status` reports. The API is
 `http://localhost:3080` (STACK's routes render, validate, grade, test).
-STACK compiles the question on every call (the API has no cache): a test takes
-seconds, with large includes up to a minute. The tests are graded with the
+STACK compiles the question on every call (the API has no cache): the workbench
+sends one call per variant (route `test`, POST `/api/q/stacktest`) with only that
+variant as deployed seed and only the tests to run, so STACK runs them as in
+Moodle (test inputs evaluated with that variant's question variables); a call
+takes seconds, with large includes up to a minute. The tests are graded with the
 route "grade" (the route "test" refuses questions for which STACK reports
 language warnings, e.g. PRT feedback without `[[lang]]` blocks next to
 multilingual feedback functions). `MECLIB_STACKAPI_URL` (environment variable
@@ -636,13 +639,24 @@ question with inputs needs question tests.
   (POST `/api/q/seeds`, undo as other edits). The seed button shows the
   variant in the preview.
 - **Matrix of variants and tests:** each row (deployed variants first, then
-  the other surveyed ones) has a button per question test. A click shows that
-  variant in the preview, fills in the test and checks it; green passed, red
-  failed, grey not run on that variant, a bar below: the result in STACK
-  itself (variant in the preview). A test number in the head runs the test on
-  every deployed variant; "Tests on deployed" runs all tests on all of them. These two run in
-  one request (POST `/api/q/testrun`): per variant the question variables once, then each test
-  (its inputs and the PRTs) as a short run of its own; the preview is not touched.
+  the other surveyed ones) has a button per question test and ▶ at its end
+  (all tests on that variant); "+" in the head of that column adds a test.
+  Green passed, red failed, grey not run on that variant, a bar below: the
+  result in STACK itself. A test number in the head runs the test on every
+  deployed variant; "Tests on deployed" runs all tests on all of them.
+- **Engine and preview** (editor bar): **Maxima | API** decides where every
+  run of the matrix and "Tests on deployed" goes - the workbench's fast check
+  or STACK itself (STACK API, one call per variant). **preview** (Maxima only):
+  on, every run goes through the preview: per variant the preview shows it, then
+  each test is filled in and checked, one after the other (the last one stays
+  active, with its route in the test details) - slower, but what the preview
+  shows is what was checked; off, all runs go as below without touching the
+  preview. Both settings are kept.
+  **Stop** ends the run before its next test (Maxima, POST `/api/q/cancel`) or
+  variant (API); the results so far stay. One run at a time.
+- Runs without the preview go in one request (POST `/api/q/testrun`): per variant
+  the question variables once, then each test (its inputs and the PRTs) as a short
+  run of its own.
   While they run, each cell is coloured as soon as its test is done (GET
   `/api/q/progress` with the token of the run); the cells still to run have a
   dashed border, the one running pulses. The result at the end decides.
@@ -655,7 +669,8 @@ question with inputs needs question tests.
 - **Approval:** the row "approve" in the head of the matrix has a ✓ under
   each test number. It is active only when the test has passed in this
   session on every deployed variant (on the variant in the preview if none is
-  deployed); otherwise it is grey and its tooltip says why. A click records
+  deployed), in Maxima or in STACK itself, and failed nowhere; otherwise it is
+  grey and its tooltip says why. A click records
   the approval in the question description ("Tests approved: 2 [2026-11-11
   c7db0766]", POST `/api/q/approve`); the expected result of the test is not
   changed. The fingerprint covers question variables and options, inputs, the
@@ -674,12 +689,13 @@ question with inputs needs question tests.
   branch's note; ○ a test that names only the last note of a PRT with several
   nodes (STACK before 4.13 compared only that one): the branch is from the
   route of its last run - write the full route. A branch no test reaches is
-  red; then "+" and "Tests" are red, and the matrix shows as a callout on
-  "+". Aim: every node once true and once false.
-- **Editor bar** in this view: Editor (the switch, back to the editor), Survey, Tests on deployed, new test (+, red
-  while there is none), run all tests on the variant in the preview (▶),
-  STACK ▶, edit (✎) and delete (✕) the test last run, and jumps to the
-  sections; the editor's buttons (snippets, graphic, sections) are hidden.
+  red; then "+" (head of the last column of the matrix) and "Tests" are red,
+  and the coverage shows as a callout on "+". Aim: every node once true and once false.
+- **Editor bar** in this view: Editor (the switch, back to the editor), Maxima | API, preview,
+  Tests on deployed, Stop, edit (✎) and delete (✕) the test last run, and the sections
+  (light blue, the one in sight darker); the editor's buttons (snippets, graphic, sections)
+  are hidden. "Survey" is next to the number of seeds in the box of the matrix, red for a
+  randomised question without deployed variants.
 - "Tests" in the editor bar is red when something is to do: no question tests,
   a branch without a test, tests not approved (or out of date), failing tests, a randomised question without deployed variants, deployed
   variants with the same note or with an error (the reasons are in its tooltip
@@ -926,7 +942,7 @@ Further without internet:
   fetches them from GitHub; without a connection it uses the copy of the last
   successful fetch and says so (message on the Questions page, source info of
   the graphic); without any earlier copy it reports the error.
-- Maxima evaluation, the Tests page, the offline Maxima tests and STACK ▶ in
+- Maxima evaluation, the Tests page, the offline Maxima tests and the engine API in
   Docker (with the meclib source "local working copy") need no internet.
 - The syntax help uses STACK's documentation from `.cache/` once
   `build_help.py` has downloaded it.
@@ -937,7 +953,7 @@ Older local copies configured by hand (`"mathjax": {"... (local)":
 
 ### STACK API (optional)
 
-Only needed for **STACK ▶** on the Questions page (question tests run by STACK
+Only needed for the engine **API** of the Tests column (question tests run by STACK
 itself, with STACK's input validation); everything else works without it.
 Set up once per computer:
 
@@ -948,7 +964,7 @@ Set up once per computer:
        docker run hello-world
 
    It prints "Hello from Docker!". Docker Desktop must be running whenever
-   STACK ▶ is used (it can start with Windows: Settings → General).
+   the engine API is used (it can start with Windows: Settings → General).
 2. **Versions of the Moodle server**: put this line into the text of any
    question (a test question in your course is enough) and preview it:
 
@@ -973,8 +989,8 @@ Set up once per computer:
        python stackapi.py up
 
    starts the containers and ends with `"running": true`. Then open a
-   question with test cases and press STACK ▶. The workbench also starts the
-   containers itself on the first STACK ▶. `python stackapi.py down` stops
+   question with test cases, switch the Tests column to API and run a test. The
+   workbench also starts the containers itself on the first such run. `python stackapi.py down` stops
    them (they use memory while running), `python stackapi.py status` reports.
 
 When the Moodle server gets a new STACK or Maxima version, add the
@@ -987,7 +1003,7 @@ The build writes the path of the working copy's `Maxima` folder into
 source "local working copy"): after moving the repository, run `build` again
 (fast, the images are reused from Docker's cache) or edit that path.
 
-If STACK ▶ reports that the STACK API does not answer: is Docker Desktop
+If a run with the engine API reports that the STACK API does not answer: is Docker Desktop
 running? `python stackapi.py up` shows Docker's messages;
 `docker compose -f .cache/stackapi/docker-compose.yml logs stack` shows those
 of the API. Port 3080 must be free. `MECLIB_STACKAPI_URL` (environment

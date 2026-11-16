@@ -631,5 +631,68 @@ class UnitName(unittest.TestCase):
         self.assertNotIn("qv.unit-name[g]", {x["key"] for x in rules.findings(new)})
 
 
+class AllowWords(unittest.TestCase):
+    """inputs.allowwords: STACK lets students type only names of at most two characters, names
+    ending in a digit, names STACK knows (e.g. Delta, omega) and the input's allowed words; a
+    name with underscores is checked part by part (Delta_p is fine). A model answer with Fhat was
+    invalid in Moodle ("Forbidden variable or constant: Fhat", TM3 08 07, 2026-11-17)."""
+
+    def fixed(self, q, target="ans1"):
+        f = next(f for f in rules.findings(block(q)) if f["key"] == "inputs.allowwords[%s]" % target)
+        return f["fix"](block(q))
+
+    def inp(self, name="ans1", tans="w", allow=""):
+        return ("<input><name>%s</name><type>algebraic</type><tans>%s</tans>"
+                "<allowwords>%s</allowwords></input>\n" % (name, tans, allow))
+
+    def test_fhat(self):
+        q = question("w: 2*Fhat/(m*a);", self.inp())
+        self.assertIn("inputs.allowwords[ans1]", keys(q))
+        new = self.fixed(q)
+        self.assertIn("<allowwords>Fhat</allowwords>", new)
+        self.assertNotIn("inputs.allowwords[ans1]", {f["key"] for f in rules.findings(new)})
+
+    def test_already_allowed(self):
+        self.assertNotIn("inputs.allowwords[ans1]", keys(question("w: 2*Fhat/(m*a);", self.inp(allow="Fhat"))))
+
+    def test_added_to_existing(self):
+        new = self.fixed(question("w: Fhat*xddot;", self.inp(allow="abc")))
+        self.assertIn("<allowwords>abc, Fhat, xddot</allowwords>", new)
+
+    def test_short_known_and_underscore(self):
+        for qv in ["w: Delta_p/m;", "w: omega*t;", "w: F_Ax*v12;", "w: %pi*sqrt(x);", "w: F1a2;", "w: x_1*m;"]:
+            self.assertNotIn("inputs.allowwords[ans1]", keys(question(qv, self.inp())), qv)
+
+    def test_accent_parts(self):
+        """STACK checks phi_dot part by part: dot is not a name students may type"""
+        for qv in ["w: phi_dot*m;", "w: phiddot*Theta;", "w: Ahat_x;"]:
+            self.assertIn("inputs.allowwords[ans1]", keys(question(qv, self.inp())), qv)
+
+    def test_intermediate_and_locals(self):
+        """assigned names and local names (block, lambda, function parameters) are not typed"""
+        q = question("kk: 3;\nf(xx) := xx^2;\nw: block([tmp], tmp: kk*Fhat, f(tmp));", self.inp())
+        msg = next(f["message"] for f in rules.findings(block(q)) if f["key"] == "inputs.allowwords[ans1]")
+        self.assertIn("Fhat", msg)
+        for n in ("kk", "tmp", "xx"):
+            self.assertNotIn(n, msg)
+
+    def test_undefined_model_answer(self):
+        """a model answer that is no question variable (typo GGX for GGx) is not this rule's matter"""
+        self.assertNotIn("inputs.allowwords[ans1]", keys(question("GGx: F1+F2;", self.inp(tans="GGX"))))
+
+    def test_function_calls_not_counted(self):
+        self.assertNotIn("inputs.allowwords[ans1]", keys(question("w: significantfigures(m*a, 3);", self.inp())))
+
+    def test_names_of_graphic(self):
+        """the names input of a graphic gets the names of its forces and moments"""
+        text = ('<p>[[jsxgraph input-ref-objects="stateRef" input-ref-names="fbd_names"]]x[[/jsxgraph]]</p>'
+                '<p hidden>[[input:objects]] [[input:names]]</p>')
+        inps = ("<input><name>names</name><type>algebraic</type><tans>[]</tans><allowwords></allowwords></input>\n"
+                "<input><name>objects</name><type>string</type><tans>\"\"</tans></input>\n")
+        q = question('initdata: [["force", "Fhat", [0, 0], [1, 0]], ["moment", "M_A", [0, 0], [1, 0], [0, 1]]];', inps, text=text)
+        self.assertIn("inputs.allowwords[names]", keys(q))
+        self.assertIn("<allowwords>Fhat</allowwords>", self.fixed(q, "names"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1320,13 +1320,14 @@ def variant(session, data, seed, resolver, previous_names=(), load_includes=True
                       "slow": sorted(tm, key=lambda x: -x[1])[:3]}}, names)
 
 
-def run_tests(session, data, seed, resolver, previous_names=(), testcases=None, on_test=None):
+def run_tests(session, data, seed, resolver, previous_names=(), testcases=None, on_test=None, stop=None):
     """The question tests on one variant, in one session: the question variables once (Maxima
     run 1), then per test one short run - its inputs (CAS expressions, evaluated with the question
     variables as STACK does; a choice input given its list of choices means its correct entries)
     and the PRTs, as a Check in test mode. testcases: the tests to run (default all). on_test:
     called after each test with (testcase, check result, error of the question variables), for
-    the progress of a test run.
+    the progress of a test run. stop: asked before each test; if it returns true, the run ends
+    there (the result has "cancelled": True and the tests done so far).
     Returns ({seed, error, tests: {testcase: check result as in evaluate()}}, names to kill)."""
     v, names = variant(session, dict(data, questionnote=""), seed, resolver, previous_names, None)
     langs = languages_used(data["questiontext"])
@@ -1334,10 +1335,13 @@ def run_tests(session, data, seed, resolver, previous_names=(), testcases=None, 
     itype = {i["name"]: i.get("type") for i in data["inputs"]}
     fv_all = [n for p in data["prts"] for n in fv_names(p)]
     simp = "simp: %s$" % ("true" if data["questionsimplify"] else "false")
-    out, used_tv, times = {}, set(), {}
+    out, used_tv, times, cancelled = {}, set(), {}, False
     for qt in data.get("qtests", []):
         if testcases is not None and qt["testcase"] not in testcases:
             continue
+        if stop and stop():
+            cancelled = True
+            break
         exprs = {n: e for n, e in qt["inputs"].items() if n in itype and str(e).strip()}
         code = ["kill(%s)$" % ",".join(inputs + ["%_tv_" + n for n in sorted(used_tv)])] if inputs or used_tv else []
         code.append(simp)
@@ -1367,8 +1371,10 @@ def run_tests(session, data, seed, resolver, previous_names=(), testcases=None, 
         times[qt["testcase"]] = {"wall": round(time.time() - t0, 3), "maxima": round(sum(x for _l, x in tm), 3),
                                  "slow": sorted(tm, key=lambda x: -x[1])[:3]}
     kill = names + inputs + ["%_tv_" + n for n in sorted(used_tv)] + [n for n in fv_all if n not in names]
-    return {"seed": seed, "error": v["error"], "tests": out,
-            "time": {"variables": v["time"], "tests": times}}, kill
+    res = {"seed": seed, "error": v["error"], "tests": out, "time": {"variables": v["time"], "tests": times}}
+    if cancelled:
+        res["cancelled"] = True
+    return res, kill
 
 
 def answer_code(data, answers, langs, resolver, checked, qv_names=(), texprs=None):

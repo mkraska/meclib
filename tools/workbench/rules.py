@@ -2042,10 +2042,137 @@ def r_qv_unused(Q_):
     return out
 
 
+# ---------------------------------------------------------------------- names students may type
+def student_may_type(name, allowed=(), units=False):
+    """Whether STACK accepts this name in a student's answer (stack_cas_security::is_allowed_to_read
+    for security 's', and the split at underscores of 998_security.filter.php): a name STACK knows
+    as a student variable or constant (e.g. Delta, omega, %pi), at most two characters (not a
+    function name), ending in a digit, an allowed word of the input, in units mode a unit; a name
+    with underscores that is none of these, part by part (Delta_p, F_Ax)."""
+    smap = sq.security_map()
+
+    def readable(n):
+        e = smap.get(n) or {}
+        sec = e.get("constant", e.get("variable", "-"))
+        if sec == "f":
+            return False
+        if ("keyword" in e or "operator" in e) and "specialallowvariable" not in e:
+            return False
+        if n in allowed or (units and n in sq.STACK_UNITS) or sec == "s":
+            return True
+        if len(n) <= 2 and "function" not in e:
+            return True
+        return n[-1:].isdigit()
+    if readable(name):
+        return True
+    parts = [x for x in name.split("_")]
+    if len(parts) == 1:
+        return False
+    return all(x == "" or readable(x) or (smap.get(x) or {}).get("function") == "s" for x in parts)
+
+
+def _qv_definitions(qvars):
+    """name -> identifiers its definitions in the question variables read (strings and comments
+    left out), and the names that are local or assigned anywhere (block and lambda lists, function
+    parameters, x: inside expressions): those are never typed by students."""
+    deps, local = {}, set()
+    for st, _line, _ins in sq.split_statements(qvars):
+        c = re.sub(r'"(?:\\.|[^"\\])*"', '""', sq.strip_comments(st))
+        for m in re.finditer(r"\b(?:block|lambda)\s*\(\s*\[([^\]]*)\]", c):
+            local.update(IDENT.findall(m.group(1)))
+        local.update(sq.ANYASSIGN.findall(c))
+        m = sq.FUNDEF.match(c)
+        if m:
+            head = c[:c.find(":=")]
+            local.update(IDENT.findall(head[head.find("(") + 1:]))
+            deps.setdefault(m.group(1), set()).update(_free_reads(c[c.find(":=") + 2:]))
+            continue
+        m = sq.ASSIGN.match(c)
+        names = [m.group(1)] if m else []
+        m2 = sq.LISTASSIGN.match(c)
+        if m2:
+            names = [n.strip() for n in m2.group(1).split(",") if n.strip()]
+        body = c[c.find(":") + 1:] if names else c
+        for n in names:
+            deps.setdefault(n, set()).update(_free_reads(body))
+    return deps, local
+
+
+def _free_reads(code):
+    """Identifiers of Maxima code that are read as variables (not called as functions)."""
+    code = re.sub(r'"(?:\\.|[^"\\])*"', '""', code)
+    return {m.group(1) for m in re.finditer(r"(?<![A-Za-z0-9_%])([A-Za-z_%][A-Za-z0-9_%]*)(?![A-Za-z0-9_%]|\s*\()", code)}
+
+
+def _typed_names(Q_, inp, deps, local):
+    """The names a student types for this input: the free names of its model answer, through the
+    question variables it reads; for the names input of a meclib graphic the names of the forces
+    and moments in the question variables."""
+    if Q_.graphic.get(inp["name"]) == "fbd_names":
+        out = set()
+        for m in re.finditer(r'\[\s*"(?:force|moment)"\s*,\s*"([^"]*)"', Q_.qvars):
+            out |= _free_reads(m.group(1))
+        return out
+    tans = (inp.get("tans") or "").strip()
+    if IDENT.fullmatch(tans) and tans not in deps:
+        return set()        # the model answer is no question variable: a different problem, not one of typing
+    seen, todo, free = set(), list(_free_reads(tans)), set()
+    while todo:
+        n = todo.pop()
+        if n in seen:
+            continue
+        seen.add(n)
+        if n in deps:
+            todo.extend(deps[n])
+        elif n not in local:
+            free.add(n)
+    return free
+
+
+def r_allowwords(Q_):
+    """inputs.allowwords: a name in the model answer (through the question variables) that students
+    may not type: STACK accepts only names of at most two characters, names ending in a digit,
+    names it knows (Delta, omega, ...) and the input's allowed words - any other answer with it
+    is invalid ("Forbidden variable or constant: Fhat", TM3 08 07). Names with underscores are
+    checked part by part (Delta_p, F_Ax are fine). For the names input of a meclib graphic: the
+    names of its forces and moments. The fix adds the names to the input's allowed words."""
+    deps, local = _qv_definitions(Q_.qvars)
+    units = sq.uses_units(Q_.data)
+    out = []
+    for inp in Q_.inputs:
+        if inp["type"] in ("string", "notes", "matrix", "dropdown", "checkbox", "radio", "boolean", "textarea", "equiv"):
+            continue
+        allowed = [w.strip() for w in (inp.get("allowwords") or "").split(",") if w.strip()]
+        bad = sorted(n for n in _typed_names(Q_, inp, deps, local)
+                     if not n.startswith("%") and not student_may_type(n, set(allowed), units))
+        if not bad:
+            continue
+
+        def fix(q, name=inp["name"], add=bad):
+            m = _named(q, "input", name)
+            blk = m.group(0)
+            cur = re.search(r"<allowwords>(.*?)</allowwords>|<allowwords\s*/>", blk, re.S)
+            have = [w.strip() for w in qfile._decode((cur.group(1) or "") if cur else "").split(",") if w.strip()]
+            words = ", ".join(have + [w for w in add if w not in have])
+            if cur:
+                blk = blk[:cur.start()] + "<allowwords>%s</allowwords>" % qfile.encode_plain(words) + blk[cur.end():]
+            else:
+                blk = blk.replace("</input>", "<allowwords>%s</allowwords></input>" % qfile.encode_plain(words), 1)
+            return q[:m.start()] + blk + q[m.end():]
+        out.append(F("inputs.allowwords", inp["name"], "required", "Names students may not type",
+                     "Input %s: the model answer uses %s, which STACK does not accept in a student's answer "
+                     "(only names of at most two characters, names ending in a digit, names STACK knows such as "
+                     "Delta or omega, and the allowed words of the input). Every answer with %s would be invalid. "
+                     "The fix adds %s to the allowed words of the input."
+                     % (inp["name"], ", ".join(bad), "it" if len(bad) == 1 else "them", ", ".join(bad)),
+                     fix, WIKI + "Labels-and-names"))
+    return out
+
+
 RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_scenes, r_graphic_inputs, r_input_settings, r_prts,
          r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_raw_in_math, r_multsgn, r_fb_floats, r_fb_dims, r_variants, r_unit_names, r_matrix_inputs, r_unused_files, r_semicolons,
          r_include_branch, r_include_dist, r_includes, r_legacy_functions, r_qtest_length, r_input_prt, r_tests_none,
-         r_html_comment, r_prt_unreachable, r_jsxgraph_blocks, r_castext_in_maxima, r_qv_unused, r_fb_floats_tol]
+         r_html_comment, r_prt_unreachable, r_jsxgraph_blocks, r_castext_in_maxima, r_qv_unused, r_fb_floats_tol, r_allowwords]
 
 
 # ---------------------------------------------------------------------- metadata in the description

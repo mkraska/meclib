@@ -42,6 +42,8 @@ texput(Fhat, "\\hat{F}");
 
 Then `Fhat` looks the same in the sketch, in the question text (`{@Fhat@}`), in the validation of the students' input and in the feedback. Tell the students how to type it, e.g. "write $\hat{F}$ (F hat) as `Fhat`", since this does not follow from the usual subscript notation.
 
+STACK lets students type only names of at most two characters, names ending in a digit, names it knows (`Delta`, `omega`, ...) and the **allowed words** of the input; names with underscores are checked part by part (`Delta_p` and `F_Ax` are fine). Names with accents (`Fhat`, `xddot`, `phi_dot`, `Ahat_x`) therefore must be allowed words of every input where students type them, including the `names` input of a graphic with such a force. The [[Meclib Workbench]] review reports missing ones (`inputs.allowwords`) and adds them.
+
 ## Names typed by students ([["forceGen"]], [["momentGen"]])
 
 Before it is used, the name in the input field is brought into the form base, accent, subscript: the base is a Greek letter name or one letter, an accent follows directly without underscore, the rest becomes a subscript. Factors are separated by blanks or stars.
