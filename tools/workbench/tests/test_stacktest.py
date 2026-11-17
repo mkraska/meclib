@@ -53,6 +53,28 @@ class TestXml(unittest.TestCase):
         self.assertIn("mkraska/meclib/dev2026/Maxima/fb_value.mac", x)
 
 
+class TestLangWarning(unittest.TestCase):
+    """STACK's API refuses to run the tests when the question has warnings (validate_for_bulk), e.g.
+    "language tag de missing in general feedback, Theta-2-T, ..." (TM3 08 07, 2026-11-17); Moodle's
+    bulk test only reports them. The workbench then sends the question again without the [[lang]]
+    markers (their contents stay; grading does not depend on feedback texts). meclib questions always
+    have this warning (empty [[lang]] blocks in the question text, needed for German feedback), so it
+    is not shown; a warning that remains is reported."""
+
+    def test_strip_lang(self):
+        q = Q.replace("<name><text>q</text></name>",
+                      "<name><text>q</text></name><questiontext><text>[[lang code=\"de\"]]Hallo[[/lang]][[lang code='other']]Hello[[/lang]]</text></questiontext>")
+        x = server.stack_test_question(q, 1, None, "local", CFG, strip_lang=True)
+        self.assertNotIn("[[lang", x)
+        self.assertNotIn("[[/lang]]", x)
+        self.assertIn("Hallo", x)
+        self.assertIn("Hello", x)
+
+    def test_plain_message(self):
+        m = '<i class="icon fa" title="x"></i>Ihre Frage enth\u00e4lt <b>Probleme</b>.'
+        self.assertEqual(server.plain_text(m), "Ihre Frage enth\u00e4lt Probleme.")
+
+
 class TestReply(unittest.TestCase):
 
     def test_outcomes(self):

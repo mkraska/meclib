@@ -74,6 +74,9 @@ Endpoints
                             questionvariables, questiontext
   POST /api/q/duplicate     {path, index, rev} copy of a question, right after it
   POST /api/q/cancel        {token} stop the test run with this progress token before its next test
+  POST /api/q/teststatus    {path, index} stored results of the question tests ({tests: {testcase:
+                            {m: {seed: passed}, a: {...}, current, date}}}); .../save with
+                            results: {testcase: {m, a}} stores those of a run
   POST /api/q/stacktest     {path, index, seed, src, lang, testcases} question tests run by STACK
                             itself (STACK API, /test) on this variant
   POST /api/q/stackgrade    {path, index, seed, src, lang, runs: [{testcase, answers}]} answers of
@@ -287,10 +290,18 @@ def api_includes(q, src, cfg):
     return re.sub(r"https://raw\.githubusercontent\.com/mkraska/meclib/([^/\s\"]+)/([^\s\"<]+)", include, q)
 
 
-def stack_test_question(q, seed, testcases, src, cfg):
+def plain_text(html):
+    """A message of STACK as plain text (tags such as its warning icon left out)."""
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]*>", "", html or "")).strip()
+
+
+def stack_test_question(q, seed, testcases, src, cfg, strip_lang=False):
     """The question (XML of one <question>) for the STACK API's /test route: the seed as its only
     deployed variant, only the question tests with these testcases (None: all), includes as in
-    api_includes()."""
+    api_includes(). strip_lang: without the [[lang]] markers (their contents stay), for a question
+    whose language warning makes the API refuse the tests (Moodle's bulk test only reports it)."""
+    if strip_lang:
+        q = re.sub(r"\[\[\s*/?\s*lang\b[^\]]*\]\]", "", q)
     q = re.sub(r"[ \t]*<deployedseed>\s*\d+\s*</deployedseed>\r?\n?", "", q)
     q = q.replace("</question>", "<deployedseed>%d</deployedseed>\n</question>" % seed)
     if testcases is not None:
@@ -307,13 +318,13 @@ def stack_test_outcomes(r, seed):
     """The reply of the STACK API's /test route for one seed: {testcase: {pass, reason}}; raises
     RuntimeError with STACK's message if the question or the variant could not be tested."""
     if r.get("isupgradeerror") or ("results" not in r and (r.get("message") or r.get("error"))):
-        raise RuntimeError(r.get("messages") or r.get("message") or r.get("error") or "STACK could not test the question")
+        raise RuntimeError(plain_text(r.get("messages") or r.get("message") or r.get("error")) or "STACK could not test the question")
     res = (r.get("results") or {})
     one = res.get(str(seed)) if isinstance(res, dict) else None
     if one is None and isinstance(res, dict):
         one = res.get("noseed")
     if not one or one.get("outcomes") is None:
-        raise RuntimeError((one or {}).get("messages") or r.get("messages") or "no results from STACK for variant %d" % seed)
+        raise RuntimeError(plain_text((one or {}).get("messages") or r.get("messages")) or "no results from STACK for variant %d" % seed)
     return {str(tc): {"pass": bool(o.get("passed")), "reason": o.get("reason") or ""}
             for tc, o in one["outcomes"].items()}
 
@@ -693,6 +704,73 @@ def regenerate_fixtures():
     return problems
 
 
+# ---------------------------------------------------------------------- test status (Tests column)
+# The results of the question tests per variant and engine (m: Maxima, a: STACK API), kept across
+# question changes and restarts of the workbench in .cache/test_status.json: per file and question
+# name, per test its results {seed: passed} and the fingerprint of the approval
+# (rules.test_fingerprint). When the fingerprint changes, the results are not current: the page
+# then ignores them as it ignores a stale approval (setting "approval lapses when the question
+# changes"); a run of the new version starts the test's results over.
+TESTSTATUS_FILE = CACHE / "test_status.json"
+TESTSTATUS_LOCK = threading.Lock()
+_teststatus = None
+
+
+def _teststatus_data():
+    global _teststatus
+    if _teststatus is None:
+        try:
+            _teststatus = json.loads(TESTSTATUS_FILE.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            _teststatus = {}
+    return _teststatus
+
+
+def _teststatus_key(target, block):
+    m = re.search(r"<name>\s*<text>(.*?)</text>", block, re.S)
+    return "%s::%s" % (target, (m.group(1).strip() if m else ""))
+
+
+def test_status_load(target, block):
+    """{testcase: {m: {seed: passed}, a: {...}, current, date}} of the tests that still exist."""
+    with TESTSTATUS_LOCK:
+        entry = _teststatus_data().get(_teststatus_key(target, block), {})
+        out = {}
+        for tc, st in entry.items():
+            fp = rules.test_fingerprint(block, tc)
+            if fp is not None:
+                out[tc] = {"m": dict(st.get("m") or {}), "a": dict(st.get("a") or {}),
+                           "current": fp == st.get("fp"), "date": st.get("date", "")}
+        return out
+
+
+def test_status_save(target, block, results):
+    """Stores the results of a run, {testcase: {m: {seed: passed}, a: {...}}}: they replace the
+    stored ones of the same cells; a test whose fingerprint changed starts over."""
+    with TESTSTATUS_LOCK:
+        data = _teststatus_data()
+        key = _teststatus_key(target, block)
+        entry = data.setdefault(key, {})
+        for tc, res in (results or {}).items():
+            tc = str(tc)
+            fp = rules.test_fingerprint(block, tc)
+            if fp is None:
+                continue
+            st = entry.get(tc)
+            if not st or st.get("fp") != fp:
+                st = entry[tc] = {"fp": fp, "m": {}, "a": {}}
+            for eng in ("m", "a"):
+                for seed, passed in (res.get(eng) or {}).items():
+                    st[eng][str(seed)] = bool(passed)
+            st["date"] = time.strftime("%Y-%m-%d %H:%M")
+        for tc in [t for t in entry if rules.test_fingerprint(block, t) is None]:
+            del entry[tc]                       # deleted tests
+        if not entry:
+            data.pop(key, None)
+        TESTSTATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        TESTSTATUS_FILE.write_text(json.dumps(data, indent=1, sort_keys=True), encoding="utf-8")
+
+
 # ---------------------------------------------------------------------- review states (folder tree)
 # Per file the worst review state of its STACK questions (rules.review_state: findings per level
 # without fix previews, and what the saved tests leave to do), for colouring the folder tree.
@@ -985,13 +1063,24 @@ class Handler(SimpleHTTPRequestHandler):
         text, _ = qfile.read_file(target)
         a, b, _ = qfile.question_span(text, int(req["index"]))
         seed = int(req.get("seed", 1))
-        q = stack_test_question(text[a:b], seed, req.get("testcases"), req.get("src", "local"), cfg)
-        xml = '<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n' + q + '\n</quiz>\n'
         PROGRESS.update(busy=True, since=time.time(), phase="STACK API: starting the containers (Docker)")
         try:
             info = stackapi.up()
-            set_phase("STACK API: STACK compiles the question and runs the tests on variant %d" % seed)
-            secs, r = stackapi.call("test", {"questionDefinition": xml, "seed": seed, "lang": req.get("lang") or "de"})
+            for strip in (False, True):
+                q = stack_test_question(text[a:b], seed, req.get("testcases"), req.get("src", "local"), cfg, strip_lang=strip)
+                xml = '<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n' + q + '\n</quiz>\n'
+                set_phase("STACK API: STACK compiles the question and runs the tests on variant %d" % seed)
+                secs, r = stackapi.call("test", {"questionDefinition": xml, "seed": seed, "lang": req.get("lang") or "de"})
+                # warnings of the question (validate_for_bulk) stop the API's tests, not Moodle's bulk test.
+                # meclib questions always have one: the empty [[lang]] blocks in the question text (needed,
+                # or the feedback is in English) and feedback texts without them. The tests run again
+                # without the [[lang]] markers; a warning that remains is another one and is reported.
+                if r.get("isupgradeerror") and not strip and "[[lang" in text[a:b]:
+                    continue
+                break
+            if r.get("isupgradeerror"):
+                raise RuntimeError("STACK's warnings stop the tests of the API (Moodle's bulk test only reports them): " +
+                                   (plain_text(r.get("messages")) or "?"))
             return {"seed": seed, "tests": stack_test_outcomes(r, seed), "seconds": secs, "api": info.get("settings")}
         except (RuntimeError, OSError, subprocess.SubprocessError) as err:
             return {"error": str(err)}
@@ -1272,6 +1361,13 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_json(self.stack_grade(cfg, req))
             if path == "/api/q/stacktest":
                 return self.send_json(self.stack_test(cfg, req))
+            if path in ("/api/q/teststatus", "/api/q/teststatus/save"):
+                target = allowed_path(cfg, req["path"])
+                text, _ = qfile.read_file(target)
+                a, b, _ = qfile.question_span(text, int(req["index"]))
+                if path.endswith("/save"):
+                    test_status_save(target, text[a:b], req.get("results") or {})
+                return self.send_json({"tests": test_status_load(target, text[a:b])})
             if path == "/api/q/duplicate":
                 target = allowed_path(cfg, req["path"])
                 text, rev = qfile.read_file(target)

@@ -420,7 +420,12 @@ STACK compiles the question on every call (the API has no cache): the workbench
 sends one call per variant (route `test`, POST `/api/q/stacktest`) with only that
 variant as deployed seed and only the tests to run, so STACK runs them as in
 Moodle (test inputs evaluated with that variant's question variables); a call
-takes seconds, with large includes up to a minute. The tests are graded with the
+takes seconds, with large includes up to a minute. The API refuses the tests of a
+question with warnings, where Moodle's bulk test only reports them; meclib
+questions always have the language warning (empty `[[lang]]` blocks in the
+question text, needed for German feedback). The workbench then sends the question
+again without the `[[lang]]` markers (their contents stay) and reports only a
+warning that remains. The tests are graded with the
 route "grade" (the route "test" refuses questions for which STACK reports
 language warnings, e.g. PRT feedback without `[[lang]]` blocks next to
 multilingual feedback functions). `MECLIB_STACKAPI_URL` (environment variable
@@ -652,6 +657,10 @@ question with inputs needs question tests.
   active, with its route in the test details) - slower, but what the preview
   shows is what was checked; off, all runs go as below without touching the
   preview. Both settings are kept.
+  **Missing** runs only the cells without a pass of the chosen engine on the
+  deployed variants (not run, failed, or stored for an older version); greyed when
+  none is missing. Shift+click on a test number or a row's ▶ does the same for that
+  column or row.
   **Stop** ends the run before its next test (Maxima, POST `/api/q/cancel`) or
   variant (API); the results so far stay. One run at a time.
 - Runs without the preview go in one request (POST `/api/q/testrun`): per variant
@@ -680,6 +689,15 @@ question with inputs needs question tests.
   has a green bar when approved, an amber one when out of date and a red one
   when its last run failed on a variant (badge "not valid: the test failed on
   variant …"); such a test counts as not approved.
+- **Test status across sessions:** the results of the runs (per deployed variant,
+  or the variant run if none is deployed; Maxima and API apart) are stored at the
+  end of each run in `.cache/test_status.json` (per file and question name, with
+  the fingerprint of the approval; POST `/api/q/teststatus/save`) and loaded when
+  the question opens (POST `/api/q/teststatus`), also after a restart. Results
+  stored for another version of the question are ignored as a stale approval is
+  ("approval lapses when the question changes"); a run of the new version starts
+  the test over. Only passed or failed is kept: the reasons and the route come
+  back with the next run. A stored pass counts for the approval.
 - **Inputs and PRTs:** which PRT reads which input (feedback variables,
   SAns, TAns, options), both in the order of the question text; red: an
   input no PRT grades (not one bound to a graphic), a PRT that reads no

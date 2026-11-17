@@ -454,6 +454,7 @@
       <span class="pair eng" title="engine of the test runs started in the matrix and by &quot;Tests on deployed&quot;"><button id="engMaxima" title="fast check in the workbench's Maxima">Maxima</button><button id="engApi">API</button></span>
       <button id="prevToggle" title="Maxima: a test cell or row runs in the preview (route in the test details); off: fast run without the preview">preview</button>
       <button id="varRunTests" title="run all question tests on every deployed variant">Tests on deployed</button>
+      <button id="varRunMissing" title="run the tests that are missing on the deployed variants">Missing</button>
       <button id="stopRun" disabled title="stop the test run before its next test (variant, with the API)">Stop</button>
       <div id="tvTools" class="tvonly"></div>
     </div>
@@ -914,7 +915,9 @@ async function selectQuestion(index) {
     showHistory(r.history);
   } catch (e) { showMessages([{ cls: "err", text: e.message }]); return; }
   loadReview();
+  runsToSave = { m: {}, a: {} };
   evaluate(true);
+  loadTestStatus();
 }
 
 // ---------------------------------------------------------------- undo / redo (history.py)
@@ -2565,8 +2568,15 @@ function renderVariants() {
     const [sd, tc] = b.dataset.cell.split(":").map((x) => parseInt(x, 10));
     cellClick(sd, tc);
   });
-  for (const b of t.querySelectorAll("button[data-col]")) b.addEventListener("click", () => columnClick(parseInt(b.dataset.col, 10)));
-  for (const b of t.querySelectorAll("button[data-row]")) b.addEventListener("click", () => rowClick(parseInt(b.dataset.row, 10)));
+  for (const b of t.querySelectorAll("button[data-col]")) b.addEventListener("click", (e) =>
+    e.shiftKey ? missingClick(null, parseInt(b.dataset.col, 10)) : columnClick(parseInt(b.dataset.col, 10)));
+  for (const b of t.querySelectorAll("button[data-row]")) b.addEventListener("click", (e) =>
+    e.shiftKey ? missingClick(parseInt(b.dataset.row, 10), null) : rowClick(parseInt(b.dataset.row, 10)));
+  const nm = missingCells(null, null).length;
+  $("varRunMissing").disabled = !nm;
+  $("varRunMissing").title = nm ? `run the ${nm} test run(s) without a pass on the deployed variants (not run, failed, or stored for an ` +
+    `older version), ${runHow()}, with the engine ${runEngine === "api" ? "API" : "Maxima"}; Shift+click on a test number or ▶: the same for that column or row`
+    : "every test has passed on every deployed variant (engine " + (runEngine === "api" ? "API" : "Maxima") + ")";
   const pb = $("tvPlus");
   if (pb) {
     pb.addEventListener("click", () => { hideCoverageCallout(); enterTestMode(null); });
@@ -2822,6 +2832,7 @@ function applyTestRun(seed, qt, chk, error, agg) {
   const r = compareTest(qt, chk);
   if (error) { r.pass = false; r.reasons.unshift("question variables: " + error); }
   (seedResults[seed] = seedResults[seed] || {})[qt.testcase] = r.pass;
+  noteRun("m", seed, qt.testcase, r.pass);
   for (const [P, x] of Object.entries(chk.prts || {}))      // the actual route, for the coverage
     if (!x.skipped) (actualRoutes[qt.testcase] = actualRoutes[qt.testcase] || {})[P] = String(x.notes || "").split(" | ").filter(Boolean);
   if (!agg) return;
@@ -2975,8 +2986,53 @@ async function guardedRun(fn) {
   if (testMode) return;
   runCtl = { token: Math.random().toString(36).slice(2) + Date.now().toString(36), stopped: false };
   showRunSettings();
+  const at = [file && file.path, qindex];
   try { await fn(runCtl); }
-  finally { runCtl = null; showRunSettings(); }
+  finally {
+    runCtl = null; showRunSettings();
+    if (file && file.path === at[0] && qindex === at[1]) saveTestStatus(); else runsToSave = { m: {}, a: {} };
+  }
+}
+// ---------------------------------------------------------------- test status across sessions
+// The results of this session's runs are stored by the server (.cache/test_status.json, per file
+// and question, POST /api/q/teststatus/save) at the end of each run - of the deployed variants
+// (all variants run if none is deployed). Opening a question loads them (POST /api/q/teststatus);
+// results stored for another version of the question (fingerprint of the approval) are ignored
+// as a stale approval is ("approval lapses when the question changes").
+let runsToSave = { m: {}, a: {} };      // engine -> "seed:testcase" -> passed
+function noteRun(eng, seed, tc, pass) { runsToSave[eng][seed + ":" + tc] = !!pass; }
+async function saveTestStatus() {
+  if (!file || qindex === null) return;
+  const dep = deployedSeeds(), results = {};
+  for (const eng of ["m", "a"])
+    for (const [k, pass] of Object.entries(runsToSave[eng])) {
+      const [sd, tc] = k.split(":");
+      if (dep.length && !dep.includes(parseInt(sd, 10))) continue;
+      ((results[tc] = results[tc] || { m: {}, a: {} })[eng])[sd] = pass;
+    }
+  runsToSave = { m: {}, a: {} };
+  if (!Object.keys(results).length) return;
+  try { await postJSON("/api/q/teststatus/save", { path: file.path, index: qindex, results }); }
+  catch (e) { showMessages([{ cls: "warn", text: "Test status not saved: " + e.message }], true); }
+}
+async function loadTestStatus() {
+  const at = [file && file.path, qindex];
+  let r;
+  try { r = await postJSON("/api/q/teststatus", { path: at[0], index: at[1] }); } catch (e) { return; }
+  if (!file || file.path !== at[0] || qindex !== at[1]) return;      // another question meanwhile
+  let n = 0;
+  for (const [tc, st] of Object.entries(r.tests || {})) {
+    if (!st.current && $("optApprovalFp").checked) continue;
+    for (const [sd, pass] of Object.entries(st.m || {})) {
+      const m = seedResults[sd] = seedResults[sd] || {};
+      if (!(tc in m)) { m[tc] = pass; n++; }
+    }
+    for (const [sd, pass] of Object.entries(st.a || {})) {
+      const m = stackSeedResults[sd] = stackSeedResults[sd] || {};
+      if (!(tc in m)) { m[tc] = { pass, reasons: pass ? [] : [`stored result (${st.date}) - run the test again for the reasons`] }; n++; }
+    }
+  }
+  if (n && result) renderTests();
 }
 function stopRun() {
   if (!runCtl || runCtl.stopped) return;
@@ -2993,6 +3049,32 @@ function rowClick(sd) {
 }
 function columnClick(tc) {
   guardedRun((ctl) => runEngine === "api" ? runApi(allSeeds(), [tc]) : runPreview ? runInPreview(allSeeds(), [tc], ctl) : runBatch(allSeeds(), [tc]));
+}
+// the cells without a pass of the chosen engine (not run, failed, stored for an older version - those
+// are not loaded): on the deployed variants (the variant in the preview if none), optionally of one
+// row (seed) or column (testcase) -> ["seed:testcase", ...]
+function missingCells(seed, tc) {
+  const tests = (result && result.qtests) || [], out = [];
+  for (const sd of seed === null ? allSeeds() : [seed])
+    for (const q of tests) {
+      if (tc !== null && q.testcase !== tc) continue;
+      const ok = runEngine === "api" ? !!((stackSeedResults[sd] || {})[q.testcase] || {}).pass : (seedResults[sd] || {})[q.testcase] === true;
+      if (!ok) out.push(sd + ":" + q.testcase);
+    }
+  return out;
+}
+function missingClick(seed, tc) {
+  guardedRun(async (ctl) => {
+    const cells = missingCells(seed, tc), bySeed = new Map();
+    for (const k of cells) { const [sd, t] = k.split(":").map((x) => parseInt(x, 10)); bySeed.set(sd, [...(bySeed.get(sd) || []), t]); }
+    if (!bySeed.size) { $("status").textContent = "no missing tests"; return; }
+    for (const [sd, tcs] of bySeed) {
+      if (ctl.stopped) break;
+      if (runEngine === "api") await runApi([sd], tcs);
+      else if (runPreview) await runInPreview([sd], tcs, ctl);
+      else await runBatch([sd], tcs);
+    }
+  });
 }
 function deployedClick() {
   guardedRun((ctl) => runEngine === "api" ? runApi(allSeeds(), null) : runPreview ? runInPreview(allSeeds(), null, ctl) : runTestsOnDeployed());
@@ -3053,6 +3135,7 @@ async function runApi(seeds, tcs) {
     for (const qt of tests) {
       const o = r.tests[String(qt.testcase)];
       m[qt.testcase] = o ? { pass: o.pass, reasons: o.reason ? [o.reason] : [] } : { pass: false, reasons: ["no result from STACK"] };
+      noteRun("a", sd, qt.testcase, m[qt.testcase].pass);
       if (m[qt.testcase].pass) pass++;
       done++;
       batchPending.left.delete(sd + ":" + qt.testcase);
@@ -3081,6 +3164,7 @@ async function runTest(qt, quiet) {
       if (!r.skipped) (actualRoutes[qt.testcase] = actualRoutes[qt.testcase] || {})[P] = String(r.notes || "").split(" | ").filter(Boolean);
     const sd = parseInt($("seed").value, 10) || 1;
     (seedResults[sd] = seedResults[sd] || {})[qt.testcase] = testResults[qt.testcase].pass;
+    noteRun("m", sd, qt.testcase, testResults[qt.testcase].pass);
   }
   if (!quiet) renderTests();
   return testResults[qt.testcase];
@@ -3849,6 +3933,7 @@ $("optApprovalFp").checked = stored(QSTORE_KEY).approvalFp !== false;
 $("optApprovalFp").addEventListener("change", () => { store(QSTORE_KEY, { approvalFp: $("optApprovalFp").checked }); renderVariants(); });
 for (const b of document.querySelectorAll("#railTests button[data-jump]")) b.addEventListener("click", () => jumpTo("edit", $(b.dataset.jump)));
 $("varRunTests").addEventListener("click", deployedClick);
+$("varRunMissing").addEventListener("click", () => missingClick(null, null));
 $("engMaxima").addEventListener("click", () => setRunEngine("maxima"));
 $("engApi").addEventListener("click", () => setRunEngine("api"));
 $("prevToggle").addEventListener("click", () => setRunPreview(!runPreview));
