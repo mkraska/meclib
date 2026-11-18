@@ -90,6 +90,12 @@ Environment facts:
 
 See "Planned" in `tools/workbench/README.md`: folder tree, review of a whole folder, templates, editor assistants, bulk edits, gitsync split files, and more.
 
+- Validation ignores the input's forbidden words (2026-11-18, TM1 10 01: `F` in `forbidwords` is accepted). Only question
+  variable names and allowed words are checked (`question_variable_words()` in `stack_question.py`). To do: check names and
+  function names against `forbidwords` (STACK message "Forbidden variable or constant"), report placeholders like
+  `[[BASIC-ALGEBRA]]` without resolving them; test first (must fail against the old code). Separate session (Martin).
+- Idea, not discussed (2026-11-18): review rule for assigned question variables whose name has an `s` entry in STACK's
+  `security-map.json` (all Greek names, `e`, `i`): students can type the name and read the value (STACK agents guide, 2026-11-16).
 - Speed of Maxima on Windows (2026-11-12): the timing of a batch test run shows the time is spent computing in
   Maxima (TM1 09 04: about 0.12 s per PRT on Windows, 0.03 s on Linux). Next: a lean mode for batch runs (no TeX of
   SAns/TAns, no feedback castext), then Maxima in WSL (Ubuntu 22.04 has Maxima 5.45.1 as the Moodle server) or
