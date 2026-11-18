@@ -1,5 +1,9 @@
 ### Dev Branch
 
+2026 11 18
+- [[Meclib Workbench]], Tests column: the survey of variants has a start seed (default 1), and a further survey adds to the table - e.g. seeds 21 to 30 after 1 to 20
+- [[Meclib Workbench]], validation of answers: names are checked as STACK checks them for students - the forbidden words of the input are now rejected ("Forbidden variable or constant: F.", TM1 10 01), forbidden function calls too ("Forbidden function: solve."), and names of more than two characters that STACK does not know and that are no allowed words (e.g. `Fhat`, `phi_dot`; before, only names of question variables were rejected); allowed words beat forbidden words; names with underscores part by part, as in STACK. New review hint `inputs.word-lists`: placeholders such as `[[BASIC-ALGEBRA]]` in the word lists are not resolved by the workbench
+
 2026 11 17
 - [[Meclib Workbench]], Tests column: button **Missing** runs only the tests without a pass of the chosen engine on the deployed variants (not run, failed, or stored for an older version of the question); Shift+click on a test number or on ▶ of a row does the same for that column or row
 - [[Meclib Workbench]], Tests column, engine API: STACK's API stops the question tests at any warning of the question (Moodle's bulk test only reports them), and meclib questions always have one - the empty `[[lang]]` blocks in the question text (needed, or the feedback is in English) against feedback texts without them. The workbench then runs the tests again without the `[[lang]]` markers (contents kept; grading does not depend on feedback texts); a warning that remains is reported as error, in plain text

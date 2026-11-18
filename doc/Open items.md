@@ -90,10 +90,9 @@ Environment facts:
 
 See "Planned" in `tools/workbench/README.md`: folder tree, review of a whole folder, templates, editor assistants, bulk edits, gitsync split files, and more.
 
-- Validation ignores the input's forbidden words (2026-11-18, TM1 10 01: `F` in `forbidwords` is accepted). Only question
-  variable names and allowed words are checked (`question_variable_words()` in `stack_question.py`). To do: check names and
-  function names against `forbidwords` (STACK message "Forbidden variable or constant"), report placeholders like
-  `[[BASIC-ALGEBRA]]` without resolving them; test first (must fail against the old code). Separate session (Martin).
+- Done (2026-11-18): validation checks the names of answers as STACK does for students (forbidden and allowed words,
+  question variables, the two-character rule, function calls; `student_word_errors()`, tests in `test_stack_question.py`);
+  placeholders like `[[BASIC-ALGEBRA]]` are reported by the review hint `inputs.word-lists`, not resolved.
 - Idea, not discussed (2026-11-18): review rule for assigned question variables whose name has an `s` entry in STACK's
   `security-map.json` (all Greek names, `e`, `i`): students can type the name and read the value (STACK agents guide, 2026-11-16).
 - Speed of Maxima on Windows (2026-11-12): the timing of a batch test run shows the time is spent computing in

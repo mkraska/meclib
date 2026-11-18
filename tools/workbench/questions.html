@@ -504,9 +504,11 @@
       <div id="testView" hidden>
         <div class="tvrow"><span id="testsNeed" class="hint"></span></div>
         <div class="tvbox" id="tvVariants">
-          <div class="tvrow"><b>Variants and tests</b><span class="hint">survey: seeds 1 to</span>
-            <input type="number" id="varCount" min="1" max="500" value="10" title="how many seeds the survey evaluates (question variables and note only)">
-            <button id="varSurvey" class="small" title="evaluate the question variables and the question note for the seeds 1..N">Survey</button></div>
+          <div class="tvrow"><b>Variants and tests</b><span class="hint">survey: seeds</span>
+            <input type="number" id="varStart" min="1" value="1" title="first seed of the survey (a second survey adds to the table)">
+            <span class="hint">to</span>
+            <input type="number" id="varCount" min="1" value="10" title="last seed of the survey (at most 500 seeds at a time)">
+            <button id="varSurvey" class="small" title="evaluate the question variables and the question note for the seeds from .. to">Survey</button></div>
           <div id="varInfo" class="hint"></div>
           <table id="varTable" class="vtab"></table>
           <p class="hint">A test button runs that test on that variant (green passed, red failed, a bar below: result in STACK
@@ -2520,7 +2522,7 @@ function renderVariants() {
   const info = [];
   if (result) info.push(result.random ? "randomised question" : "not randomised (no rand... in the question variables)");
   info.push(dep.length ? `${dep.length} deployed` : "no deployed variants");
-  if (!variantsData || variantsData.partial) info.push(variantsData ? "notes of the deployed variants; Survey for seeds 1..N" : "Survey shows the question notes");
+  if (!variantsData || variantsData.partial) info.push(variantsData ? "notes of the deployed variants; Survey for more seeds" : "Survey shows the question notes");
   $("varInfo").textContent = info.join(" · ");
   // rows: the deployed variants first, then the others of the survey (or the variant in the preview)
   const rows = variantsData ? variantsData.variants.slice() : dep.map((s) => ({ seed: s, note: { de: "", en: "" }, error: "" }));
@@ -2903,11 +2905,19 @@ async function loadDeployedNotes(force) {
 async function surveyVariants() {
   if (!file || qindex === null) return;
   if (!(await flush())) return;
-  const count = Math.max(1, Math.min(500, parseInt($("varCount").value, 10) || 10));
-  store(QSTORE_KEY, { varCount: count });
+  const start = Math.max(1, parseInt($("varStart").value, 10) || 1);
+  const count = Math.max(start, parseInt($("varCount").value, 10) || 10);
+  store(QSTORE_KEY, { varStart: start, varCount: count });
   try {
-    variantsData = await withProgress("Survey of variants", postJSON("/api/q/variants", { path: file.path, index: qindex, src: $("src").value, count }));
-    $("status").textContent = `survey: ${variantsData.variants.length} variants`;
+    const d = await withProgress("Survey of variants", postJSON("/api/q/variants", { path: file.path, index: qindex, src: $("src").value, start, count }));
+    // a further survey adds to the table: seeds already there are replaced, new ones added
+    if (variantsData && !variantsData.partial) {
+      const bySeed = new Map(variantsData.variants.map((v) => [v.seed, v]));
+      for (const v of d.variants) bySeed.set(v.seed, v);
+      d.variants = [...bySeed.values()];
+    }
+    variantsData = d;
+    $("status").textContent = `survey: seeds ${start} to ${count}, ${variantsData.variants.length} variants in the table`;
   } catch (e) { showMessages([{ cls: "err", text: "Survey failed: " + e.message }], true); }
   renderVariants();
 }
@@ -3939,7 +3949,7 @@ $("engApi").addEventListener("click", () => setRunEngine("api"));
 $("prevToggle").addEventListener("click", () => setRunPreview(!runPreview));
 $("stopRun").addEventListener("click", stopRun);
 showRunSettings();
-{ const st = stored(QSTORE_KEY); if (st.varCount) $("varCount").value = st.varCount; if (st.testsView) showTestsView(true); }
+{ const st = stored(QSTORE_KEY); if (st.varCount) $("varCount").value = st.varCount; if (st.varStart) $("varStart").value = st.varStart; if (st.testsView) showTestsView(true); }
 $("toGraphic").addEventListener("click", async () => {
   if (!result || !saved) { showMessages([{ cls: "warn", text: "Evaluate the question first." }]); return; }
   if (!(await flush())) return;

@@ -2044,31 +2044,24 @@ def r_qv_unused(Q_):
 
 # ---------------------------------------------------------------------- names students may type
 def student_may_type(name, allowed=(), units=False):
-    """Whether STACK accepts this name in a student's answer (stack_cas_security::is_allowed_to_read
-    for security 's', and the split at underscores of 998_security.filter.php): a name STACK knows
-    as a student variable or constant (e.g. Delta, omega, %pi), at most two characters (not a
-    function name), ending in a digit, an allowed word of the input, in units mode a unit; a name
-    with underscores that is none of these, part by part (Delta_p, F_Ax)."""
-    smap = sq.security_map()
+    """Whether STACK accepts this name in a student's answer (stack_question.student_name_allowed: the
+    rules of stack_cas_security for students, names with underscores part by part)."""
+    return sq.student_name_allowed(name, allowed, (), (), units)
 
-    def readable(n):
-        e = smap.get(n) or {}
-        sec = e.get("constant", e.get("variable", "-"))
-        if sec == "f":
-            return False
-        if ("keyword" in e or "operator" in e) and "specialallowvariable" not in e:
-            return False
-        if n in allowed or (units and n in sq.STACK_UNITS) or sec == "s":
-            return True
-        if len(n) <= 2 and "function" not in e:
-            return True
-        return n[-1:].isdigit()
-    if readable(name):
-        return True
-    parts = [x for x in name.split("_")]
-    if len(parts) == 1:
-        return False
-    return all(x == "" or readable(x) or (smap.get(x) or {}).get("function") == "s" for x in parts)
+
+def r_input_word_lists(Q_):
+    """inputs.word-lists (hint): STACK's placeholders such as [[BASIC-ALGEBRA]] in the allowed or forbidden
+    words of an input stand for word lists in STACK's PHP code; the workbench does not resolve them, so it
+    does not check those words in answers (STACK does)."""
+    out = []
+    for inp in Q_.inputs:
+        ph = [w.strip() for k in ("forbidwords", "allowwords") for w in (inp.get(k) or "").split(",")
+              if re.match(r"^\[\[.*\]\]$", w.strip())]
+        if ph:
+            out.append(F("inputs.word-lists", inp["name"], "hint", "Word lists not checked by the workbench",
+                         "Input %s: %s in the allowed or forbidden words - the workbench does not know the words of "
+                         "such lists and does not check them in answers; STACK does." % (inp["name"], ", ".join(ph))))
+    return out
 
 
 def _qv_definitions(qvars):
@@ -2172,7 +2165,7 @@ def r_allowwords(Q_):
 RULES = [r_security, r_style_typo, r_locked, r_float_margin, r_lang, r_lang_includes, r_scenes, r_graphic_inputs, r_input_settings, r_prts,
          r_grade, r_feedback_inputs, r_literal_index, r_tans_copy, r_math_delimiters, r_raw_in_math, r_multsgn, r_fb_floats, r_fb_dims, r_variants, r_unit_names, r_matrix_inputs, r_unused_files, r_semicolons,
          r_include_branch, r_include_dist, r_includes, r_legacy_functions, r_qtest_length, r_input_prt, r_tests_none,
-         r_html_comment, r_prt_unreachable, r_jsxgraph_blocks, r_castext_in_maxima, r_qv_unused, r_fb_floats_tol, r_allowwords]
+         r_html_comment, r_prt_unreachable, r_jsxgraph_blocks, r_castext_in_maxima, r_qv_unused, r_fb_floats_tol, r_allowwords, r_input_word_lists]
 
 
 # ---------------------------------------------------------------------- metadata in the description

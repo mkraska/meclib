@@ -12,8 +12,8 @@ What is reproduced from STACK 4.13 (moodle-qtype_stack):
   ct2_latex(); [[lang]] blocks are resolved per language like STACK's pick_lang();
 - {#stackfltsep#} gives the question's decimal separator.
 
-Not reproduced: STACK's input validation (insert stars, syntax hints, forbidden words, units
-syntax) - except the rejection of question variable names in answers (question_variable_words) and castext blocks other than the ones listed above (they are left as text).
+Not reproduced: STACK's input validation (insert stars, syntax hints, units
+syntax) - except the names STACK rejects in answers (student_word_errors: allowed and forbidden words, question variables, STACK's security list, the two-character rule) and castext blocks other than the ones listed above (they are left as text).
 """
 
 import hashlib
@@ -714,23 +714,87 @@ _PREFIXES = "y z a f p n u m c d da h k M G T P E Z Y".split()
 STACK_UNITS = set(_NONPREFIX_UNITS) | set(_PREFIX_UNITS) | {p + u for u in _PREFIX_UNITS for p in _PREFIXES}
 
 
-def question_variable_words(inp, value, qv_names, units=False):
-    """Names of question variables used as variables in a student's answer: STACK rejects such
-    an answer as invalid ("Forbidden variable or constant"), unless the name is among the
-    input's allowed words (Authoring/Variables, Notes) or - in units mode (a units input or a
-    units answer test in the question) - is a unit name. Function calls are not counted."""
-    if not qv_names:
+def word_list(text):
+    """The words of an input's allowed or forbidden words (comma separated), without STACK's
+    placeholders such as [[BASIC-ALGEBRA]] (their lists are in STACK's PHP code, see
+    rules.r_input_word_lists)."""
+    return {w.strip() for w in (text or "").split(",") if w.strip() and not re.match(r"^\[\[.*\]\]$", w.strip())}
+
+
+def _student_reads(n, allowed, forbidden, qv_names, units):
+    """stack_cas_security::is_allowed_to_read for a student (security 's')."""
+    e = security_map().get(n) or {}
+    sec = e.get("constant", e.get("variable", "-"))
+    if sec == "f":
+        return False
+    if ("keyword" in e or "operator" in e) and "specialallowvariable" not in e:
+        return False
+    if n in allowed:                  # allowed words before forbidden words
+        return True
+    if n in forbidden:
+        return False
+    if units and n in STACK_UNITS:
+        return True
+    if sec == "s":
+        return True
+    if n in qv_names:                 # names the question variables assign
+        return False
+    if len(n) <= 2 and "function" not in e:
+        return True
+    return n[-1:].isdigit()
+
+
+def _student_calls(n, allowed, forbidden, qv_names):
+    """stack_cas_security::is_allowed_to_call for a student."""
+    e = security_map().get(n) or {}
+    sec = e.get("function", "-")
+    if sec == "f" or n in forbidden:
+        return False
+    if sec == "s":
+        return True
+    if n in qv_names:
+        return False
+    if n in allowed:
+        return True
+    if n == "In":
+        return False
+    return len(n) <= 2
+
+
+def student_name_allowed(name, allowed=(), forbidden=(), qv_names=(), units=False):
+    """Whether STACK accepts this name as a variable in a student's answer: as a whole, or - if not -
+    each part between underscores (998_security.filter.php; a part may also be a function name a
+    student may call)."""
+    return not _student_name_errors(name, set(allowed), set(forbidden), set(qv_names), units)
+
+
+def _student_name_errors(name, allowed, forbidden, qv_names, units):
+    if _student_reads(name, allowed, forbidden, qv_names, units):
         return []
-    allowed = {w.strip() for w in (inp.get("allowwords") or "").split(",") if w.strip()}
-    if units:
-        allowed |= STACK_UNITS
-    code = re.sub(r'"(?:[^"\\]|\\.)*"', '""', value)
-    found = []
-    for m in re.finditer(r"(?<![A-Za-z0-9_%])([A-Za-z%_][A-Za-z0-9_%]*)(?!\s*\()", code):
-        w = m.group(1)
-        if w in qv_names and w not in allowed and w not in found:
-            found.append(w)
-    return found
+    parts = name.split("_")
+    if len(parts) == 1:
+        return [name]
+    return [x for x in dict.fromkeys(parts) if x and not (_student_reads(x, allowed, forbidden, qv_names, units) or
+                                                          (x != name and _student_calls(x, allowed, forbidden, qv_names)))]
+
+
+def student_word_errors(inp, value, qv_names, units=False):
+    """STACK's messages for the names of a student's answer that STACK rejects ("Forbidden function: f.",
+    "Forbidden variable or constant: x."): functions first, then variables, as STACK reports them.
+    Checks the input's allowed and forbidden words, the names the question variables assign, STACK's
+    security list, units (units mode) and the rule that other names need at most two characters or a
+    digit at the end; names with underscores part by part."""
+    allowed, forbidden = word_list(inp.get("allowwords")), word_list(inp.get("forbidwords"))
+    code = re.sub(r'"(?:[^"\\]|\\.)*"', '""', value or "")
+    out = []
+    for m in re.finditer(r"(?<![A-Za-z0-9_%])([A-Za-z%_][A-Za-z0-9_%]*)\s*\(", code):
+        n = m.group(1)
+        if not _student_calls(n, allowed, forbidden, qv_names):
+            out.append("Forbidden function: %s." % n)
+    for m in re.finditer(r"(?<![A-Za-z0-9_%])([A-Za-z%_][A-Za-z0-9_%]*)(?![A-Za-z0-9_%]|\s*\()", code):
+        for n in _student_name_errors(m.group(1), allowed, forbidden, qv_names, units):
+            out.append("Forbidden variable or constant: %s." % n)
+    return list(dict.fromkeys(out))
 
 
 _NUM = r"(-?\s*[0-9.]+(?:[eE][-+]?[0-9]+)?)"
@@ -1418,13 +1482,13 @@ def answer_code(data, answers, langs, resolver, checked, qv_names=(), texprs=Non
                 continue
         else:
             value = student_value(inp, raw, data["decimals"])
-            bad = (question_variable_words(inp, value, qv_names, uses_units(data))
+            bad = (student_word_errors(inp, value, qv_names, uses_units(data))
                    if inp.get("type") not in ("string", "notes") else [])
             if bad:
-                inputs[n] = {"state": "invalid", "value": value,
-                             "msg": "Forbidden variable or constant: %s." % ", ".join(bad),
-                             "hint": "STACK rejects names of question variables in answers (allow them with "
-                                     "the input option \"allowed words\")"}
+                inputs[n] = {"state": "invalid", "value": value, "msg": " ".join(bad),
+                             "hint": "STACK accepts in answers only names of at most two characters, names ending in a "
+                                     "digit and names it knows, not the forbidden words of the input or the names of "
+                                     "question variables; the input option \"allowed words\" allows more"}
                 continue
         inputs[n] = {"state": "?", "value": value}
         code.append('block([%%_p: errcatch(parse_string(%s))], if %%_p = [] then meclib_out(%s, "invalid") else ('

@@ -31,6 +31,7 @@ The review of the [[Meclib Workbench]] (Questions page, **Review** at the top of
 | [`matrix.layout`](#matrixlayout) | recommended / hint | partly | Layout of a matrix input |
 | [`inputs.no-prt`](#inputsno-prt) | hint | yes | Input not graded by any PRT |
 | [`inputs.allowwords`](#inputsallowwords) | required | yes | Names students may not type |
+| [`inputs.word-lists`](#inputsword-lists) | hint | no | Word lists not checked by the workbench |
 | **PRTs and grading** | | | |
 | [`prt.simp`](#prtsimp) | recommended | yes | PRT simplification with fb_unit |
 | [`prt.feedbackformat`](#prtfeedbackformat) | recommended | yes | Format of PRT feedback |
@@ -248,6 +249,15 @@ Message:
 > Input …: the model answer uses …, which STACK does not accept in a student's answer (only names of at most two characters, names ending in a digit, names STACK knows such as Delta or omega, and the allowed words of the input). Every answer with … would be invalid. The fix adds … to the allowed words of the input.
 
 See also: https://github.com/mkraska/meclib/wiki/Labels-and-names
+
+### `inputs.word-lists`
+
+Level: **hint** · automatic fix: **no** · function `r_input_word_lists()`
+
+inputs.word-lists (hint): STACK's placeholders such as `[[BASIC-ALGEBRA]]` in the allowed or forbidden words of an input stand for word lists in STACK's PHP code; the workbench does not resolve them, so it does not check those words in answers (STACK does).
+
+Message:
+> Input …: … in the allowed or forbidden words - the workbench does not know the words of such lists and does not check them in answers; STACK does.
 
 ## PRTs and grading
 

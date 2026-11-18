@@ -132,3 +132,56 @@ class VariantLoadsIncludes(unittest.TestCase):
         data = dict(self.data, questionvariables="a: 1;\nb: concat(x, y);")
         sq.variant(s, data, 1, self.Resolver(self.inc), (), None)
         self.assertNotIn("concat(x", s.code)
+
+
+class StudentWords(unittest.TestCase):
+    """Names in a student's answer as STACK checks them (stack_cas_security::is_allowed_to_read and
+    is_allowed_to_call for students, 998_security.filter.php): allowed words, forbidden words
+    (TM1 10 01, 2026-11-18: F in forbidwords was accepted by the workbench), question variables,
+    names STACK knows, at most two characters or a digit at the end, names with underscores part by
+    part. Function calls: forbidden words, then STACK's list, question variables, allowed words."""
+
+    def check(self, value, forbid="", allow="", qv=(), units=False):
+        return sq.student_word_errors({"forbidwords": forbid, "allowwords": allow}, value, set(qv), units)
+
+    def test_forbidden_word(self):
+        self.assertEqual(self.check("3*F*a", forbid="F"), ["Forbidden variable or constant: F."])
+
+    def test_forbidden_word_list(self):
+        self.assertEqual(self.check("F+G", forbid="F, G"), ["Forbidden variable or constant: F.",
+                                                           "Forbidden variable or constant: G."])
+
+    def test_digit_end_not_split(self):
+        """F_1 ends in a digit: allowed as a whole, its part F is not checked (as STACK)"""
+        self.assertEqual(self.check("F_1*a", forbid="F"), [])
+
+    def test_allowed_beats_forbidden(self):
+        self.assertEqual(self.check("F*a", forbid="F", allow="F"), [])
+
+    def test_long_unknown_name(self):
+        self.assertEqual(self.check("2*Fhat/m"), ["Forbidden variable or constant: Fhat."])
+        self.assertEqual(self.check("2*Fhat/m", allow="Fhat"), [])
+
+    def test_underscore_parts(self):
+        self.assertEqual(self.check("Delta_p+A_h+omega_S"), [])
+        self.assertEqual(self.check("phi_dot"), ["Forbidden variable or constant: dot."])
+
+    def test_question_variable(self):
+        self.assertEqual(self.check("vS*m", qv={"vS"}), ["Forbidden variable or constant: vS."])
+        self.assertEqual(self.check("vS*m", qv={"vS"}, allow="vS"), [])
+
+    def test_units(self):
+        """kN has two characters: allowed anyway; kPa only in units mode"""
+        self.assertEqual(self.check("3*kN"), [])
+        self.assertEqual(self.check("3*kPa"), ["Forbidden variable or constant: kPa."])
+        self.assertEqual(self.check("3*kPa", units=True), [])
+
+    def test_functions(self):
+        self.assertEqual(self.check("solve(x^2=1, x)", forbid="solve"), ["Forbidden function: solve."])
+        self.assertEqual(self.check("sqrt(2)*sin(x)"), [])
+        self.assertEqual(self.check("foo(x)"), ["Forbidden function: foo."])
+        self.assertEqual(self.check("foo(x)", allow="foo"), [])
+
+    def test_strings_and_numbers(self):
+        self.assertEqual(self.check('[0;"alpha";Fhat]'.replace(";", ","), allow="Fhat"), [])
+        self.assertEqual(self.check("1.5e3*a"), [])

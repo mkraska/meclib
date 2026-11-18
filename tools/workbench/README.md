@@ -444,11 +444,20 @@ feedback by hand (as "Start again" in Moodle's preview).
 Approximations: STACK's input validation is only approximated. The workbench
 converts a decimal comma to a point (and `;` to `,`), inserts `*` for spaces
 and implied products according to "insert stars", and accepts whatever then
-parses in Maxima (no forbidden words, no syntax checks). One rule of STACK's
-validation is reproduced: an answer that uses the name of a question variable
-as a variable is invalid ("Forbidden variable or constant: v."), unless the
-name is among the input's allowed words; the PRTs that need that input do not
-run. Answer test feedback
+parses in Maxima (no syntax checks). The names in an answer are checked as STACK
+checks them for students (`student_word_errors()` in `stack_question.py`, after
+`stack_cas_security`): a variable is accepted if it is an allowed word of the
+input; otherwise it is rejected if it is a forbidden word or the name of a
+question variable; accepted are units (units mode), names STACK knows as student
+variables (`Delta`, `omega`, `%pi`, ...), and names of at most two characters or
+ending in a digit; a name with underscores that is none of these is checked part
+by part (`Delta_p`, `F_Ax` are fine, `Fhat`, `phi_dot` not). Function calls:
+rejected if forbidden words or names of question variables, accepted if STACK
+allows them or they are allowed words or have at most two characters. Messages as
+STACK's ("Forbidden variable or constant: F.", "Forbidden function: solve.");
+the PRTs that need that input do not run. STACK's placeholders such as
+`[[BASIC-ALGEBRA]]` in the word lists are not resolved (review hint
+`inputs.word-lists`). Answer test feedback
 appears as STACK's message keys (e.g. `ATAlgEquiv_SA_not_logic`), not
 translated.
 
@@ -636,8 +645,9 @@ question with inputs needs question tests.
 - **Variants:** the question notes of the deployed variants are loaded by
   themselves when the column shows a question (and after a change of the
   deployed seeds; POST `/api/q/variants` with `seeds`). "Survey" evaluates the question variables and the question
-  note for the seeds 1..N (N on the page, default 10, kept) and the deployed
-  seeds, one Maxima run per seed (POST `/api/q/variants`; the progress box
+  note for the seeds from .. to (on the page, default 1 .. 10, kept; at most 500
+  at a time) and the deployed seeds; a further survey adds to the table (e.g. 21 .. 30
+  after 1 .. 20), one Maxima run per seed (POST `/api/q/variants`; the progress box
   shows the seed). Errors and repeated notes are marked ("same as 3"; red
   when two deployed variants share a note). A tick deploys a variant or takes
   it out: `<deployedseed>` is written to the file at once, after the PRTs

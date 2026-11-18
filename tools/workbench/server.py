@@ -74,6 +74,7 @@ Endpoints
                             questionvariables, questiontext
   POST /api/q/duplicate     {path, index, rev} copy of a question, right after it
   POST /api/q/cancel        {token} stop the test run with this progress token before its next test
+  POST /api/q/variants: also start (first seed of the survey, default 1)
   POST /api/q/teststatus    {path, index} stored results of the question tests ({tests: {testcase:
                             {m: {seed: passed}, a: {...}, current, date}}}); .../save with
                             results: {testcase: {m, a}} stores those of a run
@@ -327,6 +328,14 @@ def stack_test_outcomes(r, seed):
         raise RuntimeError(plain_text((one or {}).get("messages") or r.get("messages")) or "no results from STACK for variant %d" % seed)
     return {str(tc): {"pass": bool(o.get("passed")), "reason": o.get("reason") or ""}
             for tc, o in one["outcomes"].items()}
+
+
+def survey_seeds(start, end, deployed):
+    """Seeds of a survey of variants: start (default 1) .. end, at most 500, and the deployed seeds
+    outside that range."""
+    start = max(1, int(start or 1))
+    end = min(max(start, int(end or 10)), start + 499)
+    return list(range(start, end + 1)) + [s for s in deployed if not start <= s <= end]
 
 
 def set_phase(phase):
@@ -986,8 +995,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json({"error": str(err)}, 500)
 
     def variants(self, cfg, req):
-        """POST /api/q/variants {path, index, src, count[, seeds]}: the question note (and errors) of
-        the variants with seeds 1 .. count and of the deployed seeds (or only those in seeds), one Maxima run per seed in the
+        """POST /api/q/variants {path, index, src, count[, start][, seeds]}: the question note (and errors) of
+        the variants with seeds start (default 1) .. count and of the deployed seeds (or only those in seeds), one Maxima run per seed in the
         question's session (the page shows the progress)."""
         target = allowed_path(cfg, req["path"])
         text, _ = qfile.read_file(target)
@@ -995,8 +1004,7 @@ class Handler(SimpleHTTPRequestHandler):
         qel = stack_question.question_element(text, index)
         data = stack_question.question_data(qel)
         deployed = [int(s) for s in data["seeds"] if re.match(r"^-?\d+$", s.strip())]
-        count = max(1, min(int(req.get("count") or 10), 500))
-        seeds = list(range(1, count + 1)) + [s for s in deployed if not 1 <= s <= count]
+        seeds = survey_seeds(req.get("start"), req.get("count"), deployed)
         if req.get("seeds") is not None:      # only these (e.g. the deployed ones)
             seeds = [int(x) for x in req["seeds"]]
         PROGRESS.update(busy=True, since=time.time(), phase="Maxima session: starting Maxima and loading STACK's library")

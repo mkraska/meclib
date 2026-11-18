@@ -37,5 +37,22 @@ class TestRunProgress(unittest.TestCase):
         self.assertEqual(server.progress_reply({"token": ["abc"], "after": ["x"]})["count"], 2)
 
 
+
+class SurveySeeds(unittest.TestCase):
+    """Survey of variants from a start seed (2026-11-18): seeds start .. end and the deployed ones
+    outside that range, so that a second survey (21 .. 30) adds to a first one (1 .. 20)."""
+
+    def test_default(self):
+        self.assertEqual(server.survey_seeds(None, 5, [12]), [1, 2, 3, 4, 5, 12])
+
+    def test_start(self):
+        self.assertEqual(server.survey_seeds(21, 25, [3, 22]), [21, 22, 23, 24, 25, 3])
+
+    def test_bounds(self):
+        self.assertEqual(server.survey_seeds(0, 2, []), [1, 2])          # seeds from 1
+        self.assertEqual(server.survey_seeds(30, 20, []), [30])            # end below start: only start
+        self.assertEqual(len(server.survey_seeds(1, 2000, [])), 500)       # at most 500 at a time
+
+
 if __name__ == "__main__":
     unittest.main()

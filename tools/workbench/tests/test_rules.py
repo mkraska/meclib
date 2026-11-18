@@ -694,5 +694,24 @@ class AllowWords(unittest.TestCase):
         self.assertIn("<allowwords>Fhat</allowwords>", self.fixed(q, "names"))
 
 
+class WordLists(unittest.TestCase):
+    """inputs.word-lists (hint): STACK's placeholders such as [[BASIC-ALGEBRA]] in the allowed or forbidden
+    words of an input: their word lists are in STACK's PHP code, the workbench does not check them in
+    answers (2026-11-18)."""
+
+    def inp(self, forbid="", allow=""):
+        return ("<input><name>ans1</name><type>algebraic</type><tans>x</tans><forbidwords>%s</forbidwords>"
+                "<allowwords>%s</allowwords></input>\n" % (forbid, allow))
+
+    def test_placeholder(self):
+        q = question("x: 1;", self.inp(forbid="F, [[BASIC-ALGEBRA]]"))
+        f = next(f for f in rules.findings(block(q)) if f["key"] == "inputs.word-lists[ans1]")
+        self.assertEqual(f["level"], "hint")
+        self.assertIn("[[BASIC-ALGEBRA]]", f["message"])
+
+    def test_plain_words(self):
+        self.assertNotIn("inputs.word-lists[ans1]", keys(question("x: 1;", self.inp(forbid="F, G", allow="Fhat"))))
+
+
 if __name__ == "__main__":
     unittest.main()
