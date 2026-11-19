@@ -211,6 +211,21 @@ class MaximaSession:
             self.lines.put(line)
         self.lines.put(None)
 
+    def _kill(self):
+        """Stops Maxima that does not quit: on Windows the whole process tree (maxima.bat starts the
+        Lisp as a child, which kill() of the batch file would leave running)."""
+        if os.name == "nt":
+            try:
+                subprocess.run(["taskkill", "/F", "/T", "/PID", str(self.proc.pid)],
+                               capture_output=True, timeout=10, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                return
+            except Exception:
+                pass
+        try:
+            self.proc.kill()
+        except Exception:
+            pass
+
     def alive(self):
         return self.proc is not None and self.proc.poll() is None
 
@@ -221,7 +236,7 @@ class MaximaSession:
                 self.proc.stdin.flush()
                 self.proc.wait(timeout=3)
             except Exception:
-                self.proc.kill()
+                self._kill()
         self.proc = None
         shutil.rmtree(self.tmp, ignore_errors=True)
 
@@ -268,6 +283,8 @@ class MaximaSession:
             # castext() renderer and resolve_lang() shared with the offline Maxima tests
             "meclib_real_stack_loaded: true$",
             "load(%s)$" % mpath(harness),
+            # kill() without Maxima's option variables (kill(simp) breaks Maxima 5.48.1)
+            "load(%s)$" % mpath(HERE / "meclib_kill.lisp"),
             # exact result channel: blocks "@@MECLIBOUT:key@@\n<text>\n" appended to a file
             "meclib_out_file: false$",
             "meclib_out(%_key, %_text) := block([%_s: opena(meclib_out_file)],"

@@ -155,7 +155,7 @@ its sections, always in reach while the column scrolls.
 - Editor bar: ↶ / ↷ (undo, redo), Rename, Snippet, Graphic ↗, then the sections Review,
   Variables, Text, Inputs, Options, General FB, Specific FB, Note, PRTs and
   each PRT by name.
-- Preview bar: Restart, Update (save and evaluate, Ctrl+Enter), TAns (model answers), Check, the question tests, de / en, `0.5` / `0,5`,
+- Preview bar: Restart, Update (save and evaluate, Ctrl+Enter), TAns (model answers), Check with its engine Maxima | API, the question tests, de / en, `0.5` / `0,5`,
   simp, then the sections Question, General FB, Note, Messages, Inputs, PRT
   graphs, Variables.
 - `⋯` at the top of a bar: the side of the bar (left or right of its column;
@@ -320,6 +320,22 @@ variables, line 4: apply: subscript must be an integer; found: i_beam").
 Next to the inputs the answer is shown typeset (or "invalid input" if it
 does not parse).
 
+**Check in STACK itself**: the pair **Maxima | API** below Check chooses the
+engine (kept) - one setting for Check and for the question tests. With **API** the answers as typed go to STACK (STACK API in
+Docker, POST `/api/q/stackcheck`: route `grade` on the variant in the preview,
+then route `validate` for each answered input with a validation field that is not
+bound to a graphic; includes as for the question tests, by the meclib source).
+The preview shows STACK's own HTML: the validation next to the inputs, the
+feedback of each PRT with STACK's standard feedback, the specific feedback,
+plots and `[[jsxgraph]]` graphics in the feedback (STACK's frames, which load
+JSXGraph from the API; the `[[include]]` of meclib.js is the question's own,
+so with the source "local working copy" the graphic may use another meclib.js
+than the preview); below each PRT score, mark, penalty and answer notes. There is
+no route through the PRTs and no feedback variables (STACK does not report them).
+"not gradable" in the messages: an answer is missing or invalid. Test mode always
+checks in the workbench. Useful when the workbench's Maxima differs from the
+server's (e.g. Maxima 5.48.1 on Windows) or to compare with Moodle.
+
 **PRTs on their own**: as in STACK, each PRT sees the question variables and
 the inputs, but not the feedback variables of the other PRTs (they are deleted
 before each PRT); a PRT that uses `obj` without computing it fails here as in
@@ -392,8 +408,8 @@ test input values with the question variables, so the test is the same.
 Replacing or deleting the test updates or removes the variable. The review
 reports older test cases with too long values (`tests.value-length`,
 required) and moves them the same way.
-The check is the workbench's fast one in Maxima. With the engine switch of the
-Tests column on **API**, the tests run in STACK itself (below): the cells of the
+The check is the workbench's fast one in Maxima. With the engine switch
+(Maxima | API in the preview bar) on **API**, the tests run in STACK itself (below): the cells of the
 matrix get a green or red line for that result, failures are listed under them.
 
 **STACK itself (STACK API in Docker)**: STACK's own PHP code without Moodle,
@@ -659,14 +675,15 @@ question with inputs needs question tests.
   Green passed, red failed, grey not run on that variant, a bar below: the
   result in STACK itself. A test number in the head runs the test on every
   deployed variant; "Tests on deployed" runs all tests on all of them.
-- **Engine and preview** (editor bar): **Maxima | API** decides where every
-  run of the matrix and "Tests on deployed" goes - the workbench's fast check
+- **Engine and preview**: **Maxima | API** (preview bar, below Check; the same
+  setting as for Check) decides where every run of the matrix and "Tests on deployed" goes - the workbench's fast check
   or STACK itself (STACK API, one call per variant). **preview** (Maxima only):
   on, every run goes through the preview: per variant the preview shows it, then
   each test is filled in and checked, one after the other (the last one stays
   active, with its route in the test details) - slower, but what the preview
   shows is what was checked; off, all runs go as below without touching the
-  preview. Both settings are kept.
+  preview. **preview** is in the editor bar (in manual mode, with the editor on the
+  left, a run without the preview makes no sense). Both settings are kept.
   **Missing** runs only the cells without a pass of the chosen engine on the
   deployed variants (not run, failed, or stored for an older version); greyed when
   none is missing. Shift+click on a test number or a row's ▶ does the same for that
@@ -685,6 +702,15 @@ question with inputs needs question tests.
   TAns and options, the compared values typeset, the result, the score after
   the branch, the branch's answer note and the answer test's own note. The
   same boxes appear below each PRT graph after a Check.
+  **Accept** (in the head line, after a failed run): the result of this run
+  becomes the expected result of the test - per PRT score, penalty and the full
+  route (NULL for a PRT that did not run); inputs and description stay. Look at
+  the route first. The results of the test on other variants are reset (run it
+  there again). After a failed run with the API (a single cell), the head line
+  says "failed in STACK (API)" with STACK's reason; STACK reports no route, so
+  Accept first offers a run with Maxima in the preview ("Run with Maxima"), and
+  Accept on that run takes its result. If that run passes, the workbench and
+  STACK disagree: the head line says so (nothing to accept).
 - **Approval:** the row "approve" in the head of the matrix has a ✓ under
   each test number. It is active only when the test has passed in this
   session on every deployed variant (on the variant in the preview if none is
@@ -719,7 +745,7 @@ question with inputs needs question tests.
   route of its last run - write the full route. A branch no test reaches is
   red; then "+" (head of the last column of the matrix) and "Tests" are red,
   and the coverage shows as a callout on "+". Aim: every node once true and once false.
-- **Editor bar** in this view: Editor (the switch, back to the editor), Maxima | API, preview,
+- **Editor bar** in this view: Editor (the switch, back to the editor), preview,
   Tests on deployed, Stop, edit (✎) and delete (✕) the test last run, and the sections
   (light blue, the one in sight darker); the editor's buttons (snippets, graphic, sections)
   are hidden. "Survey" is next to the number of seeds in the box of the matrix, red for a
@@ -750,6 +776,12 @@ and the question variables (now and in the run before) assign no name the file d
 it is loaded again. A change in the working copy (meclib source "local working copy") is picked up
 by the next Update or Check. The messages say what happened ("includes reused: ..." or "includes
 loaded again: fb_value.mac changed").
+
+A Maxima session that failed (timeout, process ended) is dropped: the next run of the
+question starts a new one. Before a run, the names of the previous run are removed with
+`meclib_kill()` (`meclib_kill.lisp`), which leaves Maxima's option variables alone - a
+question that sets `simp` in its question variables would otherwise get `kill(simp)`,
+which Maxima 5.48.1 does not survive.
 
 A run of Maxima (Update, Check) is stopped after 60 s; the first run in a new
 session may take 180 s (on Windows it can take much longer than the next
@@ -981,8 +1013,8 @@ Older local copies configured by hand (`"mathjax": {"... (local)":
 
 ### STACK API (optional)
 
-Only needed for the engine **API** of the Tests column (question tests run by STACK
-itself, with STACK's input validation); everything else works without it.
+Only needed for the engine **API** (Maxima | API in the preview bar: question tests and
+Check run by STACK itself, with STACK's input validation); everything else works without it.
 Set up once per computer:
 
 1. **Docker Desktop**: install it from <https://www.docker.com/products/docker-desktop/>

@@ -129,3 +129,57 @@ class Rename(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class QtestExpect(unittest.TestCase):
+    """op "expect" (Accept in the test details): only the expected results of a test change; its
+    inputs (also empty ones and qt<n>_ variables), description and the other tests stay."""
+
+    Q = """<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+<question type="stack">
+  <name><text>q</text></name>
+  <questionvariables><text>qt1_ans1: 1+2+3;</text></questionvariables>
+  <qtest>
+    <testcase>1</testcase>
+    <description>first</description>
+    <testinput>
+      <name>ans1</name>
+      <value>qt1_ans1</value>
+    </testinput>
+    <testinput>
+      <name>ans2</name>
+      <value></value>
+    </testinput>
+    <expected>
+      <name>prt1</name>
+      <expectedscore>1.0000000</expectedscore>
+      <expectedpenalty>0.0000000</expectedpenalty>
+      <expectedanswernote>prt1-1-T</expectedanswernote>
+    </expected>
+  </qtest>
+  <qtest>
+    <testcase>2</testcase>
+    <description>second</description>
+    <expected>
+      <name>prt1</name>
+      <expectedscore>0.0000000</expectedscore>
+      <expectedpenalty>0.1000000</expectedpenalty>
+      <expectedanswernote>prt1-1-F</expectedanswernote>
+    </expected>
+  </qtest>
+</question>
+</quiz>
+"""
+
+    def test_expect(self):
+        new, label = qfile.qtest_op(self.Q, 0, {"op": "expect", "testcase": 1,
+                                                "expected": {"prt1": {"score": "0.5", "penalty": "0.1", "note": "prt1-1-F | prt1-2-T"}}})
+        self.assertEqual(label, "test 1: actual result accepted as expected")
+        t = {x["testcase"]: x for x in qfile.qtests(new)}
+        self.assertEqual(t[1]["inputs"], {"ans1": "qt1_ans1", "ans2": ""})
+        self.assertEqual(t[1]["description"], "first")
+        self.assertEqual(t[1]["expected"]["prt1"]["note"], "prt1-1-F | prt1-2-T")
+        self.assertEqual(float(t[1]["expected"]["prt1"]["score"]), 0.5)
+        self.assertEqual(t[2], {x["testcase"]: x for x in qfile.qtests(self.Q)}[2])
+        self.assertIn("qt1_ans1: 1+2+3;", new)

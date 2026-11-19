@@ -57,3 +57,79 @@ class TempDir(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PoolDropsFailedSession(unittest.TestCase):
+    """After a Maxima error of a run the session leaves the pool and is closed, so that the next run
+    starts a new one (2026-11-18, Windows: after a run with a syntax error the question's session
+    stayed dead - "Maxima process is not running" - until the workbench was restarted)."""
+
+    class Stub:
+        made = 0
+
+        def __init__(self, maxima=None, stack=None):
+            type(self).made += 1
+            self.closed, self.used, self.started = False, False, 0
+
+        def alive(self):
+            return not self.closed
+
+        def close(self):
+            self.closed = True
+
+    def setUp(self):
+        import server
+        self.server = server
+        self.old = server.MaximaSession
+        server.MaximaSession = self.Stub
+        self.pool = server.SessionPool()
+        self.pool.prepare = lambda *a, **k: None       # no spare in the test
+
+    def tearDown(self):
+        self.server.MaximaSession = self.old
+
+    def test_drop(self):
+        e1 = self.pool.get("q", None)
+        self.pool.drop("q", e1)
+        self.assertTrue(e1[0].closed)
+        e2 = self.pool.get("q", None)
+        self.assertIsNot(e1[0], e2[0])
+
+    def test_drop_only_that_session(self):
+        """a newer session under the same key (another request) is not dropped"""
+        e1 = self.pool.get("q", None)
+        self.pool.drop("q", e1)
+        e2 = self.pool.get("q", None)
+        self.pool.drop("q", e1)
+        self.assertIs(self.pool.get("q", None)[0], e2[0])
+
+
+class CloseKillsTree(unittest.TestCase):
+    """close() of a session that does not quit: on Windows the whole process tree (maxima.bat starts
+    the Lisp as a child; kill() would stop only the batch file)."""
+
+    def test_windows_taskkill(self):
+        calls = []
+        s = maxima_session.MaximaSession.__new__(maxima_session.MaximaSession)
+        s.tmp = Path(tempfile.mkdtemp(prefix="meclib-test-"))
+
+        class Proc:
+            pid = 4711
+            stdin = None
+
+            def poll(self):
+                return None
+
+            def kill(self):
+                calls.append("kill")
+
+        s.proc = Proc()
+        old_os, old_run = maxima_session.os.name, maxima_session.subprocess.run
+        try:
+            maxima_session.os.name = "nt"
+            maxima_session.subprocess.run = lambda cmd, **k: calls.append(cmd)
+            s.close()
+        finally:
+            maxima_session.os.name, maxima_session.subprocess.run = old_os, old_run
+        self.assertIn(["taskkill", "/F", "/T", "/PID", "4711"], calls)
+        self.assertIsNone(s.proc)

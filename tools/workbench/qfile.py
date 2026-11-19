@@ -1176,7 +1176,8 @@ def qtest_externalize(q, tc, nl):
 def qtest_op(text, index, op):
     """{op: add, description, inputs, expected} (a new test case, number = highest + 1),
     {op: replace, testcase, description?, inputs, expected}, {op: delete, testcase},
-    {op: describe, testcase, description}. Returns (new text, label)."""
+    {op: describe, testcase, description}, {op: expect, testcase, expected} (Accept in the test
+    details: the actual result as expected, inputs and description unchanged). Returns (new text, label)."""
     a, b, qtype = question_span(text, index)
     if qtype != "stack":
         raise ValueError("question %d is not a STACK question" % index)
@@ -1197,6 +1198,15 @@ def qtest_op(text, index, op):
             _insert_after_last(q, "</prt>", block, nl, ["<hint"])
         q, moved = qtest_externalize(q, tc, nl)
         label = "test %d added" % tc + (" (long values in %s)" % ", ".join(moved) if moved else "")
+    elif kind == "expect":
+        tc = int(op["testcase"])
+        old = tests.get(tc)
+        if not old:
+            raise ValueError("no test case %s" % tc)
+        m = span(tc)
+        block = _qtest_xml(tc, old["description"], old["inputs"], op.get("expected") or {}, nl)
+        q = q[:m.start()] + block + q[m.end():]
+        label = "test %d: actual result accepted as expected" % tc
     elif kind in ("replace", "describe"):
         tc = int(op["testcase"])
         old = tests.get(tc)

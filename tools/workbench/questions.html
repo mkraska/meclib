@@ -154,6 +154,7 @@
   #tvDetail table.exp td, #tvDetail table.exp th { padding: 1px 6px; border-top: 1px solid var(--line); text-align: left; }
   #tvDetail table.exp th { font-weight: 400; color: var(--muted); }
   #tvDetail .diff { color: var(--err); font-weight: 600; }
+  .acceptask { margin: 6px 0; padding: 6px 9px; background: #fbf1dc; border: 1px solid #e3c98f; border-radius: 4px; font-size: 12.5px; }
   .apbadge { font-size: 11.5px; padding: 1px 7px; border-radius: 4px; }
   .apbadge.ok { background: #dcefdc; color: var(--ok); } .apbadge.stale { background: #fbf1dc; color: #a35a00; }
   .apbadge.no { background: #fbf1dc; color: #a35a00; }
@@ -164,7 +165,7 @@
   table.vtab button.tc.apbtn:not(:disabled) { background: #fbf1dc; color: #a35a00; font-weight: bold; }
   #testsToggle.need { background: #f8dcda; color: var(--err); border-color: #e3a19b; font-weight: 600; }
   #varSurvey.need, table.vtab button.tc.plus.qfail { background: #f8dcda; color: var(--err); border-color: #e3a19b; font-weight: 600; }
-  #sideEdit .tvonly .pair.eng { gap: 0; } #sideEdit .tvonly .pair.eng button { padding: 2px 0; font-size: 10.5px; letter-spacing: -0.2px; }
+  #sidePreview .pair.chk button { padding: 2px 0; font-size: 10.5px; letter-spacing: -0.2px; }
   #prevToggle.on { background: #55554f; color: #fff; border-color: #55554f; }
   #stopRun:not(:disabled) { background: #c0392b; color: #fff; border-color: #a93226; font-weight: 600; }
   table.vtab .rowrun { padding-left: 8px; }
@@ -451,7 +452,6 @@
     <button id="toGraphic" class="edonly" title="open the question's graphic (first [[jsxgraph]] block, evaluated initdata) on the Graphic page">Graphic ↗</button>
     <button id="testsToggle" title="question tests and deployed variants (instead of the editor); red: something to do">Tests</button>
     <div class="tvonly">
-      <span class="pair eng" title="engine of the test runs started in the matrix and by &quot;Tests on deployed&quot;"><button id="engMaxima" title="fast check in the workbench's Maxima">Maxima</button><button id="engApi">API</button></span>
       <button id="prevToggle" title="Maxima: a test cell or row runs in the preview (route in the test details); off: fast run without the preview">preview</button>
       <button id="varRunTests" title="run all question tests on every deployed variant">Tests on deployed</button>
       <button id="varRunMissing" title="run the tests that are missing on the deployed variants">Missing</button>
@@ -544,6 +544,7 @@
     <button id="evaluate" class="primary" title="Ctrl+Enter: save, evaluate the question and update the preview">Update</button>
     <button id="fillBtn" class="primary" title="Model answer: fill in the model answers (the graphic starts from the model answer of its objects input); in test mode the model answer as written, e.g. the name of its variable">TAns</button>
     <button id="checkBtn" class="primary" title="evaluate the PRTs with the current answers (Alt+Enter)">Check</button>
+    <span class="pair chk" title="engine of Check and of the question tests"><button id="chkMaxima" title="the workbench's Maxima: Check with the route through the PRTs, fast test runs">Maxima</button><button id="chkApi">API</button></span>
     <span class="pair" title="language of the [[lang]] blocks"><button id="lang-de">de</button><button id="lang-en">en</button></span>
     <span class="pair" title="decimal separator (question option, saved in the file)"><button id="dec-point" class="dec">0<b>.</b>5</button><button id="dec-comma" class="dec">0<b>,</b>5</button></span>
     <button id="simpToggle" title="simplify (question option, saved in the file)">simp</button>
@@ -1716,9 +1717,11 @@ function initEditors() {
   for (const d of document.querySelectorAll("#editView details")) d.addEventListener("toggle", () => { if (d.open) refreshEditors(); });
 }
 // ---------------------------------------------------------------- Check (PRT evaluation)
-async function check() {
+// engine: "maxima" forces the workbench's Maxima (test runs in the preview, which need the route)
+async function check(engine) {
   if (!file || qindex === null || !result) return;
   if (!(await flush()) && conflict) return;
+  if ((engine || runEngine) === "api" && !testMode) return checkApi();
   const answers = {};
   for (const inp of result.inputs || []) answers[inp.name] = inputValues[inp.name] ?? "";
   const body = { path: file.path, index: qindex, src: $("src").value, answers };
@@ -1732,7 +1735,7 @@ async function check() {
     body.seed = parseInt($("seed").value, 10) || 1;
     const r = await withProgress("Check", postJSON("/api/q/check", body));
     $("status").textContent = "checked in " + r.seconds + " s";
-    lastCheck = r.check; lastCheck.timing = r.timing;
+    lastCheck = r.check; lastCheck.timing = r.timing; lastApiCheck = null;
     result.timing = r.timing; result.first_run = r.first_run; renderMessages();
     showCheck();
     renderVariables();
@@ -1741,6 +1744,88 @@ async function check() {
     $("status").textContent = "Check failed (see messages)";
     showMessages([{ cls: "err", text: "Check failed: " + e.message }], true);
   } finally { $("checkBtn").disabled = false; }
+}
+// ---------------------------------------------------------------- Check in STACK itself (engine API)
+// The answers as typed go to STACK (STACK API in Docker, POST /api/q/stackcheck: route grade, and
+// validate for each input with a validation field that is not bound to a graphic) on the variant
+// in the preview; the preview shows STACK's own HTML: validation, PRT feedback (with STACK's
+// standard feedback), specific feedback, plots and [[jsxgraph]] frames from the API. No route
+// through the PRTs (only the answer notes). Test mode always checks in the workbench. The engine
+// is the one of the question tests (runEngine).
+// the engine (pair Maxima | API in the preview bar) is the same for Check and the question tests:
+// runEngine, shown by showRunSettings()
+let lastApiCheck = null;
+async function checkApi() {
+  const bound = (inp) => new RegExp("input-ref-" + inp.name + "\\s*=").test(textOrder());
+  const body = { path: file.path, index: qindex, src: $("src").value, lang,
+    seed: parseInt($("seed").value, 10) || 1,
+    answers: stackAnswersOf((inp) => inputValues[inp.name] ?? ""),
+    inputs: (result.inputs || []).filter((inp) => !bound(inp) && (inputValues[inp.name] ?? "") !== "" &&
+      document.querySelector(`.stack-validation[data-input="${CSS.escape(inp.name)}"]`)).map((inp) => inp.name) };
+  $("status").textContent = "checking in STACK ...";
+  $("checkBtn").disabled = true;
+  try {
+    const r = await withProgress("Check (STACK API)", postJSON("/api/q/stackcheck", body));
+    if (r.error) throw new Error(r.error);
+    $("status").textContent = "checked in STACK in " + r.seconds + " s";
+    lastCheck = null; lastApiCheck = r;
+    showApiCheck();
+    renderPRTGraphs();
+  } catch (e) {
+    $("status").textContent = "Check in STACK failed (see messages)";
+    showMessages([{ cls: "err", text: "Check in STACK (API) failed: " + e.message }], true);
+  } finally { $("checkBtn").disabled = false; }
+}
+// STACK's [[jsxgraph]] frames into their holders (each API call numbers its holders from 0, so the
+// holders filled are renamed before the next part is shown, as the STACK API's own page does)
+function apiIframes(frames, base) {
+  for (const [id, html, holder, title, scrolling, evil] of frames || []) {
+    const div = document.getElementById(holder);
+    if (!div) continue;
+    const frm = document.createElement("iframe");
+    frm.id = "api-" + id; frm.title = title || ""; frm.style.cssText = "width:100%;height:100%;border:0";
+    if (scrolling === false) { frm.scrolling = "no"; frm.style.overflow = "hidden"; }
+    if (!evil) frm.sandbox = "allow-scripts allow-downloads";
+    frm.srcdoc = String(html).replace("<head>", `<head><base href="${base}">`);
+    div.replaceChildren(frm);
+  }
+  for (const el of document.querySelectorAll('[id^="stack-iframe-holder"]:not([id$="_done"])')) el.id += "_done";
+}
+function showApiCheck() {
+  const r = lastApiCheck;
+  if (!r) return;
+  for (const inp of result.inputs || [])
+    for (const el of document.querySelectorAll(`.stack-validation[data-input="${CSS.escape(inp.name)}"]`)) el.innerHTML = "";
+  const box = $("sfb");
+  box.hidden = !String(r.specificfeedback || "").trim();
+  box.innerHTML = box.hidden ? "" : String(r.specificfeedback).replace(/\[\[feedback:([A-Za-z0-9_]+)\]\]/g,
+    (m, n) => `<div class="stack-prt" data-prt="${esc(n)}"></div>`);
+  const weights = r.weights || {};
+  for (const [name, p] of Object.entries(r.prts || {})) {
+    for (const el of document.querySelectorAll(`.stack-prt[data-prt="${CSS.escape(name)}"]`)) {
+      el.className = "stack-prt checked block";
+      if (!p.answered && !p.errors.length) {
+        el.innerHTML = `<span class="hint">PRT <b>${esc(name)}</b> (STACK): not answered or not valid</span>`;
+        continue;
+      }
+      const w = weights[name], total = weights.total;
+      el.innerHTML = (p.feedback ? `<div class="stackprtfeedback stackprtfeedback-${esc(name)}">${p.feedback}</div>` : "") +
+        '<div class="prtwb">' + (p.errors.length ? `<div class="prterr">${esc(p.errors.join("\n"))}</div>` : "") +
+        `<div class="prtinfo"><span>PRT <b>${esc(name)}</b> in STACK</span><span>score ${esc(fmtScore(p.score))}</span>` +
+        (w !== undefined && total ? `<span>mark ${(p.score * w * total).toFixed(2).replace(/\.?0+$/, "")} / ${(w * total).toFixed(2).replace(/\.?0+$/, "")}</span>` : "") +
+        `<span>penalty ${esc(fmtScore(p.penalty))}</span><span>notes: ${esc((p.notes || []).join(" | ") || "-")}</span></div></div>`;
+    }
+  }
+  apiIframes(r.iframes, r.base);
+  for (const [name, html] of Object.entries(r.validation || {})) {
+    for (const el of document.querySelectorAll(`.stack-validation[data-input="${CSS.escape(name)}"]`)) el.innerHTML = html;
+    apiIframes((r.viframes || {})[name], r.base);
+  }
+  if (r.isgradable === false) showMessages([{ cls: "warn", text: "STACK: not gradable - some answers are missing or invalid (see the validation at the inputs)" }], true);
+  if (window.MathJax && MathJax.Hub) {
+    MathJax.Hub.Queue(["Typeset", MathJax.Hub, $("qtext")]);
+    if (!box.hidden) MathJax.Hub.Queue(["Typeset", MathJax.Hub, box]);
+  }
 }
 let lastCheck = null;
 function showCheck() {
@@ -1862,7 +1947,7 @@ function fillModelAnswers() {
     else v = studentSyntax(v);
     inputValues[inp.name] = v;
   }
-  lastCheck = null;
+  lastCheck = null; lastApiCheck = null;
   render(true);
 }
 
@@ -2667,6 +2752,16 @@ function renderTestDetail() {
   if (!box) return;
   const qt = ((result && result.qtests) || []).find((q) => q.testcase === activeTest);
   const sd = parseInt($("seed").value, 10) || 1;
+  const api = qt ? (stackSeedResults[sd] || {})[qt.testcase] : null;
+  if (qt && api && !api.pass && !(lastCheck && lastTestRun && lastTestRun.tc === qt.testcase && lastTestRun.seed === sd)) {
+    // failed in STACK itself: no route to take over - Accept asks for a run with Maxima first
+    box.innerHTML = `<div class="tvrow"><b>Test ${esc(qt.testcase)}</b><span class="hint">${esc(qt.description || "")} · variant ${sd}</span>` +
+      `<span class="diff">failed in STACK (API)</span><button class="small" id="acceptActual" title="STACK's result has no route the workbench could take over: ` +
+      `run the test with Maxima in the preview first, then Accept takes that result">Accept</button></div>` +
+      (api.reasons.length ? `<div class="hint">${esc(api.reasons.join("; "))}</div>` : "") + '<div id="acceptAsk"></div>';
+    $("acceptActual").addEventListener("click", () => askMaximaRun(qt.testcase, sd));
+    return;
+  }
   if (!qt || !lastCheck || !lastTestRun || lastTestRun.tc !== qt.testcase || lastTestRun.seed !== sd) {
     box.innerHTML = '<span class="hint">Run a test (a button in the matrix): its route through the PRTs shows here. Approve a test with ✓ under its number in the matrix header.</span>';
     return;
@@ -2674,7 +2769,12 @@ function renderTestDetail() {
   const st = approvalState(qt.testcase), r = testResults[qt.testcase], act = actualExpected(lastCheck);
   let h = `<details data-k="box"${detailOpen.box ? " open" : ""}><summary class="tvrow"><b>Test ${esc(qt.testcase)}</b><span class="hint">${esc(qt.description || "")} · variant ${sd}</span>` +
     `<span class="apbadge ${st}">${esc(approvalText(qt.testcase))}</span>` +
-    `<span class="${r && r.pass ? "hint" : "diff"}">${r ? (r.pass ? "passed" : "failed") : ""}</span></summary>`;
+    `<span class="${r && r.pass ? "hint" : "diff"}">${r ? (r.pass ? "passed" : "failed") : ""}</span>` +
+    (r && r.pass && api && !api.pass ? '<span class="diff" title="the workbench and STACK disagree on this test: compare the route here with the STACK result in the test messages">failed in STACK (API)</span>' : "") +
+    (r && !r.pass ? `<button class="small" id="acceptActual" title="take the result of this run (variant ${sd}) as the expected result of test ${esc(qt.testcase)}: ` +
+      "score, penalty and route of each PRT; inputs and description stay. Look at the route first - the test then passes by definition" +
+      (deployedSeeds().length > 1 ? "; with several deployed variants: run the test on all of them afterwards" : "") + '">Accept</button>' : "") +
+    "</summary>";
   // inputs and PRTs in the order of the question text, as in the editor (byTextOrder)
   const ordered = (obj, tag) => byTextOrder(Object.keys(obj).map((name) => ({ name })), tag).map((x) => [x.name, obj[x.name]]);
   h += '<div class="hint">' + ordered(qt.inputs, "input").map(([n, v]) => {
@@ -2693,8 +2793,57 @@ function renderTestDetail() {
   }
   h += "</details>";
   box.innerHTML = h;
+  const acc = $("acceptActual");
+  if (acc) acc.addEventListener("click", (ev) => { ev.preventDefault(); ev.stopPropagation(); acceptActual(qt.testcase); });
   box.querySelectorAll("details[data-k]").forEach((d) => d.addEventListener("toggle", () => { detailOpen[d.dataset.k] = d.open; }));
   typeset(box);
+}
+// Accept after a failed run with the API: STACK reports no route, so a run with Maxima in the
+// preview comes first (asked in a small box below the head line); Accept on that run then takes it
+function askMaximaRun(tc, sd) {
+  const ask = $("acceptAsk");
+  if (!ask) return;
+  ask.innerHTML = `<div class="acceptask">STACK's result cannot be taken over (no route). Run test ${esc(tc)} on variant ${sd} ` +
+    `with Maxima in the preview now? Then press Accept again to take that result.` +
+    ` <button class="small primary" data-a="run">Run with Maxima</button> <button class="small" data-a="cancel">Cancel</button></div>`;
+  ask.querySelector("[data-a=run]").addEventListener("click", () => { ask.innerHTML = ""; guardedRun(() => runCell(sd, tc)); });
+  ask.querySelector("[data-a=cancel]").addEventListener("click", () => { ask.innerHTML = ""; });
+}
+// Accept (head of the test details, failed run): the result of the run shown there becomes the
+// expected result of the test (op "expect": score, penalty, full route per PRT; NULL for a PRT
+// that did not run); its inputs and description stay
+async function acceptActual(tc) {
+  const sd = parseInt($("seed").value, 10) || 1;
+  if (!lastCheck || !lastTestRun || lastTestRun.tc !== tc || lastTestRun.seed !== sd) return;
+  if (!(await flush())) return;
+  const expected = {};
+  for (const prt of result.prts || []) {
+    const r = lastCheck.prts[prt.name];
+    expected[prt.name] = !r || r.skipped ? (r && r.bail ? { score: "", penalty: "", note: prt.name + "-bail" } : { score: "", penalty: "", note: "NULL" })
+      : { score: r.score, penalty: r.penalty, note: String(r.notes || "").split(" | ").filter(Boolean).join(" | ") || "NULL" };
+  }
+  const backup = !backedUp.has(file.path);
+  try {
+    const r = await postJSON("/api/q/qtest", { path: file.path, index: qindex, rev: file.rev, op: "expect", testcase: tc, expected, backup });
+    if (backup) backedUp.add(file.path);
+    file.rev = r.rev; showHistory(r.history);
+    showMessages([{ cls: "info", text: r.label + " (variant " + sd + ")." }]);
+    if (result) {
+      result.qtests = r.qtests || result.qtests;
+      const qt = (result.qtests || []).find((q) => q.testcase === tc);
+      if (qt) testResults[tc] = compareTest(qt, lastCheck);
+      for (const s of Object.keys(seedResults)) if (s !== String(sd)) delete seedResults[s][tc];       // other variants: run again
+      for (const s of Object.keys(stackSeedResults)) delete stackSeedResults[s][tc];
+      if (seedResults[sd]) seedResults[sd][tc] = !!(testResults[tc] && testResults[tc].pass);
+    }
+    renderTests();
+    renderTestDetail();
+    refreshFileState();
+  } catch (e) {
+    if (e.conflict) { conflict = true; showConflict(); }
+    else showMessages([{ cls: "err", text: e.message }], true);
+  }
+  renderVariants();
 }
 // records the approval only (date and fingerprint in the question description); the expected
 // results stay as they are: the test passed with them on every deployed variant
@@ -2947,15 +3096,19 @@ async function runTestsOnDeployed() {
   const bad = Object.entries(seedResults).filter(([, m]) => Object.values(m).some((p) => !p)).map(([s]) => s);
   if (bad.length) $("status").textContent += ` - variant(s) ${bad.join(", ")}`;
 }
-// (for /api/q/stackgrade - not used by the matrix any more, which runs STACK's own question tests;
-// kept for a Check of the preview in STACK itself, planned)
+// (stackAnswers for /api/q/stackgrade - not used by the matrix any more, which runs STACK's own
+// question tests; stackAnswersOf for the Check of the preview in STACK itself)
 // a test's answers as the STACK API takes them: as typed (decimal separator of the question); a
 // choice input as the number of the chosen entry (checkbox: one key name_k per ticked entry), a
 // matrix input cell by cell (name_sub_r_c)
 function stackAnswers(qt) {
+  return stackAnswersOf((inp) => qt.values && inp.name in qt.values ? answerText(inp, qt.values[inp.name]) : "");
+}
+// the same for the answers as typed (text of each input, as in inputValues)
+function stackAnswersOf(textOf) {
   const out = {};
   for (const inp of result.inputs || []) {
-    const v = qt.values && inp.name in qt.values ? answerText(inp, qt.values[inp.name]) : "";
+    const v = textOf(inp);
     if (MCQ_TYPES.includes(inp.type) && inp.choices) {
       const vals = inp.choices.map((c) => c.value);
       if (inp.type === "checkbox") {
@@ -2974,18 +3127,20 @@ function stackAnswers(qt) {
 // the STACK API's /test route, one request per variant with only the chosen tests - STACK
 // evaluates the test inputs with that variant's question variables, as in Moodle). One run at a
 // time; Stop ends it before its next test (Maxima) or variant (API).
-let runEngine = stored(QSTORE_KEY).runEngine === "api" ? "api" : "maxima";
+let runEngine = (stored(QSTORE_KEY).runEngine || stored(QSTORE_KEY).checkEngine) === "api" ? "api" : "maxima";
 let runPreview = stored(QSTORE_KEY).runPreview !== false;
 let runCtl = null;                // the run going on: {token, stopped}
 function runHow() {
   return runEngine === "api" ? "in STACK itself (API)" : runPreview ? "in the preview" : "fast, without the preview";
 }
 function showRunSettings() {
-  $("engMaxima").classList.toggle("on", runEngine === "maxima"); $("engApi").classList.toggle("on", runEngine === "api");
-  $("engApi").title = stackApi && stackApi.built
-    ? `STACK itself (STACK API in Docker: STACK ${(stackApi.settings || {}).release || ""}, Maxima ${(stackApi.settings || {}).maxima || ""}); ` +
-      "STACK compiles the question once per variant, which takes seconds to a minute with large includes"
-    : "STACK API not built yet - in tools/workbench: python stackapi.py build --maxima <the server's Maxima, e.g. 5.45.1> (Docker Desktop running), see README";
+  $("chkMaxima").classList.toggle("on", runEngine === "maxima"); $("chkApi").classList.toggle("on", runEngine === "api");
+  $("chkApi").title = (stackApi && stackApi.built
+    ? `STACK itself (STACK API in Docker: STACK ${(stackApi.settings || {}).release || ""}, Maxima ${(stackApi.settings || {}).maxima || ""}) ` +
+      "for Check (STACK's validation and feedback, no route through the PRTs) and the question tests; " +
+      "STACK compiles the question first (once per variant), which takes seconds to a minute with large includes"
+    : "STACK API not built yet - in tools/workbench: python stackapi.py build --maxima <the server's Maxima, e.g. 5.45.1> (Docker Desktop running), see README") +
+    "; in test mode Check stays in the workbench";
   $("prevToggle").classList.toggle("on", runPreview); $("prevToggle").disabled = runEngine === "api";
   $("stopRun").disabled = !runCtl || runCtl.stopped;
 }
@@ -3158,15 +3313,16 @@ async function runApi(seeds, tcs) {
     ` on ${nseeds} variant(s), ${((performance.now() - t0) / 1000).toFixed(0)} s` : "") + (ctl && ctl.stopped ? " (stopped)" : "");
   $("status").textContent = stackSummary;
   if (err) showMessages([{ cls: "err", text: "STACK API: " + err }], true);
+  if (seeds.length === 1 && tests.length === 1) { activeTest = tests[0].testcase; testDeleteArmed = null; }   // its details (Accept)
   renderTests();
 }
 async function runTest(qt, quiet) {
   if (testMode) return null;
   activeTest = qt.testcase; testDeleteArmed = null;
   for (const inp of result.inputs || []) inputValues[inp.name] = qt.values && inp.name in qt.values ? answerText(inp, qt.values[inp.name]) : "";
-  lastCheck = null;
+  lastCheck = null; lastApiCheck = null;
   render(true);
-  await check();
+  await check("maxima");
   if (lastCheck) {
     testResults[qt.testcase] = compareTest(qt, lastCheck);
     lastTestRun = { tc: qt.testcase, seed: parseInt($("seed").value, 10) || 1 };
@@ -3198,7 +3354,7 @@ function enterTestMode(tc) {
     else if (exprInput(inp) && inp.tans && inp.tans_raw != null && (inputValues[inp.name] ?? "") === answerText(inp, inp.tans_raw))
       inputValues[inp.name] = inp.tans;
   }
-  lastCheck = null;
+  lastCheck = null; lastApiCheck = null;
   render(true);
   showTestBanner();
   renderTests();
@@ -3213,7 +3369,7 @@ function leaveTestMode(restore) {
   if (!restore || !result) return;
   for (const k of Object.keys(inputValues)) delete inputValues[k];
   Object.assign(inputValues, saved);
-  lastCheck = null;
+  lastCheck = null; lastApiCheck = null;
   render(true);
   renderTests();
 }
@@ -3329,7 +3485,7 @@ async function evaluate(firstTime) {
     // in test mode the expressions stay, also for another variant (that is what they are for)
     const keep = !firstTime && prev && (String(prev.seed) === String(result.seed) || !!testMode);
     if (keep) carryAnswers(prev);
-    lastCheck = null;
+    lastCheck = null; lastApiCheck = null;
     render(keep);
     renderTests();
     if (keep && hadCheck) await check();
@@ -3357,7 +3513,7 @@ function carryAnswers(prev) {
 }
 function restart() {
   if (!result) return;
-  lastCheck = null;
+  lastCheck = null; lastApiCheck = null;
   render(false);
 }
 
@@ -3615,7 +3771,7 @@ function render(keepValues) {
   previewPending = false;
   for (const h of frames) h.stop();
   frames = [];
-  if (!keepValues) { for (const k of Object.keys(inputValues)) delete inputValues[k]; lastCheck = null; }
+  if (!keepValues) { for (const k of Object.keys(inputValues)) delete inputValues[k]; lastCheck = null; lastApiCheck = null; }
   const texts = result.texts || {};
   const pick = (key) => (texts[key] ? texts[key][lang] : "") || "";
   const fmt = result.format || "html";
@@ -3627,12 +3783,13 @@ function render(keepValues) {
   renderTiming();
   renderInto($("qtext"), ifMarkup(pick("questiontext")), fmt);
   applyIfMarks($("qtext"));
-  if (!lastCheck) $("sfb").hidden = true;
+  if (!lastCheck && !lastApiCheck) $("sfb").hidden = true;
   renderInto($("gfb"), pick("generalfeedback"), (result.formats || {}).generalfeedback || "html");
   if (pick("questionnote")) renderInto($("qnote"), pick("questionnote"), (result.formats || {}).questionnote || "html");
   else $("qnote").textContent = "-";
   renderInputs();
   if (lastCheck) showCheck();
+  else if (lastApiCheck) showApiCheck();
 }
 
 // "question" or the name of a PRT: its feedback variables as evaluated by the last Check
@@ -3944,8 +4101,8 @@ $("optApprovalFp").addEventListener("change", () => { store(QSTORE_KEY, { approv
 for (const b of document.querySelectorAll("#railTests button[data-jump]")) b.addEventListener("click", () => jumpTo("edit", $(b.dataset.jump)));
 $("varRunTests").addEventListener("click", deployedClick);
 $("varRunMissing").addEventListener("click", () => missingClick(null, null));
-$("engMaxima").addEventListener("click", () => setRunEngine("maxima"));
-$("engApi").addEventListener("click", () => setRunEngine("api"));
+$("chkMaxima").addEventListener("click", () => setRunEngine("maxima"));
+$("chkApi").addEventListener("click", () => setRunEngine("api"));
 $("prevToggle").addEventListener("click", () => setRunPreview(!runPreview));
 $("stopRun").addEventListener("click", stopRun);
 showRunSettings();

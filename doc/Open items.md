@@ -90,6 +90,22 @@ Environment facts:
 
 See "Planned" in `tools/workbench/README.md`: folder tree, review of a whole folder, templates, editor assistants, bulk edits, gitsync split files, and more.
 
+- Rule `prt.fb-floats` sets tolerance 0.005 for exactly graded algebraic answers (2026-11-18, TM3 09 02 a1, a2, Ep;
+  fixed there by hand to 0): `_grading_tol()` matches SAns/TAns of the nodes literally, so `rat(S_a1)` vs `rat(a1)` or
+  `trigexpand(S_a1)` vs `a1` is not found and `r_fb_floats` falls back to `"0.005"`; `prt.fb-floats-tol` has the same
+  blind spot (only the weak hint "cannot be checked"). To do: recognise value-preserving wrappers (`rat`, `ratsimp`,
+  `expand`, `trigexpand`, `trigsimp`, `fullratsimp`) on both sides, also in the fb_floats call itself; for algebraic
+  inputs without a recognised grading node use 0, not 0.005 (0.005 is the standard for numbers); same matching in
+  `prt.fb-floats-tol`; test cases in `test_rules.py` first. Then search all questions in `Documents\STACK` for
+  `fb_floats(..., 0.005)` at exactly graded nodes (the rule has already been applied to them).
+- Done (2026-11-18): a syntax error in a test input or model answer no longer kills the evaluation (`cas_expr()`:
+  `eval_string()` inside `errcatch()`, test `SyntaxErrorsCaught`); a failed Maxima session is dropped from the pool and
+  started again on the next run (`SessionPool.drop()`), on Windows killed with its process tree (tests
+  `PoolDropsFailedSession`, `CloseKillsTree`). To check by Martin on Windows: TM3 09 02 test 4 shows NULL/invalid.
+- Done (2026-11-18): Check hung with Maxima 5.48.1 on Windows (TM3 09 02): `kill(simp)` before the run (the question
+  variables assign `simp`); now `meclib_kill()` in `meclib_kill.lisp` skips Maxima's option variables (test
+  `KillKeepsOptionVariables`). Diagnosis script: `KI\meclib-STACK\diag\diag_hang.bat`. Confirmed by Martin on
+  Windows with 5.48.1 (all tests of TM3 09 02 run).
 - Done (2026-11-18): validation checks the names of answers as STACK does for students (forbidden and allowed words,
   question variables, the two-character rule, function calls; `student_word_errors()`, tests in `test_stack_question.py`);
   placeholders like `[[BASIC-ALGEBRA]]` are reported by the review hint `inputs.word-lists`, not resolved.
@@ -110,8 +126,9 @@ See "Planned" in `tools/workbench/README.md`: folder tree, review of a whole fol
   `fb_unit()` is a feedback variable (e.g. an angle shifted by 360° in the feedback variables) or the input is of type
   `numerical`. Martin: unnecessary hints reduce the attention for hints in general. Discuss before implementing
   (test case in `test_rules.py` first).
-- Check button of the preview: choice between the workbench evaluation and the STACK API (Docker) (Martin,
-  2026-11-16). Not discussed yet.
+- Done (2026-11-18): Check of the preview in STACK itself (switch Maxima | API, `/api/q/stackcheck`, test
+  `test_stackcheck.py`). Still to check: a question with a meclib graphic in the PRT feedback (do STACK's
+  frames draw in the workbench page?); TM3 09 02 has none.
 
 ### Feedback functions (from earlier sessions, still open)
 

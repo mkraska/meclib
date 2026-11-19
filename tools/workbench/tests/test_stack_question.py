@@ -86,6 +86,32 @@ class IncludePlan(unittest.TestCase):
         self.assertEqual(self.plan("a: 1;"), (False, None))
 
 
+class KillKeepsOptionVariables(unittest.TestCase):
+    """A new run removes the names of the previous one with meclib_kill(), not kill(): kill(simp)
+    unbinds Maxima's simplifier switch, which Maxima 5.48.1 does not survive ("The variable $SIMP
+    is unbound", the run never ends; TM3 09 02 assigns simp in its question variables, so its Check
+    hung after the first evaluation, 2026-11-18). meclib_kill.lisp skips Maxima's option variables."""
+
+    def test_variant_uses_meclib_kill(self):
+        s = VariantLoadsIncludes.Session()
+        t = VariantLoadsIncludes("test_include_loaded")
+        t.setUp()
+        sq.variant(s, dict(t.data, questionvariables="simp: false;\na: 1;\nsimp: true;"), 1,
+                   VariantLoadsIncludes.Resolver(t.inc), ("a", "simp"), None)
+        self.assertNotIn("kill(a", s.code)
+        self.assertIn("meclib_kill('[a,simp])$", s.code)
+
+    def test_prt_code_uses_meclib_kill(self):
+        prt = {"name": "p", "autosimplify": "1", "feedbackvariables": "", "nodes": []}
+        code = "\n".join(sq.prt_code(prt, {}, "0.1", "de", "en", lambda s: s, others=("simp", "x")))
+        self.assertNotIn("kill(simp", code)
+        self.assertIn("meclib_kill('[simp,x])$", code)
+
+    def test_lisp_file_exists(self):
+        lisp = Path(sq.__file__).resolve().parent / "meclib_kill.lisp"
+        self.assertIn("$meclib_kill", lisp.read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -185,3 +211,65 @@ class StudentWords(unittest.TestCase):
     def test_strings_and_numbers(self):
         self.assertEqual(self.check('[0;"alpha";Fhat]'.replace(";", ","), allow="Fhat"), [])
         self.assertEqual(self.check("1.5e3*a"), [])
+
+
+class SyntaxErrorsCaught(unittest.TestCase):
+    """A syntax error in a test input or a model answer must not stop the whole Maxima run (TM3 09 02
+    test 4, 2026-11-18: c/2(2*sin(phi_2)*l-b)^2 left the preview empty): errcatch() does not catch
+    parse errors, so the expressions go to Maxima as strings, read with eval_string() inside
+    errcatch(); a failing one counts as not evaluable (invalid), as in Moodle."""
+
+    BAD = "c/2(2*sin(phi_2)*l-b)^2"
+
+    class Session:
+        def __init__(self):
+            self.code = []
+
+        def run_with_results(self, code):
+            self.code.append(code)
+            return "", {}
+
+    class Resolver:
+        def local_file(self, url):
+            return None
+
+    def data(self):
+        demo = Path(__file__).resolve().parents[3] / "demo_questions" / "contact_demo_01.xml"
+        d = sq.question_data(sq.question_element(demo.read_text(encoding="utf-8"), 0))
+        d["questionvariables"] = "a: 1;"
+        name = d["inputs"][0]["name"]
+        d["inputs"] = [dict(d["inputs"][0], tans=self.BAD, type="algebraic")]
+        d["qtests"] = [{"testcase": 1, "inputs": {name: self.BAD}, "expected": {}}]
+        d["questionnote"] = ""
+        return d, name
+
+    def assert_quoted(self, code):
+        self.assertNotIn("errcatch(" + self.BAD, code)
+        self.assertIn('eval_string("%s")' % self.BAD, code)
+
+    def test_evaluate(self):
+        d, name = self.data()
+        s = self.Session()
+        try:
+            sq.evaluate(s, d, 1, self.Resolver())
+        except Exception:        # the stub returns no results; only the code sent matters
+            pass
+        self.assert_quoted("\n".join(s.code))
+
+    def test_test_mode(self):
+        d, name = self.data()
+        s = self.Session()
+        try:
+            sq.evaluate(s, d, 1, self.Resolver(), answers={}, test_exprs={name: self.BAD})
+        except Exception:
+            pass
+        self.assert_quoted("\n".join(s.code))
+
+    def test_run_tests(self):
+        d, name = self.data()
+        s = self.Session()
+        try:
+            sq.run_tests(s, d, 1, self.Resolver())
+        except Exception:
+            pass
+        self.assert_quoted("\n".join(s.code))

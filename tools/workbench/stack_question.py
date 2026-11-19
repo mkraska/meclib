@@ -863,6 +863,12 @@ def prt_required_inputs(prt, input_names):
     return [i for i in input_names if i in used]
 
 
+def kill_code(names):
+    """Maxima code removing the names of an earlier run: meclib_kill() (meclib_kill.lisp, loaded by
+    the session) is kill() without Maxima's option variables - kill(simp) breaks Maxima 5.48.1."""
+    return "meclib_kill('[%s])$" % ",".join(names)
+
+
 def tick(label):
     """Maxima code that records the time at this point (the segment before it is "label")."""
     return 'meclib_out("tick", sconcat(%s, "|", string(elapsed_real_time())))$' % mstring(label)
@@ -892,7 +898,7 @@ def prt_code(prt, raw_by_input, default_penalty, lang_de, lang_en, includes_reso
     v = lambda name: "%%_P_%s_%s" % (tag, name)
     code = ['print("@@PRT %s@@")$' % P]
     if others:
-        code.append("kill(%s)$" % ",".join(others))
+        code.append(kill_code(others))
     code.append("simp: %s$" % ("true" if prt["autosimplify"] else "false"))
     code.append("%stack_prt_stop_p: false$")   # STACK: set false before the feedback variables
     fvnames = []
@@ -1017,6 +1023,14 @@ def test_inputs(data, test_exprs):
             if n in itype and itype[n] not in MCQ_TYPES + ("matrix", "string", "notes") and str(e).strip()}
 
 
+def cas_expr(expr):
+    """Maxima code that evaluates an expression of the question (model answer, question test input)
+    from a string: errcatch(eval_string(...)) also catches its syntax errors, which would stop the
+    whole Maxima run if the expression were pasted as code (errcatch does not catch parse errors;
+    TM3 09 02, 2026-11-18). A failing expression gives errcatch's [] (not evaluable)."""
+    return "eval_string(%s)" % mstring(expr)
+
+
 def evaluate(session, data, seed, resolver, previous_names=(), answers=None, test_exprs=None):
     """Evaluates question variables, model answers and castext of a question in a Maxima
     session. Returns a dict for the preview page. test_exprs ({input: expression}, with answers):
@@ -1026,7 +1040,7 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None, tes
     statements = split_statements(data["questionvariables"])
     names, includes, code = [], [], []
     if previous_names:
-        code.append("kill(%s)$" % ",".join(previous_names))
+        code.append(kill_code(previous_names))
     code.append("simp: %s$" % ("true" if data["questionsimplify"] else "false"))
     code.append("stackfltsep: %s$" % mstring(data["decimals"]))
     code.extend(option_commands(data))
@@ -1087,20 +1101,20 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None, tes
                         ' if length(%%_e) > 2 then (if stringp(%%_e[3]) then %%_e[3] else string(%%_e[3])) else "", tex1(%%_e[1])]), %%_v[1]))),'
                         ' %%_l: errcatch(mcq_correct(%%_v[1])), if %%_l # [] and %%_l[1] # [] then (%%_l: %%_l[1],'
                         ' meclib_out(%s, string(%s)), meclib_out(%s, fb_tmpl_tostring(%s)))))$'
-                        % (tans, mstring("mcq:" + inp["name"]), mstring("tans:" + inp["name"]), pick,
+                        % (cas_expr(tans), mstring("mcq:" + inp["name"]), mstring("tans:" + inp["name"]), pick,
                            mstring("tanstex:" + inp["name"]), pick))
             continue
         if tans.strip() and "model answer of %s" % inp["name"] not in security:
             code.append('block([%%_v: errcatch(%s)], if %%_v # [] then (meclib_out(%s, string(%%_v[1])),'
                         ' meclib_out(%s, fb_tmpl_tostring(%%_v[1]))))$'
-                        % (tans, mstring("tans:" + inp["name"]), mstring("tanstex:" + inp["name"])))
+                        % (cas_expr(tans), mstring("tans:" + inp["name"]), mstring("tanstex:" + inp["name"])))
     # matrix inputs: the size and the cells of the model answer (STACK takes the size of the
     # input grid from the model answer)
     for inp in data["inputs"]:
         if inp.get("type") == "matrix" and (inp.get("tans") or "").strip():
             code.append('block([%%_v: errcatch(%s)], if %%_v # [] and matrixp(%%_v[1]) then meclib_out(%s,'
                         ' stackjson_stringify(map(lambda([%%_r], map(string, %%_r)), args(%%_v[1])))))$'
-                        % (inp["tans"], mstring("mcells:" + inp["name"])))
+                        % (cas_expr(inp["tans"]), mstring("mcells:" + inp["name"])))
     # syntax hints are castext too (e.g. {@meclib_h_unit@}, multilingual)
     langs_q = languages_used(data["questiontext"])
     for inp in data["inputs"]:
@@ -1128,7 +1142,7 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None, tes
                 pick = (', if %%_v # [] and listp(%%_v[1]) and %%_v[1] # [] and every(listp, %%_v[1]) then %%_v: [%s]'
                         % ("mcq_correct(%_v[1])" if itype[name] == "checkbox" else "first(mcq_correct(%_v[1]))"))
             code.append('block([%%_v: errcatch(%s)]%s, if %%_v # [] then meclib_out(%s, string(%%_v[1])))$'
-                        % (expr, pick, mstring("qt:%s:%s" % (qt["testcase"], name))))
+                        % (cas_expr(expr), pick, mstring("qt:%s:%s" % (qt["testcase"], name))))
     # test mode: the expressions evaluated as the inputs of question tests above, kept as strings
     # (%_tv_<input>, false if the expression fails) for answer_code()
     texprs = test_inputs(data, test_exprs) if answers is not None else {}
@@ -1137,7 +1151,7 @@ def evaluate(session, data, seed, resolver, previous_names=(), answers=None, tes
             code.append("%%_tv_%s: false$" % name)
             continue
         code.append('block([%%_v: errcatch(%s)], if %%_v # [] then (%%_tv_%s: string(%%_v[1]), meclib_out(%s, %%_tv_%s))'
-                    ' else %%_tv_%s: false)$' % (expr, name, mstring("tv:" + name), name, name))
+                    ' else %%_tv_%s: false)$' % (cas_expr(expr), name, mstring("tv:" + name), name, name))
     code.append(tick("model answers, syntax hints"))
     texts = {"questiontext": data["questiontext"], "generalfeedback": data["generalfeedback"],
              "questionnote": data["questionnote"], "prtcorrect": data["prtcorrect"],
@@ -1337,7 +1351,7 @@ def variant(session, data, seed, resolver, previous_names=(), load_includes=True
         skip, include_sig = include_plan(session, data, resolver, previous_names)
         load_includes = not skip
     if previous_names:
-        code.append("kill(%s)$" % ",".join(previous_names))
+        code.append(kill_code(previous_names))
     code.append("simp: %s$" % ("true" if data["questionsimplify"] else "false"))
     code.append("stackfltsep: %s$" % mstring(data["decimals"]))
     code.extend(option_commands(data))
@@ -1407,7 +1421,7 @@ def run_tests(session, data, seed, resolver, previous_names=(), testcases=None, 
             cancelled = True
             break
         exprs = {n: e for n, e in qt["inputs"].items() if n in itype and str(e).strip()}
-        code = ["kill(%s)$" % ",".join(inputs + ["%_tv_" + n for n in sorted(used_tv)])] if inputs or used_tv else []
+        code = [kill_code(inputs + ["%_tv_" + n for n in sorted(used_tv)])] if inputs or used_tv else []
         code.append(simp)
         for n, e in exprs.items():
             used_tv.add(n)
@@ -1421,7 +1435,7 @@ def run_tests(session, data, seed, resolver, previous_names=(), testcases=None, 
             # string(): Maxima source of the value; a string keeps its quotes (string("a") is a)
             code.append('block([%%_v: errcatch(%s)]%s, if %%_v # [] then (%%_tv_%s: if stringp(%%_v[1]) then '
                         'sconcat("\\"", ssubst("\\\\\\"", "\\"", %%_v[1]), "\\"") else string(%%_v[1]), meclib_out(%s, %%_tv_%s))'
-                        ' else %%_tv_%s: false)$' % (e, pick, n, mstring("tv:" + n), n, n))
+                        ' else %%_tv_%s: false)$' % (cas_expr(e), pick, n, mstring("tv:" + n), n, n))
         checked = {}
         code.insert(0, tick("start"))
         code += answer_code(dict(data, specificfeedback=""), {}, langs, resolver, checked, names, exprs)
@@ -1530,7 +1544,7 @@ def answer_code(data, answers, langs, resolver, checked, qv_names=(), texprs=Non
     if sfb.strip():
         gone = fv_all + [n for n in names if n not in fv_all]
         if gone:
-            code.append("kill(%s)$" % ",".join(gone))
+            code.append(kill_code(gone))
         code.append("simp: %s$" % ("false" if str(data.get("questionsimplify", "1")) == "0" else "true"))
         md = data["formats"].get("specificfeedback") == "markdown"
         code.append('fb_tmpl_md: %s$' % ("true" if md else "false"))

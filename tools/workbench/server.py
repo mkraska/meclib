@@ -80,6 +80,8 @@ Endpoints
                             results: {testcase: {m, a}} stores those of a run
   POST /api/q/stacktest     {path, index, seed, src, lang, testcases} question tests run by STACK
                             itself (STACK API, /test) on this variant
+  POST /api/q/stackcheck    {path, index, seed, src, lang, answers, inputs} Check of the preview in
+                            STACK itself (STACK API: grade, validate per input), STACK's HTML
   POST /api/q/stackgrade    {path, index, seed, src, lang, runs: [{testcase, answers}]} answers of
                             question tests graded by STACK itself (STACK API in Docker, stackapi.py)
   GET  /api/stackapi/status the STACK API: built, running, versions
@@ -115,6 +117,7 @@ import argparse
 import os
 import subprocess
 import hashlib
+import html
 import json
 import mimetypes
 import re
@@ -194,6 +197,17 @@ class SessionPool:
             self.sessions[key] = entry
         self.prepare(maxima, stack)
         return entry
+
+    def drop(self, key, entry):
+        """Takes a session out of the pool and closes it (after a Maxima error of one of its runs), so
+        that the next run of the question starts a new one; a newer session under the key is kept."""
+        with self.lock:
+            if self.sessions.get(key) is entry:
+                del self.sessions[key]
+        try:
+            entry[0].close()
+        except Exception:
+            pass
 
     def prepare(self, maxima, stack=None):
         """Starts the spare in the background, unless there is one for these versions."""
@@ -1008,15 +1022,19 @@ class Handler(SimpleHTTPRequestHandler):
         if req.get("seeds") is not None:      # only these (e.g. the deployed ones)
             seeds = [int(x) for x in req["seeds"]]
         PROGRESS.update(busy=True, since=time.time(), phase="Maxima session: starting Maxima and loading STACK's library")
-        out = []
+        out, key, entry = [], "%s:%d:%s" % (target, index, src), None
         try:
-            entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg), current_stack())
+            entry = POOL.get(key, current_maxima(cfg), current_stack())
             resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
             for k, seed in enumerate(seeds):
                 set_phase("variant %d of %d (seed %d)" % (k + 1, len(seeds), seed))
                 v, names = stack_question.variant(entry[0], data, seed, resolver, entry[2], load_includes=None)
                 entry[2] = names
                 out.append(v)
+        except MaximaError:
+            if entry is not None:
+                POOL.drop(key, entry)
+            raise
         finally:
             PROGRESS["busy"] = False
         return {"variants": out, "deployed": deployed, "random": stack_question.is_random(data),
@@ -1041,8 +1059,9 @@ class Handler(SimpleHTTPRequestHandler):
         token = req.get("progress")
         progress_start_tests(token)
         out, cancelled = [], False
+        key, entry = "%s:%d:%s" % (target, index, src), None
         try:
-            entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg), current_stack())
+            entry = POOL.get(key, current_maxima(cfg), current_stack())
             resolver = stack_question.IncludeResolver(src, cfg["branches"], fetch)
             for k, seed in enumerate(seeds):
                 if run_cancelled(token):
@@ -1057,6 +1076,10 @@ class Handler(SimpleHTTPRequestHandler):
                 if r.get("cancelled"):
                     cancelled = True
                     break
+        except MaximaError:
+            if entry is not None:
+                POOL.drop(key, entry)
+            raise
         finally:
             PROGRESS["busy"] = False
             CANCELLED.discard(token)
@@ -1090,6 +1113,72 @@ class Handler(SimpleHTTPRequestHandler):
                 raise RuntimeError("STACK's warnings stop the tests of the API (Moodle's bulk test only reports them): " +
                                    (plain_text(r.get("messages")) or "?"))
             return {"seed": seed, "tests": stack_test_outcomes(r, seed), "seconds": secs, "api": info.get("settings")}
+        except (RuntimeError, OSError, subprocess.SubprocessError) as err:
+            return {"error": str(err)}
+        finally:
+            PROGRESS["busy"] = False
+
+    def stack_check(self, cfg, req):
+        """POST /api/q/stackcheck {path, index, seed, src, lang, answers, inputs}: Check of the preview
+        in STACK itself (STACK API in Docker): the answers as typed (keys as STACK's form fields, see
+        stackAnswers() of the page) graded by the route grade on the variant with this seed, and the
+        validation of each input in inputs by the route validate (one call per input; inputs that
+        are bound to a graphic left out by the page). The question goes as in stack_grade().
+        -> {seconds, isgradable, score, weights, prts: {name: {score, penalty, notes, errors, feedback,
+        answered}}, specificfeedback, validation: {input: html}, iframes, viframes: {input: iframes},
+        base, api} or {error}
+        feedback, specificfeedback and validation are STACK's HTML (plots as URLs of the API);
+        iframes (grade) and viframes (validate, per input): STACK's [[jsxgraph]] frames [id, html,
+        holder id, title, scrolling, evil]; the page puts them into their holders with base as base
+        URL (each API call numbers its holders from 0 again)."""
+        target = allowed_path(cfg, req["path"])
+        text, _ = qfile.read_file(target)
+        a, b, _ = qfile.question_span(text, int(req["index"]))
+        q = text[a:b]
+        seed = int(req.get("seed", 1))
+        if not re.search(r"<deployedseed>\s*%d\s*</deployedseed>" % seed, q):
+            q = q.replace("</question>", "<deployedseed>%d</deployedseed></question>" % seed)
+        q = api_includes(q, req.get("src", "local"), cfg)
+        xml = '<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n' + q + '\n</quiz>\n'
+        lang = req.get("lang") or "de"
+        answers = req.get("answers") or {}
+        base = stackapi.URL.rstrip("/") + "/"
+        t0 = time.time()
+        PROGRESS.update(busy=True, since=t0, phase="STACK API: starting the containers (Docker)")
+        try:
+            info = stackapi.up()
+            set_phase("STACK API: STACK compiles the question and grades the answers (variant %d)" % seed)
+            _secs, r = stackapi.call("grade", {"questionDefinition": xml, "seed": seed, "answers": answers, "lang": lang})
+            if "isgradable" not in r:
+                return {"error": "STACK: " + plain_text(r.get("message") or r.get("error") or json.dumps(r)[:500])}
+
+            def plots(html, assets):
+                for name, file in (assets or {}).items():
+                    html = (html or "").replace('"%s"' % name, '"%splot.php/%s"' % (base, file))
+                return html or ""
+            assets = r.get("gradingassets") or {}
+            out = {"isgradable": r.get("isgradable"), "score": r.get("score"), "prts": {},
+                   "weights": r.get("scoreweights") or {}, "iframes": r.get("iframes") or [], "viframes": {},
+                   "specificfeedback": plots(r.get("specificfeedback"), assets), "validation": {},
+                   "summary": r.get("responsesummary", ""), "base": base, "api": info.get("settings")}
+            feedback = r.get("prts") or {}
+            for name, p in (r.get("prtresults") or {}).items():
+                out["prts"][name] = {"score": p.get("score"), "penalty": p.get("penalty"),
+                                     "notes": p.get("answernotes") or [], "errors": p.get("errors") or [],
+                                     "feedback": plots(feedback.get(name), assets),
+                                     "answered": name in feedback}
+            for k, name in enumerate(req.get("inputs") or []):
+                set_phase("STACK API: validation of input %s (%d of %d)" % (name, k + 1, len(req.get("inputs") or [])))
+                _s, v = stackapi.call("validate", {"questionDefinition": xml, "seed": seed, "answers": answers,
+                                                   "inputName": name, "lang": lang})
+                if "validation" in v:
+                    out["validation"][name] = v.get("validation") or ""
+                    out["viframes"][name] = v.get("iframes") or []
+                else:
+                    out["validation"][name] = '<span class="val-bad">%s</span>' % html.escape(
+                        "STACK: " + plain_text(v.get("message") or v.get("error") or "?"))
+            out["seconds"] = round(time.time() - t0, 2)
+            return out
         except (RuntimeError, OSError, subprocess.SubprocessError) as err:
             return {"error": str(err)}
         finally:
@@ -1191,8 +1280,9 @@ class Handler(SimpleHTTPRequestHandler):
                 qel = stack_question.question_element(text, index)
                 data = stack_question.question_data(qel)
                 PROGRESS.update(busy=True, since=time.time(), phase="Maxima session: starting Maxima and loading STACK's library")
+                key, entry = "%s:%d:%s" % (target, index, src), None
                 try:
-                    entry = POOL.get("%s:%d:%s" % (target, index, src), current_maxima(cfg), current_stack())
+                    entry = POOL.get(key, current_maxima(cfg), current_stack())
                     first = not entry[0].used
                     evaluating = "evaluating with Maxima" + (" (first run in this session, may take longer)" if first else "")
 
@@ -1207,6 +1297,10 @@ class Handler(SimpleHTTPRequestHandler):
                     set_phase(evaluating)
                     result = stack_question.evaluate(entry[0], data, int(req.get("seed", 1)), resolver, entry[2], answers,
                                                      req.get("test_exprs") if answers is not None else None)
+                except MaximaError as err:
+                    if entry is not None:       # a session that failed is not used again
+                        POOL.drop(key, entry)
+                    raise MaximaError("%s (the question gets a new Maxima session on the next run)" % err)
                 finally:
                     PROGRESS["busy"] = False
                 result["offline"] = resolver.offline
@@ -1365,6 +1459,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_json(self.variants(cfg, req))
             if path == "/api/q/testrun":
                 return self.send_json(self.test_run(cfg, req))
+            if path == "/api/q/stackcheck":
+                return self.send_json(self.stack_check(cfg, req))
             if path == "/api/q/stackgrade":
                 return self.send_json(self.stack_grade(cfg, req))
             if path == "/api/q/stacktest":
